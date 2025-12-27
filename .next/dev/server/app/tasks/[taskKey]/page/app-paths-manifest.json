@@ -1,0 +1,3 @@
+{
+  "/tasks/[taskKey]/page": "app/tasks/[taskKey]/page.js"
+}
