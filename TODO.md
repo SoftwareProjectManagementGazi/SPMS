@@ -42,7 +42,7 @@ Altyapının sağlam kurulması, veri bütünlüğü ve ekip çalışması için
 
 ### Temel CRUD Servisleri
 - [COMPLETED] SQLAlchemy ORM oturum yönetimini yapılandır.
-- [ ] Proje Yönetimi: Proje oluşturma, okuma, güncelleme ve silme endpoint'lerini yaz.
+- [COMPLETED] Proje Yönetimi: Proje oluşturma, okuma, güncelleme ve silme endpoint'lerini yaz.
 - [ ] Görev Yönetimi: Görev oluşturma, listeleme, güncelleme ve silme endpoint'lerini yaz.
 *İlgili Gereksinimler: [SPMS-02.1], [SPMS-02.3], [SPMS-DB-01]*
 

@@ -10,3 +10,8 @@ class UserAlreadyExistsError(DomainError):
 class InvalidCredentialsError(DomainError):
     def __init__(self):
         super().__init__("Invalid email or password")
+
+class ProjectNotFoundError(DomainError):
+    def __init__(self, project_id: int):
+        super().__init__(f"Project with id {project_id} not found")
+
