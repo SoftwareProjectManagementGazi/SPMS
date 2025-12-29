@@ -51,11 +51,12 @@ async def update_task(
     task_id: int,
     dto: TaskUpdateDTO,
     task_repo: ITaskRepository = Depends(get_task_repo),
+    project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_current_user)
 ):
     try:
-        use_case = UpdateTaskUseCase(task_repo)
-        return await use_case.execute(task_id, dto)
+        use_case = UpdateTaskUseCase(task_repo, project_repo)
+        return await use_case.execute(task_id, dto, current_user.id) # type: ignore
     except TaskNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -63,10 +64,11 @@ async def update_task(
 async def delete_task(
     task_id: int,
     task_repo: ITaskRepository = Depends(get_task_repo),
+    project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_current_user)
 ):
     try:
-        use_case = DeleteTaskUseCase(task_repo)
-        await use_case.execute(task_id)
+        use_case = DeleteTaskUseCase(task_repo, project_repo)
+        await use_case.execute(task_id, current_user.id) # type: ignore
     except TaskNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

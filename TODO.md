@@ -51,8 +51,8 @@ Geliştirilen servislerin güvenliğinin doğrulanması.
 
 ### Rol Bazlı Erişim Kontrolü (RBAC) Testleri
 - [COMPLETED] Pytest altyapısını kur.
-- [ ] Yetkisiz erişim senaryolarını test et (Örn: Yetkisiz kullanıcının proje silmeye çalışması -> HTTP 403 Forbidden dönmeli).
-- [ ] Kullanıcının sadece kendi görevlerine müdahale edebildiğini doğrulayan birim testleri yaz.
+- [COMPLETED] Yetkisiz erişim senaryolarını test et (Örn: Yetkisiz kullanıcının proje silmeye çalışması -> HTTP 403 Forbidden dönmeli).
+- [COMPLETED] Kullanıcının sadece kendi görevlerine müdahale edebildiğini doğrulayan birim testleri yaz.
 *İlgili Gereksinimler: [SPMS-01.2], [SPMS-SEC-04], [SPMS-QLT-7]*
 
 ## 4. Kullanıcı Arayüzü (Frontend) Geliştirmeleri (Phase 4)
