@@ -1,6 +1,6 @@
 # Dependency Injection Container
 # This file will map interfaces to implementations
+from app.infrastructure.database.database import get_db_session
 
-def get_db():
-    # Placeholder for database session dependency
-    yield None
+# Re-export the database dependency
+get_db = get_db_session
