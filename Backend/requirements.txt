@@ -6,3 +6,7 @@ pydantic-settings
 passlib[bcrypt]
 python-jose
 python-multipart
+pytest
+pytest-asyncio
+httpx
+aiosqlite
