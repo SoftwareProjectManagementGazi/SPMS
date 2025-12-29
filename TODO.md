@@ -34,10 +34,10 @@ Altyapının sağlam kurulması, veri bütünlüğü ve ekip çalışması için
 *İlgili Gereksinimler: [SPMS-API-03], [SPMS-API-05]*
 
 ### Kimlik Doğrulama (Auth) Servisi
-- [ ] Kullanıcı güvenliği için `bcrypt` kütüphanesini projeye dahil et.
-- [ ] `POST /register`: Kullanıcı kayıt servisini yaz (Parolayı hashleyerek kaydet).
-- [ ] `POST /login`: Kullanıcı giriş servisini yaz (Email/Parola doğrulama).
-- [ ] Başarılı girişte JWT (JSON Web Token) üreten mekanizmayı kur.
+- [COMPLETED] Kullanıcı güvenliği için `bcrypt` kütüphanesini projeye dahil et.
+- [COMPLETED] `POST /register`: Kullanıcı kayıt servisini yaz (Parolayı hashleyerek kaydet).
+- [COMPLETED] `POST /login`: Kullanıcı giriş servisini yaz (Email/Parola doğrulama).
+- [COMPLETED] Başarılı girişte JWT (JSON Web Token) üreten mekanizmayı kur.
 *İlgili Gereksinimler: [SPMS-01.1], [SPMS-01.3], [SPMS-SEC-01], [SPMS-SEC-02]*
 
 ### Temel CRUD Servisleri
