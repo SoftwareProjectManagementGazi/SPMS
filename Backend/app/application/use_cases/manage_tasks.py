@@ -45,14 +45,26 @@ class ListMyTasksUseCase:
         return [TaskResponseDTO.model_validate(t) for t in tasks]
 
 class UpdateTaskUseCase:
-    def __init__(self, task_repo: ITaskRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self.task_repo = task_repo
+        self.project_repo = project_repo
 
-    async def execute(self, task_id: int, dto: TaskUpdateDTO) -> TaskResponseDTO:
+    async def execute(self, task_id: int, dto: TaskUpdateDTO, user_id: int) -> TaskResponseDTO:
         task = await self.task_repo.get_by_id(task_id)
         if not task:
             raise TaskNotFoundError(task_id)
         
+        # Check permissions: Project Owner or Assignee
+        project = await self.project_repo.get_by_id(task.project_id)
+        if not project:
+             raise TaskNotFoundError(task_id) # Should be ProjectNotFound but leaking existence
+
+        is_owner = project.owner_id == user_id
+        is_assignee = task.assignee_id == user_id
+
+        if not (is_owner or is_assignee):
+            raise TaskNotFoundError(task_id) # Obfuscate existence for unauthorized
+
         # Update fields
         update_data = dto.model_dump(exclude_unset=True)
         updated_task = task.model_copy(update=update_data)
@@ -61,12 +73,24 @@ class UpdateTaskUseCase:
         return TaskResponseDTO.model_validate(result)
 
 class DeleteTaskUseCase:
-    def __init__(self, task_repo: ITaskRepository):
+    def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self.task_repo = task_repo
+        self.project_repo = project_repo
 
-    async def execute(self, task_id: int) -> None:
+    async def execute(self, task_id: int, user_id: int) -> None:
         task = await self.task_repo.get_by_id(task_id)
         if not task:
             raise TaskNotFoundError(task_id)
+        
+        # Check permissions: Project Owner ONLY (usually assignees can't delete, only update status)
+        # OR Allow Assignee to delete? Let's restrict Delete to Project Owner for safety.
+        # But for "intervene in their own tasks", update is key. Delete might be Owner only.
+        # Let's check the requirement: "Users can only intervene in their own tasks".
+        # I'll allow Assignee to delete for now to be flexible, or restrict to Owner. 
+        # Let's restrict DELETE to Owner, UPDATE to Owner + Assignee.
+        
+        project = await self.project_repo.get_by_id(task.project_id)
+        if not project or project.owner_id != user_id:
+             raise TaskNotFoundError(task_id)
         
         await self.task_repo.delete(task_id)

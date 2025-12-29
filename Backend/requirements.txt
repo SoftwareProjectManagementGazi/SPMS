@@ -10,3 +10,4 @@ pytest
 pytest-asyncio
 httpx
 aiosqlite
+pydantic[email]
