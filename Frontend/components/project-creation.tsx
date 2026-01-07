@@ -21,6 +21,10 @@ import CustomizeColumns from "@/components/project/customize-columns"
 import FieldToggles from "@/components/project/field-toggles"
 import AiRecommendationModal from "@/components/project/ai-recommendation-modal"
 import { users } from "@/lib/mock-data"
+import { projectService } from "@/services/project-service"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
 
 const methodologies: { value: Methodology; label: string; description: string; icon: React.ElementType }[] = [
   { value: "scrum", label: "Scrum", description: "Sprint-based planning with iterative development", icon: Layers },
@@ -30,6 +34,8 @@ const methodologies: { value: Methodology; label: string; description: string; i
 
 export function ProjectCreation() {
   const router = useRouter()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // Form states
   const [projectName, setProjectName] = React.useState("")
@@ -57,8 +63,26 @@ export function ProjectCreation() {
     template ? buildDefaultEnabledFieldsMap(template) : {},
   )
 
-  // Stored projects (so Create can push into it)
-  const [storedProjects, setStoredProjects] = useLocalStorageState<Project[]>("pms:projects", [])
+  // Mutation for creating project
+  const createProjectMutation = useMutation({
+      mutationFn: projectService.create,
+      onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          toast({
+              title: "Project created",
+              description: "Your new project has been successfully created.",
+          })
+          router.push("/projects")
+      },
+      onError: (error: any) => {
+          console.error("Failed to create project:", error);
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to create project. Please try again.",
+          })
+      }
+  })
 
   // Reset columns/fields when methodology changes
   React.useEffect(() => {
@@ -68,36 +92,22 @@ export function ProjectCreation() {
   }, [template, setColumns, setEnabledFields])
 
   const canCreate =
-    Boolean(selectedMethodology) && projectName.trim().length > 0 && projectKey.trim().length > 0
+    Boolean(selectedMethodology) && projectName.trim().length > 0 && projectKey.trim().length > 0 && !createProjectMutation.isPending
 
   function handleCreate() {
     if (!selectedMethodology) return
     if (!projectName.trim() || !projectKey.trim()) return
 
-    const id = String(Date.now())
+    const start = startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")
+    const end = endDate ? format(endDate, "yyyy-MM-dd") : undefined
 
-    const start = startDate ? format(startDate, "yyyy-MM-dd") : ""
-    const end = endDate ? format(endDate, "yyyy-MM-dd") : ""
-
-    // Project tipiniz farklıysa bile patlamasın diye config alanlarını "as any" ile ekliyoruz.
-    const newProject = {
-      id,
-      name: projectName.trim(),
-      key: projectKey.trim().toUpperCase(),
-      description: projectDesc.trim(),
-      methodology: selectedMethodology,
-      lead: users?.[0],
-      startDate: start,
-      endDate: end,
-      progress: 0,
-
-      // frontend-only config
-      workflowColumns: columns,
-      enabledFields: enabledFields,
-    } as any as Project
-
-    setStoredProjects([newProject, ...storedProjects])
-    router.push("/projects")
+    createProjectMutation.mutate({
+        name: projectName.trim(),
+        description: projectDesc.trim(),
+        methodology: selectedMethodology,
+        start_date: start,
+        end_date: end,
+    })
   }
 
   return (
@@ -273,6 +283,7 @@ export function ProjectCreation() {
         </Button>
 
         <Button disabled={!canCreate} onClick={handleCreate} type="button">
+          {createProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Project
         </Button>
       </div>

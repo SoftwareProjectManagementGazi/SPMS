@@ -3,21 +3,43 @@
 import * as React from "react"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-
-import { projects as mockProjects } from "@/lib/mock-data"
-import { useLocalStorageState } from "@/hooks/useLocalStorageState"
-import type { Project } from "@/lib/types"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useProjects } from "@/hooks/use-projects"
+import { Loader2, AlertCircle } from "lucide-react"
 
 export default function ProjectsPage() {
-  const [storedProjects] = useLocalStorageState<Project[]>("pms:projects", [])
+  // Mock data ve localStorage yerine artık tek satırda backend'e bağlıyız
+  const { data: projects, isLoading, isError, error } = useProjects()
 
-  // localStorage projeleri üstte dursun
-  const allProjects = React.useMemo(() => {
-    return [...storedProjects, ...mockProjects]
-  }, [storedProjects])
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppShell>
+    )
+  }
+
+  if (isError) {
+    return (
+      <AppShell>
+        <div className="p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load projects. Is the backend server running?
+              <br />
+              <span className="text-xs opacity-70">{(error as Error).message}</span>
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
@@ -26,7 +48,7 @@ export default function ProjectsPage() {
           <div>
             <h1 className="text-2xl font-bold">Projects</h1>
             <p className="text-muted-foreground">
-              Your projects (saved + mock data)
+              Manage your projects, track progress, and collaborate with your team.
             </p>
           </div>
 
@@ -35,11 +57,11 @@ export default function ProjectsPage() {
           </Link>
         </div>
 
-        {allProjects.length === 0 ? (
+        {!projects || projects.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>No projects yet</CardTitle>
-              <CardDescription>Create a new project to get started.</CardDescription>
+              <CardTitle>No projects found</CardTitle>
+              <CardDescription>There are no projects in the database yet.</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/projects/new">
@@ -49,57 +71,44 @@ export default function ProjectsPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allProjects.map((p: any) => (
-              <Card key={p.id} className="shadow-sm">
-                <CardHeader className="space-y-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base">
-                        {p.name ?? "Untitled Project"}
-                      </CardTitle>
-                      <CardDescription>
-                        {p.key ? `Key: ${p.key}` : "No key"}
-                        {p.methodology ? ` • ${String(p.methodology).toUpperCase()}` : ""}
-                      </CardDescription>
+            {projects.map((p) => (
+              <Link href={`/projects/${p.id}`} key={p.id} className="block group">
+                <Card className="shadow-sm group-hover:shadow-md transition-shadow h-full cursor-pointer border-l-4 border-l-primary/0 group-hover:border-l-primary/100">
+                  <CardHeader className="space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle className="text-base group-hover:text-primary transition-colors">
+                          {p.name}
+                        </CardTitle>
+                        <CardDescription>
+                          {p.key ? `Key: ${p.key}` : "No key"}
+                          {p.methodology ? ` • ${String(p.methodology).toUpperCase()}` : ""}
+                        </CardDescription>
+                      </div>
+                      
+                      {/* Status badge - logic can be improved based on dates or future backend status field */}
+                      <span className="text-xs font-medium px-2 py-1 bg-secondary rounded-full">
+                         {p.methodology}
+                      </span>
                     </div>
+                  </CardHeader>
 
-                    {/* İstersen ileride /projects/[id] sayfasına linklersin */}
-                    <span className="text-xs text-muted-foreground">
-                      {p.progress != null ? `${p.progress}%` : ""}
-                    </span>
-                  </div>
-                </CardHeader>
+                  <CardContent className="space-y-3">
+                    {p.description ? (
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {p.description}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No description provided.</p>
+                    )}
 
-                <CardContent className="space-y-3">
-                  {p.description ? (
-                    <p className="text-sm text-muted-foreground line-clamp-3">
-                      {p.description}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No description.</p>
-                  )}
-
-                  <div className="text-xs text-muted-foreground">
-                    {p.startDate ? `Start: ${p.startDate}` : "Start: -"}
-                    {" • "}
-                    {p.endDate ? `End: ${p.endDate}` : "End: -"}
-                  </div>
-
-                  {/* Frontend-only config gösterimi (istersen kaldır) */}
-                  {Array.isArray(p.workflowColumns) && p.workflowColumns.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {p.workflowColumns.slice(0, 8).map((c: string, idx: number) => (
-                        <span
-                          key={`${c}-${idx}`}
-                          className="text-[11px] rounded-full border px-2 py-0.5 bg-secondary"
-                        >
-                          {c}
-                        </span>
-                      ))}
+                    <div className="text-xs text-muted-foreground flex gap-3 pt-2 border-t mt-2">
+                      <span>Start: {p.startDate ? new Date(p.startDate).toLocaleDateString() : "-"}</span>
+                      <span>End: {p.endDate ? new Date(p.endDate).toLocaleDateString() : "-"}</span>
                     </div>
-                  ) : null}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
