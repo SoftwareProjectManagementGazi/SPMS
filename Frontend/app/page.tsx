@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
           <Tabs value={view} onValueChange={(v) => setView(v as "manager" | "member")}>
             <TabsList>
-              <TabsTrigger value="manager">Manager View</TabsTrigger>
+              <TabsTrigger value="manager">Management</TabsTrigger>
               <TabsTrigger value="member">My Work</TabsTrigger>
             </TabsList>
           </Tabs>

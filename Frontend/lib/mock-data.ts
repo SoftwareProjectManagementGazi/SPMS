@@ -5,31 +5,31 @@ export const users: User[] = [
     id: "1",
     name: "Ahmet Yılmaz",
     email: "ahmet@spms.com",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/man.png?height=40&width=40",
     role: "manager",
   },
   {
     id: "2",
     name: "Elif Demir",
     email: "elif@spms.com",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/woman.png?height=40&width=40",
     role: "member",
   },
   {
     id: "3",
     name: "Mehmet Kaya",
     email: "mehmet@spms.com",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/man2.png?height=40&width=40",
     role: "member",
   },
   {
     id: "4",
     name: "Zeynep Akar",
     email: "zeynep@spms.com",
-    avatar: "/placeholder.svg?height=40&width=40",
+    avatar: "/woman2.png?height=40&width=40",
     role: "member",
   },
-  { id: "5", name: "Can Öztürk", email: "can@spms.com", avatar: "/placeholder.svg?height=40&width=40", role: "member" },
+  { id: "5", name: "Can Öztürk", email: "can@spms.com", avatar: "/man2.png?height=40&width=40", role: "member" },
 ]
 
 export const projects: Project[] = [
