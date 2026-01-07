@@ -33,10 +33,8 @@ class GetProjectUseCase:
         self.project_repo = project_repo
 
     async def execute(self, project_id: int, manager_id: int) -> ProjectResponseDTO:
-        project = await self.project_repo.get_by_id(project_id)
-        # Check ownership or existence
-        if not project or project.manager_id != manager_id:
-             # For security, we might want to return 404 even if it exists but belongs to another
+        project = await self.project_repo.get_by_id_and_user(project_id, manager_id)
+        if not project:
             raise ProjectNotFoundError(project_id)
         return ProjectResponseDTO.model_validate(project)
 
