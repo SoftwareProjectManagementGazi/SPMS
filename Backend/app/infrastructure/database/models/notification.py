@@ -10,7 +10,7 @@ class NotificationModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     message = Column(Text, nullable=False)
-    type = Column(SqlEnum(NotificationType), nullable=False)
+    type = Column(SqlEnum(NotificationType, name="notification_type"), nullable=False)
     is_read = Column(Boolean, default=False)
     related_entity_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

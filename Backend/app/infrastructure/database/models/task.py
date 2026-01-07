@@ -16,7 +16,7 @@ class TaskModel(Base):
     
     title = Column(String(200), nullable=False)
     description = Column(String, nullable=True)
-    priority = Column(SqlEnum(TaskPriority), default=TaskPriority.MEDIUM, nullable=True)
+    priority = Column(SqlEnum(TaskPriority, name="task_priority"), default=TaskPriority.MEDIUM, nullable=True)
     points = Column(Integer, nullable=True)
     
     is_recurring = Column(Boolean, default=False)

@@ -24,7 +24,7 @@ class ProjectResponseDTO(BaseModel):
     start_date: datetime
     end_date: Optional[datetime]
     methodology: Methodology
-    owner_id: int
+    manager_id: int
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)

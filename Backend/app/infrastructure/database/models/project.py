@@ -23,7 +23,7 @@ class ProjectModel(Base):
     description = Column(String, nullable=True)
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
-    methodology = Column(SqlEnum(Methodology), nullable=False)
+    methodology = Column(SqlEnum(Methodology, name="methodology_type"), nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
