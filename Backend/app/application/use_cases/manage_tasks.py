@@ -43,6 +43,16 @@ class ListMyTasksUseCase:
         tasks = await self.task_repo.get_all_by_assignee(user_id)
         return [TaskResponseDTO.model_validate(t) for t in tasks]
 
+class GetTaskUseCase:
+    def __init__(self, task_repo: ITaskRepository):
+        self.task_repo = task_repo
+
+    async def execute(self, task_id: int) -> TaskResponseDTO:
+        task = await self.task_repo.get_by_id(task_id)
+        if not task:
+            raise TaskNotFoundError(task_id)
+        return TaskResponseDTO.model_validate(task)
+
 class UpdateTaskUseCase:
     def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):
         self.task_repo = task_repo
