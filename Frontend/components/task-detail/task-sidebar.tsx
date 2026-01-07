@@ -49,6 +49,9 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
     <div className="space-y-4">
       {/* Status */}
       <Card className="shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
+        </CardHeader>
         <CardContent className="pt-4">
           <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
             <SelectTrigger

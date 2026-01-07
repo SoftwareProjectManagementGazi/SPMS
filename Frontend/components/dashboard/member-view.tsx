@@ -100,6 +100,10 @@ function SubTaskRow({ subTask }: { subTask: SubTask }) {
         <span className="text-xs text-muted-foreground">Sub-Task (Alt Görev)</span>
       </div>
 
+      <Badge className={statusColors[subTask.status]} variant="secondary">
+        {subTask.status === "in-progress" ? "In Progress" : subTask.status === "todo" ? "To Do" : "Done"}
+      </Badge>
+
       {subTask.assignee && (
         <Avatar className="h-6 w-6">
           <AvatarImage src={subTask.assignee.avatar || "/placeholder.svg"} />
@@ -111,10 +115,6 @@ function SubTaskRow({ subTask }: { subTask: SubTask }) {
           </AvatarFallback>
         </Avatar>
       )}
-
-      <Badge className={statusColors[subTask.status]} variant="secondary">
-        {subTask.status === "in-progress" ? "In Progress" : subTask.status === "todo" ? "To Do" : "Done"}
-      </Badge>
     </Link>
   )
 }
