@@ -7,8 +7,9 @@ class User(BaseModel):
     email: EmailStr
     password_hash: str
     full_name: str
+    avatar: Optional[str] = None
     is_active: bool = True
-    is_admin: bool = False
+    role_id: Optional[int] = None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
