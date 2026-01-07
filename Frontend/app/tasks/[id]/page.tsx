@@ -1,32 +1,38 @@
 "use client"
-import { useParams } from "next/navigation"
+import { use } from "react"
 import { AppShell } from "@/components/app-shell"
 import { TaskHeader } from "@/components/task-detail/task-header"
 import { TaskContent } from "@/components/task-detail/task-content"
 import { TaskSidebar } from "@/components/task-detail/task-sidebar"
-import { parentTasks, subTasks } from "@/lib/mock-data"
+import { taskService } from "@/services/task-service"
+import { useQuery } from "@tanstack/react-query"
+import { Loader2 } from "lucide-react"
 
-export default function TaskDetailPage() {
-  const params = useParams()
-  const taskKey = params.taskKey as string
+export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
 
-  const allTasks = [...parentTasks, ...subTasks]
-  let task = allTasks.find((t) => t.key === taskKey)
+  const { data: task, isLoading, error } = useQuery({
+      queryKey: ['task', id],
+      queryFn: () => taskService.getById(id)
+  })
 
-  if (task && "parentTaskId" in task) {
-    const parentTask = parentTasks.find((pt) => pt.id === task.parentTaskId)
-    if (parentTask) {
-      task.project = parentTask.project
-    }
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center h-[50vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppShell>
+    )
   }
 
-  if (!task) {
+  if (error || !task) {
     return (
       <AppShell>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <h1 className="text-2xl font-bold">Task Not Found</h1>
-            <p className="text-muted-foreground">The task {taskKey} does not exist.</p>
+            <p className="text-muted-foreground">The task with ID {id} does not exist or could not be loaded.</p>
           </div>
         </div>
       </AppShell>
