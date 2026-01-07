@@ -2,21 +2,24 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ChevronDown, ChevronRight, Clock, AlertTriangle } from "lucide-react"
+import { ChevronDown, ChevronRight, Clock, AlertTriangle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { parentTasks, activities, currentUser } from "@/lib/mock-data"
+import { activities, currentUser } from "@/lib/mock-data"
 import type { ParentTask, SubTask } from "@/lib/types"
+import { useQuery } from "@tanstack/react-query"
+import { taskService } from "@/services/task-service"
 
 const statusColors = {
   todo: "bg-slate-100 text-slate-700",
   "in-progress": "bg-blue-100 text-blue-700",
   done: "bg-green-100 text-green-700",
 }
+// ... (keep rest of imports and constants)
 
 const priorityColors = {
   critical: "bg-red-500 text-white",
@@ -44,7 +47,7 @@ function TaskRow({ task }: { task: ParentTask }) {
         </Button>
 
         <div className="flex-1 min-w-0">
-          <Link href={`/tasks/${task.key}`} className="group">
+          <Link href={`/tasks/${task.id}`} className="group">
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs text-muted-foreground group-hover:text-primary group-hover:underline">
                 {task.key}
@@ -89,7 +92,7 @@ function TaskRow({ task }: { task: ParentTask }) {
 function SubTaskRow({ subTask }: { subTask: SubTask }) {
   return (
     <Link
-      href={`/tasks/${subTask.key}`}
+      href={`/tasks/${subTask.id}`}
       className="flex items-center gap-4 py-3 px-4 pl-14 hover:bg-accent/50 border-b border-border/50 last:border-0"
     >
       <div className="flex-1 min-w-0">
@@ -120,14 +123,28 @@ function SubTaskRow({ subTask }: { subTask: SubTask }) {
 }
 
 export function MemberView() {
-  const myTasks = parentTasks.filter(
-    (t) => t.assignee?.id === currentUser.id || t.subTasks.some((st) => st.assignee?.id === currentUser.id),
-  )
+  const { data: myTasks, isLoading, error } = useQuery({
+      queryKey: ['myTasks'],
+      queryFn: taskService.getMyTasks
+  })
 
-  const overdueTasks = parentTasks.filter((t) => {
+  // TODO: Add overdue tasks logic when backend supports due date filtering or do it client side
+  const overdueTasks = myTasks ? myTasks.filter((t) => {
     if (!t.dueDate) return false
     return new Date(t.dueDate) < new Date() && t.status !== "done"
-  })
+  }) : []
+
+  if (isLoading) {
+      return (
+          <div className="flex h-[200px] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+      )
+  }
+
+  if (error) {
+      return <div>Error loading tasks</div>
+  }
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -138,9 +155,15 @@ export function MemberView() {
             <CardTitle>My Work - Task Hierarchy</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {parentTasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
+            {!myTasks || myTasks.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                    You have no tasks assigned.
+                </div>
+            ) : (
+                myTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} />
+                ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -197,7 +220,7 @@ export function MemberView() {
                 {overdueTasks.map((task) => (
                   <Link
                     key={task.id}
-                    href={`/tasks/${task.key}`}
+                    href={`/tasks/${task.id}`}
                     className="block p-3 rounded-lg bg-red-50 hover:bg-red-100 transition-colors"
                   >
                     <div className="flex items-center gap-2">
