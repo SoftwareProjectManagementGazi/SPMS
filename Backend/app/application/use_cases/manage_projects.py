@@ -8,14 +8,14 @@ class CreateProjectUseCase:
     def __init__(self, project_repo: IProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, dto: ProjectCreateDTO, owner_id: int) -> ProjectResponseDTO:
+    async def execute(self, dto: ProjectCreateDTO, manager_id: int) -> ProjectResponseDTO:
         new_project = Project(
             name=dto.name,
             description=dto.description,
             start_date=dto.start_date,
             end_date=dto.end_date,
             methodology=dto.methodology,
-            owner_id=owner_id
+            manager_id=manager_id
         )
         created_project = await self.project_repo.create(new_project)
         return ProjectResponseDTO.model_validate(created_project)
@@ -24,18 +24,18 @@ class ListProjectsUseCase:
     def __init__(self, project_repo: IProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, owner_id: int) -> List[ProjectResponseDTO]:
-        projects = await self.project_repo.get_all(owner_id)
+    async def execute(self, manager_id: int) -> List[ProjectResponseDTO]:
+        projects = await self.project_repo.get_all(manager_id)
         return [ProjectResponseDTO.model_validate(p) for p in projects]
 
 class GetProjectUseCase:
     def __init__(self, project_repo: IProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, project_id: int, owner_id: int) -> ProjectResponseDTO:
+    async def execute(self, project_id: int, manager_id: int) -> ProjectResponseDTO:
         project = await self.project_repo.get_by_id(project_id)
         # Check ownership or existence
-        if not project or project.owner_id != owner_id:
+        if not project or project.manager_id != manager_id:
              # For security, we might want to return 404 even if it exists but belongs to another
             raise ProjectNotFoundError(project_id)
         return ProjectResponseDTO.model_validate(project)
@@ -44,9 +44,9 @@ class UpdateProjectUseCase:
     def __init__(self, project_repo: IProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, project_id: int, dto: ProjectUpdateDTO, owner_id: int) -> ProjectResponseDTO:
+    async def execute(self, project_id: int, dto: ProjectUpdateDTO, manager_id: int) -> ProjectResponseDTO:
         project = await self.project_repo.get_by_id(project_id)
-        if not project or project.owner_id != owner_id:
+        if not project or project.manager_id != manager_id:
             raise ProjectNotFoundError(project_id)
         
         # Update fields
@@ -60,9 +60,9 @@ class DeleteProjectUseCase:
     def __init__(self, project_repo: IProjectRepository):
         self.project_repo = project_repo
 
-    async def execute(self, project_id: int, owner_id: int) -> None:
+    async def execute(self, project_id: int, manager_id: int) -> None:
         project = await self.project_repo.get_by_id(project_id)
-        if not project or project.owner_id != owner_id:
+        if not project or project.manager_id != manager_id:
             raise ProjectNotFoundError(project_id)
         
         await self.project_repo.delete(project_id)

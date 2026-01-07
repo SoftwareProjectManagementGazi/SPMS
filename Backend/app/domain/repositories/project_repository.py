@@ -12,7 +12,7 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all(self, owner_id: int) -> List[Project]:
+    async def get_all(self, manager_id: int) -> List[Project]:
         pass
 
     @abstractmethod

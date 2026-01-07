@@ -19,7 +19,6 @@ class CreateTaskUseCase:
         new_task = Task(
             title=dto.title,
             description=dto.description,
-            status=dto.status,
             priority=dto.priority,
             due_date=dto.due_date,
             project_id=dto.project_id,
@@ -59,7 +58,7 @@ class UpdateTaskUseCase:
         if not project:
              raise TaskNotFoundError(task_id) # Should be ProjectNotFound but leaking existence
 
-        is_owner = project.owner_id == user_id
+        is_owner = project.manager_id == user_id
         is_assignee = task.assignee_id == user_id
 
         if not (is_owner or is_assignee):
@@ -90,7 +89,7 @@ class DeleteTaskUseCase:
         # Let's restrict DELETE to Owner, UPDATE to Owner + Assignee.
         
         project = await self.project_repo.get_by_id(task.project_id)
-        if not project or project.owner_id != user_id:
+        if not project or project.manager_id != user_id:
              raise TaskNotFoundError(task_id)
         
         await self.task_repo.delete(task_id)
