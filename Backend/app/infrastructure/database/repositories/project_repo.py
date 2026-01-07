@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, or_
 from app.domain.entities.project import Project
 from app.domain.repositories.project_repository import IProjectRepository
 from app.infrastructure.database.models.project import ProjectModel
@@ -29,10 +29,28 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_all(self, manager_id: int) -> List[Project]:
-        stmt = select(ProjectModel).where(ProjectModel.manager_id == manager_id)
+    async def get_by_id_and_user(self, project_id: int, user_id: int) -> Optional[Project]:
+        stmt = select(ProjectModel).where(
+            ProjectModel.id == project_id,
+            or_(
+                ProjectModel.manager_id == user_id,
+                ProjectModel.members.any(id=user_id)
+            )
+        )
         result = await self.session.execute(stmt)
-        models = result.scalars().all()
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def get_all(self, manager_id: int) -> List[Project]:
+        # Fetch projects where user is manager OR a member
+        stmt = select(ProjectModel).where(
+            or_(
+                ProjectModel.manager_id == manager_id,
+                ProjectModel.members.any(id=manager_id)
+            )
+        )
+        result = await self.session.execute(stmt)
+        models = result.scalars().unique().all() # unique() is important for joins/relationships
         return [self._to_entity(m) for m in models]
 
     async def update(self, project: Project) -> Project:
