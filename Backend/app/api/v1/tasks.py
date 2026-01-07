@@ -6,6 +6,7 @@ from app.application.use_cases.manage_tasks import (
     CreateTaskUseCase,
     ListProjectTasksUseCase,
     ListMyTasksUseCase,
+    GetTaskUseCase,
     UpdateTaskUseCase,
     DeleteTaskUseCase
 )
@@ -45,6 +46,18 @@ async def list_my_tasks(
 ):
     use_case = ListMyTasksUseCase(task_repo)
     return await use_case.execute(current_user.id) # type: ignore
+
+@router.get("/{task_id}", response_model=TaskResponseDTO)
+async def get_task(
+    task_id: int,
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        use_case = GetTaskUseCase(task_repo)
+        return await use_case.execute(task_id)
+    except TaskNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 @router.put("/{task_id}", response_model=TaskResponseDTO)
 async def update_task(
