@@ -1,401 +1,346 @@
 import logging
 import random
-from datetime import date, timedelta
+import json
+from datetime import date, timedelta, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload
 
+# --- Modeller ---
 from app.infrastructure.database.models.role import RoleModel
 from app.infrastructure.database.models.user import UserModel
-from app.infrastructure.database.models.project import ProjectModel, Methodology, project_members
+from app.infrastructure.database.models.project import ProjectModel, Methodology
 from app.infrastructure.database.models.board_column import BoardColumnModel
 from app.infrastructure.database.models.sprint import SprintModel
 from app.infrastructure.database.models.task import TaskModel, TaskPriority
 from app.infrastructure.database.models.comment import CommentModel
 from app.infrastructure.database.models.notification import NotificationModel, NotificationType
+from app.infrastructure.database.models.log import LogModel
+from app.infrastructure.database.models.label import LabelModel
+
 from app.infrastructure.security import get_password_hash
 
 logger = logging.getLogger(__name__)
 
-# --- Constants & Data ---
+# --- Sabit Veriler ---
 
 INITIAL_ROLES = [
-    {"name": "Admin", "description": "Administrator with full access"},
-    {"name": "Project Manager", "description": "Manages projects and teams"},
-    {"name": "Member", "description": "Project member can view and work on tasks"},
+    {"name": "Admin", "description": "Sistem yöneticisi, tam yetkili."},
+    {"name": "Project Manager", "description": "Proje yöneticisi, ekip ve süreç yönetimi."},
+    {"name": "Member", "description": "Ekip üyesi, görev üzerinde çalışır."},
 ]
 
 USERS_DATA = [
-    {
-        "email": "admin@spms.com",
-        "password": "admin",
-        "full_name": "System Administrator",
-        "role": "Admin",
-        "avatar": "https://i.pravatar.cc/150?u=admin"
-    },
-    {
-        "email": "manager@spms.com",
-        "password": "password",
-        "full_name": "Alice Manager",
-        "role": "Project Manager",
-        "avatar": "https://i.pravatar.cc/150?u=alice"
-    },
-    {
-        "email": "dev@spms.com",
-        "password": "password",
-        "full_name": "Bob Developer",
-        "role": "Member",
-        "avatar": "https://i.pravatar.cc/150?u=bob"
-    },
-    {
-        "email": "qa@spms.com",
-        "password": "password",
-        "full_name": "Charlie Tester",
-        "role": "Member",
-        "avatar": "https://i.pravatar.cc/150?u=charlie"
-    },
-    # Additional Users
-    {"email": "david.lee@spms.com", "password": "password", "full_name": "David Lee", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=david"},
-    {"email": "emma.white@spms.com", "password": "password", "full_name": "Emma White", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=emma"},
-    {"email": "frank.wright@spms.com", "password": "password", "full_name": "Frank Wright", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=frank"},
-    {"email": "grace.green@spms.com", "password": "password", "full_name": "Grace Green", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=grace"},
-    {"email": "henry.black@spms.com", "password": "password", "full_name": "Henry Black", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=henry"},
-    {"email": "isabel.grey@spms.com", "password": "password", "full_name": "Isabel Grey", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=isabel"},
-    {"email": "jack.brown@spms.com", "password": "password", "full_name": "Jack Brown", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=jack"},
-    {"email": "karen.davis@spms.com", "password": "password", "full_name": "Karen Davis", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=karen"},
-    {"email": "leo.wilson@spms.com", "password": "password", "full_name": "Leo Wilson", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=leo"},
-    {"email": "mia.thomas@spms.com", "password": "password", "full_name": "Mia Thomas", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=mia"},
+    {"email": "admin@spms.com", "full_name": "Sistem Yöneticisi", "role": "Admin", "avatar": "https://i.pravatar.cc/150?u=admin"},
+    {"email": "ayse.oz@gazi.edu.tr", "full_name": "Ayşe Öz", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=ayse"},
+    {"email": "yusuf.bayrakci@gazi.edu.tr", "full_name": "Yusuf Emre Bayrakcı", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=yusuf"},
+    {"email": "mehmet.yilmaz@firma.com", "full_name": "Mehmet Yılmaz", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=mehmet"},
+    {"email": "zeynep.kaya@firma.com", "full_name": "Zeynep Kaya", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=zeynep"},
+    {"email": "ali.demir@firma.com", "full_name": "Ali Demir", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=ali"},
+    {"email": "elif.celik@firma.com", "full_name": "Elif Çelik", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=elif"},
+    {"email": "can.yildiz@firma.com", "full_name": "Can Yıldız", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=can"},
 ]
 
 PROJECTS_DATA = [
     {
-        "name": "E-Commerce Revamp",
-        "key": "ECM",
-        "description": "Modernizing the main e-commerce platform.",
+        "name": "SPMS Geliştirme",
+        "key": "SPMS",
+        "description": "Yazılım Proje Yönetim Sistemi'nin backend ve frontend geliştirmeleri.",
         "methodology": Methodology.SCRUM,
-        "manager_email": "manager@spms.com",
-        "members": ["dev@spms.com", "qa@spms.com", "david.lee@spms.com", "emma.white@spms.com", "frank.wright@spms.com"]
+        "manager_email": "ayse.oz@gazi.edu.tr",
+        "labels": ["Backend", "Frontend", "Database", "Bug", "Refactor"]
     },
     {
-        "name": "Internal Tools",
-        "key": "INT",
-        "description": "Maintenance of internal HR and Finance tools.",
+        "name": "E-Ticaret Mobil App",
+        "key": "MOB",
+        "description": "Müşteriler için iOS ve Android tabanlı mobil alışveriş uygulaması.",
         "methodology": Methodology.KANBAN,
-        "manager_email": "grace.green@spms.com",
-        "members": ["dev@spms.com", "henry.black@spms.com", "isabel.grey@spms.com", "jack.brown@spms.com"]
+        "manager_email": "yusuf.bayrakci@gazi.edu.tr",
+        "labels": ["UI/UX", "API", "iOS", "Android", "Critical"]
     },
     {
-        "name": "Legacy Migration",
-        "key": "LEG",
-        "description": "Moving legacy data to the new cloud infrastructure.",
+        "name": "Veri Ambarı Göçü",
+        "key": "DATA",
+        "description": "Eski Oracle veritabanından PostgreSQL sistemine veri taşıma ve temizleme projesi.",
         "methodology": Methodology.WATERFALL,
-        "manager_email": "manager@spms.com",
-        "members": ["qa@spms.com", "karen.davis@spms.com", "leo.wilson@spms.com", "mia.thomas@spms.com"]
+        "manager_email": "ayse.oz@gazi.edu.tr",
+        "labels": ["ETL", "Validation", "Script", "Schema"]
+    },
+    {
+        "name": "Yapay Zeka Modülü",
+        "key": "AI",
+        "description": "Proje tahminlemeleri için makine öğrenmesi modülünün entegrasyonu.",
+        "methodology": Methodology.SCRUM,
+        "manager_email": "yusuf.bayrakci@gazi.edu.tr",
+        "labels": ["ML", "Python", "Training", "Integration"]
     }
 ]
 
-# --- Seeder Functions ---
+# Gerçekçi görev içerikleri üretmek için şablonlar
+PARENT_TASK_TEMPLATES = [
+    ("Kullanıcı Oturum Yönetimi", "Sisteme güvenli giriş, kayıt olma, şifre sıfırlama ve JWT token altyapısının kurulmasını kapsar."),
+    ("Ödeme Sistemi Entegrasyonu", "Stripe ve Iyzico sanal pos entegrasyonlarının yapılması ve güvenli ödeme sayfasının hazırlanması."),
+    ("Raporlama Dashboard'u", "Yöneticiler için grafiksel raporların sunulduğu, chart.js kullanılan panelin geliştirilmesi."),
+    ("Bildirim Altyapısı", "WebSocket üzerinden gerçek zamanlı bildirimlerin ve e-posta servisinin kurgulanması."),
+    ("Profil Sayfaları", "Kullanıcıların kendi bilgilerini güncelleyebileceği ve avatar yükleyebileceği ekranlar."),
+    ("Arama ve Filtreleme", "Proje genelinde detaylı arama (Elasticsearch) ve filtreleme özelliklerinin backend desteği."),
+    ("Performans Optimizasyonu", "Veritabanı sorgularının optimize edilmesi ve Redis önbellekleme mekanizmasının kurulması."),
+    ("API Dokümantasyonu", "Swagger/OpenAPI kullanılarak tüm endpointlerin detaylı dokümante edilmesi.")
+]
+
+SUBTASK_PREFIXES = ["Analiz", "Tasarım", "Geliştirme", "Unit Test", "Entegrasyon", "Code Review", "Bug Fix"]
+
+COMMENT_TEXTS = [
+    "Bu konuda biraz daha detaya ihtiyacım var.",
+    "Tasarım ekibiyle görüştüm, revize bekliyoruz.",
+    "API endpoint'i hazır, test edebilirsiniz.",
+    "Pull Request açıldı, inceleme bekliyor.",
+    "Gecikme için üzgünüm, yarına tamamlanacak.",
+    "Harika iş, ellerine sağlık!"
+]
+
+# --- Yardımcı Fonksiyonlar ---
+
+def get_random_date(start_days_ago=60, end_days_ago=0):
+    days = random.randint(end_days_ago, start_days_ago)
+    return datetime.now() - timedelta(days=days)
 
 async def seed_data(session: AsyncSession):
-    """
-    Orchestrates the seeding process.
-    """
     try:
-        logger.info("Starting database seed...")
+        # Check if data already exists to prevent duplication
+        result = await session.execute(select(UserModel).limit(1))
+        if result.scalars().first():
+            logger.info("SEEDER: Veritabanı zaten dolu, işlem atlanıyor.")
+            return
+
+        logger.info("SEEDER: Veritabanı dolumu başlatılıyor...")
         
         roles_map = await seed_roles(session)
         users_map = await seed_users(session, roles_map)
         projects_map = await seed_projects(session, users_map)
         
-        await seed_scrum_details(session, projects_map, users_map)
-        await seed_kanban_details(session, projects_map, users_map)
-        await seed_waterfall_details(session, projects_map, users_map)
+        await seed_scrum_details(session, projects_map["SPMS"], users_map)
+        await seed_kanban_details(session, projects_map["MOB"], users_map)
+        await seed_waterfall_details(session, projects_map["DATA"], users_map)
+        await seed_scrum_details(session, projects_map["AI"], users_map)
         
         await session.commit()
-        logger.info("Database seeding completed successfully.")
-
+        logger.info("SEEDER: İşlem başarıyla tamamlandı.")
     except Exception as e:
-        logger.error(f"Error seeding database: {e}")
+        logger.error(f"SEEDER HATASI: {e}")
         await session.rollback()
         raise
 
-async def seed_roles(session: AsyncSession):
-    logger.info("Seeding roles...")
-    result = await session.execute(select(RoleModel))
-    existing_roles = result.scalars().all()
-    roles_map = {r.name: r for r in existing_roles}
+# --- Temel Veri Fonksiyonları ---
 
-    for role_data in INITIAL_ROLES:
-        if role_data["name"] not in roles_map:
-            new_role = RoleModel(name=role_data["name"], description=role_data["description"])
-            session.add(new_role)
-            roles_map[role_data["name"]] = new_role
-    
-    await session.flush() # Ensure IDs are generated
+async def seed_roles(session: AsyncSession):
+    logger.info("... Roller oluşturuluyor")
+    result = await session.execute(select(RoleModel))
+    roles_map = {r.name: r for r in result.scalars().all()}
+    for r_data in INITIAL_ROLES:
+        if r_data["name"] not in roles_map:
+            role = RoleModel(name=r_data["name"], description=r_data["description"])
+            session.add(role)
+            roles_map[r_data["name"]] = role
+    await session.flush()
     return roles_map
 
 async def seed_users(session: AsyncSession, roles_map):
-    logger.info("Seeding users...")
+    logger.info("... Kullanıcılar oluşturuluyor")
     result = await session.execute(select(UserModel))
-    existing_users = result.scalars().all()
-    users_map = {u.email: u for u in existing_users}
-
-    for user_data in USERS_DATA:
-        if user_data["email"] not in users_map:
-            role = roles_map.get(user_data["role"])
-            if not role:
-                logger.warning(f"Role {user_data['role']} not found for user {user_data['email']}. Skipping.")
-                continue
-
-            new_user = UserModel(
-                email=user_data["email"],
-                password_hash=get_password_hash(user_data["password"]),
-                full_name=user_data["full_name"],
+    users_map = {u.email: u for u in result.scalars().all()}
+    for u_data in USERS_DATA:
+        if u_data["email"] not in users_map:
+            role = roles_map.get(u_data["role"])
+            user = UserModel(
+                email=u_data["email"],
+                password_hash=get_password_hash("123456"),
+                full_name=u_data["full_name"],
                 is_active=True,
                 role_id=role.id,
-                avatar=user_data["avatar"]
+                avatar=u_data["avatar"]
             )
-            session.add(new_user)
-            users_map[user_data["email"]] = new_user
-    
+            session.add(user)
+            users_map[u_data["email"]] = user
     await session.flush()
     return users_map
 
 async def seed_projects(session: AsyncSession, users_map):
-    logger.info("Seeding projects...")
+    logger.info("... Projeler oluşturuluyor")
     result = await session.execute(select(ProjectModel))
-    existing_projects = result.scalars().all()
-    projects_map = {p.key: p for p in existing_projects}
+    projects_map = {p.key: p for p in result.scalars().all()}
+    all_users = list(users_map.values())
 
     for p_data in PROJECTS_DATA:
         if p_data["key"] not in projects_map:
             manager = users_map.get(p_data["manager_email"])
-            new_project = ProjectModel(
+            project = ProjectModel(
                 name=p_data["name"],
                 key=p_data["key"],
                 description=p_data["description"],
                 methodology=p_data["methodology"],
                 manager_id=manager.id if manager else None,
-                start_date=date.today(),
+                start_date=date.today() - timedelta(days=30),
                 end_date=date.today() + timedelta(days=90)
             )
+            # Rastgele 4-6 üye ata
+            members = random.sample(all_users, k=min(len(all_users), random.randint(4, 6)))
+            if manager and manager not in members: members.append(manager)
+            project.members.extend(members)
             
-            # Add members
-            if manager:
-                 new_project.members.append(manager)
-                 
-            for member_email in p_data["members"]:
-                member = users_map.get(member_email)
-                if member:
-                    new_project.members.append(member)
-            
-            session.add(new_project)
-            projects_map[p_data["key"]] = new_project
+            session.add(project)
+            projects_map[p_data["key"]] = project
+            await session.flush()
+
+            # Etiketler
+            for lbl in p_data["labels"]:
+                color = f"#{random.randint(0, 0xFFFFFF):06x}"
+                session.add(LabelModel(project_id=project.id, name=lbl, color=color))
     
     await session.flush()
     return projects_map
 
-async def generate_tasks(session: AsyncSession, project: ProjectModel, sprints: list, col_map: dict):
-    """
-    Generates random tasks for a project, including parent-child relationships.
-    """
-    # Check if tasks already exist to avoid duplication on re-seed
-    res = await session.execute(select(TaskModel).where(TaskModel.project_id == project.id))
-    if res.scalars().first():
-        logger.info(f"Tasks already exist for project {project.key}. Skipping task generation.")
-        return
+# --- Görev Üretim Mantığı (Hiyerarşik) ---
 
-    # Reload project members to ensure we have access
+async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectModel, sprints: list, col_map: dict):
+    logger.info(f"   -> Görevler üretiliyor: {project.name}")
+    
+    # Gerekli verileri çek
     await session.refresh(project, attribute_names=['members'])
     members = project.members
-    if not members:
-        logger.warning(f"No members found for project {project.key}. Cannot assign tasks.")
-        return
-
-    priorities = [TaskPriority.LOW, TaskPriority.MEDIUM, TaskPriority.HIGH]
+    lbl_res = await session.execute(select(LabelModel).where(LabelModel.project_id == project.id))
+    labels = lbl_res.scalars().all()
     col_names = list(col_map.keys())
 
-    # Generate 4-5 Parent Tasks
-    num_parents = random.randint(4, 5)
-    
+    # Parent Task Loop (6-7 adet)
+    num_parents = random.randint(6, 7)
     for i in range(num_parents):
-        parent_title = f"{project.key} Feature {i+1}"
-        reporter = random.choice(members)
-        assignee = random.choice(members)
+        template = PARENT_TASK_TEMPLATES[i % len(PARENT_TASK_TEMPLATES)]
+        p_title = f"{template[0]} ({project.key})"
+        p_desc = template[1]
         
-        # Randomly assign sprint if available
-        sprint_id = random.choice(sprints).id if sprints else None
-        
-        # Randomly assign column (bias towards initial columns for parents?)
-        # Let's just pick random.
-        col_name = random.choice(col_names)
-        
+        # Parent genellikle Backlog veya Todo'da durur, ama bazen ilerlemiş olabilir
+        p_status_name = random.choice(col_names[:3]) # İlk 3 kolon
+        p_col = col_map[p_status_name]
+        p_assignee = random.choice(members)
+        p_sprint = random.choice(sprints) if sprints and project.methodology == Methodology.SCRUM else None
+
         parent_task = TaskModel(
             project_id=project.id,
-            sprint_id=sprint_id,
-            column_id=col_map[col_name].id,
-            title=parent_title,
-            description=f"High-level requirements for {parent_title}. This is a parent task.",
-            priority=random.choice(priorities),
-            points=random.randint(5, 13),
-            assignee_id=assignee.id,
-            reporter_id=reporter.id,
-            parent_task_id=None
+            sprint_id=p_sprint.id if p_sprint else None,
+            column_id=p_col.id,
+            assignee_id=p_assignee.id,
+            reporter_id=project.manager_id,
+            title=p_title,
+            description=f"## Genel Bakış\n{p_desc}\n\nBu ana görev, altındaki iş kalemlerinin tamamlanmasıyla bitecektir.",
+            priority=random.choice([TaskPriority.HIGH, TaskPriority.CRITICAL]),
+            points=random.choice([13, 21, 34]), # Epic puanları yüksek olur
+            due_date=datetime.now() + timedelta(days=30),
+            created_at=get_random_date(start_days_ago=45, end_days_ago=30)
         )
         session.add(parent_task)
-        await session.flush() # Flush to get ID for subtasks
+        await session.flush() # ID al
 
-        # Generate 2-6 Subtasks
-        num_subs = random.randint(2, 6)
+        # Subtask Loop (2-7 adet)
+        num_subs = random.randint(2, 7)
         for j in range(num_subs):
-            sub_title = f"{parent_title} - Subtask {j+1}"
-            sub_assignee = random.choice(members)
-            sub_reporter = random.choice(members)
+            prefix = SUBTASK_PREFIXES[j % len(SUBTASK_PREFIXES)]
+            s_title = f"{prefix}: {template[0]} - Parça {j+1}"
             
+            # Subtask'lar daha dağınık olabilir
+            s_status_name = random.choice(col_names)
+            s_col = col_map[s_status_name]
+            s_assignee = random.choice(members)
+            
+            # Subtask sprint'i parent ile aynı veya farklı olabilir (genelde aynı olur)
+            s_sprint = p_sprint if p_sprint else (random.choice(sprints) if sprints else None)
+
             sub_task = TaskModel(
                 project_id=project.id,
-                sprint_id=sprint_id, # Inherit sprint
-                column_id=col_map[random.choice(col_names)].id, # Random column
-                title=sub_title,
-                description=f"Implementation details for {sub_title}.",
-                priority=random.choice(priorities),
-                points=random.randint(1, 5),
-                assignee_id=sub_assignee.id,
-                reporter_id=sub_reporter.id,
-                parent_task_id=parent_task.id
+                sprint_id=s_sprint.id if s_sprint else None,
+                column_id=s_col.id,
+                assignee_id=s_assignee.id,
+                reporter_id=p_assignee.id,
+                parent_task_id=parent_task.id,
+                title=s_title,
+                description=f"### İş Tanımı\n{template[0]} kapsamında yapılacak {prefix} çalışmaları.\n\n- [ ] Gereksinimleri kontrol et\n- [ ] Kodlamayı yap\n- [ ] Test et",
+                priority=random.choice(list(TaskPriority)),
+                points=random.choice([1, 2, 3, 5, 8]),
+                due_date=datetime.now() + timedelta(days=random.randint(-5, 15)),
+                created_at=get_random_date(start_days_ago=25, end_days_ago=5)
             )
             session.add(sub_task)
-            
-            # Add a random comment occasionally
-            if random.random() > 0.7:
-                comment = CommentModel(
-                    task_id=sub_task.id, # Needs flush? No, relationship or flush. We'll flush batch later or rely on session.
-                    # Wait, if we don't flush sub_task, sub_task.id is None.
-                    # We can't set task_id directly if None.
-                    # But we can assume session.add(sub_task) will get ID on next flush/commit?
-                    # No, for FK assignment we need ID or object relationship.
-                    # Since CommentModel uses task_id, we need ID.
-                    # Let's just skip comments inside this loop to avoid excessive flushing.
-                    pass
-                )
+            await session.flush()
 
+            # Detaylar: Etiket, Log, Yorum
+            if labels:
+                # Many-to-Many ilişkisi seeder'da zor olabilir, varsa ekle (TaskModel'de relationship tanimliysa)
+                # sub_task.labels.append(random.choice(labels)) 
+                pass
+            
+            # LOG (Create)
+            session.add(LogModel(
+                project_id=project.id, task_id=sub_task.id, user_id=sub_task.reporter_id,
+                action="CREATE", changes=json.dumps({"status": "Open"}), timestamp=sub_task.created_at
+            ))
+
+            # LOG (Status Change - Eğer ilerlediyse)
+            if s_status_name not in ["Backlog", "To Do", "Gereksinim"]:
+                session.add(LogModel(
+                    project_id=project.id, task_id=sub_task.id, user_id=sub_task.assignee_id,
+                    action="STATUS_CHANGE", changes=json.dumps({"new_status": s_status_name}),
+                    timestamp=datetime.now() - timedelta(days=random.randint(0, 5))
+                ))
+
+            # Yorum (%50 ihtimal)
+            if random.random() > 0.5:
+                session.add(CommentModel(
+                    task_id=sub_task.id, user_id=random.choice(members).id,
+                    content=random.choice(COMMENT_TEXTS), created_at=datetime.now()
+                ))
+
+            # Bildirim (Atama varsa)
+            if sub_task.assignee_id:
+                session.add(NotificationModel(
+                    user_id=sub_task.assignee_id, type=NotificationType.TASK_ASSIGNED,
+                    message=f"Yeni görev atandı: {s_title}", related_entity_id=sub_task.id, is_read=False
+                ))
+
+# --- Metodolojiye Özgü Detaylar ---
+
+async def seed_scrum_details(session: AsyncSession, project, users_map):
+    cols = ["Backlog", "To Do", "In Progress", "Code Review", "Done"]
+    col_map = {}
+    for idx, name in enumerate(cols):
+        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
+        session.add(c)
+        col_map[name] = c
     await session.flush()
 
+    s1 = SprintModel(project_id=project.id, name="Sprint 1", goal="Altyapı", start_date=date.today()-timedelta(days=14), end_date=date.today(), is_active=False)
+    s2 = SprintModel(project_id=project.id, name="Sprint 2", goal="MVP", start_date=date.today(), end_date=date.today()+timedelta(days=14), is_active=True)
+    session.add_all([s1, s2])
+    await session.flush()
 
-async def seed_scrum_details(session: AsyncSession, projects_map, users_map):
-    project = projects_map.get("ECM")
-    if not project: return
+    await generate_hierarchical_tasks(session, project, [s1, s2], col_map)
 
-    # 1. Columns
-    columns = ["Backlog", "To Do", "In Progress", "Review", "Done"]
+async def seed_kanban_details(session: AsyncSession, project, users_map):
+    col_defs = [("To Do", 0), ("Analiz", 3), ("Geliştirme", 4), ("Test", 2), ("Done", 0)]
     col_map = {}
+    for idx, (name, wip) in enumerate(col_defs):
+        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx, wip_limit=wip)
+        session.add(c)
+        col_map[name] = c
+    await session.flush()
     
-    res = await session.execute(select(BoardColumnModel).where(BoardColumnModel.project_id == project.id))
-    existing_cols = res.scalars().all()
-    
-    if not existing_cols:
-        for idx, col_name in enumerate(columns):
-            col = BoardColumnModel(project_id=project.id, name=col_name, order_index=idx)
-            session.add(col)
-            col_map[col_name] = col
-        await session.flush()
-    else:
-        for col in existing_cols:
-            col_map[col.name] = col
+    await generate_hierarchical_tasks(session, project, [], col_map)
 
-    # 2. Sprints
-    sprints = []
-    res = await session.execute(select(SprintModel).where(SprintModel.project_id == project.id))
-    existing_sprints = res.scalars().all()
-    if not existing_sprints:
-        sprint1 = SprintModel(
-            project_id=project.id, name="Sprint 1", goal="Setup Infrastructure",
-            start_date=date.today(), end_date=date.today() + timedelta(days=14),
-            is_active=True
-        )
-        sprint2 = SprintModel(
-            project_id=project.id, name="Sprint 2", goal="Core Features",
-            start_date=date.today() + timedelta(days=15), end_date=date.today() + timedelta(days=29),
-            is_active=False
-        )
-        session.add_all([sprint1, sprint2])
-        await session.flush()
-        sprints = [sprint1, sprint2]
-    else:
-        sprints = existing_sprints
-
-    # 3. Tasks
-    await generate_tasks(session, project, sprints, col_map)
-    
-    # 4. Add Notification (Sample)
-    # Check if we have tasks now
-    res = await session.execute(select(TaskModel).where(TaskModel.project_id == project.id))
-    task = res.scalars().first()
-    if task and task.assignee_id:
-        # Check if notification exists
-        n_res = await session.execute(select(NotificationModel).where(
-            NotificationModel.user_id == task.assignee_id, 
-            NotificationModel.related_entity_id == task.id
-        ))
-        if not n_res.scalars().first():
-             n1 = NotificationModel(
-                user_id=task.assignee_id, message=f"You were assigned to '{task.title}'",
-                type=NotificationType.TASK_ASSIGNED, related_entity_id=task.id
-             )
-             session.add(n1)
-
-
-async def seed_kanban_details(session: AsyncSession, projects_map, users_map):
-    project = projects_map.get("INT")
-    if not project: return
-
-    # Columns with WIP
-    col_defs = [
-        {"name": "To Do", "wip": 0},
-        {"name": "In Progress", "wip": 3},
-        {"name": "Testing", "wip": 2},
-        {"name": "Done", "wip": 0}
-    ]
+async def seed_waterfall_details(session: AsyncSession, project, users_map):
+    cols = ["Gereksinim", "Analiz", "Tasarım", "Uygulama", "Test", "Bakım"]
     col_map = {}
-
-    res = await session.execute(select(BoardColumnModel).where(BoardColumnModel.project_id == project.id))
-    existing_cols = res.scalars().all()
+    for idx, name in enumerate(cols):
+        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
+        session.add(c)
+        col_map[name] = c
+    await session.flush()
     
-    if not existing_cols:
-        for idx, c_def in enumerate(col_defs):
-            col = BoardColumnModel(
-                project_id=project.id, name=c_def["name"], 
-                order_index=idx, wip_limit=c_def["wip"]
-            )
-            session.add(col)
-            col_map[c_def["name"]] = col
-        await session.flush()
-    else:
-         for col in existing_cols:
-            col_map[col.name] = col
-    
-    # Tasks
-    await generate_tasks(session, project, [], col_map)
-
-async def seed_waterfall_details(session: AsyncSession, projects_map, users_map):
-    project = projects_map.get("LEG")
-    if not project: return
-    
-    columns = ["Requirements", "Design", "Implementation", "Verification", "Maintenance"]
-    col_map = {}
-    
-    res = await session.execute(select(BoardColumnModel).where(BoardColumnModel.project_id == project.id))
-    existing_cols = res.scalars().all()
-    
-    if not existing_cols:
-        for idx, col_name in enumerate(columns):
-            col = BoardColumnModel(project_id=project.id, name=col_name, order_index=idx)
-            session.add(col)
-            col_map[col_name] = col
-        await session.flush()
-    else:
-        for col in existing_cols:
-            col_map[col.name] = col
-            
-    # Tasks
-    await generate_tasks(session, project, [], col_map)
+    await generate_hierarchical_tasks(session, project, [], col_map)

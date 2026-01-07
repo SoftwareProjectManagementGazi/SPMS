@@ -112,12 +112,12 @@ CREATE TABLE notifications (
 CREATE TABLE logs (
     id SERIAL PRIMARY KEY,
     project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL, 
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- İşlemi yapan
     action VARCHAR(100) NOT NULL, -- "TASK_UPDATED", "SPRINT_CREATED" vb.
     changes JSONB, -- Değişiklik detayları (Eski/Yeni değer) JSON formatında
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
 -- 11. DOSYA VE ETİKETLER (ER Diyagramına göre ekler)
 CREATE TABLE files (
     id SERIAL PRIMARY KEY,
