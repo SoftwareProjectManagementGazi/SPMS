@@ -77,7 +77,8 @@ async def test_register_user_already_exists():
         id=1,
         email="existing@example.com",
         password_hash="hashed_pw",
-        full_name="Existing User"
+        full_name="Existing User",
+        is_active=True
     )
     user_repo.users[1] = existing_user
 
