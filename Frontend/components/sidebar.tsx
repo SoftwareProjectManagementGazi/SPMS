@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { currentUser } from "@/lib/mock-data"
+import { useAuth } from "@/context/auth-context"
 
 interface SidebarProps {
   collapsed: boolean
@@ -30,6 +30,9 @@ const navItems = [
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
+  const { user } = useAuth()
+
+  if (!user) return null // Or a skeleton loader if preferred, but Sidebar usually renders when auth is ready or layout handles it.
 
   return (
     <aside
@@ -78,9 +81,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className={cn("border-t border-sidebar-border p-3", collapsed ? "flex justify-center" : "")}>
         <div className={cn("flex items-center gap-3", collapsed && "flex-col")}>
           <Avatar className="h-9 w-9">
-            <AvatarImage src={currentUser.avatar || "/placeholder.svg"} alt={currentUser.name} />
+            <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
             <AvatarFallback>
-              {currentUser.name
+              {user.name
                 .split(" ")
                 .map((n) => n[0])
                 .join("")}
@@ -88,9 +91,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Avatar>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-sidebar-foreground">{currentUser.name}</span>
+              <span className="text-sm font-medium text-sidebar-foreground">{user.name}</span>
               <span className="text-xs text-sidebar-foreground/60">
-                {currentUser.role === "manager" ? "Manager" : "Member"}
+                {typeof user.role === 'string' ? user.role : user.role?.name || "Member"}
               </span>
             </div>
           )}
