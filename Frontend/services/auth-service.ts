@@ -17,6 +17,10 @@ interface UserResponseDTO {
     email: string
     full_name: string
     is_active: boolean
+    role?: {
+        name: string
+        description?: string
+    }
 }
 
 export const authService = {
@@ -28,12 +32,17 @@ export const authService = {
   getCurrentUser: async (): Promise<User> => {
       const response = await apiClient.get<UserResponseDTO>('/auth/me');
       const data = response.data;
+      
       return {
           id: data.id.toString(),
           name: data.full_name,
           email: data.email,
-          avatar: "/placeholder-user.jpg", // Default placeholder
-          role: "member" // Default role
+          avatar: "/placeholder-user.jpg",
+          // DİNAMİK ROL ATAMASI
+          role: data.role ? { 
+              name: data.role.name, 
+              description: data.role.description 
+          } : { name: "Member" } // Güvenlik ağı: Backend rol dönmezse varsayılan
       };
   },
 

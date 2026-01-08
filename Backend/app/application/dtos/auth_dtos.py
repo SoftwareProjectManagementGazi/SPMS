@@ -1,5 +1,10 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
+class RoleDTO(BaseModel):
+    name: str
+    description: Optional[str] = None
+    
 class UserRegisterDTO(BaseModel):
     email: EmailStr
     password: str
@@ -18,3 +23,7 @@ class UserResponseDTO(BaseModel):
     email: EmailStr
     full_name: str
     is_active: bool
+    role: Optional[RoleDTO] = None  
+
+    class Config:
+        from_attributes = True # ORM nesnelerini Pydantic'e çevirmek için şart

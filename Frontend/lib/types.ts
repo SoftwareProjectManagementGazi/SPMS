@@ -3,12 +3,17 @@ export type TaskPriority = "critical" | "high" | "medium" | "low"
 export type TaskType = "task" | "sub-task" | "bug"
 export type Methodology = "scrum" | "kanban" | "waterfall"
 
+export interface Role {
+  name: string;
+  description?: string
+}
+
 export interface User {
   id: string
   name: string
   email: string
   avatar: string
-  role: "manager" | "member"
+  role: Role
 }
 
 export interface Project {
