@@ -4,6 +4,7 @@ from sqlalchemy import select, delete, or_
 from app.domain.entities.project import Project
 from app.domain.repositories.project_repository import IProjectRepository
 from app.infrastructure.database.models.project import ProjectModel
+from app.infrastructure.database.models.user import UserModel
 from sqlalchemy.orm import joinedload
 
 class SqlAlchemyProjectRepository(IProjectRepository):
@@ -42,7 +43,10 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             .options(joinedload(ProjectModel.columns)) # <-- BU SATIR EKLENDİ
             .where(
                 ProjectModel.id == project_id,
-                ProjectModel.manager_id == user_id
+                or_(
+                    ProjectModel.manager_id == user_id,
+                    ProjectModel.members.any(UserModel.id == user_id)
+                )
             )
         )
         result = await self.session.execute(stmt)
@@ -51,11 +55,16 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         return self._to_entity(model) if model else None
 
     async def get_all(self, manager_id: int) -> List[Project]:
-        # GÜNCELLEME: columns ilişkisi yüklendi
+        # GÜNCELLEME: columns ilişkisi yüklendi ve üye olunan projeler de getiriliyor
         stmt = (
             select(ProjectModel)
-            .options(joinedload(ProjectModel.columns)) # <-- BU SATIR EKLENDİ
-            .where(ProjectModel.manager_id == manager_id)
+            .options(joinedload(ProjectModel.columns)) 
+            .where(
+                or_(
+                    ProjectModel.manager_id == manager_id,
+                    ProjectModel.members.any(UserModel.id == manager_id)
+                )
+            )
         )
         result = await self.session.execute(stmt)
         # GÜNCELLEME: .unique() eklendi (joinedload collection olduğu için şart)
