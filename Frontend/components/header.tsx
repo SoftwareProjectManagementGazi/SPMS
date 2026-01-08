@@ -14,39 +14,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useEffect, useState } from "react"
-import { User } from "@/lib/types"
-import { authService } from "@/services/auth-service"
+// import { useEffect, useState } from "react" // Kaldırıldı
+// import { User } from "@/lib/types" // Kaldırıldı
+// import { authService } from "@/services/auth-service" // Kaldırıldı
+import { useAuth } from "@/context/auth-context" // EKLENDİ
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 
 interface HeaderProps {
   onCreateClick: () => void
 }
 
 export function Header({ onCreateClick }: HeaderProps) {
-  const [user, setUser] = useState<User | null>(null)
+  // ÖNCE:
+  // const [user, setUser] = useState<User | null>(null)
+  // useEffect(() => { ...fetchUser... }, [])
+
+  // ŞİMDİ: Merkezi state'i kullan
+  const { user, logout } = useAuth() 
   const router = useRouter()
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userData = await authService.getCurrentUser()
-        setUser(userData)
-      } catch (error) {
-        console.error("Failed to fetch user", error)
-      }
-    }
-    fetchUser()
-  }, [])
-
   const handleLogout = () => {
-    authService.logout()
-    router.push("/login")
+    // authService.logout() // YERİNE:
+    logout() // Context'teki logout'u çağır (state'i sıfırlar ve login'e atar)
+    // router.push("/login") // logout() fonksiyonu içinde zaten redirect varsa buna gerek yok, ama AuthContext'inizde var.
   }
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-6">
+       {/* ... Diğer kısımlar aynı ... */}
       <div className="relative w-full max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search tasks, projects, logs..." className="pl-10 bg-secondary border-0" />
@@ -76,6 +71,7 @@ export function Header({ onCreateClick }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
+                {/* user? ifadesi context'ten gelen veriyi kullanır */}
                 <AvatarImage src={user?.avatar} alt={user?.name} />
                 <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
               </Avatar>
@@ -90,40 +86,15 @@ export function Header({ onCreateClick }: HeaderProps) {
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            {/* ... Menü öğeleri aynı ... */}
+             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push('/settings')}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Profile</span>
                 <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard className="mr-2 h-4 w-4" />
-                <span>Billing</span>
-                <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Keyboard className="mr-2 h-4 w-4" />
-                <span>Keyboard shortcuts</span>
-                <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Team</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <UserPlus className="mr-2 h-4 w-4" />
-                <span>New Team</span>
-                <DropdownMenuShortcut>⌘+T</DropdownMenuShortcut>
-              </DropdownMenuItem>
+               {/* ... */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
