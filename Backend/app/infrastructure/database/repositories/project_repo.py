@@ -22,6 +22,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         model = self._to_model(project)
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit()
         await self.session.refresh(model)
         return self._to_entity(model)
 
@@ -90,6 +91,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             # model.manager_id = project.manager_id 
             
             await self.session.flush()
+            await self.session.commit()
             await self.session.refresh(model)
             return self._to_entity(model)
         return project # Should ideally raise not found, but repo just returns
@@ -97,4 +99,5 @@ class SqlAlchemyProjectRepository(IProjectRepository):
     async def delete(self, project_id: int) -> bool:
         stmt = delete(ProjectModel).where(ProjectModel.id == project_id)
         result = await self.session.execute(stmt)
+        await self.session.commit()
         return result.rowcount > 0

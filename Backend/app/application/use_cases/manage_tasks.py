@@ -40,7 +40,8 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
             title=task.parent.title,
             key=f"{p_key_prefix}-{task.parent.id}",
             status=p_status,
-            project_id=task.parent.project_id
+            project_id=task.parent.project_id,
+            priority=task.parent.priority # Added priority mapping
         )
 
     # 4. Subtasks Mapping (YENİ)
@@ -157,6 +158,19 @@ class UpdateTaskUseCase:
         existing_task = await self.task_repo.get_by_id(task_id)
         if not existing_task:
             raise TaskNotFoundError(f"Task with id {task_id} not found")
+
+        # Business Rule 1: Validate Column ID
+        if dto.column_id is not None:
+            # Projeyi ve columnlarını çek
+            project = await self.project_repo.get_by_id(existing_task.project_id)
+            if not project:
+                 raise ProjectNotFoundError(f"Project {existing_task.project_id} not found")
+            
+            # Column'ın bu projeye ait olup olmadığını kontrol et
+            # project.columns bir liste objesi (BoardColumn entity) döner
+            valid_column_ids = [c.id for c in project.columns]
+            if dto.column_id not in valid_column_ids:
+                raise ValueError(f"Column {dto.column_id} does not belong to project {existing_task.project_id}")
 
         update_data = dto.model_dump(exclude_unset=True)
         updated_task = await self.task_repo.update(task_id, update_data)

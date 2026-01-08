@@ -59,7 +59,7 @@ function buildTaskHierarchy(tasks: ParentTask[]) {
           parentTaskId: null,
           subTasks: [],
           project: t.project || { id: t.parentSummary.projectId, name: "Unknown Project", key: "UNK" },
-          priority: "MEDIUM", // DÜZELTME: "medium" -> "MEDIUM"
+          priority: t.parentSummary.priority || "MEDIUM", 
           description: "",
           points: 0,
           createdAt: new Date().toISOString(),

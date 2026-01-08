@@ -54,6 +54,7 @@ export interface ParentTask {
   title: string
   description: string
   status: string
+  columnId?: string // YENİ: Status update için gerekli
   priority: TaskPriority
   
   assignee: User | null
@@ -69,6 +70,7 @@ export interface ParentTask {
       key: string;
       status: string;
       projectId: string;
+      priority: TaskPriority; // YENİ: Priority eklendi
   } | null;
 
   // Backend'den gelen 'sub_tasks' buraya map edilecek
