@@ -13,7 +13,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
   const { data: task, isLoading, error } = useQuery({
       queryKey: ['task', id],
-      queryFn: () => taskService.getById(id)
+      queryFn: () => taskService.getTask(id)
   })
 
   if (isLoading) {

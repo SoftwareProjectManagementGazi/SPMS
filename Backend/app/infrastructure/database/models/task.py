@@ -31,4 +31,7 @@ class TaskModel(Base):
     column = relationship("BoardColumnModel", backref="tasks")
     assignee = relationship("UserModel", foreign_keys=[assignee_id], backref="assigned_tasks")
     reporter = relationship("UserModel", foreign_keys=[reporter_id], backref="reported_tasks")
-    parent_task = relationship("TaskModel", remote_side=[id], backref="subtasks")
+    
+    # DÜZELTME: İlişki adını 'parent_task' yerine 'parent' yaptık.
+    # Bu sayede hem Repository sorgusu (TaskModel.parent) hem de Entity (task.parent) ile eşleşecek.
+    parent = relationship("TaskModel", remote_side=[id], backref="subtasks")

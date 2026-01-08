@@ -5,20 +5,32 @@ export interface TaskResponseDTO {
     id: number;
     title: string;
     description: string | null;
-    priority: TaskPriority;
+    status: string;
+    priority: any;
     due_date: string | null;
     points: number | null;
     is_recurring: boolean;
-    
     project_id: number;
-    sprint_id: number | null;
-    column_id: number | null;
     assignee_id: number | null;
     reporter_id: number | null;
     parent_task_id: number | null;
     
+    parent_task_summary?: {
+        id: number;
+        title: string;
+        key: string;
+        status: string;
+        project_id: number;
+    } | null;
+
     created_at: string;
     updated_at: string | null;
+
+    project?: {
+        id: number;
+        name: string;
+        key: string;
+    };
 }
 
 export interface CreateTaskDTO {
@@ -27,32 +39,58 @@ export interface CreateTaskDTO {
     priority?: TaskPriority;
     due_date?: string;
     points?: number;
+    status: string;
     project_id: number;
     assignee_id?: number;
 }
 
 const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
-    // Placeholder users until we have a user service/store
     const placeholderUser: User = {
         id: data.assignee_id?.toString() || "0",
         name: "User " + (data.assignee_id || "?"),
         email: "user@example.com",
         avatar: "/placeholder-user.jpg",
-        role: "member"
+        role: { name: "member" }
     };
+
+    // DÜZELTME: Key'i artık elle 'TSK' yazmıyoruz.
+    // Backend'den gelen proje key'ini kullanıyoruz (örn: SPMS, MOB).
+    // Eğer proje bilgisi yoksa fallback olarak 'TASK' kullanıyoruz.
+    const projectKey = data.project?.key || "TASK";
 
     return {
         id: data.id.toString(),
-        key: `TSK-${data.id}`,
+        parentTaskId: data.parent_task_id ? data.parent_task_id.toString() : null,
+        
+        parentSummary: data.parent_task_summary ? {
+            id: data.parent_task_summary.id.toString(),
+            title: data.parent_task_summary.title,
+            key: data.parent_task_summary.key,
+            status: data.parent_task_summary.status,
+            projectId: data.parent_task_summary.project_id.toString()
+        } : null,
+
+        isGhost: false,
+
+        // Dinamik Key Kullanımı
+        key: `${projectKey}-${data.id}`,
+        
         title: data.title,
         description: data.description || "",
-        status: "todo", // Backend doesn't return status directly yet (might depend on column_id)
+        status: data.status || "todo",
         priority: data.priority,
         assignee: data.assignee_id ? placeholderUser : null,
-        reporter: placeholderUser, // TODO: map correctly
+        reporter: placeholderUser,
         points: data.points || 0,
         projectId: data.project_id.toString(),
-        project: {} as any, // Only needed if fully populated
+        
+        project: data.project ? {
+            id: data.project.id.toString(),
+            name: data.project.name,
+            key: data.project.key,
+            description: ""
+        } : { id: data.project_id.toString(), name: "Unknown Project" } as any,
+        
         subTasks: [],
         createdAt: data.created_at,
         updatedAt: data.updated_at || data.created_at,
@@ -80,17 +118,27 @@ export const taskService = {
         return response.data.map(mapTaskResponseToParentTask);
     },
 
-    getById: async (taskId: string): Promise<ParentTask> => {
+    getTasksByProject: async (projectId: string): Promise<ParentTask[]> => {
+        const response = await apiClient.get<TaskResponseDTO[]>(`/tasks/project/${projectId}`);
+        return response.data.map(mapTaskResponseToParentTask);
+    },
+
+    getTask: async (taskId: string): Promise<ParentTask> => {
         const response = await apiClient.get<TaskResponseDTO>(`/tasks/${taskId}`);
         return mapTaskResponseToParentTask(response.data);
     },
 
-    update: async (taskId: string, data: Partial<CreateTaskDTO>): Promise<ParentTask> => {
-        const response = await apiClient.put<TaskResponseDTO>(`/tasks/${taskId}`, data);
+    createTask: async (taskData: any) => {
+        const response = await apiClient.post<TaskResponseDTO>('/tasks', taskData);
         return mapTaskResponseToParentTask(response.data);
     },
 
-    delete: async (taskId: string): Promise<void> => {
+    updateTask: async (taskId: string, taskData: any) => {
+        const response = await apiClient.put<TaskResponseDTO>(`/tasks/${taskId}`, taskData);
+        return mapTaskResponseToParentTask(response.data);
+    },
+
+    deleteTask: async (taskId: string) => {
         await apiClient.delete(`/tasks/${taskId}`);
     }
 };
