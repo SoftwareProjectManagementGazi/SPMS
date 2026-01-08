@@ -20,11 +20,12 @@ const statusColors: Record<string, string> = {
   done: "bg-green-100 text-green-700",
 }
 
+// DÜZELTME: Anahtarlar büyük harf yapıldı (Type uyumu için)
 const priorityColors: Record<string, string> = {
-  critical: "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-white",
-  low: "bg-slate-400 text-white",
+  CRITICAL: "bg-red-500 text-white",
+  HIGH: "bg-orange-500 text-white",
+  MEDIUM: "bg-yellow-500 text-white",
+  LOW: "bg-slate-400 text-white",
 }
 
 // --- 1. Helper: Hiyerarşi Oluşturma ---
@@ -46,7 +47,8 @@ function buildTaskHierarchy(tasks: ParentTask[]) {
 
       // Ghost Parent Oluşturma
       if (!parent && t.parentSummary) {
-        parent = {
+        // DÜZELTME: Ghost Parent değişkeni oluşturup tipini belirledik
+        const ghostParent: ParentTask = {
           id: t.parentSummary.id,
           key: t.parentSummary.key,
           title: t.parentSummary.title,
@@ -56,27 +58,29 @@ function buildTaskHierarchy(tasks: ParentTask[]) {
           assignee: null,
           parentTaskId: null,
           subTasks: [],
-          // GHOST FIX: Proje ismini çocuktan alıyoruz (child task'ta project objesi dolu gelir)
-          project: t.project || { id: t.parentSummary.projectId, name: "Unknown Project" },
-          priority: "medium",
+          project: t.project || { id: t.parentSummary.projectId, name: "Unknown Project", key: "UNK" },
+          priority: "MEDIUM", // DÜZELTME: "medium" -> "MEDIUM"
           description: "",
           points: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          reporter: {} as any,
+          reporter: null,
           dueDate: null,
           isRecurring: false,
           loggedTime: 0,
           estimatedTime: 0,
           labels: []
         };
-        taskMap.set(parent.id, parent);
-        roots.push(parent);
+        
+        taskMap.set(ghostParent.id, ghostParent);
+        roots.push(ghostParent);
+        parent = ghostParent; // Referansı güncelle
       }
 
       if (parent) {
         parent.subTasks.push(currentTask as unknown as SubTask);
       } else {
+        // Parent yoksa ve ghost oluşturulamıyorsa root olarak ekle (Fallback)
         roots.push(currentTask);
       }
     } else {
@@ -118,7 +122,6 @@ function groupTasksByProject(roots: ParentTask[]): ProjectGroup[] {
 // --- Bileşenler ---
 
 function TaskRow({ task }: { task: ParentTask }) {
-  // DÜZELTME 1: Subtaskler varsayılan olarak kapalı (collapsed) gelsin
   const [expanded, setExpanded] = React.useState(false)
   
   const completedSubTasks = task.subTasks.filter((st) => st.status === "done").length
@@ -127,7 +130,6 @@ function TaskRow({ task }: { task: ParentTask }) {
 
   return (
     <div className="border-b border-border last:border-0">
-      {/* DÜZELTME 3: Parent Tasklar grileşmemeli (Opacity kaldırıldı) */}
       <div className="flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors">
         <Button
           variant="ghost"
@@ -184,7 +186,6 @@ function TaskRow({ task }: { task: ParentTask }) {
 }
 
 function SubTaskRow({ subTask }: { subTask: SubTask }) {
-  // Statü kontrolü (null safety)
   const safeStatus = subTask.status || "todo";
 
   return (
@@ -200,7 +201,6 @@ function SubTaskRow({ subTask }: { subTask: SubTask }) {
         <span className="text-xs text-muted-foreground">Sub-Task (Alt Görev)</span>
       </div>
 
-      {/* Subtask Statusu Eklendi */}
       <Badge className={statusColors[safeStatus] || "bg-gray-100"} variant="secondary">
         {safeStatus === "in-progress" ? "In Progress" : safeStatus === "todo" ? "To Do" : safeStatus.replace("-", " ")}
       </Badge>
@@ -267,7 +267,6 @@ export function MemberView() {
                 </CardContent>
              </Card>
         ) : (
-            // DÜZELTME 2: Her proje ayrı bir kartta ve başlık "Other Tasks" değil
             groupedTasks.map((group) => (
                 <Card key={group.id} className="shadow-sm overflow-hidden">
                     <CardHeader className="bg-muted/20 py-4 border-b">

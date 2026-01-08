@@ -1,9 +1,8 @@
-from pydantic import BaseModel, ConfigDict, model_validator
-from typing import Optional, Any
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, List
 from datetime import datetime
 from app.domain.entities.task import TaskPriority
 
-# 1. YENİ: Proje Özet DTO'su (İsim taşımak için)
 class ProjectSummaryDTO(BaseModel):
     id: int
     name: str
@@ -18,7 +17,15 @@ class ParentTaskSummaryDTO(BaseModel):
     project_id: int
     model_config = ConfigDict(from_attributes=True)
 
-# ... (Create ve Update DTO'ları aynı kalsın) ...
+# YENİ: Alt görev özeti için DTO
+class SubTaskSummaryDTO(BaseModel):
+    id: int
+    title: str
+    key: str
+    status: str
+    priority: TaskPriority
+    model_config = ConfigDict(from_attributes=True)
+
 class TaskCreateDTO(BaseModel):
     title: str
     description: Optional[str] = None
@@ -51,13 +58,12 @@ class TaskResponseDTO(BaseModel):
     title: str
     description: Optional[str] = None
     priority: TaskPriority
-    status: str = "todo" 
+    status: str  # Artık UseCase tarafından hesaplanıp buraya string olarak konacak
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool
     
     project_id: int
-    # 2. YENİ: Proje detaylarını taşıyacak alan
     project: Optional[ProjectSummaryDTO] = None
     
     sprint_id: Optional[int] = None
@@ -67,57 +73,12 @@ class TaskResponseDTO(BaseModel):
     parent_task_id: Optional[int] = None
 
     parent_task_summary: Optional[ParentTaskSummaryDTO] = None
+    # YENİ: Alt görevler listesi
+    sub_tasks: List[SubTaskSummaryDTO] = []
+
     created_at: datetime
     updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
-
-    @model_validator(mode='before')
-    @classmethod
-    def compute_data(cls, data: Any) -> Any:
-        data_dict = {}
-        if hasattr(data, 'model_dump'):
-            data_dict = data.model_dump()
-        elif isinstance(data, dict):
-            data_dict = data
-        else:
-            return data
-
-        # Status Hesapla
-        status_slug = "todo"
-        if hasattr(data, 'column') and data.column:
-             if hasattr(data.column, 'name'):
-                 status_slug = data.column.name.lower().replace(" ", "-")
-             elif isinstance(data.column, dict):
-                 status_slug = data.column.get('name', 'todo').lower().replace(" ", "-")
-        data_dict['status'] = status_slug
-
-        # 3. YENİ: Proje Verisini Doldur
-        if hasattr(data, 'project') and data.project:
-            # Pydantic otomatik çevirecek ama explicit olmakta fayda var
-            data_dict['project'] = data.project
-
-        # Parent Summary Hesapla
-        summary = None
-        if hasattr(data, 'parent') and data.parent:
-            project_key = "TASK"
-            if hasattr(data.parent, 'project') and data.parent.project:
-                project_key = data.parent.project.key
-            
-            task_key = f"{project_key}-{data.parent.id}"
-            
-            parent_status = "todo"
-            if hasattr(data.parent, 'column') and data.parent.column:
-                parent_status = data.parent.column.name.lower().replace(" ", "-")
-
-            summary = ParentTaskSummaryDTO(
-                id=data.parent.id,
-                title=data.parent.title,
-                key=task_key,
-                status=parent_status,
-                project_id=data.parent.project_id
-            )
-            
-        data_dict['parent_task_summary'] = summary
-        
-        return data_dict
+    
+    # compute_data validatörü TAMAMEN SİLİNDİ.

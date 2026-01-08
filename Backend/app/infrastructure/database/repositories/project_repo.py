@@ -4,6 +4,7 @@ from sqlalchemy import select, delete, or_
 from app.domain.entities.project import Project
 from app.domain.repositories.project_repository import IProjectRepository
 from app.infrastructure.database.models.project import ProjectModel
+from sqlalchemy.orm import joinedload
 
 class SqlAlchemyProjectRepository(IProjectRepository):
     def __init__(self, session: AsyncSession):
@@ -24,7 +25,12 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         return self._to_entity(model)
 
     async def get_by_id(self, project_id: int) -> Optional[Project]:
-        stmt = select(ProjectModel).where(ProjectModel.id == project_id)
+        # GÜNCELLEME: joinedload(ProjectModel.columns) EKLENDİ
+        stmt = (
+            select(ProjectModel)
+            .options(joinedload(ProjectModel.columns)) 
+            .where(ProjectModel.id == project_id)
+        )
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None

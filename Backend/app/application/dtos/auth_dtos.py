@@ -27,3 +27,9 @@ class UserResponseDTO(BaseModel):
 
     class Config:
         from_attributes = True # ORM nesnelerini Pydantic'e çevirmek için şart
+
+class UserListDTO(BaseModel):
+    id: int
+    email: str
+    username: str
+    avatar_url: str | None = None        

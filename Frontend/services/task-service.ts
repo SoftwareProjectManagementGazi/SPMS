@@ -1,20 +1,30 @@
 import { apiClient } from '@/lib/api-client';
 import { ParentTask, TaskPriority, User } from '@/lib/types';
 
+// Backend Response DTO ile birebir eşleşmeli
 export interface TaskResponseDTO {
     id: number;
     title: string;
     description: string | null;
-    status: string;
-    priority: any;
+    priority: TaskPriority;
+    status: string; // Backend hesaplayıp gönderiyor
     due_date: string | null;
     points: number | null;
     is_recurring: boolean;
+    
     project_id: number;
+    project?: {
+        id: number;
+        name: string;
+        key: string;
+    };
+    
+    sprint_id: number | null;
+    column_id: number | null;
     assignee_id: number | null;
     reporter_id: number | null;
     parent_task_id: number | null;
-    
+
     parent_task_summary?: {
         id: number;
         title: string;
@@ -23,14 +33,17 @@ export interface TaskResponseDTO {
         project_id: number;
     } | null;
 
+    // YENİ: Backend artık subtask listesini gönderiyor
+    sub_tasks: Array<{
+        id: number;
+        title: string;
+        key: string;
+        status: string;
+        priority: TaskPriority;
+    }>;
+
     created_at: string;
     updated_at: string | null;
-
-    project?: {
-        id: number;
-        name: string;
-        key: string;
-    };
 }
 
 export interface CreateTaskDTO {
@@ -39,29 +52,46 @@ export interface CreateTaskDTO {
     priority?: TaskPriority;
     due_date?: string;
     points?: number;
-    status: string;
     project_id: number;
+    parent_task_id?: number;
     assignee_id?: number;
+    column_id?: number; // Status yerine Column ID gönderiyoruz
 }
 
 const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
-    const placeholderUser: User = {
-        id: data.assignee_id?.toString() || "0",
-        name: "User " + (data.assignee_id || "?"),
-        email: "user@example.com",
-        avatar: "/placeholder-user.jpg",
-        role: { name: "member" }
-    };
-
-    // DÜZELTME: Key'i artık elle 'TSK' yazmıyoruz.
-    // Backend'den gelen proje key'ini kullanıyoruz (örn: SPMS, MOB).
-    // Eğer proje bilgisi yoksa fallback olarak 'TASK' kullanıyoruz.
+    // Proje Key ve ID oluşturma
     const projectKey = data.project?.key || "TASK";
+    const taskKey = `${projectKey}-${data.id}`;
+
+    // Placeholder User (Eğer user detay endpoint'i yoksa ID gösteririz)
+    // İdeal dünyada Backend assignee detayını 'expand' edip göndermeli.
+    // Şimdilik basit tutuyoruz.
+    const assigneeUser: User | null = data.assignee_id ? {
+        id: data.assignee_id.toString(),
+        name: `User ${data.assignee_id}`, // Backend user name dönerse burayı güncelleriz
+        email: "",
+        avatar: undefined
+    } : null;
 
     return {
         id: data.id.toString(),
         parentTaskId: data.parent_task_id ? data.parent_task_id.toString() : null,
+        key: taskKey,
+        title: data.title,
+        description: data.description || "",
+        status: data.status,
+        priority: data.priority,
+        assignee: assigneeUser,
+        reporter: null, // İsteğe bağlı
+        points: data.points || 0,
+        projectId: data.project_id.toString(),
         
+        project: data.project ? {
+            id: data.project.id.toString(),
+            name: data.project.name,
+            key: data.project.key
+        } : { id: data.project_id.toString(), name: "Unknown", key: "UNK" },
+
         parentSummary: data.parent_task_summary ? {
             id: data.parent_task_summary.id.toString(),
             title: data.parent_task_summary.title,
@@ -70,31 +100,19 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
             projectId: data.parent_task_summary.project_id.toString()
         } : null,
 
-        isGhost: false,
+        // YENİ: Backend'den gelen listeyi map ediyoruz
+        subTasks: data.sub_tasks.map(st => ({
+            id: st.id.toString(),
+            key: st.key,
+            title: st.title,
+            status: st.status,
+            priority: st.priority,
+            assignee: null // Subtask özetinde assignee yoksa null
+        })),
 
-        // Dinamik Key Kullanımı
-        key: `${projectKey}-${data.id}`,
-        
-        title: data.title,
-        description: data.description || "",
-        status: data.status || "todo",
-        priority: data.priority,
-        assignee: data.assignee_id ? placeholderUser : null,
-        reporter: placeholderUser,
-        points: data.points || 0,
-        projectId: data.project_id.toString(),
-        
-        project: data.project ? {
-            id: data.project.id.toString(),
-            name: data.project.name,
-            key: data.project.key,
-            description: ""
-        } : { id: data.project_id.toString(), name: "Unknown Project" } as any,
-        
-        subTasks: [],
         createdAt: data.created_at,
         updatedAt: data.updated_at || data.created_at,
-        dueDate: data.due_date || null,
+        dueDate: data.due_date,
         isRecurring: data.is_recurring,
         loggedTime: 0,
         estimatedTime: 0,
@@ -134,6 +152,7 @@ export const taskService = {
     },
 
     updateTask: async (taskId: string, taskData: any) => {
+        // Partial update için
         const response = await apiClient.put<TaskResponseDTO>(`/tasks/${taskId}`, taskData);
         return mapTaskResponseToParentTask(response.data);
     },

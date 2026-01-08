@@ -1,5 +1,5 @@
-export type TaskStatus = "todo" | "in-progress" | "done"
-export type TaskPriority = "critical" | "high" | "medium" | "low"
+export type TaskStatus = string // Artık enum değil dinamik string (örn: "todo", "done")
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" // Backend Enum ile eşleşmeli
 export type TaskType = "task" | "sub-task" | "bug"
 export type Methodology = "scrum" | "kanban" | "waterfall"
 
@@ -11,9 +11,9 @@ export interface Role {
 export interface User {
   id: string
   name: string
-  email: string
-  avatar: string
-  role: Role
+  email?: string
+  avatar?: string
+  role?: { name: string }
 }
 
 export interface Project {
@@ -32,33 +32,28 @@ export interface SubTask {
   id: string
   key: string
   title: string
-  description: string
   status: string 
-  priority: string
-  assignee: User | null
-  points: number
-  parentTaskId: string
-  createdAt: string
-  updatedAt: string
-  dueDate: string | null
+  priority: TaskPriority
+  // Subtask özetinde assignee detayı olmayabilir, opsiyonel bırakıyoruz
+  assignee?: User | null 
 }
 
 export interface ParentTask {
   id: string
-  // Subtask ise parent ID'si olur
   parentTaskId?: string | null 
   
   key: string
   title: string
   description: string
   status: string
-  priority: string
+  priority: TaskPriority
+  
   assignee: User | null
-  reporter: User
+  reporter: User | null
+  
   points: number
   projectId: string
   
-  // YENİ ALANLAR (Ghost Mantığı İçin)
   isGhost?: boolean; 
   parentSummary?: {
       id: string;
@@ -68,6 +63,7 @@ export interface ParentTask {
       projectId: string;
   } | null;
 
+  // Backend'den gelen 'sub_tasks' buraya map edilecek
   subTasks: SubTask[]
   
   createdAt: string
@@ -77,7 +73,11 @@ export interface ParentTask {
   loggedTime: number
   estimatedTime: number
   labels: string[]
-  project: any // Tam proje objesi yerine any veya Project type
+  project: {
+      id: string;
+      name: string;
+      key: string;
+  }
 }
 
 export interface Activity {
