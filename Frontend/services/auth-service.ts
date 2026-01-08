@@ -16,6 +16,7 @@ interface UserResponseDTO {
     id: number
     email: string
     full_name: string
+    avatar?: string
     is_active: boolean
     role?: {
         name: string
@@ -37,7 +38,7 @@ export const authService = {
           id: data.id.toString(),
           name: data.full_name,
           email: data.email,
-          avatar: "/placeholder-user.jpg",
+          avatar: data.avatar || "/placeholder-user.jpg",
           // DİNAMİK ROL ATAMASI
           role: data.role ? { 
               name: data.role.name, 
