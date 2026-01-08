@@ -106,7 +106,7 @@ export default function AiRecommendationModal({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="secondary" type="button">
-          AI ile süreç öner
+          Süreç modeli önerisi için tıkla
         </Button>
       </DialogTrigger>
 

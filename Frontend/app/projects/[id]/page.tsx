@@ -57,9 +57,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center h-[50vh] gap-4">
-          <h2 className="text-xl font-semibold">Project not found</h2>
-          <p className="text-muted-foreground">The project you are looking for does not exist or you don't have permission to view it.</p>
-          <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+          <h2 className="text-xl font-semibold">Proje bulunamadı</h2>
+          <p className="text-muted-foreground">Aradığınız proje mevcut değil veya projeyi görüntüleme izniniz yok.</p>
+          <Button variant="outline" onClick={() => window.history.back()}>Geri Dön</Button>
         </div>
       </AppShell>
     )
@@ -93,7 +93,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                     <div className="flex items-center gap-1">
                         <UserIcon className="h-4 w-4" />
-                        <span>Lead: {project.lead?.name || "Unassigned"}</span>
+                        <span>Lider: {project.lead?.name || "Unassigned"}</span>
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 {/* DÜZELTME: Buton onClick ile modalı açıyor */}
                 <Button onClick={() => setIsCreateTaskOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Create Task
+                    Görev Oluştur
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -138,15 +138,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 ) : !tasks || tasks.length === 0 ? (
                     <Card className="border-dashed">
                         <CardHeader className="text-center py-12">
-                            <CardTitle>No tasks yet</CardTitle>
+                            <CardTitle>Henüz bir görev yok.</CardTitle>
                             <CardDescription>
-                                Get started by creating your first task for this project.
+                                Yeni bir görev oluşturarak projene başla.
                             </CardDescription>
                             <div className="pt-4">
                                 {/* DÜZELTME: Buton onClick ile modalı açıyor */}
                                 <Button variant="outline" onClick={() => setIsCreateTaskOpen(true)}>
                                     <Plus className="mr-2 h-4 w-4" />
-                                    Create Task
+                                    Görev Oluştur
                                 </Button>
                             </div>
                         </CardHeader>
@@ -180,7 +180,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                             <span>{task.assignee?.name || "Unassigned"}</span>
                                        </div>
                                        {task.points && (
-                                           <Badge variant="outline" className="font-mono text-[10px]">{task.points} pts</Badge>
+                                           <Badge variant="outline" className="font-mono text-[10px]">{task.points} puan</Badge>
                                        )}
                                    </div>
                                </CardContent>
@@ -191,7 +191,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </TabsContent>
             
             <TabsContent value="list">
-                <div className="py-12 text-center text-muted-foreground">List view coming soon...</div>
+                <div className="py-12 text-center text-muted-foreground">Liste görünümü yakında ..</div>
             </TabsContent>
         </Tabs>
         

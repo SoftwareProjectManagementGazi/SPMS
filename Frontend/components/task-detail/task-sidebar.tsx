@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-// DÜZELTME 1: SubTask tipi çıkarıldı, detay görünümü için ParentTask (Full Data) gerekli
 import type { ParentTask, TaskPriority } from "@/lib/types" 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { taskService } from "@/services/task-service"
@@ -28,7 +27,6 @@ const priorityColors: Record<string, string> = {
 }
 
 interface TaskSidebarProps {
-  // DÜZELTME 1: Sadece ParentTask (Full Task) kabul ediliyor
   task: ParentTask
 }
 
@@ -39,7 +37,6 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
   // 1. Proje Detaylarını Çek (Columns/Status için)
   const { data: project, isLoading: isProjectLoading } = useQuery({
       queryKey: ['project', task.projectId],
-      // DÜZELTME 2: getProject -> getById
       queryFn: () => projectService.getById(task.projectId), 
       enabled: !!task.projectId
   });
@@ -56,9 +53,9 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
       onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['task', task.id] })
           queryClient.invalidateQueries({ queryKey: ['project-tasks'] })
-          queryClient.invalidateQueries({ queryKey: ['myTasks'] }) // Listeyi yenile
+          queryClient.invalidateQueries({ queryKey: ['myTasks'] }) 
           if (task.parentTaskId) {
-             queryClient.invalidateQueries({ queryKey: ['task', task.parentTaskId] }) // Parent detayını yenile
+             queryClient.invalidateQueries({ queryKey: ['task', task.parentTaskId] }) 
           }
           toast.success("Task updated successfully")
       },
@@ -87,31 +84,51 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
   // Column/Status Listesi
   const columns = project?.columns || [] 
 
+  // DÜZELTME: Doğru sütun ID'sini bulma mantığı
+  const currentColumnId = React.useMemo(() => {
+    // 1. Eğer task üzerinde columnId varsa direkt onu kullan
+    if (task.columnId) return task.columnId.toString();
+    
+    // 2. ColumnId yoksa (yeni task), status string'i ile eşleşen kolonu bul
+    if (columns.length > 0) {
+       // "To Do" -> "todo", "In Progress" -> "inprogress" şeklinde normalize et
+       const taskStatusNorm = task.status.toLowerCase().replace(/[^a-z0-9]/g, "");
+       
+       const match = columns.find(c => 
+           c.name.toLowerCase().replace(/[^a-z0-9]/g, "") === taskStatusNorm
+       );
+       
+       if (match) return match.id.toString();
+       
+       // 3. Eğer hala bulunamadıysa ve status "todo" ise, ilk sütunu (genelde To Do) varsay
+       if (taskStatusNorm === "todo") return columns[0].id.toString();
+    }
+    
+    return undefined;
+ }, [task.columnId, task.status, columns]);
+
   return (
     <div className="space-y-4">
       
       {/* STATUS SELECTION */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Durum</CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
           <Select 
             onValueChange={handleStatusChange} 
-            defaultValue={
-                task.columnId 
-                ? task.columnId 
-                : columns.find((c) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()
-            }
+            // Value prop'unu kullanarak controlled component yapıyoruz
+            value={currentColumnId} 
           >
             <SelectTrigger className="w-full font-medium">
               <SelectValue placeholder={task.status.toUpperCase().replace("-", " ")} />
             </SelectTrigger>
             <SelectContent>
               {isProjectLoading ? (
-                  <SelectItem value="loading" disabled>Loading statuses...</SelectItem>
+                  <SelectItem value="loading" disabled>Durumlar yükleniyor...</SelectItem>
               ) : columns.length === 0 ? (
-                  <SelectItem value="empty" disabled>No statuses found</SelectItem>
+                  <SelectItem value="empty" disabled>Herhangi bir durum bulunamadı</SelectItem>
               ) : (
                   columns.map((col) => (
                     <SelectItem key={col.id} value={col.id.toString()}>
@@ -130,7 +147,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
       {/* ASSIGNEE SELECTION */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Assignee</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Atanan Kişi</CardTitle>
         </CardHeader>
         <CardContent>
             <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
@@ -147,7 +164,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
                   ) : (
                     <>
                       <UserPlus className="h-4 w-4" />
-                      <span className="text-muted-foreground">Unassigned</span>
+                      <span className="text-muted-foreground">Atanmamış</span>
                     </>
                   )}
                 </Button>
@@ -156,7 +173,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
                 <Command>
                   <CommandInput placeholder="Search users..." />
                   <CommandList>
-                    <CommandEmpty>No users found.</CommandEmpty>
+                    <CommandEmpty>Kullanıcı bulunamadı.</CommandEmpty>
                     <CommandGroup>
                       {users.map((user) => (
                         <CommandItem
@@ -182,11 +199,11 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
       {/* PRIORITY & DETAILS */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Details</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Detaylar</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Priority</span>
+            <span className="text-sm text-muted-foreground">Öncelik</span>
             <Select onValueChange={(v) => handlePriorityChange(v as TaskPriority)} defaultValue={task.priority}>
                 <SelectTrigger className="w-[120px] h-8 text-xs">
                     <SelectValue />
@@ -201,7 +218,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
             </Select>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Points</span>
+            <span className="text-sm text-muted-foreground">Puanlar</span>
             <Badge variant="secondary">{task.points}</Badge>
           </div>
         </CardContent>
@@ -210,11 +227,11 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
       {/* DATES */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Dates</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Tarihler</CardTitle>
         </CardHeader>
         <CardContent>
              <div className="space-y-2">
-                <span className="text-muted-foreground text-sm">Due Date</span>
+                <span className="text-muted-foreground text-sm">Bitiş Tarihi</span>
                 <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
