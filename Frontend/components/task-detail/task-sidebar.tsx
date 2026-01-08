@@ -36,7 +36,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
   const [assigneeOpen, setAssigneeOpen] = React.useState(false)
 
   // 1. Proje Detaylarını Çek (Columns/Status için)
-  const { data: project } = useQuery({
+  const { data: project, isLoading: isProjectLoading } = useQuery({
       queryKey: ['project', task.projectId],
       // DÜZELTME 2: getProject -> getById
       queryFn: () => projectService.getById(task.projectId), 
@@ -76,8 +76,7 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
   }
 
   // Column/Status Listesi
-  // DÜZELTME: project?.columns tipini any olarak belirttik veya varsa tipi kullanabiliriz
-  const columns = (project as any)?.columns || [] 
+  const columns = project?.columns || [] 
 
   return (
     <div className="space-y-4">
@@ -90,22 +89,25 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
         <CardContent className="pt-4">
           <Select 
             onValueChange={handleStatusChange} 
-            // DÜZELTME 3: c parametresi için tip belirtildi (any)
-            defaultValue={columns.find((c: any) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()}
+            defaultValue={columns.find((c) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()}
           >
             <SelectTrigger className="w-full font-medium">
               <SelectValue placeholder={task.status.toUpperCase().replace("-", " ")} />
             </SelectTrigger>
             <SelectContent>
-              {columns.length > 0 ? columns.map((col: any) => (
-                <SelectItem key={col.id} value={col.id.toString()}>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-slate-500" />
-                    {col.name}
-                  </div>
-                </SelectItem>
-              )) : (
+              {isProjectLoading ? (
                   <SelectItem value="loading" disabled>Loading statuses...</SelectItem>
+              ) : columns.length === 0 ? (
+                  <SelectItem value="empty" disabled>No statuses found</SelectItem>
+              ) : (
+                  columns.map((col) => (
+                    <SelectItem key={col.id} value={col.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-slate-500" />
+                        {col.name}
+                      </div>
+                    </SelectItem>
+                  ))
               )}
             </SelectContent>
           </Select>

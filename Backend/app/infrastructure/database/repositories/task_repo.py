@@ -7,6 +7,7 @@ from app.domain.repositories.task_repository import ITaskRepository
 from app.infrastructure.database.models.task import TaskModel
 # YENİ İMPORT: Nested eager loading için gerekli
 from app.infrastructure.database.models.user import UserModel
+from app.infrastructure.database.models.project import ProjectModel
 
 class SqlAlchemyTaskRepository(ITaskRepository):
     def __init__(self, session: AsyncSession):
@@ -92,24 +93,26 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         """
         return select(TaskModel).options(
             # 1. Temel İlişkiler
-            joinedload(TaskModel.project),
+            # GÜNCELLEME: Project'in Columns bilgisini de yüklüyoruz (Task Entity içinde Project validate edilirken gerekli)
+            joinedload(TaskModel.project).joinedload(ProjectModel.columns),
+            
             joinedload(TaskModel.column),
             
-            # GÜNCELLEME: Assignee'nin Role bilgisini de yüklüyoruz (ZİNCİRLEME YÜKLEME)
+            # Assignee ve Role
             joinedload(TaskModel.assignee).joinedload(UserModel.role),
             
             # 2. Parent İlişkisi
             joinedload(TaskModel.parent).options(
-                joinedload(TaskModel.project),
+                joinedload(TaskModel.project), # Parent'ın projesinin columnlarına gerek olmayabilir ama hata verirse buraya da eklenmeli
                 joinedload(TaskModel.column),
             ),
 
             # 3. Subtasks İlişkisi
             selectinload(TaskModel.subtasks).options(
                 joinedload(TaskModel.column),
-                # GÜNCELLEME: Alt görevlerin assignee ve role bilgisini de yüklüyoruz
                 joinedload(TaskModel.assignee).joinedload(UserModel.role),
-                joinedload(TaskModel.project)
+                # Alt görevin projesinin columnlarına da ihtiyaç olabilir
+                joinedload(TaskModel.project).joinedload(ProjectModel.columns) 
             )
         )
 
@@ -122,7 +125,9 @@ class SqlAlchemyTaskRepository(ITaskRepository):
     async def get_by_id(self, task_id: int) -> Optional[Task]:
         stmt = self._get_base_query().where(TaskModel.id == task_id)
         result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
+        # GÜNCELLEME: .unique() eklendi
+        # joinedload ile collection (örn: columns) yüklediğimizde unique() şarttır.
+        model = result.unique().scalar_one_or_none()
         return self._to_entity(model)
 
     async def get_all_by_project(self, project_id: int) -> List[Task]:

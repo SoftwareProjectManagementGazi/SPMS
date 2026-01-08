@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import { Project, User, Methodology } from '@/lib/types';
+import { Project, User, Methodology, BoardColumn } from '@/lib/types';
 
 // Backend Response Type (Backend'den gelen ham veri tipi)
 interface ProjectResponse {
@@ -11,6 +11,7 @@ interface ProjectResponse {
   methodology: Methodology;
   manager_id: number;
   created_at: string;
+  columns?: BoardColumn[];
 }
 
 // Frontend'den Backend'e giden veri tipi
@@ -44,6 +45,7 @@ const mapProjectResponseToProject = (data: ProjectResponse): Project => {
     startDate: data.start_date,
     endDate: data.end_date || "",
     progress: 0, // Backend'den gelmediği için default
+    columns: data.columns || [],
   };
 };
 

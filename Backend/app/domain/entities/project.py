@@ -1,7 +1,8 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+from app.domain.entities.board_column import BoardColumn
 
 class Methodology(str, Enum):
     SCRUM = "SCRUM"
@@ -18,5 +19,6 @@ class Project(BaseModel):
     methodology: Methodology
     manager_id: Optional[int] = None
     created_at: Optional[datetime] = None
+    columns: List[BoardColumn] = []
 
     model_config = ConfigDict(from_attributes=True)
