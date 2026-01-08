@@ -11,17 +11,15 @@ export const apiClient = axios.create({
 });
 
 // Request interceptor to add the auth token to every request
-apiClient.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
+apiClient.interceptors.response.use(
+  (response) => response,
   (error) => {
+    // Token süresi dolmuşsa veya geçersizse:
+    if (error.response?.status === 401) {
+       localStorage.removeItem(AUTH_TOKEN_KEY); // Token'ı sil
+       window.location.href = '/login'; // Sayfayı yenileyerek Login'e at
+    }
+    console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

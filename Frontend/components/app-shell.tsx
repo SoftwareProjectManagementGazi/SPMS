@@ -4,6 +4,7 @@ import * as React from "react"
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { CreateTaskModal } from "./create-task-modal"
+import AuthGuard from "@/components/auth-guard"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -14,6 +15,7 @@ export function AppShell({ children }: AppShellProps) {
   const [createModalOpen, setCreateModalOpen] = React.useState(false)
 
   return (
+    <AuthGuard>
     <div className="flex h-screen bg-background">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -22,5 +24,6 @@ export function AppShell({ children }: AppShellProps) {
       </div>
       <CreateTaskModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
     </div>
+    </AuthGuard>
   )
 }
