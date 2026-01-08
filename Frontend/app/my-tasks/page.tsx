@@ -8,8 +8,8 @@ export default function MyTasksPage() {
     <AppShell>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">My Tasks</h1>
-          <p className="text-muted-foreground">View and manage your assigned tasks</p>
+          <h1 className="text-2xl font-bold">Görevlerim</h1>
+          <p className="text-muted-foreground">Görevlerini Görüntüle ve Yönet</p>
         </div>
         <MemberView />
       </div>

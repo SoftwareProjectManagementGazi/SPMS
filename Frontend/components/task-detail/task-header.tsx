@@ -24,7 +24,7 @@ export function TaskHeader({ task }: TaskHeaderProps) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{task.title}</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+          {/* <Button variant="outline" size="sm" className="gap-2 bg-transparent">
             <Edit className="h-4 w-4" />
             Edit
           </Button>
@@ -35,7 +35,7 @@ export function TaskHeader({ task }: TaskHeaderProps) {
           <Button variant="outline" size="sm" className="gap-2 bg-transparent">
             <Clock className="h-4 w-4" />
             Log Work
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>
