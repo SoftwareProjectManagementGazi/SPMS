@@ -2,14 +2,23 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+# Importlar
 from app.domain.entities.board_column import BoardColumn 
 from app.domain.entities.project import Project
+# User entity'sini import ediyoruz (Assignee için)
+from app.domain.entities.user import User
 
 class TaskPriority(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+class TaskStatus(str, Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+    REVIEW = "REVIEW"
 
 class Task(BaseModel):
     id: Optional[int] = None
@@ -27,17 +36,24 @@ class Task(BaseModel):
     reporter_id: Optional[int] = None
     parent_task_id: Optional[int] = None
     
-    # İlişkisel Alanlar
+    # --- İLİŞKİSEL ALANLAR ---
     parent: Optional['Task'] = None 
-    # YENİ: Alt görevler listesi (Default boş liste)
-    subtasks: List['Task'] = Field(default_factory=list)
     
+    # EKSİK ALAN 1: Subtasks (Alt Görevler)
+    # Repository'de manuel mapping ile dolduruyoruz, burada tanımlı olmalı.
+    subtasks: List['Task'] = Field(default_factory=list)
+
     column: Optional[BoardColumn] = None 
     project: Optional[Project] = None
+    
+    # EKSİK ALAN 2: Assignee (Atanan Kişi)
+    # Repository'de "assignee": model.assignee ile gönderiyoruz.
+    assignee: Optional[User] = None
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
+# Döngüsel referansları çöz
 Task.model_rebuild()

@@ -22,6 +22,12 @@ export interface TaskResponseDTO {
     sprint_id: number | null;
     column_id: number | null;
     assignee_id: number | null;
+    assignee?: {
+        id: number;
+        email: string;
+        username: string;
+        avatar_url?: string;
+    } | null;   
     reporter_id: number | null;
     parent_task_id: number | null;
 
@@ -66,13 +72,12 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
     // Placeholder User (Eğer user detay endpoint'i yoksa ID gösteririz)
     // İdeal dünyada Backend assignee detayını 'expand' edip göndermeli.
     // Şimdilik basit tutuyoruz.
-    const assigneeUser: User | null = data.assignee_id ? {
-        id: data.assignee_id.toString(),
-        name: `User ${data.assignee_id}`, // Backend user name dönerse burayı güncelleriz
-        email: "",
-        avatar: undefined
+    const assigneeUser: User | null = data.assignee ? {
+        id: data.assignee.id.toString(),
+        name: data.assignee.username, // Backend DTO'da username olarak mapledik
+        email: data.assignee.email,
+        avatar: data.assignee.avatar_url
     } : null;
-
     return {
         id: data.id.toString(),
         parentTaskId: data.parent_task_id ? data.parent_task_id.toString() : null,

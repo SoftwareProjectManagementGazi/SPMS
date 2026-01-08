@@ -9,6 +9,14 @@ class ProjectSummaryDTO(BaseModel):
     key: str
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserSummaryDTO(BaseModel):
+    id: int
+    email: str
+    username: str 
+    avatar_url: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)    
+
 class ParentTaskSummaryDTO(BaseModel):
     id: int
     title: str
@@ -69,6 +77,7 @@ class TaskResponseDTO(BaseModel):
     sprint_id: Optional[int] = None
     column_id: Optional[int] = None
     assignee_id: Optional[int] = None
+    assignee: Optional[UserSummaryDTO] = None
     reporter_id: Optional[int] = None
     parent_task_id: Optional[int] = None
 

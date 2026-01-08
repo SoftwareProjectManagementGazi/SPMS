@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.application.dtos.auth_dtos import UserRegisterDTO, UserLoginDTO, TokenDTO, UserResponseDTO, UserListDTO
+from app.application.dtos.auth_dtos import UserRegisterDTO, UserLoginDTO, TokenDTO, UserResponseDTO
+# UserListDTO'yu buradan import ediyorsanız kalsın, yoksa aşağıda tanımlayacağız.
+# from app.application.dtos.auth_dtos import UserListDTO 
+
 from app.application.use_cases.register_user import RegisterUserUseCase
 from app.application.use_cases.login_user import LoginUserUseCase
 from app.api.dependencies import get_user_repo, get_security_service, get_current_user
@@ -8,8 +11,16 @@ from app.application.ports.security_port import ISecurityService
 from app.domain.entities.user import User
 from app.domain.exceptions import UserAlreadyExistsError, InvalidCredentialsError
 from typing import List
+from pydantic import BaseModel
 
 router = APIRouter()
+
+# Eğer UserListDTO auth_dtos.py içinde yoksa burada tanımlayın:
+class UserListDTO(BaseModel):
+    id: int
+    email: str
+    username: str # Frontend bu ismi bekliyor olabilir, backend'den full_name'i buraya map edeceğiz
+    avatar_url: str | None = None
 
 @router.get("/me", response_model=UserResponseDTO)
 async def read_users_me(current_user: User = Depends(get_current_user)):
@@ -39,8 +50,6 @@ async def login(
     except InvalidCredentialsError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
-
-
 @router.get("/users", response_model=List[UserListDTO])
 async def list_users(
     current_user: dict = Depends(get_current_user),
@@ -49,15 +58,15 @@ async def list_users(
     """
     Sistemdeki tüm kullanıcıları listeler (Assignee seçimi için).
     """
-    # Repo'da get_all metodu yoksa, basit bir select sorgusu ile çekilir
-    # Not: user_repo.get_all() metodunun repo'da tanımlı olduğundan emin olun.
-    # Eğer yoksa, repo'ya eklememiz gerekir. Şimdilik varsayalım.
     users = await user_repo.get_all() 
     return [
         UserListDTO(
             id=u.id, 
             email=u.email, 
-            username=u.username,
-            avatar_url=None # Avatar URL'i veritabanında varsa buraya ekleyin
+            # DÜZELTME: u.username -> u.full_name
+            # User entity'sinde 'username' yok, 'full_name' var.
+            username=u.full_name, 
+            # Avatar bilgisini de ekleyelim (Entity'de 'avatar' string olarak var)
+            avatar_url=u.avatar 
         ) for u in users
     ]
