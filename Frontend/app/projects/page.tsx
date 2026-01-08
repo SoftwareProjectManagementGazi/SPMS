@@ -29,9 +29,9 @@ export default function ProjectsPage() {
         <div className="p-6">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>Hata</AlertTitle>
             <AlertDescription>
-              Failed to load projects. Is the backend server running?
+              Projeler yüklenemedi. Lütfen daha sonra tekrar deneyin.
               <br />
               <span className="text-xs opacity-70">{(error as Error).message}</span>
             </AlertDescription>
@@ -46,26 +46,26 @@ export default function ProjectsPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Projects</h1>
+            <h1 className="text-2xl font-bold">Projeler</h1>
             <p className="text-muted-foreground">
-              Manage your projects, track progress, and collaborate with your team.
+              Projelerinizi yönetin, ilerlemeyi takip edin ve ekibinizle iş birliği yapın.
             </p>
           </div>
 
           <Link href="/projects/new">
-            <Button>Create New Project</Button>
+            <Button>Yeni Proje Oluştur</Button>
           </Link>
         </div>
 
         {!projects || projects.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>No projects found</CardTitle>
-              <CardDescription>There are no projects in the database yet.</CardDescription>
+              <CardTitle>Projeler bulunamadı</CardTitle>
+              <CardDescription>Veritabanında henüz proje yok.</CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/projects/new">
-                <Button>Create New Project</Button>
+                <Button>Yeni Proje Oluştur</Button>
               </Link>
             </CardContent>
           </Card>
@@ -103,8 +103,8 @@ export default function ProjectsPage() {
                     )}
 
                     <div className="text-xs text-muted-foreground flex gap-3 pt-2 border-t mt-2">
-                      <span>Start: {p.startDate ? new Date(p.startDate).toLocaleDateString() : "-"}</span>
-                      <span>End: {p.endDate ? new Date(p.endDate).toLocaleDateString() : "-"}</span>
+                      <span>Başlangıç: {p.startDate ? new Date(p.startDate).toLocaleDateString() : "-"}</span>
+                      <span>Bitiş: {p.endDate ? new Date(p.endDate).toLocaleDateString() : "-"}</span>
                     </div>
                   </CardContent>
                 </Card>

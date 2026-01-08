@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, Layers, Workflow, GitBranch } from "lucide-react"
+import { CalendarIcon, Layers, Workflow, GitBranch, Loader2 } from "lucide-react"
 import { format } from "date-fns"
+import { tr } from "date-fns/locale" // Tarih formatı için Türkçe yerelleştirme (opsiyonel)
 import { useRouter } from "next/navigation"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -13,23 +14,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import type { Methodology, Project } from "@/lib/types"
+import type { Methodology } from "@/lib/types"
 
 import { getTemplateById, buildDefaultEnabledFieldsMap } from "@/lib/process-templates"
 import { useLocalStorageState } from "@/hooks/useLocalStorageState"
 import CustomizeColumns from "@/components/project/customize-columns"
 import FieldToggles from "@/components/project/field-toggles"
 import AiRecommendationModal from "@/components/project/ai-recommendation-modal"
-import { users } from "@/lib/mock-data"
 import { projectService } from "@/services/project-service"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from "lucide-react"
 
 const methodologies: { value: Methodology; label: string; description: string; icon: React.ElementType }[] = [
-  { value: "scrum", label: "Scrum", description: "Sprint-based planning with iterative development", icon: Layers },
-  { value: "kanban", label: "Kanban", description: "Continuous flow with WIP limits", icon: Workflow },
-  { value: "waterfall", label: "Waterfall", description: "Sequential phases from start to finish", icon: GitBranch },
+  { value: "scrum", label: "Scrum", description: "Sprint tabanlı planlama ve yinelemeli geliştirme", icon: Layers },
+  { value: "kanban", label: "Kanban", description: "WIP sınırları ile sürekli akış", icon: Workflow },
+  { value: "waterfall", label: "Waterfall", description: "Başlangıçtan bitişe sıralı aşamalar", icon: GitBranch },
 ]
 
 export function ProjectCreation() {
@@ -69,8 +68,8 @@ export function ProjectCreation() {
       onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['projects'] });
           toast({
-              title: "Project created",
-              description: "Your new project has been successfully created.",
+              title: "Proje oluşturuldu",
+              description: "Yeni projeniz başarıyla oluşturuldu.",
           })
           router.push("/projects")
       },
@@ -78,8 +77,8 @@ export function ProjectCreation() {
           console.error("Failed to create project:", error);
           toast({
               variant: "destructive",
-              title: "Error",
-              description: "Failed to create project. Please try again.",
+              title: "Hata",
+              description: "Proje oluşturulamadı. Lütfen tekrar deneyin.",
           })
       }
   })
@@ -116,16 +115,16 @@ export function ProjectCreation() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Create New Project</h1>
-        <p className="text-muted-foreground">Set up a new project with your preferred methodology</p>
+        <h1 className="text-2xl font-bold">Yeni bir proje oluştur</h1>
+        <p className="text-muted-foreground">Tercih ettiğiniz metodolojiyle yeni bir proje oluşturun</p>
       </div>
 
       {/* Project Details */}
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
-            <CardTitle>Project Details</CardTitle>
-            <CardDescription>Basic information about your project</CardDescription>
+            <CardTitle>Proje Detayları</CardTitle>
+            <CardDescription>Projeniz hakkında temel bilgiler</CardDescription>
           </div>
 
           <AiRecommendationModal onApply={(m) => setSelectedMethodology(m)} />
@@ -134,17 +133,17 @@ export function ProjectCreation() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Project Name</Label>
+              <Label>Proje Adı</Label>
               <Input
-                placeholder="Enter project name"
+                placeholder="Proje adını girin"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Project Key</Label>
+              <Label>Proje Anahtarı (Key)</Label>
               <Input
-                placeholder="e.g., PROJ"
+                placeholder="Örn: PROJ"
                 className="uppercase"
                 maxLength={6}
                 value={projectKey}
@@ -154,9 +153,9 @@ export function ProjectCreation() {
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>Açıklama</Label>
             <Textarea
-              placeholder="Describe the project..."
+              placeholder="Projeyi açıklayın..."
               className="min-h-[100px]"
               value={projectDesc}
               onChange={(e) => setProjectDesc(e.target.value)}
@@ -165,7 +164,7 @@ export function ProjectCreation() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Start Date</Label>
+              <Label>Başlangıç Tarihi</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -174,7 +173,7 @@ export function ProjectCreation() {
                     type="button"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Select date"}
+                    {startDate ? format(startDate, "PPP", { locale: tr }) : "Tarih seçin"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -184,7 +183,7 @@ export function ProjectCreation() {
             </div>
 
             <div className="space-y-2">
-              <Label>End Date</Label>
+              <Label>Bitiş Tarihi</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -193,7 +192,7 @@ export function ProjectCreation() {
                     type="button"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : "Select date"}
+                    {endDate ? format(endDate, "PPP", { locale: tr }) : "Tarih seçin"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -208,8 +207,8 @@ export function ProjectCreation() {
       {/* Methodology */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Select Methodology</CardTitle>
-          <CardDescription>Choose how you want to manage this project</CardDescription>
+          <CardTitle>Metodoloji Seçin</CardTitle>
+          <CardDescription>Projenizi nasıl yönetmek istediğinizi belirleyin</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -247,13 +246,18 @@ export function ProjectCreation() {
               {/* Preview */}
               <Card className="border-dashed">
                 <CardHeader>
-                  <CardTitle className="text-base">Template Preview</CardTitle>
-                  <CardDescription>{template.shortDescription}</CardDescription>
+                  <CardTitle className="text-base">Tasarım Önizlemesi</CardTitle>
+                  <CardDescription>
+                    {template.shortDescription === "Scrum workflow" && "Scrum iş akışı"}
+                    {template.shortDescription === "Kanban workflow" && "Kanban iş akışı"}
+                    {template.shortDescription === "Waterfall workflow" && "Waterfall iş akışı"}
+                    {!["Scrum workflow", "Kanban workflow", "Waterfall workflow"].includes(template.shortDescription) && template.shortDescription}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {columns.map((c, i) => (
-                      <span key={`${c}-${i}`} className="text-xs rounded-full border px-3 py-1 bg-secondary">
+                      <span key={`${i}`} className="text-xs rounded-full border px-3 py-1 bg-secondary">
                         {c}
                       </span>
                     ))}
@@ -268,7 +272,7 @@ export function ProjectCreation() {
               <FieldToggles
                 fields={template.taskFields.map((f) => ({
                   id: f.id,
-                  label: f.label,
+                  label: f.label, // Bu label'lar process-templates dosyasından geliyor, orası da Türkçeleştirilebilir.
                   description: f.description,
                 }))}
                 enabled={enabledFields}
@@ -282,12 +286,12 @@ export function ProjectCreation() {
       {/* Actions */}
       <div className="flex justify-end gap-3">
         <Button variant="outline" type="button" onClick={() => router.push("/projects")}>
-          Cancel
+          İptal
         </Button>
 
         <Button disabled={!canCreate} onClick={handleCreate} type="button">
           {createProjectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Project
+          Projeyi Oluştur
         </Button>
       </div>
     </div>

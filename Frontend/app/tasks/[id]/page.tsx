@@ -31,8 +31,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       <AppShell>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Task Not Found</h1>
-            <p className="text-muted-foreground">The task with ID {id} does not exist or could not be loaded.</p>
+            <h1 className="text-2xl font-bold">Görev Bulunamadı</h1>
+            <p className="text-muted-foreground">ID {id} olan görev mevcut değil veya yüklenemedi.</p>
           </div>
         </div>
       </AppShell>

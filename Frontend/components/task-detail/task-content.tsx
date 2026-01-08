@@ -75,7 +75,7 @@ export function TaskContent({ task }: TaskContentProps) {
       {/* Description */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Description</CardTitle>
+          <CardTitle className="text-base">Açıklama</CardTitle>
         </CardHeader>
         <CardContent>
           {isEditing ? (
@@ -90,7 +90,7 @@ export function TaskContent({ task }: TaskContentProps) {
                   {updateTaskMutation.isPending ? "Saving..." : "Save"}
                  </Button>
                 <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
-                  Cancel
+                  İptal Et
                 </Button>
               </div>
             </div>
@@ -108,12 +108,12 @@ export function TaskContent({ task }: TaskContentProps) {
       {/* Attachments */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Attachments</CardTitle>
+          <CardTitle className="text-base">Ekler</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-accent/50 transition-colors cursor-pointer">
             <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Drop files here or click to upload</p>
+            <p className="text-sm text-muted-foreground">Yüklemek için tıklayın veya dosyaları buraya sürükleyin</p>
           </div>
         </CardContent>
       </Card>
@@ -123,16 +123,16 @@ export function TaskContent({ task }: TaskContentProps) {
       {task.subTasks && task.subTasks.length > 0 && (
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Sub-Tasks (Alt Görevler)</CardTitle>
+            <CardTitle className="text-base">Alt Görevler</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Anahtar</TableHead>
+                  <TableHead>Başlık</TableHead>
+                  <TableHead>Öncelik</TableHead>
+                  <TableHead>Durum</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -170,9 +170,9 @@ export function TaskContent({ task }: TaskContentProps) {
         <CardHeader className="pb-0">
           <Tabs defaultValue="comments">
             <TabsList>
-              <TabsTrigger value="comments">Comments</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-              <TabsTrigger value="worklogs">Work Logs</TabsTrigger>
+              <TabsTrigger value="comments">Yorumlar</TabsTrigger>
+              <TabsTrigger value="history">Geçmiş</TabsTrigger>
+              <TabsTrigger value="worklogs">Çalışma Günlükleri</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>

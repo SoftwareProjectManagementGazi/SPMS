@@ -154,11 +154,11 @@ function TaskRow({ task }: { task: ParentTask }) {
           </Link>
           <div className="flex items-center gap-4 mt-1">
             <span className="text-xs text-muted-foreground">
-                {task.isGhost ? "Context Task (Parent)" : "Parent Task"}
+                {task.isGhost ? "Görev Bağlamı (Ana Görev)" : "Ana Görev"}
             </span>
             {totalSubTasks > 0 && (
               <span className="text-xs text-muted-foreground">
-                {completedSubTasks}/{totalSubTasks} sub-tasks
+                {completedSubTasks}/{totalSubTasks} alt görevler
               </span>
             )}
           </div>
@@ -250,7 +250,7 @@ export function MemberView() {
   if (error) {
     return (
       <div className="p-4 border border-red-200 bg-red-50 text-red-600 rounded-md">
-          Error loading tasks.
+          Görevler yüklenemedi. Lütfen daha sonra tekrar deneyin.
       </div>
     )
   }
@@ -263,7 +263,7 @@ export function MemberView() {
         {groupedTasks.length === 0 ? (
              <Card className="shadow-sm">
                 <CardContent className="p-12 text-center text-muted-foreground">
-                    <p>You have no tasks assigned yet.</p>
+                    <p>Henüz atanmış görevin yok.</p>
                 </CardContent>
              </Card>
         ) : (
@@ -297,7 +297,7 @@ export function MemberView() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Recent Activity
+              Şuanki Aktivite
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -328,12 +328,12 @@ export function MemberView() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-4 w-4" />
-              Overdue Tasks
+              Gecikmiş Görevler
             </CardTitle>
           </CardHeader>
           <CardContent>
             {overdueTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No overdue tasks</p>
+              <p className="text-sm text-muted-foreground">Gecikmiş görev yok</p>
             ) : (
               <div className="space-y-3">
                 {overdueTasks.map((task) => (
@@ -346,7 +346,7 @@ export function MemberView() {
                       <span className="font-mono text-xs text-red-600">{task.key}</span>
                       <span className="text-sm font-medium truncate">{task.title}</span>
                     </div>
-                    <p className="text-xs text-red-600 mt-1">Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-xs text-red-600 mt-1">Bitiş Tarihi: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'N/A'}</p>
                   </Link>
                 ))}
               </div>
