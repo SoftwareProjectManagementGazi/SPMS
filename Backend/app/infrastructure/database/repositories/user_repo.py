@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.domain.entities.user import User
 from app.domain.repositories.user_repository import IUserRepository
 from app.infrastructure.database.models.user import UserModel
@@ -17,7 +18,7 @@ class SqlAlchemyUserRepository(IUserRepository):
         return UserModel(**data)
 
     async def get_by_email(self, email: str) -> Optional[User]:
-        stmt = select(UserModel).where(UserModel.email == email)
+        stmt = select(UserModel).options(selectinload(UserModel.role)).where(UserModel.email == email)
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
@@ -29,8 +30,14 @@ class SqlAlchemyUserRepository(IUserRepository):
         await self.session.refresh(model)
         return self._to_entity(model)
         
+    async def get_by_email(self, email: str) -> Optional[User]:
+        stmt = select(UserModel).options(selectinload(UserModel.role)).where(UserModel.email == email)
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+    
     async def get_by_id(self, user_id: int) -> Optional[User]:
-        stmt = select(UserModel).where(UserModel.id == user_id)
+        stmt = select(UserModel).options(selectinload(UserModel.role)).where(UserModel.id == user_id)
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
