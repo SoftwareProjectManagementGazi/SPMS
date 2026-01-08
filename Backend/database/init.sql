@@ -33,7 +33,8 @@ CREATE TABLE projects (
     start_date DATE,
     end_date DATE,
     manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- Proje yöneticisi
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    custom_fields JSON
 );
 
 -- Proje Üyeleri (Many-to-Many İlişkisi - ER Diyagramındaki "Üyesidir")

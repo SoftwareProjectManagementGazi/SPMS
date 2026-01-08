@@ -4,6 +4,7 @@ import { Project, User, Methodology, BoardColumn } from '@/lib/types';
 // Backend Response Type (Backend'den gelen ham veri tipi)
 interface ProjectResponse {
   id: number;
+  key: string;
   name: string;
   description: string | null;
   start_date: string;
@@ -12,15 +13,19 @@ interface ProjectResponse {
   manager_id: number;
   created_at: string;
   columns?: BoardColumn[];
+  custom_fields?: Record<string, any>;
 }
 
 // Frontend'den Backend'e giden veri tipi
 export interface CreateProjectDTO {
+  key: string;
   name: string;
   description?: string;
   methodology: Methodology;
   start_date: string;
   end_date?: string;
+  columns?: string[];
+  custom_fields?: Record<string, any>;
 }
 
 // Mapper Function: Backend verisini Frontend'in beklediği yapıya çevirir
@@ -37,7 +42,7 @@ const mapProjectResponseToProject = (data: ProjectResponse): Project => {
 
   return {
     id: data.id.toString(),
-    key: `PRJ-${data.id}`, // Backend'de key yoksa generate ediyoruz
+    key: data.key,
     name: data.name,
     description: data.description || "",
     methodology: data.methodology,

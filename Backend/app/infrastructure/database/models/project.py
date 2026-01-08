@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SqlEnum, Date, Table
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SqlEnum, Date, Table, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.infrastructure.database.models.base import Base
@@ -26,6 +26,7 @@ class ProjectModel(Base):
     methodology = Column(SqlEnum(Methodology, name="methodology_type"), nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    custom_fields = Column(JSON, nullable=True)
 
     manager = relationship("UserModel", backref="managed_projects")
     sprints = relationship("SprintModel", back_populates="project", cascade="all, delete-orphan")

@@ -3,6 +3,7 @@
 import { use, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Loader2, Plus, Calendar, User as UserIcon, MoreHorizontal } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,7 @@ import { CreateTaskModal } from "@/components/create-task-modal"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
   
   // YENİ: Modal kontrol state'i
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
@@ -153,7 +155,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                        {tasks.map(task => (
                            // Not: Board görünümü için burası geçicidir, listelenmesi yeterli şu an.
-                           <Card key={task.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                           <Card 
+                                key={task.id} 
+                                className="cursor-pointer hover:shadow-md transition-shadow"
+                                onClick={() => router.push(`/tasks/${task.id}`)}
+                           >
                                <CardHeader className="pb-2">
                                    <div className="flex justify-between items-start">
                                        {/* HATA DÜZELTİLDİ: 'critical' -> 'CRITICAL' */}

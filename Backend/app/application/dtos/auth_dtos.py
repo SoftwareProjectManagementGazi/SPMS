@@ -22,6 +22,7 @@ class UserResponseDTO(BaseModel):
     id: int
     email: EmailStr
     full_name: str
+    avatar: Optional[str] = None
     is_active: bool
     role: Optional[RoleDTO] = None  
 

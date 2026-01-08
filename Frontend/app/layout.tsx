@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import QueryProvider from "@/components/providers/query-provider"
+import { AuthProvider } from "@/context/auth-context"
 import "./globals.css"
 
 const inter = Inter({
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
         <QueryProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </QueryProvider>
         <Analytics />
       </body>
