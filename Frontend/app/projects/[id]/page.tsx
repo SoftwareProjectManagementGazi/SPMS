@@ -1,9 +1,8 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { use, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Loader2, Plus, Calendar, Clock, User as UserIcon, MoreHorizontal } from "lucide-react"
+import { Loader2, Plus, Calendar, User as UserIcon, MoreHorizontal } from "lucide-react"
 
 import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
@@ -22,10 +21,14 @@ import {
 import { projectService } from "@/services/project-service"
 import { taskService } from "@/services/task-service"
 import { format } from "date-fns"
+// YENİ: Modal import edildi
+import { CreateTaskModal } from "@/components/create-task-modal"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  // Next.js 15+ allows unwrapping params with React.use()
   const { id } = use(params)
+  
+  // YENİ: Modal kontrol state'i
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
 
   const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ['project', id],
@@ -94,7 +97,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
             
             <div className="flex gap-2">
-                <Button>
+                {/* DÜZELTME: Buton onClick ile modalı açıyor */}
+                <Button onClick={() => setIsCreateTaskOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Create Task
                 </Button>
@@ -137,7 +141,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 Get started by creating your first task for this project.
                             </CardDescription>
                             <div className="pt-4">
-                                <Button variant="outline">
+                                {/* DÜZELTME: Buton onClick ile modalı açıyor */}
+                                <Button variant="outline" onClick={() => setIsCreateTaskOpen(true)}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Create Task
                                 </Button>
@@ -146,12 +151,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </Card>
                 ) : (
                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {/* Simple task cards for now - proper board implementation would be complex */}
                        {tasks.map(task => (
+                           // Not: Board görünümü için burası geçicidir, listelenmesi yeterli şu an.
                            <Card key={task.id} className="cursor-pointer hover:shadow-md transition-shadow">
                                <CardHeader className="pb-2">
                                    <div className="flex justify-between items-start">
-                                       <Badge variant={task.priority === 'critical' ? 'destructive' : 'secondary'} className="uppercase text-[10px]">
+                                       {/* HATA DÜZELTİLDİ: 'critical' -> 'CRITICAL' */}
+                                       <Badge variant={task.priority === 'CRITICAL' ? 'destructive' : 'secondary'} className="uppercase text-[10px]">
                                            {task.priority}
                                        </Badge>
                                        <span className="text-xs text-muted-foreground font-mono">{task.key}</span>
@@ -162,7 +168,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                                        <div className="flex items-center gap-1">
                                             <Avatar className="h-5 w-5">
-                                                <AvatarFallback className="text-[10px]">{task.assignee?.name.charAt(0) || "?"}</AvatarFallback>
+                                                <AvatarImage src={task.assignee?.avatar} />
+                                                <AvatarFallback className="text-[10px]">{task.assignee?.name?.charAt(0) || "?"}</AvatarFallback>
                                             </Avatar>
                                             <span>{task.assignee?.name || "Unassigned"}</span>
                                        </div>
@@ -181,6 +188,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="py-12 text-center text-muted-foreground">List view coming soon...</div>
             </TabsContent>
         </Tabs>
+        
+        {/* YENİ: Create Task Modal Entegrasyonu */}
+        <CreateTaskModal 
+            open={isCreateTaskOpen} 
+            onOpenChange={setIsCreateTaskOpen}
+            defaultProjectId={id}
+        />
       </div>
     </AppShell>
   )

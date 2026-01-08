@@ -1,107 +1,133 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, UserPlus, Plus } from "lucide-react"
+import { CalendarIcon, UserPlus } from "lucide-react"
 import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import { users } from "@/lib/mock-data"
-import type { ParentTask, TaskStatus, User, SubTask } from "@/lib/types"
+// DÜZELTME 1: SubTask tipi çıkarıldı, detay görünümü için ParentTask (Full Data) gerekli
+import type { ParentTask, TaskPriority } from "@/lib/types" 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { taskService } from "@/services/task-service"
+import { userService } from "@/services/user-service"
+import { projectService } from "@/services/project-service"
 
-const statusOptions: { value: TaskStatus; label: string; color: string }[] = [
-  { value: "todo", label: "To Do", color: "bg-slate-500" },
-  { value: "in-progress", label: "In Progress", color: "bg-blue-500" },
-  { value: "done", label: "Done", color: "bg-green-500" },
-]
-
-const priorityColors = {
-  critical: "bg-red-500 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-500 text-white",
-  low: "bg-slate-400 text-white",
+const priorityColors: Record<string, string> = {
+  CRITICAL: "bg-red-500 hover:bg-red-600",
+  HIGH: "bg-orange-500 hover:bg-orange-600",
+  MEDIUM: "bg-yellow-500 hover:bg-yellow-600",
+  LOW: "bg-blue-500 hover:bg-blue-600",
 }
 
 interface TaskSidebarProps {
-  task: ParentTask | SubTask
+  // DÜZELTME 1: Sadece ParentTask (Full Task) kabul ediliyor
+  task: ParentTask
 }
 
 export function TaskSidebar({ task }: TaskSidebarProps) {
-  const [status, setStatus] = React.useState<TaskStatus>(task.status)
-  const [assignee, setAssignee] = React.useState<User | null>(task.assignee)
+  const queryClient = useQueryClient()
   const [assigneeOpen, setAssigneeOpen] = React.useState(false)
-  const [dueDate, setDueDate] = React.useState<Date | undefined>(task.dueDate ? new Date(task.dueDate) : undefined)
 
-  const timeProgress =
-    "estimatedTime" in task && task.estimatedTime > 0 && "loggedTime" in task
-      ? Math.round((task.loggedTime / task.estimatedTime) * 100)
-      : 0
+  // 1. Proje Detaylarını Çek (Columns/Status için)
+  const { data: project } = useQuery({
+      queryKey: ['project', task.projectId],
+      // DÜZELTME 2: getProject -> getById
+      queryFn: () => projectService.getById(task.projectId), 
+      enabled: !!task.projectId
+  });
+
+  // 2. Kullanıcıları Çek
+  const { data: users = [] } = useQuery({
+      queryKey: ['users'],
+      queryFn: userService.getAll
+  });
+
+  // 3. Update Mutation
+  const updateTaskMutation = useMutation({
+      mutationFn: (data: any) => taskService.updateTask(task.id, data),
+      onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['task', task.id] })
+          queryClient.invalidateQueries({ queryKey: ['project-tasks'] })
+      }
+  });
+
+  const handleStatusChange = (columnIdString: string) => {
+      updateTaskMutation.mutate({ column_id: parseInt(columnIdString) })
+  }
+
+  const handleAssigneeChange = (userId: string) => {
+      updateTaskMutation.mutate({ assignee_id: parseInt(userId) })
+      setAssigneeOpen(false)
+  }
+
+  const handlePriorityChange = (priority: TaskPriority) => {
+      updateTaskMutation.mutate({ priority })
+  }
+
+  const handleDateChange = (date: Date | undefined) => {
+      updateTaskMutation.mutate({ due_date: date ? date.toISOString() : null })
+  }
+
+  // Column/Status Listesi
+  // DÜZELTME: project?.columns tipini any olarak belirttik veya varsa tipi kullanabiliriz
+  const columns = (project as any)?.columns || [] 
 
   return (
     <div className="space-y-4">
-      {/* Status */}
+      
+      {/* STATUS SELECTION */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Status</CardTitle>
         </CardHeader>
         <CardContent className="pt-4">
-          <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-            <SelectTrigger
-              className={cn(
-                "w-full font-medium",
-                status === "todo" && "bg-slate-100 border-slate-300",
-                status === "in-progress" && "bg-blue-100 border-blue-300 text-blue-700",
-                status === "done" && "bg-green-100 border-green-300 text-green-700",
-              )}
-            >
-              <SelectValue />
+          <Select 
+            onValueChange={handleStatusChange} 
+            // DÜZELTME 3: c parametresi için tip belirtildi (any)
+            defaultValue={columns.find((c: any) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()}
+          >
+            <SelectTrigger className="w-full font-medium">
+              <SelectValue placeholder={task.status.toUpperCase().replace("-", " ")} />
             </SelectTrigger>
             <SelectContent>
-              {statusOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+              {columns.length > 0 ? columns.map((col: any) => (
+                <SelectItem key={col.id} value={col.id.toString()}>
                   <div className="flex items-center gap-2">
-                    <div className={cn("h-2 w-2 rounded-full", option.color)} />
-                    {option.label}
+                    <div className="h-2 w-2 rounded-full bg-slate-500" />
+                    {col.name}
                   </div>
                 </SelectItem>
-              ))}
+              )) : (
+                  <SelectItem value="loading" disabled>Loading statuses...</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
-      {/* People */}
+      {/* ASSIGNEE SELECTION */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">People</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Assignee</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Assignee */}
-          <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Assignee</label>
+        <CardContent>
             <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-2 bg-transparent">
-                  {assignee ? (
+                  {task.assignee ? (
                     <>
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={assignee.avatar || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {assignee.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
+                        <AvatarImage src={task.assignee.avatar} />
+                        <AvatarFallback>{task.assignee.name.substring(0,2).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <span>{assignee.name}</span>
+                      <span>{task.assignee.name}</span>
                     </>
                   ) : (
                     <>
@@ -121,19 +147,11 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
                         <CommandItem
                           key={user.id}
                           value={user.name}
-                          onSelect={() => {
-                            setAssignee(user)
-                            setAssigneeOpen(false)
-                          }}
+                          onSelect={() => handleAssigneeChange(user.id)}
                         >
                           <Avatar className="h-6 w-6 mr-2">
-                            <AvatarImage src={user.avatar || "/placeholder.svg"} />
-                            <AvatarFallback>
-                              {user.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback>{user.name.substring(0,2)}</AvatarFallback>
                           </Avatar>
                           {user.name}
                         </CommandItem>
@@ -143,52 +161,10 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
                 </Command>
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Reporter */}
-          {"reporter" in task && task.reporter && (
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Reporter</label>
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start gap-2 h-auto py-2 px-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={task.reporter.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>
-                        {task.reporter.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{task.reporter.name}</span>
-                  </Button>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-64">
-                  <div className="flex gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={task.reporter.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>
-                        {task.reporter.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h4 className="font-medium">{task.reporter.name}</h4>
-                      <p className="text-sm text-muted-foreground">{task.reporter.email}</p>
-                      <p className="text-xs text-muted-foreground mt-1 capitalize">{task.reporter.role}</p>
-                    </div>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Details */}
+      {/* PRIORITY & DETAILS */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Details</CardTitle>
@@ -196,76 +172,54 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Priority</span>
-            <Badge className={priorityColors[task.priority]}>{task.priority}</Badge>
+            <Select onValueChange={(v) => handlePriorityChange(v as TaskPriority)} defaultValue={task.priority}>
+                <SelectTrigger className="w-[120px] h-8 text-xs">
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    {["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(p => (
+                        <SelectItem key={p} value={p}>
+                            <Badge className={priorityColors[p] || "bg-slate-500"}>{p}</Badge>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Points</span>
             <Badge variant="secondary">{task.points}</Badge>
           </div>
-          {"labels" in task && task.labels && (
-            <div className="space-y-2">
-              <span className="text-sm text-muted-foreground">Labels</span>
-              <div className="flex flex-wrap gap-1">
-                {task.labels.map((label) => (
-                  <Badge key={label} variant="outline" className="text-xs">
-                    {label}
-                  </Badge>
-                ))}
-                <Button variant="ghost" size="icon" className="h-5 w-5">
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Dates */}
+      {/* DATES */}
       <Card className="shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">Dates</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Dates</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Created</span>
-            <span>{task.createdAt}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Updated</span>
-            <span>{task.updatedAt}</span>
-          </div>
-          <div className="space-y-2">
-            <span className="text-muted-foreground">Due Date</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dueDate ? format(dueDate, "PPP") : "Set due date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
-              </PopoverContent>
-            </Popover>
-          </div>
+        <CardContent>
+             <div className="space-y-2">
+                <span className="text-muted-foreground text-sm">Due Date</span>
+                <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {task.dueDate ? format(new Date(task.dueDate), "PPP") : "Set due date"}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar 
+                        mode="single" 
+                        selected={task.dueDate ? new Date(task.dueDate) : undefined} 
+                        onSelect={handleDateChange} 
+                        initialFocus 
+                    />
+                </PopoverContent>
+                </Popover>
+            </div>
         </CardContent>
       </Card>
 
-      {/* Time Tracking */}
-      {"loggedTime" in task && typeof task.estimatedTime === "number" && (
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Time Tracking</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={timeProgress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{task.loggedTime}h logged</span>
-              <span>{task.estimatedTime}h estimated</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
