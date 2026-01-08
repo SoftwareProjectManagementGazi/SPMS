@@ -93,10 +93,10 @@ export default function CustomizeColumns({
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        {/* <p className="text-xs text-muted-foreground">
           Not: Drag & drop eklemek istersen sonra @dnd-kit ile kolayca
           geliştirebiliriz.
-        </p>
+        </p> */}
       </CardContent>
     </Card>
   );

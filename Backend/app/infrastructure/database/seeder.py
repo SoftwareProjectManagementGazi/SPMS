@@ -30,8 +30,8 @@ INITIAL_ROLES = [
 ]
 
 USERS_DATA = [
-    {"email": "admin@spms.com", "full_name": "Sistem Yöneticisi", "role": "Admin", "avatar": "https://i.pravatar.cc/150?u=admin"},
-    {"email": "ayse.oz@gazi.edu.tr", "full_name": "Ayşe Öz", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=ayse"},
+    {"email": "admin@spms.com", "full_name": "Sistem Yöneticisi", "role": "Admin", "avatar": "https://i.pravatar.cc/150?u=ayse"},
+    {"email": "ayse.oz@gazi.edu.tr", "full_name": "Ayşe Öz", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=admin"},
     {"email": "yusuf.bayrakci@gazi.edu.tr", "full_name": "Yusuf Emre Bayrakcı", "role": "Project Manager", "avatar": "https://i.pravatar.cc/150?u=yusuf"},
     {"email": "mehmet.yilmaz@firma.com", "full_name": "Mehmet Yılmaz", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=mehmet"},
     {"email": "zeynep.kaya@firma.com", "full_name": "Zeynep Kaya", "role": "Member", "avatar": "https://i.pravatar.cc/150?u=zeynep"},
