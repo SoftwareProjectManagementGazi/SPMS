@@ -16,6 +16,13 @@ export interface User {
   role?: { name: string }
 }
 
+export interface BoardColumn {
+  id: number
+  name: string
+  order_index: number
+  wip_limit: number
+}
+
 export interface Project {
   id: string
   name: string
@@ -26,6 +33,7 @@ export interface Project {
   startDate: string
   endDate: string
   progress: number
+  columns?: BoardColumn[]
 }
 
 export interface SubTask {

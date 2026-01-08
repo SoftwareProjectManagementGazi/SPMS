@@ -1,7 +1,8 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional , List
 from datetime import datetime
 from app.domain.entities.project import Methodology
+from app.domain.entities.board_column import BoardColumn
 
 class ProjectCreateDTO(BaseModel):
     name: str
@@ -27,4 +28,6 @@ class ProjectResponseDTO(BaseModel):
     manager_id: int
     created_at: datetime
     
+    columns: List[BoardColumn] = []
+
     model_config = ConfigDict(from_attributes=True)

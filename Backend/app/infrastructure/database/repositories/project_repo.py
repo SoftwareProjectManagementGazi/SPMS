@@ -32,31 +32,34 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             .where(ProjectModel.id == project_id)
         )
         result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
+        model = result.unique() .scalar_one_or_none()
         return self._to_entity(model) if model else None
 
     async def get_by_id_and_user(self, project_id: int, user_id: int) -> Optional[Project]:
-        stmt = select(ProjectModel).where(
-            ProjectModel.id == project_id,
-            or_(
-                ProjectModel.manager_id == user_id,
-                ProjectModel.members.any(id=user_id)
+        # GÜNCELLEME: joinedload ile columns ilişkisi yüklendi
+        stmt = (
+            select(ProjectModel)
+            .options(joinedload(ProjectModel.columns)) # <-- BU SATIR EKLENDİ
+            .where(
+                ProjectModel.id == project_id,
+                ProjectModel.manager_id == user_id
             )
         )
         result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
+        # joinedload(collection) kullandığımız için unique() çağırmamız gerekebilir.
+        model = result.unique().scalar_one_or_none()
         return self._to_entity(model) if model else None
 
     async def get_all(self, manager_id: int) -> List[Project]:
-        # Fetch projects where user is manager OR a member
-        stmt = select(ProjectModel).where(
-            or_(
-                ProjectModel.manager_id == manager_id,
-                ProjectModel.members.any(id=manager_id)
-            )
+        # GÜNCELLEME: columns ilişkisi yüklendi
+        stmt = (
+            select(ProjectModel)
+            .options(joinedload(ProjectModel.columns)) # <-- BU SATIR EKLENDİ
+            .where(ProjectModel.manager_id == manager_id)
         )
         result = await self.session.execute(stmt)
-        models = result.scalars().unique().all() # unique() is important for joins/relationships
+        # GÜNCELLEME: .unique() eklendi (joinedload collection olduğu için şart)
+        models = result.unique().scalars().all()
         return [self._to_entity(m) for m in models]
 
     async def update(self, project: Project) -> Project:

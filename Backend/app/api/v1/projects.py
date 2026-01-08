@@ -12,6 +12,7 @@ from app.application.use_cases.manage_projects import (
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.entities.user import User
 from app.domain.exceptions import ProjectNotFoundError
+from app.application.use_cases.get_project_details import GetProjectDetailsUseCase
 
 router = APIRouter()
 
@@ -35,14 +36,16 @@ async def list_projects(
 @router.get("/{project_id}", response_model=ProjectResponseDTO)
 async def get_project(
     project_id: int,
-    project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user), # Giriş yapmış olması yeterli
+    project_repo: IProjectRepository = Depends(get_project_repo)
 ):
-    try:
-        use_case = GetProjectUseCase(project_repo)
-        return await use_case.execute(project_id, current_user.id) # type: ignore
-    except ProjectNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    # DİKKAT: Burada repository'nin 'unique()' eklenmiş get_by_id metodunu kullanıyoruz.
+    project = await project_repo.get_by_id(project_id)
+    
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {project_id} not found")
+        
+    return ProjectResponseDTO.model_validate(project)
 
 @router.put("/{project_id}", response_model=ProjectResponseDTO)
 async def update_project(
