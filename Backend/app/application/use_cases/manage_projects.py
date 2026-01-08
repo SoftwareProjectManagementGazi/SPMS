@@ -2,6 +2,7 @@ from typing import List
 from app.domain.repositories.project_repository import IProjectRepository
 from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
 from app.domain.entities.project import Project
+from app.domain.entities.board_column import BoardColumn
 from app.domain.exceptions import ProjectNotFoundError
 
 class CreateProjectUseCase:
@@ -9,13 +10,22 @@ class CreateProjectUseCase:
         self.project_repo = project_repo
 
     async def execute(self, dto: ProjectCreateDTO, manager_id: int) -> ProjectResponseDTO:
+        # Create BoardColumn entities from string list
+        columns = [
+            BoardColumn(name=col_name, order_index=i, wip_limit=0) 
+            for i, col_name in enumerate(dto.columns)
+        ]
+
         new_project = Project(
+            key=dto.key,
             name=dto.name,
             description=dto.description,
             start_date=dto.start_date,
             end_date=dto.end_date,
             methodology=dto.methodology,
-            manager_id=manager_id
+            manager_id=manager_id,
+            columns=columns,
+            custom_fields=dto.custom_fields
         )
         created_project = await self.project_repo.create(new_project)
         return ProjectResponseDTO.model_validate(created_project)

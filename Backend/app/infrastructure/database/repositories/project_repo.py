@@ -5,6 +5,7 @@ from app.domain.entities.project import Project
 from app.domain.repositories.project_repository import IProjectRepository
 from app.infrastructure.database.models.project import ProjectModel
 from app.infrastructure.database.models.user import UserModel
+from app.infrastructure.database.models.board_column import BoardColumnModel
 from sqlalchemy.orm import joinedload
 
 class SqlAlchemyProjectRepository(IProjectRepository):
@@ -15,16 +16,37 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         return Project.model_validate(model)
 
     def _to_model(self, entity: Project) -> ProjectModel:
-        data = entity.model_dump(exclude={"id", "created_at"})
-        return ProjectModel(**data)
+        # Exclude columns to handle them manually as relationship objects
+        data = entity.model_dump(exclude={"id", "created_at", "columns"})
+        model = ProjectModel(**data)
+        
+        if entity.columns:
+            model.columns = [
+                BoardColumnModel(
+                    name=c.name,
+                    order_index=c.order_index,
+                    wip_limit=c.wip_limit
+                ) for c in entity.columns
+            ]
+            
+        return model
 
     async def create(self, project: Project) -> Project:
         model = self._to_model(project)
         self.session.add(model)
         await self.session.flush()
         await self.session.commit()
-        await self.session.refresh(model)
-        return self._to_entity(model)
+        
+        # Re-fetch with eager loading to avoid MissingGreenlet error
+        stmt = (
+            select(ProjectModel)
+            .options(joinedload(ProjectModel.columns))
+            .where(ProjectModel.id == model.id)
+        )
+        result = await self.session.execute(stmt)
+        refreshed_model = result.unique().scalar_one()
+        
+        return self._to_entity(refreshed_model)
 
     async def get_by_id(self, project_id: int) -> Optional[Project]:
         # GÜNCELLEME: joinedload(ProjectModel.columns) EKLENDİ

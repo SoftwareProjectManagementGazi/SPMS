@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 from app.domain.entities.board_column import BoardColumn
@@ -20,5 +20,6 @@ class Project(BaseModel):
     manager_id: Optional[int] = None
     created_at: Optional[datetime] = None
     columns: List[BoardColumn] = []
+    custom_fields: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)

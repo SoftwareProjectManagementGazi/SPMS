@@ -102,11 +102,14 @@ export function ProjectCreation() {
     const end = endDate ? format(endDate, "yyyy-MM-dd") : undefined
 
     createProjectMutation.mutate({
+        key: projectKey.trim(),
         name: projectName.trim(),
         description: projectDesc.trim(),
-        methodology: selectedMethodology,
+        methodology: selectedMethodology.toUpperCase() as Methodology,
         start_date: start,
         end_date: end,
+        columns: columns,
+        custom_fields: enabledFields,
     })
   }
 
