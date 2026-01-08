@@ -7,7 +7,8 @@ from app.application.dtos.task_dtos import (
     TaskResponseDTO, 
     ProjectSummaryDTO,
     ParentTaskSummaryDTO,
-    SubTaskSummaryDTO
+    SubTaskSummaryDTO,
+    UserSummaryDTO 
 )
 from app.domain.entities.task import Task
 from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError
@@ -58,6 +59,16 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
                 priority=sub.priority
             ))
 
+    assignee_dto = None
+    if task.assignee:
+        assignee_dto = UserSummaryDTO(
+            id=task.assignee.id,
+            email=task.assignee.email,
+            # Entity'de full_name var ama DTO'da username dediysek burada çeviriyoruz
+            username=task.assignee.full_name, 
+            avatar_url=task.assignee.avatar
+        )        
+
     # 5. Project Summary
     project_summary = None
     if task.project:
@@ -78,6 +89,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
         sprint_id=task.sprint_id,
         column_id=task.column_id,
         assignee_id=task.assignee_id,
+        assignee=assignee_dto,
         reporter_id=task.reporter_id,
         parent_task_id=task.parent_task_id,
         parent_task_summary=parent_summary,

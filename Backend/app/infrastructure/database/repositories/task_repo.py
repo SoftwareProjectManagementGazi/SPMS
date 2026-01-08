@@ -2,10 +2,11 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from sqlalchemy.orm import joinedload, selectinload
-# 'attributes' importuna artık gerek yok, siliyoruz.
 from app.domain.entities.task import Task
 from app.domain.repositories.task_repository import ITaskRepository
 from app.infrastructure.database.models.task import TaskModel
+# YENİ İMPORT: Nested eager loading için gerekli
+from app.infrastructure.database.models.user import UserModel
 
 class SqlAlchemyTaskRepository(ITaskRepository):
     def __init__(self, session: AsyncSession):
@@ -14,14 +15,11 @@ class SqlAlchemyTaskRepository(ITaskRepository):
     def _to_entity(self, model: TaskModel) -> Optional[Task]:
         """
         SQLAlchemy modelini Domain Entity'e MANUEL olarak çeviriyoruz.
-        Bu yöntem 'model_validate'in yarattığı recursion (sonsuz döngü) 
-        ve lazy loading hatalarını kesin olarak çözer.
-        Clean Architecture'a uygundur: Mapping logic repository içindedir.
         """
         if not model:
             return None
 
-        # 1. Ana Task Objesini oluşturmak için verileri hazırla
+        # 1. Ana Task Objesini oluştur
         task_data = {
             "id": model.id,
             "title": model.title,
@@ -39,30 +37,26 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             "created_at": model.created_at,
             "updated_at": model.updated_at,
             
-            # İlişkiler (Simple Objects) 
-            # joinedload ile çekildiği için güvenle atayabiliriz
-            "project": model.project, 
-            "column": model.column,   
             "assignee": model.assignee, 
+            "column": model.column,     
+            "project": model.project,   
         }
 
         # 2. Parent (Varsa)
-        # Sadece parent'ın temel bilgilerini alıyoruz, onun subtask'lerini almıyoruz (Döngü kırma)
         if model.parent:
             task_data["parent"] = Task(
                 id=model.parent.id,
                 title=model.parent.title,
                 priority=model.parent.priority,
                 project_id=model.parent.project_id,
-                # Kritik: Parent'ın subtask'lerini boş bırakıyoruz
                 subtasks=[], 
                 parent=None,
                 column=model.parent.column,
-                project=model.parent.project
+                project=model.parent.project,
+                assignee=None 
             )
 
         # 3. Subtasks (Varsa)
-        # Alt görevleri listeye ekliyoruz ama onların parent'ını boş bırakıyoruz (Döngü kırma)
         if model.subtasks:
             subtask_list = []
             for sub in model.subtasks:
@@ -70,12 +64,10 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                     id=sub.id,
                     title=sub.title,
                     priority=sub.priority,
-                    # Status hesabı (Modelde property yoksa manuel yapıyoruz)
                     status=sub.column.name.lower().replace(" ", "-") if sub.column else "todo",
                     project_id=sub.project_id,
                     column=sub.column,
                     assignee=sub.assignee,
-                    # Kritik: Alt görevin parent'ını boş bırakıyoruz
                     parent=None, 
                     subtasks=[] 
                 )
@@ -84,7 +76,6 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         else:
             task_data["subtasks"] = []
 
-        # 4. Final Entity Oluşturma
         return Task(**task_data)
 
     def _to_model(self, entity: Task) -> TaskModel:
@@ -97,27 +88,27 @@ class SqlAlchemyTaskRepository(ITaskRepository):
 
     def _get_base_query(self):
         """
-        Mapper'ın ihtiyaç duyduğu verileri Eager Load (Peşin Yükleme) ile çeker.
+        Mapper'ın ihtiyaç duyduğu verileri Eager Load ile çeker.
         """
         return select(TaskModel).options(
             # 1. Temel İlişkiler
             joinedload(TaskModel.project),
             joinedload(TaskModel.column),
-            joinedload(TaskModel.assignee),
+            
+            # GÜNCELLEME: Assignee'nin Role bilgisini de yüklüyoruz (ZİNCİRLEME YÜKLEME)
+            joinedload(TaskModel.assignee).joinedload(UserModel.role),
             
             # 2. Parent İlişkisi
-            # Parent'ın kendisine ihtiyacımız var (Mapper'da kullanıyoruz)
             joinedload(TaskModel.parent).options(
                 joinedload(TaskModel.project),
                 joinedload(TaskModel.column),
             ),
 
             # 3. Subtasks İlişkisi
-            # Mapper'da model.subtasks üzerinde döngü kurduğumuz için
-            # bu verinin MUTLAKA yüklenmiş olması gerekir. Aksi takdirde MissingGreenlet hatası alırız.
             selectinload(TaskModel.subtasks).options(
                 joinedload(TaskModel.column),
-                joinedload(TaskModel.assignee),
+                # GÜNCELLEME: Alt görevlerin assignee ve role bilgisini de yüklüyoruz
+                joinedload(TaskModel.assignee).joinedload(UserModel.role),
                 joinedload(TaskModel.project)
             )
         )
@@ -126,7 +117,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         model = self._to_model(task)
         self.session.add(model)
         await self.session.flush()
-        return await self.get_by_id(model.id) # type: ignore
+        return await self.get_by_id(model.id)
 
     async def get_by_id(self, task_id: int) -> Optional[Task]:
         stmt = self._get_base_query().where(TaskModel.id == task_id)
@@ -138,7 +129,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         stmt = self._get_base_query().where(TaskModel.project_id == project_id)
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
-        return [self._to_entity(m) for m in models if m is not None] # None check eklendi
+        return [self._to_entity(m) for m in models if m is not None]
     
     async def get_all_by_assignee(self, assignee_id: int) -> List[Task]:
         stmt = self._get_base_query().where(TaskModel.assignee_id == assignee_id)
@@ -157,8 +148,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                     setattr(model, key, value)
             
             await self.session.flush()
-            # Güncel halini çekip dönüyoruz
-            return await self.get_by_id(task_id) # type: ignore
+            return await self.get_by_id(task_id) 
             
         raise Exception(f"Task with id {task_id} not found")
 
