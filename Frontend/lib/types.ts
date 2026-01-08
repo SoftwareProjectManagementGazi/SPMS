@@ -33,8 +33,8 @@ export interface SubTask {
   key: string
   title: string
   description: string
-  status: TaskStatus
-  priority: TaskPriority
+  status: string 
+  priority: string
   assignee: User | null
   points: number
   parentTaskId: string
@@ -45,25 +45,39 @@ export interface SubTask {
 
 export interface ParentTask {
   id: string
+  // Subtask ise parent ID'si olur
+  parentTaskId?: string | null 
+  
   key: string
   title: string
   description: string
-  status: TaskStatus
-  priority: TaskPriority
+  status: string
+  priority: string
   assignee: User | null
   reporter: User
   points: number
   projectId: string
-  project: Project
+  
+  // YENİ ALANLAR (Ghost Mantığı İçin)
+  isGhost?: boolean; 
+  parentSummary?: {
+      id: string;
+      title: string;
+      key: string;
+      status: string;
+      projectId: string;
+  } | null;
+
   subTasks: SubTask[]
+  
   createdAt: string
   updatedAt: string
   dueDate: string | null
   isRecurring: boolean
-  recurringFrequency?: "daily" | "weekly" | "monthly"
   loggedTime: number
   estimatedTime: number
   labels: string[]
+  project: any // Tam proje objesi yerine any veya Project type
 }
 
 export interface Activity {

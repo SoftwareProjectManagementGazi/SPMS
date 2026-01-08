@@ -34,7 +34,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const { data: tasks, isLoading: isTasksLoading } = useQuery({
     queryKey: ['tasks', id],
-    queryFn: () => taskService.getByProjectId(id),
+    queryFn: () => taskService.getTasksByProject(id),
     enabled: !!id
   })
 
