@@ -66,7 +66,6 @@ Kullanıcı deneyimini sağlayacak arayüzlerin kodlanması.
 
 ### Görev Yönetim Ekranları
 - [ ] "Görevlerim" Ekranı: Kullanıcının üzerine atanmış görevleri listeleyen sayfayı yap (Erişim izni olmayan projeleri filtrele).
-- [ ] Durum Güncelleme: Görev kartlarına "Yapılacaklar -> Tamamlandı" geçişini sağlayan butonları ekle.
 - [ ] UI bileşenlerini (Butonlar, Kartlar) modüler (Component-based) olarak tasarla.
 *İlgili Gereksinimler: [SPMS-01.5], [SPMS-02.4], [SPMS-UI-05]*
 
