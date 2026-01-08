@@ -42,6 +42,11 @@ export function TaskContent({ task }: TaskContentProps) {
   const [description, setDescription] = React.useState(task.description)
   const [isEditing, setIsEditing] = React.useState(false)
 
+  // Sync state with prop when data is refreshed
+  React.useEffect(() => {
+    setDescription(task.description)
+  }, [task.description])
+
   // 1. Mutation Tanımla
   const updateTaskMutation = useMutation({
     mutationFn: (newDescription: string) => 
@@ -51,6 +56,8 @@ export function TaskContent({ task }: TaskContentProps) {
         setIsEditing(false)
         // Veriyi tazelemek için:
         queryClient.invalidateQueries({ queryKey: ['task', task.id] })
+        queryClient.invalidateQueries({ queryKey: ['project-tasks'] })
+        queryClient.invalidateQueries({ queryKey: ['myTasks'] })
     },
     onError: () => {
         toast.error("Failed to update description")

@@ -210,7 +210,9 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading tasks...
                     </div>
                   ) : parentTasks.length > 0 ? (
-                    parentTasks.map((task: any) => (
+                    parentTasks
+                        .filter((t: any) => !t.parentTaskId) // Filter: Sadece parent task'ları göster
+                        .map((task: any) => (
                       <SelectItem key={task.id} value={task.id}>
                         <span className="font-mono text-xs text-muted-foreground mr-2">{task.key}</span>
                         {task.title}

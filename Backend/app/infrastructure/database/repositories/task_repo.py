@@ -120,6 +120,11 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         model = self._to_model(task)
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit() # Changes persisted
+        # refresh is needed if we rely on DB generated fields that might change on commit? 
+        # Usually flush is enough for ID, but commit is safer for persistence.
+        # We need to refresh to get the eager loaded relationships if we were relying on them?
+        # Actually, get_by_id fetches everything again, so we are good.
         return await self.get_by_id(model.id)
 
     async def get_by_id(self, task_id: int) -> Optional[Task]:
@@ -153,6 +158,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                     setattr(model, key, value)
             
             await self.session.flush()
+            await self.session.commit() # Changes persisted
             return await self.get_by_id(task_id) 
             
         raise Exception(f"Task with id {task_id} not found")
@@ -160,4 +166,5 @@ class SqlAlchemyTaskRepository(ITaskRepository):
     async def delete(self, task_id: int) -> bool:
         stmt = delete(TaskModel).where(TaskModel.id == task_id)
         result = await self.session.execute(stmt)
+        await self.session.commit() # Changes persisted
         return result.rowcount > 0

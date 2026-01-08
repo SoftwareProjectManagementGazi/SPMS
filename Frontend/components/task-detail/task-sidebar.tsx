@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
 import { CalendarIcon, UserPlus } from "lucide-react"
 import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,6 +56,14 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
       onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['task', task.id] })
           queryClient.invalidateQueries({ queryKey: ['project-tasks'] })
+          queryClient.invalidateQueries({ queryKey: ['myTasks'] }) // Listeyi yenile
+          if (task.parentTaskId) {
+             queryClient.invalidateQueries({ queryKey: ['task', task.parentTaskId] }) // Parent detayını yenile
+          }
+          toast.success("Task updated successfully")
+      },
+      onError: (error: any) => {
+          toast.error(error.response?.data?.detail || "Failed to update task")
       }
   });
 
@@ -89,7 +98,11 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
         <CardContent className="pt-4">
           <Select 
             onValueChange={handleStatusChange} 
-            defaultValue={columns.find((c) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()}
+            defaultValue={
+                task.columnId 
+                ? task.columnId 
+                : columns.find((c) => c.name.toLowerCase().replace(" ", "-") === task.status)?.id.toString()
+            }
           >
             <SelectTrigger className="w-full font-medium">
               <SelectValue placeholder={task.status.toUpperCase().replace("-", " ")} />

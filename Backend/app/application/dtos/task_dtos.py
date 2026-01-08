@@ -23,6 +23,7 @@ class ParentTaskSummaryDTO(BaseModel):
     key: str
     status: str
     project_id: int
+    priority: TaskPriority # Added priority
     model_config = ConfigDict(from_attributes=True)
 
 # YENİ: Alt görev özeti için DTO

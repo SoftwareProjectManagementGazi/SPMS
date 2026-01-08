@@ -37,6 +37,7 @@ export interface TaskResponseDTO {
         key: string;
         status: string;
         project_id: number;
+        priority: TaskPriority;
     } | null;
 
     // YENİ: Backend artık subtask listesini gönderiyor
@@ -85,6 +86,7 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
         title: data.title,
         description: data.description || "",
         status: data.status,
+        columnId: data.column_id ? data.column_id.toString() : undefined, // YENİ MAPPING
         priority: data.priority,
         assignee: assigneeUser,
         reporter: null, // İsteğe bağlı
@@ -102,7 +104,8 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
             title: data.parent_task_summary.title,
             key: data.parent_task_summary.key,
             status: data.parent_task_summary.status,
-            projectId: data.parent_task_summary.project_id.toString()
+            projectId: data.parent_task_summary.project_id.toString(),
+            priority: data.parent_task_summary.priority // YENİ: Priority eklendi
         } : null,
 
         // YENİ: Backend'den gelen listeyi map ediyoruz
