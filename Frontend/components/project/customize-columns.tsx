@@ -1,5 +1,3 @@
-// components/project/customize-columns.tsx
-
 "use client";
 
 import { useMemo, useState } from "react";
@@ -18,12 +16,13 @@ type Props = {
 export default function CustomizeColumns({
   columns,
   onChange,
-  title = "Customize Workflow Columns",
-  description = "Add, rename, or remove columns for this project.",
+  title = "İş Akışı Sütunlarını Özelleştir",
+  description = "Bu proje için sütun ekleyin, yeniden adlandırın veya kaldırın.",
 }: Props) {
   const [newColumn, setNewColumn] = useState("");
 
-  const normalized = useMemo(() => columns.map((c) => c.trim()), [columns]);
+  // Boşlukları temizle ama orijinal array yapısını bozma
+  const normalized = useMemo(() => columns, [columns]);
 
   function renameColumn(index: number, value: string) {
     const next = [...normalized];
@@ -33,16 +32,16 @@ export default function CustomizeColumns({
 
   function removeColumn(index: number) {
     const next = normalized.filter((_, i) => i !== index);
-    onChange(next.length ? next : ["To Do"]); // tamamen boş kalmasın
+    onChange(next.length ? next : ["Yapılacaklar"]); // tamamen boş kalmasın
   }
 
   function addColumn() {
     const name = newColumn.trim();
     if (!name) return;
 
-    // aynı isim varsa ekleme
+    // Aynı isim varsa ekleme (büyük/küçük harf duyarsız kontrol)
     const exists = normalized.some(
-      (c) => c.toLowerCase() === name.toLowerCase()
+      (c) => c.trim().toLowerCase() === name.toLowerCase()
     );
     if (exists) return;
 
@@ -58,14 +57,16 @@ export default function CustomizeColumns({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* mevcut kolonlar */}
+        {/* Mevcut kolonlar */}
         <div className="space-y-2">
           {normalized.map((col, idx) => (
-            <div key={`${col}-${idx}`} className="flex gap-2 items-center">
+            // DÜZELTME: key değeri `col` içermemeli, sadece index olmalı.
+            // Böylece yazı yazarken component re-mount olmaz ve focus kaybolmaz.
+            <div key={idx} className="flex gap-2 items-center">
               <Input
                 value={col}
                 onChange={(e) => renameColumn(idx, e.target.value)}
-                placeholder="Column name"
+                placeholder="Sütun adı"
               />
               <Button
                 variant="secondary"
@@ -78,25 +79,27 @@ export default function CustomizeColumns({
           ))}
         </div>
 
-        {/* yeni kolon ekleme */}
+        {/* Yeni kolon ekleme */}
         <div className="flex gap-2 items-center">
           <Input
             value={newColumn}
             onChange={(e) => setNewColumn(e.target.value)}
             placeholder="Yeni kolon adı"
             onKeyDown={(e) => {
-              if (e.key === "Enter") addColumn();
+              if (e.key === "Enter") {
+                e.preventDefault(); // Form submitini engelle
+                addColumn();
+              }
             }}
           />
           <Button onClick={addColumn} type="button">
-            Kolon ekle
+            Kolon Ekle
           </Button>
         </div>
 
-        {/* <p className="text-xs text-muted-foreground">
-          Not: Drag & drop eklemek istersen sonra @dnd-kit ile kolayca
-          geliştirebiliriz.
-        </p> */}
+        <p className="text-xs text-muted-foreground">
+          {/* Not: İleride sürükle-bırak özelliği ile sıralamayı değiştirebileceksiniz. */}
+        </p>
       </CardContent>
     </Card>
   );

@@ -22,8 +22,8 @@ interface SidebarProps {
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/my-tasks", label: "My Tasks", icon: CheckSquare },
+  { href: "/projects", label: "Projeler", icon: FolderKanban },
+  { href: "/my-tasks", label: "Görevlerim", icon: CheckSquare },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ]

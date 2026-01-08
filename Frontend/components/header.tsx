@@ -50,7 +50,7 @@ export function Header({ onCreateClick }: HeaderProps) {
       <div className="flex items-center gap-2">
         <Button onClick={onCreateClick} className="gap-2">
           <Plus className="h-4 w-4" />
-          Create
+          Oluştur
         </Button>
 
         <Button variant="ghost" size="icon" className="relative">
@@ -91,16 +91,16 @@ export function Header({ onCreateClick }: HeaderProps) {
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push('/settings')}>
                 <UserIcon className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-                <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                <span>Profilim</span>
+                {/* <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut> */}
               </DropdownMenuItem>
                {/* ... */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+              <span>Çıkış Yap</span>
+              {/* <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut> */}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

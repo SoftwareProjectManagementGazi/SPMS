@@ -83,13 +83,54 @@ export default function LoginPage() {
 
     // ... (Geri kalan return kısmı aynı kalacak)
     return (
-        // ... Mevcut JSX kodlarınız ...
         <div className="min-h-screen grid lg:grid-cols-2">
-            {/* ... */}
-             <div className="relative flex items-center justify-center p-8 sm:p-12 lg:p-20 bg-background">
-                {/* ... */}
-                 <div className="mx-auto w-full max-w-[400px] space-y-8">
-                    {/* ... */}
+            {/* Left Side - Hero/Visuals */}
+            <div className="hidden lg:flex flex-col justify-between bg-zinc-900 p-10 text-white relative overflow-hidden">
+                {/* Abstract Background Shapes */}
+                <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+                    <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-600/20 blur-[100px]" />
+                    <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/20 blur-[100px]" />
+                    <div className="absolute top-[40%] left-[40%] w-[300px] h-[300px] rounded-full bg-violet-500/10 blur-[80px]" />
+                </div>
+
+                <div className="relative z-10 flex items-center gap-2 text-xl font-bold tracking-tight">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                        <LayoutDashboard className="h-6 w-6" />
+                    </div>
+                    SPMS
+                </div>
+
+                <div className="relative z-10 max-w-md">
+                    <blockquote className="space-y-4">
+                        <p className="text-2xl font-medium leading-normal">
+                            {/* "Efficiency is doing things right; effectiveness is doing the right things. SPMS helps you do both." */}
+                        </p>
+                        <footer className="text-sm text-zinc-400 font-medium">
+                            Software Project Management System
+                        </footer>
+                    </blockquote>
+                </div>
+
+                <div className="relative z-10 text-sm text-zinc-500">
+                    © 2024 SPMS
+                </div>
+            </div>
+
+            {/* Right Side - Form */}
+            <div className="relative flex items-center justify-center p-8 sm:p-12 lg:p-20 bg-background">
+                <div className="absolute top-8 right-8">
+                    
+                </div>
+
+                <div className="mx-auto w-full max-w-[400px] space-y-8">
+                    <div className="flex flex-col space-y-2 text-center">
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                            Hoşgeldin
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Devam etmek için hesabına giriş yap.
+                        </p>
+                    </div>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             {/* ... Form alanları aynı ... */}
@@ -155,7 +196,7 @@ export default function LoginPage() {
                                 {isLoading && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                Sign In
+                                Giriş Yap
                             </Button>
                         </form>
                     </Form>
