@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { useEffect } from "react"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -42,6 +43,13 @@ export default function LoginPage() {
             password: "",
         },
     })
+   
+    useEffect(() => {
+        if (authService.isAuthenticated()) {
+            router.replace("/projects")
+        }
+    }, [router])
+    
 
     async function onSubmit(data: LoginFormValues) {
         setIsLoading(true)
