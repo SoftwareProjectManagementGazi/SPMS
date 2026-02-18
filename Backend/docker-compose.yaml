@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: secretpassword # Şifre (Projede .env ile yönetilmeli)
       POSTGRES_DB: spms_db           # Veritabanı adı
     ports:
-      - "5432:5432"                  # Dışarıya açılan port
+      - "5433:5432"                  # Dışarıya açılan port
     volumes:
       - postgres_data:/var/lib/postgresql/data  # Veri kalıcılığı (Konteyner silinse de veri gitmez)
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql # SQL dosyasını otomatik çalıştırır!

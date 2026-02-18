@@ -5,7 +5,7 @@ pycache/
 __pycache__/
 .next/
 .cache/
-
+.env
 node_modules/
 
 BM495_PROJE_SRS_Y.E.BAYRAKCI_A.OZ_20252026_GUZ.pdf
