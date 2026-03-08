@@ -1,0 +1,686 @@
+# SPMS SDD Revizyon Belgesi
+
+Bu belge, SRS'te belirtilen eksik kalan isterlerin Clean Architecture, SOLID ve Dependency Injection (DI) prensiplerine uygun mimari tasarımlarını içermektedir. Mevcut `sdd.md` belgesindeki kararlar (LOGS tablosu, is_recurring algoritması vb.) referans alınarak uyumsuzluklar giderilmiş ve GEMINI.md prensipleri ile detaylandırılmıştır.
+
+## SPMS-01.4: Kullanıcı profili düzenleme, ekip oluşturma / davet işlemleri
+**Modül:** Kullanıcı ve Yetkilendirme Modülü (SPMS-01) & Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `User` (profil için), `ProjectMember` (ekip daveti için). SDD Matrisi'ne göre ekip işlemleri Task modülü üzerinden yürütülür.
+- **Application:** UseCases: `UpdateUserProfileUseCase` (Auth modülünde), `InviteUserToProjectUseCase` (Task modülünde).
+- **Infrastructure:** Repository: `SqlAlchemyUserRepository`, `SqlAlchemyProjectMemberRepository`.
+- **API:** Router: `auth_router.py` (profil) ve `project_router.py` (ekip daveti).
+
+---
+
+## SPMS-02.10: Görev geçmişi ve işlem logları
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Log`. Repository ABC: `ILogRepository` (SDD Tablo: LOGS).
+- **Application:** UseCases: `LogTaskEventUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyLogRepository`. (Değişiklikler JSON olarak 'changes' alanına yazılır).
+- **API:** Router: `task_router.py` (GET /tasks/{id}/logs).
+
+---
+
+## SPMS-02.11: Görev içi yorumlaşma ve dosya paylaşımı
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Comment` (SDD Tablo: COMMENTS). Port: `IFileStoragePort`.
+- **Application:** UseCases: `AddCommentUseCase`, `UploadAttachmentUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyCommentRepository`. Adapter: `LocalFileStorageAdapter`.
+- **API:** Router: `task_router.py` (POST /tasks/{id}/comments) ve `notification_router` tetiklenmesi.
+
+---
+
+## SPMS-02.12: Takvim görünümünde veya zaman çizelgesinde (Gantt) izleme
+**Modül:** Proje ve Görev Yönetim Modülü / Raporlama (Gantt)
+
+**Mimari Karar:**
+- **Domain:** Model: `TimelineReadModel`. Process modülünden kuralları alır.
+- **Application:** UseCases: `GetProjectTimelineQuery`.
+- **Infrastructure:** Repository: `SqlAlchemyTaskRepository` (başlangıç/bitiş tarihleri çekilir).
+- **API:** Router: `project_router.py`.
+
+---
+
+## SPMS-02.2: Projelere ekip üyelerini atama
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `ProjectMember`. SDD Matrisine göre proje-kullanıcı ilişkisi bu varlık ile kontrol altındadır.
+- **Application:** UseCases: `AssignMemberToProjectUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyProjectMemberRepository`.
+- **API:** Router: `project_router.py`.
+
+---
+
+## SPMS-02.5: Görevler arası bağımlılıklar ("bitmeden-başlayamaz" vb.)
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Task`. SDD 5.2.3'e göre görev tablosunda `parent_task_id` üzerinden veya bağımsız bir bağımlılık tablosu ile takip edilir. Process Modülü kuralları denetler.
+- **Application:** UseCases: `AddDependencyUseCase`, `ValidateTaskCompletionUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyTaskRepository`.
+- **API:** Router: `task_router.py`.
+
+---
+
+## SPMS-02.6: Tekrarlayan görevler
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `RepeatingEvent` veya `Task` üzerindeki `is_recurring` alanı. (SDD 5.2.3.3: Zamanlayıcı her gün is_recurring=True olanları tarar).
+- **Application:** UseCases: `ProcessRecurringTasksUseCase`.
+- **Infrastructure:** Adapter: `APSchedulerTaskAdapter` nesnesi arka plan işleyicisi (Scheduler) olarak çalışır.
+- **API:** Worker logic entegrasyonu.
+
+---
+
+## SPMS-02.7: Tekrarlayan görevlerde değişiklik kontrolü
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Task` (recurring serisi yönetimi).
+- **Application:** UseCases: `UpdateRecurringSeriesUseCase` (Sadece bu örnek mi yoksa tümü mü kararı UI'dan alınır).
+- **Infrastructure:** Repository: `SqlAlchemyTaskRepository`.
+- **API:** Router: `task_router.py`.
+
+---
+
+## SPMS-02.8: Tekrarlayan görevlerin bitiş kriteri
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Task` (recurrence bitiş kriteri için `due_date` veya limit).
+- **Application:** UseCases: `ProcessRecurringTasksUseCase` içerisinde bitiş kriteri kontrolü.
+- **Infrastructure:** Adapter: `APSchedulerTaskAdapter`.
+- **API:** Worker logic.
+
+---
+
+## SPMS-02.9: Mükerrer görev kontrolü ve uyarı sistemi
+**Modül:** Proje ve Görev Yönetim Modülü (SPMS-02)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: `DuplicateTaskDetector`. (SDD Matrisi: Görev oluşturulurken başlık, proje ve tarihe göre benzerlik sorgulanır).
+- **Application:** UseCases: `CreateTaskUseCase` içerisine benzerlik kontrolünün inject edilmesi.
+- **Infrastructure:** Repository: `SqlAlchemyTaskRepository`.
+- **API:** Router: `task_router.py`.
+
+---
+
+## SPMS-03.1: Gerçek zamanlı bildirim gönderimi
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.2: Belirli durumlarda bildirim tetiklenmesi
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.3: Rol bazlı mesajlaşma yetkisi
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.4: Görev içi mesajlaşma / yorum alanı
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.5: Uygulama içi ve e-posta/push bildirimleri
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.6: Bildirim tercihleri (sessiz mod vb.)
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-03.7: Mesaj geçmişi güvenli saklanması
+**Modül:** Bildirim ve Mesajlaşma (SPMS-03)
+
+**Mimari Karar:**
+- **Domain:** Entity: `Notification`, `Message` (SDD Tablo: NOTIFICATIONS, type ve is_read alanları). Port: `INotificationPort`.
+- **Application:** UseCases: `SendNotificationUseCase`, `AcknowledgeNotificationUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyNotificationRepository`. Adapter: `WebSocketNotificationAdapter` (Odalar/Room mantığı).
+- **API:** Router: `WebSocket` endpointleri.
+
+---
+
+## SPMS-04.1: İlerleme durumlarının grafiksel sunumu
+**Modül:** Raporlama ve Analitik (SPMS-04)
+
+**Mimari Karar:**
+- **Domain:** Model: `ReportParams`. Port: `IPdfExportPort`, `IExcelExportPort`.
+- **Application:** UseCases: `GenerateProjectReportUseCase` (SDD'ye göre Burndown vb. hesaplamalar).
+- **Infrastructure:** Adapter: `PdfkitExportAdapter`, `PandasExcelExportAdapter`. Repository: Okuma ağırlıklı View'lar.
+- **API:** Router: `report_router.py`.
+
+---
+
+## SPMS-04.2: Rapor filtrelemeleri (Kullanıcı, görev, proje bazlı)
+**Modül:** Raporlama ve Analitik (SPMS-04)
+
+**Mimari Karar:**
+- **Domain:** Model: `ReportParams`. Port: `IPdfExportPort`, `IExcelExportPort`.
+- **Application:** UseCases: `GenerateProjectReportUseCase` (SDD'ye göre Burndown vb. hesaplamalar).
+- **Infrastructure:** Adapter: `PdfkitExportAdapter`, `PandasExcelExportAdapter`. Repository: Okuma ağırlıklı View'lar.
+- **API:** Router: `report_router.py`.
+
+---
+
+## SPMS-04.3: Rapor çıktılarının PDF/Excel olarak dışa aktarımı
+**Modül:** Raporlama ve Analitik (SPMS-04)
+
+**Mimari Karar:**
+- **Domain:** Model: `ReportParams`. Port: `IPdfExportPort`, `IExcelExportPort`.
+- **Application:** UseCases: `GenerateProjectReportUseCase` (SDD'ye göre Burndown vb. hesaplamalar).
+- **Infrastructure:** Adapter: `PdfkitExportAdapter`, `PandasExcelExportAdapter`. Repository: Okuma ağırlıklı View'lar.
+- **API:** Router: `report_router.py`.
+
+---
+
+## SPMS-04.4: Kullanıcı performans metriklerinin hesaplanması
+**Modül:** Raporlama ve Analitik (SPMS-04)
+
+**Mimari Karar:**
+- **Domain:** Model: `ReportParams`. Port: `IPdfExportPort`, `IExcelExportPort`.
+- **Application:** UseCases: `GenerateProjectReportUseCase` (SDD'ye göre Burndown vb. hesaplamalar).
+- **Infrastructure:** Adapter: `PdfkitExportAdapter`, `PandasExcelExportAdapter`. Repository: Okuma ağırlıklı View'lar.
+- **API:** Router: `report_router.py`.
+
+---
+
+## SPMS-04.5: Dashboard üzerinden yöneticilere performans verilerinin sunulması
+**Modül:** Raporlama ve Analitik (SPMS-04)
+
+**Mimari Karar:**
+- **Domain:** Model: `ReportParams`. Port: `IPdfExportPort`, `IExcelExportPort`.
+- **Application:** UseCases: `GenerateProjectReportUseCase` (SDD'ye göre Burndown vb. hesaplamalar).
+- **Infrastructure:** Adapter: `PdfkitExportAdapter`, `PandasExcelExportAdapter`. Repository: Okuma ağırlıklı View'lar.
+- **API:** Router: `report_router.py`.
+
+---
+
+## SPMS-05.1: Scrum, Waterfall, Kanban, Iterative süreç modelleri desteği
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.2: Süreç modeli şablonlarının otomatik oluşturulması
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.3: Süreç şablonlarının özelleştirilmesi
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.4: Yeni modellerin tanımlanabilir olması
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.5: Takvim ve etkinliklerin sürece göre otomatik planlanması
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.6: Modüler projeye pano / görünümler eklenmesi
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.7: Kanban panosu eklenebilirliği
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.8: Gantt şeması eklenebilirliği
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-05.9: Basit liste veya takvim görünümü
+**Modül:** Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)
+
+**Mimari Karar:**
+- **Domain:** Domain Service: Strategy Pattern uygulanacak. `ProcessStrategy` (ABC). ProjectFactory şablonları yükler.
+- **Application:** UseCases: `InitializeProjectWorkspaceUseCase`, `ChangeProjectProcessUseCase`.
+- **Infrastructure:** Repository: `SqlAlchemyBoardColumnRepository` vb. (Dinamik Pano/Sütun işlemleri).
+- **API:** Router: `process_router.py`.
+
+---
+
+## SPMS-ADAPT-1: Süreç modeli (Scrum, Kanban) değişimi
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-ADAPT-2: Yeni şablon tanımlama
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-ADAPT-3: UI/Tema ayarlaması
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-ADAPT-4: Modül açma-kapatma
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-ADAPT-5: Sistem parametreleri konfigürasyon dosyaları/panelleri
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-ADAPT-6: Yeniden başlatma gerektirmeyen uyarlamalar
+**Modül:** Uyarlama ve Konfigürasyon
+
+**Mimari Karar:**
+- **Domain:** Entity: `SystemConfig`.
+- **Application:** UseCases: `UpdateSystemSettingUseCase`.
+- **Infrastructure:** Adapter: Konfigürasyon adaptörü.
+- **API:** Router: `config_router.py`.
+
+---
+
+## SPMS-API-04: Standart hata kodları
+**Modül:** API Güvenlik ve Standartları
+
+**Mimari Karar:**
+- **Domain:** Exception tanımları.
+- **Application:** FastAPI ValidationPipelines.
+- **Infrastructure:** RateLimit Adapter.
+- **API:** FastAPI Global Exception Handler.
+
+---
+
+## SPMS-API-06: Endpoint hız sınırlandırması (Rate limiting)
+**Modül:** API Güvenlik ve Standartları
+
+**Mimari Karar:**
+- **Domain:** Exception tanımları.
+- **Application:** FastAPI ValidationPipelines.
+- **Infrastructure:** RateLimit Adapter.
+- **API:** FastAPI Global Exception Handler.
+
+---
+
+## SPMS-API-07: Sıkı CORS politikaları
+**Modül:** API Güvenlik ve Standartları
+
+**Mimari Karar:**
+- **Domain:** Exception tanımları.
+- **Application:** FastAPI ValidationPipelines.
+- **Infrastructure:** RateLimit Adapter.
+- **API:** FastAPI Global Exception Handler.
+
+---
+
+## SPMS-DATA-2: Sürüm bilgisi (Versioning)
+**Modül:** Dahili Veri Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** Tüm Domain entitylerinde id, created_at, updated_at özellikleri.
+- **Application:** Listelemelerde filtreler.
+- **Infrastructure:** SQLAlchemy Model listener'ları.
+- **API:** API DTO dönüşümleri.
+
+---
+
+## SPMS-DATA-3: Tarihsel izleme (Audit trail / Loglama)
+**Modül:** Dahili Veri Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** Tüm Domain entitylerinde id, created_at, updated_at özellikleri.
+- **Application:** Listelemelerde filtreler.
+- **Infrastructure:** SQLAlchemy Model listener'ları.
+- **API:** API DTO dönüşümleri.
+
+---
+
+## SPMS-DATA-4: Tekrarlayan görev veri altyapısı
+**Modül:** Dahili Veri Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** Tüm Domain entitylerinde id, created_at, updated_at özellikleri.
+- **Application:** Listelemelerde filtreler.
+- **Infrastructure:** SQLAlchemy Model listener'ları.
+- **API:** API DTO dönüşümleri.
+
+---
+
+## SPMS-DATA-7: Yumuşak silme (Soft delete)
+**Modül:** Dahili Veri Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** Tüm Domain entitylerinde id, created_at, updated_at özellikleri.
+- **Application:** Listelemelerde filtreler.
+- **Infrastructure:** SQLAlchemy Model listener'ları.
+- **API:** API DTO dönüşümleri.
+
+---
+
+## SPMS-EXT-01: 3. parti API (Slack, Teams vb.) entegrasyonu
+**Modül:** Dış Sistemlerle Entegrasyon (SPMS-EXT)
+
+**Mimari Karar:**
+- **Domain:** Entity: `IntegrationConfig`. Port: `IExternalMessagingPort`.
+- **Application:** UseCases: `ConfigureIntegrationUseCase`.
+- **Infrastructure:** Adapter: `WebhookAdapter`.
+- **API:** Router: `integration_router.py`.
+
+---
+
+## SPMS-EXT-02: Çekirdek harici bağımsız servis katmanı entegrasyonu
+**Modül:** Dış Sistemlerle Entegrasyon (SPMS-EXT)
+
+**Mimari Karar:**
+- **Domain:** Entity: `IntegrationConfig`. Port: `IExternalMessagingPort`.
+- **Application:** UseCases: `ConfigureIntegrationUseCase`.
+- **Infrastructure:** Adapter: `WebhookAdapter`.
+- **API:** Router: `integration_router.py`.
+
+---
+
+## SPMS-EXT-03: Kullanıcı izni kontrolü
+**Modül:** Dış Sistemlerle Entegrasyon (SPMS-EXT)
+
+**Mimari Karar:**
+- **Domain:** Entity: `IntegrationConfig`. Port: `IExternalMessagingPort`.
+- **Application:** UseCases: `ConfigureIntegrationUseCase`.
+- **Infrastructure:** Adapter: `WebhookAdapter`.
+- **API:** Router: `integration_router.py`.
+
+---
+
+## SPMS-EXT-04: API anahtarı güvenliği
+**Modül:** Dış Sistemlerle Entegrasyon (SPMS-EXT)
+
+**Mimari Karar:**
+- **Domain:** Entity: `IntegrationConfig`. Port: `IExternalMessagingPort`.
+- **Application:** UseCases: `ConfigureIntegrationUseCase`.
+- **Infrastructure:** Adapter: `WebhookAdapter`.
+- **API:** Router: `integration_router.py`.
+
+---
+
+## SPMS-EXT-05: Bağımsız yeni entegrasyon ekleme
+**Modül:** Dış Sistemlerle Entegrasyon (SPMS-EXT)
+
+**Mimari Karar:**
+- **Domain:** Entity: `IntegrationConfig`. Port: `IExternalMessagingPort`.
+- **Application:** UseCases: `ConfigureIntegrationUseCase`.
+- **Infrastructure:** Adapter: `WebhookAdapter`.
+- **API:** Router: `integration_router.py`.
+
+---
+
+## SPMS-QLT-4: Performans - İşlemlerin max 5 saniye içinde tamamlanması (Optimizasyonlar devam etmekte)
+**Modül:** Yazılım Kalitesi
+
+**Mimari Karar:**
+- **Domain:** N/A
+- **Application:** CQRS ile okuma hızlandırılması.
+- **Infrastructure:** PostgreSQL indexing.
+- **API:** APM.
+
+---
+
+## SPMS-QLT-6: Esneklik (Yeni süreç/model ekleme desteğinin gelmesi)
+**Modül:** Yazılım Kalitesi
+
+**Mimari Karar:**
+- **Domain:** N/A
+- **Application:** CQRS ile okuma hızlandırılması.
+- **Infrastructure:** PostgreSQL indexing.
+- **API:** APM.
+
+---
+
+## SPMS-SAFE-1: Kritik işlemlerde onay penceresi
+**Modül:** Emniyet ve Süreklilik
+
+**Mimari Karar:**
+- **Domain:** Exception: `SystemSafetyError`.
+- **Application:** UseCase: `ProcessSessionTimeoutUseCase`.
+- **Infrastructure:** Adapter: `RedisRateLimiterAdapter` (Timeout vs için).
+- **API:** FastAPI Timeout middleware.
+
+---
+
+## SPMS-SAFE-2: Oturum zaman aşımı (timeout) ile sistemden çıkarma
+**Modül:** Emniyet ve Süreklilik
+
+**Mimari Karar:**
+- **Domain:** Exception: `SystemSafetyError`.
+- **Application:** UseCase: `ProcessSessionTimeoutUseCase`.
+- **Infrastructure:** Adapter: `RedisRateLimiterAdapter` (Timeout vs için).
+- **API:** FastAPI Timeout middleware.
+
+---
+
+## SPMS-SAFE-3: Hatalı giriş durumunda geçici kilitleme
+**Modül:** Emniyet ve Süreklilik
+
+**Mimari Karar:**
+- **Domain:** Exception: `SystemSafetyError`.
+- **Application:** UseCase: `ProcessSessionTimeoutUseCase`.
+- **Infrastructure:** Adapter: `RedisRateLimiterAdapter` (Timeout vs için).
+- **API:** FastAPI Timeout middleware.
+
+---
+
+## SPMS-SAFE-4: Hata/emniyet takip servisi sağlama
+**Modül:** Emniyet ve Süreklilik
+
+**Mimari Karar:**
+- **Domain:** Exception: `SystemSafetyError`.
+- **Application:** UseCase: `ProcessSessionTimeoutUseCase`.
+- **Infrastructure:** Adapter: `RedisRateLimiterAdapter` (Timeout vs için).
+- **API:** FastAPI Timeout middleware.
+
+---
+
+## SPMS-SEC-05: Rate limiting ve DoS koruması
+**Modül:** Güvenlik, Kimlik Doğrulama
+
+**Mimari Karar:**
+- **Domain:** Domain Service: `TokenGenerationService`.
+- **Application:** UseCases: `VerifyTokenUseCase`.
+- **Infrastructure:** Adapter: `BcryptPasswordAdapter`, `JwtTokenAdapter`.
+- **API:** FastAPI CORS, Helmet.
+
+---
+
+## SPMS-SEC-06: Parola sıfırlama mekanizması (Token doğrulama)
+**Modül:** Güvenlik, Kimlik Doğrulama
+
+**Mimari Karar:**
+- **Domain:** Domain Service: `TokenGenerationService`.
+- **Application:** UseCases: `VerifyTokenUseCase`.
+- **Infrastructure:** Adapter: `BcryptPasswordAdapter`, `JwtTokenAdapter`.
+- **API:** FastAPI CORS, Helmet.
+
+---
+
+## SPMS-SEC-07: Katı CORS politikası
+**Modül:** Güvenlik, Kimlik Doğrulama
+
+**Mimari Karar:**
+- **Domain:** Domain Service: `TokenGenerationService`.
+- **Application:** UseCases: `VerifyTokenUseCase`.
+- **Infrastructure:** Adapter: `BcryptPasswordAdapter`, `JwtTokenAdapter`.
+- **API:** FastAPI CORS, Helmet.
+
+---
+
+## SPMS-SEC-08: KVKK / GDPR protokollerine uyum
+**Modül:** Güvenlik, Kimlik Doğrulama
+
+**Mimari Karar:**
+- **Domain:** Domain Service: `TokenGenerationService`.
+- **Application:** UseCases: `VerifyTokenUseCase`.
+- **Infrastructure:** Adapter: `BcryptPasswordAdapter`, `JwtTokenAdapter`.
+- **API:** FastAPI CORS, Helmet.
+
+---
+
+## SPMS-UI-02: Sürükle-bırak destekli görev panosu (Kanban) ve durum bildirimleri
+**Modül:** Dış Arayüz / UI Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** N/A
+- **Application:** N/A
+- **Infrastructure:** N/A
+- **API:** React, Zustand store.
+
+---
+
+## SPMS-UI-03: Takvim modülü (Görev ve toplantılar için)
+**Modül:** Dış Arayüz / UI Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** N/A
+- **Application:** N/A
+- **Infrastructure:** N/A
+- **API:** React, Zustand store.
+
+---
+
+## SPMS-UI-04: Raporlama ekranı (Filtreleme özellikli)
+**Modül:** Dış Arayüz / UI Gereksinimleri
+
+**Mimari Karar:**
+- **Domain:** N/A
+- **Application:** N/A
+- **Infrastructure:** N/A
+- **API:** React, Zustand store.
+
+---
+
