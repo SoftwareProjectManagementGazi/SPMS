@@ -13,6 +13,8 @@ from app.domain.repositories.project_repository import IProjectRepository
 from app.infrastructure.database.repositories.project_repo import SqlAlchemyProjectRepository
 from app.domain.repositories.task_repository import ITaskRepository
 from app.infrastructure.database.repositories.task_repo import SqlAlchemyTaskRepository
+from app.domain.repositories.audit_repository import IAuditRepository
+from app.infrastructure.database.repositories.audit_repo import SqlAlchemyAuditRepository
 from app.application.ports.security_port import ISecurityService
 from app.infrastructure.adapters.security_adapter import SecurityAdapter
 
@@ -29,6 +31,9 @@ def get_project_repo(session: AsyncSession = Depends(get_db)) -> IProjectReposit
 
 def get_task_repo(session: AsyncSession = Depends(get_db)) -> ITaskRepository:
     return SqlAlchemyTaskRepository(session)
+
+def get_audit_repo(session: AsyncSession = Depends(get_db)) -> IAuditRepository:
+    return SqlAlchemyAuditRepository(session)
 
 def get_security_service() -> ISecurityService:
     return SecurityAdapter()
