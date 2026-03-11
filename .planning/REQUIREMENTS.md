@@ -17,10 +17,10 @@ Requirements for this milestone. All map to roadmap phases.
 - [ ] **ARCH-04**: task_repo.create → use case → get_by_id çift round-trip giderilir; repo'nun create methodu tam entity döner
 - [ ] **ARCH-05**: task_repo.update → use case → get_by_id çift round-trip giderilir
 - [ ] **ARCH-06**: project_repo.update metodu sabit alan listesi yerine DTO'dan dinamik field mapping kullanır
-- [ ] **ARCH-07**: SQLAlchemy echo=True settings.DEBUG env var ile kontrol edilir; production'da False
-- [ ] **ARCH-08**: JWT_SECRET ve DB_PASSWORD için hardcoded default kaldırılır; .env yoksa startup'ta validation error fırlatılır
+- [x] **ARCH-07**: SQLAlchemy echo=True settings.DEBUG env var ile kontrol edilir; production'da False
+- [x] **ARCH-08**: JWT_SECRET ve DB_PASSWORD için hardcoded default kaldırılır; .env yoksa startup'ta validation error fırlatılır
 - [ ] **ARCH-09**: Dashboard (ManagerView/MemberView), Settings sayfası ve Task Activity gerçek API'ye bağlanır (mock data kaldırılır)
-- [ ] **ARCH-10**: Task endpoint'lerinde proje üyelik kontrolü eklenir; kullanıcı yalnızca üyesi olduğu projenin görevlerine erişebilir (RBAC düzeltmesi)
+- [x] **ARCH-10**: Task endpoint'lerinde proje üyelik kontrolü eklenir; kullanıcı yalnızca üyesi olduğu projenin görevlerine erişebilir (RBAC düzeltmesi)
 
 ---
 
@@ -93,7 +93,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 - [ ] **SEC-01**: Auth endpoint'lerine (login, register) rate limiting uygulanır
 - [ ] **SEC-02**: API endpoint'leri standart HTTP hata kodları döner (400, 401, 403, 404, 500)
-- [ ] **SEC-03**: CORS politikası katı şekilde tanımlanır; yalnızca güvenilir domain'lerden gelen istekler kabul edilir
+- [x] **SEC-03**: CORS politikası katı şekilde tanımlanır; yalnızca güvenilir domain'lerden gelen istekler kabul edilir
 - [ ] **SEC-04**: Kullanıcı verileri işlenmesi KVKK/GDPR gerekliliklerine uygun şekilde belgelenir ve uygulanır
 
 ---
@@ -109,10 +109,10 @@ Requirements for this milestone. All map to roadmap phases.
 ### Data Infrastructure (DATA)
 
 - [ ] **DATA-01**: Tablolara versioning (version/updated_at) alanı eklenir
-- [ ] **DATA-02**: Kritik tablolarda audit trail tutulur; geçmiş değişiklikler sorgulanabilir
+- [x] **DATA-02**: Kritik tablolarda audit trail tutulur; geçmiş değişiklikler sorgulanabilir
 - [ ] **DATA-03**: Tekrarlayan görev için veri altyapısı oluşturulur (başlangıç tarihi, tekrarlama aralığı, bitiş koşulu)
-- [ ] **DATA-04**: Silme işlemleri soft delete ile yapılır; kalıcı silme yalnızca admin izninde
-- [ ] **DATA-05**: tasks.project_id, tasks.assignee_id, tasks.parent_task_id, projects.manager_id sütunlarına index eklenir
+- [x] **DATA-04**: Silme işlemleri soft delete ile yapılır; kalıcı silme yalnızca admin izninde
+- [x] **DATA-05**: tasks.project_id, tasks.assignee_id, tasks.parent_task_id, projects.manager_id sütunlarına index eklenir
 
 ---
 
@@ -175,17 +175,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-04 | Phase 1 | Pending |
 | ARCH-05 | Phase 1 | Pending |
 | ARCH-06 | Phase 1 | Pending |
-| ARCH-07 | Phase 1 | Pending |
-| ARCH-08 | Phase 1 | Pending |
+| ARCH-07 | Phase 1 | Complete |
+| ARCH-08 | Phase 1 | Complete |
 | ARCH-09 | Phase 1 | Pending |
-| ARCH-10 | Phase 1 | Pending |
+| ARCH-10 | Phase 1 | Complete |
 | DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete |
 | SAFE-02 | Phase 1 | Pending |
 | SAFE-03 | Phase 1 | Pending |
 | AUTH-01 | Phase 2 | Pending |
