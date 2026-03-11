@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Table
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.base import Base, TimestampedMixin
 
 # Association Table for Task-Label Many-to-Many
 task_labels = Table(
@@ -10,7 +10,8 @@ task_labels = Table(
     Column("label_id", Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True),
 )
 
-class LabelModel(Base):
+
+class LabelModel(TimestampedMixin, Base):
     __tablename__ = "labels"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.base import Base, TimestampedMixin
 
-class UserModel(Base):
+
+class UserModel(TimestampedMixin, Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -14,5 +15,6 @@ class UserModel(Base):
     avatar = Column(String(255), nullable=True)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # updated_at provided by TimestampedMixin
 
     role = relationship("RoleModel", back_populates="users")

@@ -1,4 +1,4 @@
-from .base import Base
+from .base import Base, TimestampedMixin
 from .role import RoleModel
 from .user import UserModel
 from .project import ProjectModel
@@ -10,3 +10,4 @@ from .notification import NotificationModel
 from .log import LogModel
 from .file import FileModel
 from .label import LabelModel
+from .audit_log import AuditLogModel

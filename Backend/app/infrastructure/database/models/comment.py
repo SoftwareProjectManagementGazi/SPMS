@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.base import Base, TimestampedMixin
 
-class CommentModel(Base):
+
+class CommentModel(TimestampedMixin, Base):
     __tablename__ = "comments"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -11,6 +12,7 @@ class CommentModel(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # updated_at provided by TimestampedMixin
 
     task = relationship("TaskModel", backref="comments")
     user = relationship("UserModel", backref="comments")
