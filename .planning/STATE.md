@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-03-11T19:59:40.866Z"
+last_activity: 2026-03-11 — Completed Plan 01-03 (RBAC enforcement on all task endpoints, startup RuntimeError on insecure defaults, CORS from env var)
+progress:
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: in-progress
 stopped_at: "Completed 01-03-PLAN.md"
 last_updated: "2026-03-11T20:35:00Z"
 last_activity: 2026-03-11 — Completed Plan 01-03 (RBAC on task endpoints, startup secret validation, CORS env var, SQLAlchemy echo=DEBUG)
 progress:
-  total_phases: 7
+  [███████░░░] 67%
   completed_phases: 0
   total_plans: 6
   completed_plans: 3
@@ -50,6 +66,7 @@ Progress: [█████░░░░░] 50%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P04 | 6 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -70,6 +87,9 @@ Recent decisions affecting current work:
 - [01-03]: Admin bypass uses role.name.lower() == 'admin' — case-insensitive role check in get_project_member and get_task_project_member
 - [01-03]: Create task endpoint uses inline membership check since project_id is in DTO body, not URL path — no path-param variant needed
 - [01-03]: _validate_startup_secrets() extracted as standalone function to enable unit testing without triggering DB seed in lifespan
+- [Phase 01]: Soft-delete implemented at repository layer per Clean Architecture — use cases stay clean
+- [Phase 01]: deleted_at set via datetime.utcnow() in Python code, not via server_default or onupdate (Pitfall 2)
+- [Phase 01]: project_repo.update() uses dynamic field mapping via updatable_fields list (ARCH-06 resolved)
 
 ### Pending Todos
 
@@ -85,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T20:35:00Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: .planning/phases/01-foundation-security-hardening/01-04-PLAN.md
+Last session: 2026-03-11T19:59:40.864Z
+Stopped at: Completed 01-04-PLAN.md
+Resume file: None
