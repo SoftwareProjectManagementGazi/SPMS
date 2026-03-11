@@ -1,13 +1,16 @@
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from app.domain.entities.task import Task
 from app.domain.repositories.task_repository import ITaskRepository
 from app.infrastructure.database.models.task import TaskModel
+from app.infrastructure.database.models.audit_log import AuditLogModel
 # YENİ İMPORT: Nested eager loading için gerekli
 from app.infrastructure.database.models.user import UserModel
 from app.infrastructure.database.models.project import ProjectModel
+
 
 class SqlAlchemyTaskRepository(ITaskRepository):
     def __init__(self, session: AsyncSession):
@@ -37,10 +40,10 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             "parent_task_id": model.parent_task_id,
             "created_at": model.created_at,
             "updated_at": model.updated_at,
-            
-            "assignee": model.assignee, 
-            "column": model.column,     
-            "project": model.project,   
+
+            "assignee": model.assignee,
+            "column": model.column,
+            "project": model.project,
         }
 
         # 2. Parent (Varsa)
@@ -50,11 +53,11 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                 title=model.parent.title,
                 priority=model.parent.priority,
                 project_id=model.parent.project_id,
-                subtasks=[], 
+                subtasks=[],
                 parent=None,
                 column=model.parent.column,
                 project=model.parent.project,
-                assignee=None 
+                assignee=None
             )
 
         # 3. Subtasks (Varsa)
@@ -69,8 +72,8 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                     project_id=sub.project_id,
                     column=sub.column,
                     assignee=sub.assignee,
-                    parent=None, 
-                    subtasks=[] 
+                    parent=None,
+                    subtasks=[]
                 )
                 subtask_list.append(sub_entity)
             task_data["subtasks"] = subtask_list
@@ -81,8 +84,8 @@ class SqlAlchemyTaskRepository(ITaskRepository):
 
     def _to_model(self, entity: Task) -> TaskModel:
         data = entity.model_dump(exclude={
-            "id", "created_at", "updated_at", 
-            "parent", "column", "project", 
+            "id", "created_at", "updated_at",
+            "parent", "column", "project",
             "parent_task_summary", "subtasks", "assignee"
         })
         return TaskModel(**data)
@@ -90,20 +93,18 @@ class SqlAlchemyTaskRepository(ITaskRepository):
     def _get_base_query(self):
         """
         Mapper'ın ihtiyaç duyduğu verileri Eager Load ile çeker.
+        Soft-delete filter: only return rows where is_deleted == False.
         """
-        return select(TaskModel).options(
+        return select(TaskModel).where(TaskModel.is_deleted == False).options(
             # 1. Temel İlişkiler
-            # GÜNCELLEME: Project'in Columns bilgisini de yüklüyoruz (Task Entity içinde Project validate edilirken gerekli)
             joinedload(TaskModel.project).joinedload(ProjectModel.columns),
-            
             joinedload(TaskModel.column),
-            
             # Assignee ve Role
             joinedload(TaskModel.assignee).joinedload(UserModel.role),
-            
+
             # 2. Parent İlişkisi
             joinedload(TaskModel.parent).options(
-                joinedload(TaskModel.project), # Parent'ın projesinin columnlarına gerek olmayabilir ama hata verirse buraya da eklenmeli
+                joinedload(TaskModel.project),
                 joinedload(TaskModel.column),
             ),
 
@@ -111,8 +112,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             selectinload(TaskModel.subtasks).options(
                 joinedload(TaskModel.column),
                 joinedload(TaskModel.assignee).joinedload(UserModel.role),
-                # Alt görevin projesinin columnlarına da ihtiyaç olabilir
-                joinedload(TaskModel.project).joinedload(ProjectModel.columns) 
+                joinedload(TaskModel.project).joinedload(ProjectModel.columns)
             )
         )
 
@@ -120,18 +120,12 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         model = self._to_model(task)
         self.session.add(model)
         await self.session.flush()
-        await self.session.commit() # Changes persisted
-        # refresh is needed if we rely on DB generated fields that might change on commit? 
-        # Usually flush is enough for ID, but commit is safer for persistence.
-        # We need to refresh to get the eager loaded relationships if we were relying on them?
-        # Actually, get_by_id fetches everything again, so we are good.
+        await self.session.commit()
         return await self.get_by_id(model.id)
 
     async def get_by_id(self, task_id: int) -> Optional[Task]:
         stmt = self._get_base_query().where(TaskModel.id == task_id)
         result = await self.session.execute(stmt)
-        # GÜNCELLEME: .unique() eklendi
-        # joinedload ile collection (örn: columns) yüklediğimizde unique() şarttır.
         model = result.unique().scalar_one_or_none()
         return self._to_entity(model)
 
@@ -140,31 +134,58 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
         return [self._to_entity(m) for m in models if m is not None]
-    
+
     async def get_all_by_assignee(self, assignee_id: int) -> List[Task]:
         stmt = self._get_base_query().where(TaskModel.assignee_id == assignee_id)
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
         return [self._to_entity(m) for m in models if m is not None]
 
-    async def update(self, task_id: int, update_data: Dict[str, Any]) -> Task:
-        stmt = select(TaskModel).where(TaskModel.id == task_id)
+    async def update(self, task_id: int, update_data: Dict[str, Any], user_id: int = None) -> Task:
+        stmt = select(TaskModel).where(TaskModel.id == task_id, TaskModel.is_deleted == False)
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
-        
-        if model:
-            for key, value in update_data.items():
-                if hasattr(model, key):
-                    setattr(model, key, value)
-            
-            await self.session.flush()
-            await self.session.commit() # Changes persisted
-            return await self.get_by_id(task_id) 
-            
-        raise Exception(f"Task with id {task_id} not found")
+
+        if not model:
+            raise Exception(f"Task with id {task_id} not found")
+
+        # Compute audit diff — one AuditLogModel row per changed field
+        audit_entries = []
+        for key, new_val in update_data.items():
+            if hasattr(model, key):
+                old_val = getattr(model, key)
+                if old_val != new_val:
+                    audit_entries.append(
+                        AuditLogModel(
+                            entity_type="task",
+                            entity_id=task_id,
+                            field_name=key,
+                            old_value=str(old_val) if old_val is not None else None,
+                            new_value=str(new_val) if new_val is not None else None,
+                            user_id=user_id,
+                            action="updated",
+                        )
+                    )
+                    setattr(model, key, new_val)
+
+        # Increment optimistic lock version
+        model.version = (model.version or 1) + 1
+
+        # Persist audit entries and updated model in one commit
+        self.session.add_all(audit_entries)
+        await self.session.flush()
+        await self.session.commit()
+
+        return await self.get_by_id(task_id)
 
     async def delete(self, task_id: int) -> bool:
-        stmt = delete(TaskModel).where(TaskModel.id == task_id)
+        """Soft-delete: set is_deleted=True and deleted_at; do NOT issue SQL DELETE."""
+        stmt = select(TaskModel).where(TaskModel.id == task_id, TaskModel.is_deleted == False)
         result = await self.session.execute(stmt)
-        await self.session.commit() # Changes persisted
-        return result.rowcount > 0
+        model = result.scalar_one_or_none()
+        if model:
+            model.is_deleted = True
+            model.deleted_at = datetime.utcnow()  # Set explicitly — NOT via onupdate
+            await self.session.commit()
+            return True
+        return False
