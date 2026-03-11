@@ -3,7 +3,7 @@ from app.infrastructure.config import settings
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=True, # Set to False in production
+    echo=settings.DEBUG,
     pool_pre_ping=True,
 )
 

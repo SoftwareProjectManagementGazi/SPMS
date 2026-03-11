@@ -11,9 +11,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import auth, projects, tasks
 from app.infrastructure.database.database import AsyncSessionLocal
 from app.infrastructure.database.seeder import seed_data
+from app.infrastructure.config import settings
+
+
+def _validate_startup_secrets(s) -> None:
+    """Raise RuntimeError if insecure default secrets are detected."""
+    if s.JWT_SECRET == "supersecretkey":
+        raise RuntimeError(
+            "STARTUP FAILED: JWT_SECRET is set to the insecure default value. "
+            "Set a secure, unique value in your .env file."
+        )
+    if s.DB_PASSWORD == "secretpassword":
+        raise RuntimeError(
+            "STARTUP FAILED: DB_PASSWORD is set to the insecure default value. "
+            "Set a secure, unique value in your .env file."
+        )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: validate secrets before anything else
+    _validate_startup_secrets(settings)
     # Startup: Seed database
     async with AsyncSessionLocal() as session:
         await seed_data(session)
@@ -22,15 +40,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SPMS API", version="1.0.0", lifespan=lifespan)
 
-# Configure CORS
-origins = [
-    "http://localhost:3000",  # Next.js frontend
-    "http://127.0.0.1:3000",
-]
-
+# Configure CORS — origins read from env var
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
