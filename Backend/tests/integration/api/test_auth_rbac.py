@@ -93,7 +93,6 @@ async def test_delete_other_user_task_in_other_project(client: AsyncClient, db_s
         title="Secret Task",
         priority=TaskPriority.HIGH,
         project_id=created_project.id,
-        status_id=1 # Assuming status ID 1 exists (Backlog)
     )
     created_task = await task_repo.create(task)
 
@@ -123,10 +122,9 @@ async def test_access_my_tasks(client: AsyncClient, db_session: AsyncSession):
     
     # Create task assigned to me
     task = Task(
-        title="My Task", 
-        project_id=created_project.id, 
+        title="My Task",
+        project_id=created_project.id,
         assignee_id=created_user.id,
-        status_id=1
     )
     created_task = await task_repo.create(task)
     
