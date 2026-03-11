@@ -108,9 +108,9 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Data Infrastructure (DATA)
 
-- [ ] **DATA-01**: Tablolara versioning (version/updated_at) alanı eklenir
+- [x] **DATA-01**: Tablolara versioning (version/updated_at) alanı eklenir
 - [x] **DATA-02**: Kritik tablolarda audit trail tutulur; geçmiş değişiklikler sorgulanabilir
-- [ ] **DATA-03**: Tekrarlayan görev için veri altyapısı oluşturulur (başlangıç tarihi, tekrarlama aralığı, bitiş koşulu)
+- [x] **DATA-03**: Tekrarlayan görev için veri altyapısı oluşturulur (başlangıç tarihi, tekrarlama aralığı, bitiş koşulu)
 - [x] **DATA-04**: Silme işlemleri soft delete ile yapılır; kalıcı silme yalnızca admin izninde
 - [x] **DATA-05**: tasks.project_id, tasks.assignee_id, tasks.parent_task_id, projects.manager_id sütunlarına index eklenir
 
@@ -179,9 +179,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-08 | Phase 1 | Complete |
 | ARCH-09 | Phase 1 | Pending |
 | ARCH-10 | Phase 1 | Complete |
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
