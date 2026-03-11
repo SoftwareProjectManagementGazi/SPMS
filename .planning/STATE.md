@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: "Completed 01-02-PLAN.md"
-last_updated: "2026-03-11T19:45:00Z"
-last_activity: 2026-03-11 — Completed Plan 01-02 (database schema foundation, TimestampedMixin, AuditLogModel, Alembic)
+stopped_at: "Completed 01-03-PLAN.md"
+last_updated: "2026-03-11T20:35:00Z"
+last_activity: 2026-03-11 — Completed Plan 01-03 (RBAC on task endpoints, startup secret validation, CORS env var, SQLAlchemy echo=DEBUG)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
-  percent: 4
+  completed_plans: 3
+  percent: 50
 ---
 
 # Project State
@@ -26,27 +26,27 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 1 of 7 (Foundation & Security Hardening)
-Plan: 3 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-03-11 — Completed Plan 01-02 (TimestampedMixin on 7 models, AuditLogModel, Alembic + 001_phase1_schema.py migration)
+Last activity: 2026-03-11 — Completed Plan 01-03 (RBAC enforcement on all task endpoints, startup RuntimeError on insecure defaults, CORS from env var)
 
-Progress: [██░░░░░░░░] 4%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 10 min
-- Total execution time: 0.2 hours
+- Total plans completed: 3
+- Average duration: 19 min
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 - Foundation & Security Hardening | 2 | 21 min | 10 min |
+| 01 - Foundation & Security Hardening | 3 | 56 min | 19 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (6 min), 01-02 (15 min)
+- Last 5 plans: 01-01 (6 min), 01-02 (15 min), 01-03 (35 min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [01-02]: AuditLogModel has no TimestampedMixin — it is immutable append-only; no soft-delete, no version tracking
 - [01-02]: Migration 001_phase1_schema.py is hand-written and fully idempotent via information_schema checks
 - [01-02]: Alembic env.py uses async_engine_from_config + run_sync pattern for asyncpg compatibility
+- [01-03]: Admin bypass uses role.name.lower() == 'admin' — case-insensitive role check in get_project_member and get_task_project_member
+- [01-03]: Create task endpoint uses inline membership check since project_id is in DTO body, not URL path — no path-param variant needed
+- [01-03]: _validate_startup_secrets() extracted as standalone function to enable unit testing without triggering DB seed in lifespan
 
 ### Pending Todos
 
@@ -74,13 +77,14 @@ None yet.
 
 ### Blockers/Concerns
 
-- Critical: Task endpoints have no RBAC enforcement — any authenticated user can delete any task (addressed in Phase 1, ARCH-10)
-- Critical: JWT_SECRET and DB_PASSWORD have hardcoded defaults — deployment without .env is insecure (addressed in Phase 1, ARCH-08)
+- RESOLVED: Task endpoints RBAC enforcement — fixed in Plan 01-03 (ARCH-10)
+- RESOLVED: JWT_SECRET and DB_PASSWORD hardcoded defaults — startup validation added in Plan 01-03 (ARCH-08)
 - High: Dashboard, Settings, and Task Activity show mock data — not usable for real users (addressed in Phase 1, ARCH-09)
 - Medium: Integration tests reference non-existent status_id field — RESOLVED in Plan 01-01 (status_id removed from test_auth_rbac.py)
+- Note: tests/integration/conftest.py uses main spms_db directly (not a test DB) — Alembic migrations must be applied before integration tests run
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:45:00Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: .planning/phases/01-foundation-security-hardening/01-03-PLAN.md
+Last session: 2026-03-11T20:35:00Z
+Stopped at: Completed 01-03-PLAN.md
+Resume file: .planning/phases/01-foundation-security-hardening/01-04-PLAN.md

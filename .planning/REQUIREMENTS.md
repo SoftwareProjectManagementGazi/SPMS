@@ -92,7 +92,7 @@ Requirements for this milestone. All map to roadmap phases.
 ### Security & API Hardening (SEC)
 
 - [ ] **SEC-01**: Auth endpoint'lerine (login, register) rate limiting uygulanır
-- [ ] **SEC-02**: API endpoint'leri standart HTTP hata kodları döner (400, 401, 403, 404, 500)
+- [x] **SEC-02**: API endpoint'leri standart HTTP hata kodları döner (400, 401, 403, 404, 500)
 - [x] **SEC-03**: CORS politikası katı şekilde tanımlanır; yalnızca güvenilir domain'lerden gelen istekler kabul edilir
 - [ ] **SEC-04**: Kullanıcı verileri işlenmesi KVKK/GDPR gerekliliklerine uygun şekilde belgelenir ve uygulanır
 
@@ -184,7 +184,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
-| SEC-02 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | SAFE-02 | Phase 1 | Pending |
 | SAFE-03 | Phase 1 | Pending |
