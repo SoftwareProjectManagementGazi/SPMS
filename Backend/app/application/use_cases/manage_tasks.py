@@ -173,7 +173,7 @@ class UpdateTaskUseCase:
                 raise ValueError(f"Column {dto.column_id} does not belong to project {existing_task.project_id}")
 
         update_data = dto.model_dump(exclude_unset=True)
-        updated_task = await self.task_repo.update(task_id, update_data)
+        updated_task = await self.task_repo.update(task_id, update_data, user_id=user_id)
         
         # İlişkilerin güncel hali için tekrar çekiyoruz (Repository update metodu relations dönmüyorsa)
         full_task = await self.task_repo.get_by_id(task_id) 
