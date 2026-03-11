@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.base import Base, TimestampedMixin
 
-class FileModel(Base):
+
+class FileModel(TimestampedMixin, Base):
     __tablename__ = "files"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -12,6 +13,7 @@ class FileModel(Base):
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    # updated_at provided by TimestampedMixin
 
     task = relationship("TaskModel", backref="files")
     uploader = relationship("UserModel", backref="uploaded_files")

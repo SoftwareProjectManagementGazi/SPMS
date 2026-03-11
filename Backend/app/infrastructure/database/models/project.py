@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SqlEnum, Date, Table, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.infrastructure.database.models.base import Base
+from app.infrastructure.database.models.base import Base, TimestampedMixin
 from app.domain.entities.project import Methodology
 # Imports for relationships (if needed for typing, but SQLAlchemy strings handle it)
 
@@ -14,7 +14,8 @@ project_members = Table(
     Column("joined_at", DateTime(timezone=True), server_default=func.now())
 )
 
-class ProjectModel(Base):
+
+class ProjectModel(TimestampedMixin, Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -24,7 +25,7 @@ class ProjectModel(Base):
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     methodology = Column(SqlEnum(Methodology, name="methodology_type"), nullable=False)
-    manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     custom_fields = Column(JSON, nullable=True)
 
