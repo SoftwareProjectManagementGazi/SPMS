@@ -49,8 +49,65 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = await user_repo.get_by_email(email)
     if user is None:
         raise credentials_exception
     return user
+
+
+def _is_admin(user: User) -> bool:
+    """Return True when the user holds the admin role."""
+    return (
+        user.role is not None
+        and user.role.name.lower() == "admin"
+    )
+
+
+async def get_project_member(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+) -> User:
+    """
+    Verify that the current user is a member of the given project.
+    Admin users bypass the membership check.
+    Raises HTTP 403 for non-members.
+    """
+    if _is_admin(current_user):
+        return current_user
+    project = await project_repo.get_by_id_and_user(project_id, current_user.id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this project",
+        )
+    return current_user
+
+
+async def get_task_project_member(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+) -> User:
+    """
+    Fetch the task, extract its project_id, then verify membership.
+    Admin users bypass the membership check.
+    Raises HTTP 404 if the task does not exist, HTTP 403 for non-members.
+    """
+    task = await task_repo.get_by_id(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {task_id} not found",
+        )
+    if _is_admin(current_user):
+        return current_user
+    project = await project_repo.get_by_id_and_user(task.project_id, current_user.id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this project",
+        )
+    return current_user

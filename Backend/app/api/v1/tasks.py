@@ -1,6 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.dependencies import get_task_repo, get_project_repo, get_current_user
+from app.api.dependencies import (
+    get_task_repo,
+    get_project_repo,
+    get_current_user,
+    get_project_member,
+    get_task_project_member,
+)
 from app.application.dtos.task_dtos import TaskCreateDTO, TaskUpdateDTO, TaskResponseDTO
 from app.application.use_cases.manage_tasks import (
     CreateTaskUseCase,
@@ -22,8 +28,18 @@ async def create_task(
     dto: TaskCreateDTO,
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
+    # Enforce project membership: check that the current user is a member of the project
+    # specified in the request body. Admin bypass applies.
+    from app.api.dependencies import _is_admin
+    if not _is_admin(current_user):
+        project = await project_repo.get_by_id_and_user(dto.project_id, current_user.id)
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this project",
+            )
     try:
         use_case = CreateTaskUseCase(task_repo, project_repo)
         return await use_case.execute(dto)
@@ -34,7 +50,7 @@ async def create_task(
 async def list_project_tasks(
     project_id: int,
     task_repo: ITaskRepository = Depends(get_task_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_project_member),
 ):
     use_case = ListProjectTasksUseCase(task_repo)
     return await use_case.execute(project_id)
@@ -51,7 +67,7 @@ async def list_my_tasks(
 async def get_task(
     task_id: int,
     task_repo: ITaskRepository = Depends(get_task_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_task_project_member),
 ):
     try:
         use_case = GetTaskUseCase(task_repo)
@@ -65,7 +81,7 @@ async def update_task(
     dto: TaskUpdateDTO,
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_task_project_member),
 ):
     try:
         use_case = UpdateTaskUseCase(task_repo, project_repo)
@@ -82,7 +98,7 @@ async def delete_task(
     task_id: int,
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_task_project_member),
 ):
     try:
         use_case = DeleteTaskUseCase(task_repo, project_repo)
