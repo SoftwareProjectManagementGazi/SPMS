@@ -169,24 +169,80 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 – ARCH-10 | Phase 1 | Pending |
-| AUTH-01 – AUTH-04 | Phase 2 | Pending |
-| TASK-01 – TASK-11 | Phase 3 | Pending |
-| VIEW-01 – VIEW-04 | Phase 4 | Pending |
-| NOTIF-01 – NOTIF-06 | Phase 5 | Pending |
-| REPT-01 – REPT-05 | Phase 6 | Pending |
-| PROC-01 – PROC-05 | Phase 7 | Pending |
-| SEC-01 – SEC-04 | Phase 8 | Pending |
-| SAFE-01 – SAFE-03 | Phase 8 | Pending |
-| DATA-01 – DATA-05 | Phase 1 | Pending |
-| ADAPT-01 – ADAPT-06 | Phase 7 | Pending |
-| EXT-01 – EXT-05 | Phase 9 | Pending |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
+| ARCH-04 | Phase 1 | Pending |
+| ARCH-05 | Phase 1 | Pending |
+| ARCH-06 | Phase 1 | Pending |
+| ARCH-07 | Phase 1 | Pending |
+| ARCH-08 | Phase 1 | Pending |
+| ARCH-09 | Phase 1 | Pending |
+| ARCH-10 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SAFE-02 | Phase 1 | Pending |
+| SAFE-03 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | Pending |
+| SEC-04 | Phase 2 | Pending |
+| SAFE-01 | Phase 2 | Pending |
+| TASK-01 | Phase 3 | Pending |
+| TASK-02 | Phase 3 | Pending |
+| TASK-03 | Phase 3 | Pending |
+| TASK-04 | Phase 3 | Pending |
+| TASK-05 | Phase 3 | Pending |
+| TASK-06 | Phase 3 | Pending |
+| TASK-07 | Phase 3 | Pending |
+| TASK-08 | Phase 3 | Pending |
+| TASK-09 | Phase 3 | Pending |
+| TASK-10 | Phase 3 | Pending |
+| TASK-11 | Phase 3 | Pending |
+| VIEW-01 | Phase 4 | Pending |
+| VIEW-02 | Phase 4 | Pending |
+| VIEW-03 | Phase 4 | Pending |
+| VIEW-04 | Phase 4 | Pending |
+| NOTIF-01 | Phase 5 | Pending |
+| NOTIF-02 | Phase 5 | Pending |
+| NOTIF-03 | Phase 5 | Pending |
+| NOTIF-04 | Phase 5 | Pending |
+| NOTIF-05 | Phase 5 | Pending |
+| NOTIF-06 | Phase 5 | Pending |
+| REPT-01 | Phase 6 | Pending |
+| REPT-02 | Phase 6 | Pending |
+| REPT-03 | Phase 6 | Pending |
+| REPT-04 | Phase 6 | Pending |
+| REPT-05 | Phase 6 | Pending |
+| PROC-01 | Phase 7 | Pending |
+| PROC-02 | Phase 7 | Pending |
+| PROC-03 | Phase 7 | Pending |
+| PROC-04 | Phase 7 | Pending |
+| PROC-05 | Phase 7 | Pending |
+| ADAPT-01 | Phase 7 | Pending |
+| ADAPT-02 | Phase 7 | Pending |
+| ADAPT-03 | Phase 7 | Pending |
+| ADAPT-04 | Phase 7 | Pending |
+| ADAPT-05 | Phase 7 | Pending |
+| ADAPT-06 | Phase 7 | Pending |
+| EXT-01 | Phase 7 | Pending |
+| EXT-02 | Phase 7 | Pending |
+| EXT-03 | Phase 7 | Pending |
+| EXT-04 | Phase 7 | Pending |
+| EXT-05 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 65 total
-- Mapped to phases: 65
+- v1 requirements: 68 total
+- Mapped to phases: 68
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation*
