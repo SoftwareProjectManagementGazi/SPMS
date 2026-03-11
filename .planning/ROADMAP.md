@@ -32,7 +32,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Application refuses to start if JWT_SECRET or DB_PASSWORD are absent from the environment; SQLAlchemy query logging is off in production
   4. All task and project list endpoints return consistent HTTP error codes (400, 401, 403, 404, 500); CORS policy rejects requests from non-allowlisted origins
   5. Database tables include soft-delete flags, version/updated_at fields, audit trail records, indexes on tasks.project_id / tasks.assignee_id / tasks.parent_task_id / projects.manager_id, and a recurring-task schema
-**Plans**: TBD
+**Plans**: 6 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Wave 0 test scaffolds: fix broken test, create 7 new test stub files (Nyquist compliance)
+- [ ] 01-02-PLAN.md — DB schema foundation: TimestampedMixin, AuditLogModel, Alembic migration with all Phase 1 schema changes
+- [ ] 01-03-PLAN.md — Security hardening: RBAC membership dependency, startup secret validation, CORS env var, error code consistency
+- [ ] 01-04-PLAN.md — Repository data infrastructure: soft delete + audit diff wiring in task/project/user repos
+- [ ] 01-05-PLAN.md — Backend architecture cleanup: DTO migration, duplicate method merge, double round-trip elimination, nested manager DTO
+- [ ] 01-06-PLAN.md — Frontend wiring + session expiry + logging: settings/dashboard live data, 401 intercept, structured log middleware
 
 ### Phase 2: Authentication & Team Management
 **Goal**: Users can manage their own profiles, create and join teams, reset forgotten passwords, and the system locks accounts after repeated failed logins
@@ -111,7 +119,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Security Hardening | 0/TBD | Not started | - |
+| 1. Foundation & Security Hardening | 0/6 | Not started | - |
 | 2. Authentication & Team Management | 0/TBD | Not started | - |
 | 3. Project & Task Completion | 0/TBD | Not started | - |
 | 4. Views & UI | 0/TBD | Not started | - |
