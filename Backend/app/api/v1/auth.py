@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.application.dtos.auth_dtos import UserRegisterDTO, UserLoginDTO, TokenDTO, UserResponseDTO
-# UserListDTO'yu buradan import ediyorsanız kalsın, yoksa aşağıda tanımlayacağız.
-# from app.application.dtos.auth_dtos import UserListDTO 
+from app.application.dtos.auth_dtos import UserRegisterDTO, UserLoginDTO, TokenDTO, UserResponseDTO, UserListDTO
 
 from app.application.use_cases.register_user import RegisterUserUseCase
 from app.application.use_cases.login_user import LoginUserUseCase
@@ -11,16 +9,8 @@ from app.application.ports.security_port import ISecurityService
 from app.domain.entities.user import User
 from app.domain.exceptions import UserAlreadyExistsError, InvalidCredentialsError
 from typing import List
-from pydantic import BaseModel
 
 router = APIRouter()
-
-# Eğer UserListDTO auth_dtos.py içinde yoksa burada tanımlayın:
-class UserListDTO(BaseModel):
-    id: int
-    email: str
-    username: str # Frontend bu ismi bekliyor olabilir, backend'den full_name'i buraya map edeceğiz
-    avatar_url: str | None = None
 
 @router.get("/me", response_model=UserResponseDTO)
 async def read_users_me(current_user: User = Depends(get_current_user)):

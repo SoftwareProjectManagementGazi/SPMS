@@ -110,15 +110,9 @@ class CreateTaskUseCase:
             raise ProjectNotFoundError(f"Project with id {dto.project_id} not found")
             
         task = Task(**dto.model_dump())
+        # ARCH-04: task_repo.create() now returns the full entity with eager loading — no separate get_by_id needed
         created_task = await self.task_repo.create(task)
-        
-        # Oluşturulan task'ı ilişkileriyle tekrar çekmek gerekebilir veya repo create içinde handle edilmeli.
-        # Clean architecture'da genelde create sonrası full objeyi dönmek için get çağrılır veya repo full obje döner.
-        # Şimdilik basic mapping ile dönüyoruz:
-        # Not: created_task relation'ları dolu gelmeyebilir (lazy loading). 
-        # En doğrusu created_task'i tekrar get_by_id ile çekmektir.
-        full_task = await self.task_repo.get_by_id(created_task.id)
-        return map_task_to_response_dto(full_task)
+        return map_task_to_response_dto(created_task)
 
 class ListProjectTasksUseCase:
     def __init__(self, task_repo: ITaskRepository):
@@ -173,11 +167,9 @@ class UpdateTaskUseCase:
                 raise ValueError(f"Column {dto.column_id} does not belong to project {existing_task.project_id}")
 
         update_data = dto.model_dump(exclude_unset=True)
+        # ARCH-05: task_repo.update() already returns the full entity with eager loading — no separate get_by_id needed
         updated_task = await self.task_repo.update(task_id, update_data, user_id=user_id)
-        
-        # İlişkilerin güncel hali için tekrar çekiyoruz (Repository update metodu relations dönmüyorsa)
-        full_task = await self.task_repo.get_by_id(task_id) 
-        return map_task_to_response_dto(full_task)
+        return map_task_to_response_dto(updated_task)
 
 class DeleteTaskUseCase:
     def __init__(self, task_repo: ITaskRepository, project_repo: IProjectRepository):

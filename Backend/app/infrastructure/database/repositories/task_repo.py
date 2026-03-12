@@ -121,7 +121,11 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         self.session.add(model)
         await self.session.flush()
         await self.session.commit()
-        return await self.get_by_id(model.id)
+        # ARCH-04: fetch full entity with eager loading in a single query (no separate get_by_id call)
+        stmt = self._get_base_query().where(TaskModel.id == model.id)
+        result = await self.session.execute(stmt)
+        refreshed = result.unique().scalar_one()
+        return self._to_entity(refreshed)
 
     async def get_by_id(self, task_id: int) -> Optional[Task]:
         stmt = self._get_base_query().where(TaskModel.id == task_id)
