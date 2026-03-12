@@ -24,6 +24,7 @@ import { taskService } from "@/services/task-service"
 import { format } from "date-fns"
 // YENİ: Modal import edildi
 import { CreateTaskModal } from "@/components/create-task-modal"
+import { TypeToConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -31,6 +32,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   
   // YENİ: Modal kontrol state'i
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ['project', id],
@@ -42,6 +44,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryFn: () => taskService.getByProjectId(id),
     enabled: !!id
   })
+
+  const handleDeleteProject = async () => {
+    try {
+      await projectService.deleteProject(id)
+      router.push("/projects")
+    } catch {
+      // Error is logged by apiClient interceptor
+    }
+  }
 
   if (isProjectLoading) {
     return (
@@ -115,7 +126,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <DropdownMenuItem>Edit Project</DropdownMenuItem>
                         <DropdownMenuItem>Manage Team</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">Archive Project</DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => setDeleteDialogOpen(true)}
+                        >
+                          Delete Project
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -196,10 +212,20 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </Tabs>
         
         {/* YENİ: Create Task Modal Entegrasyonu */}
-        <CreateTaskModal 
-            open={isCreateTaskOpen} 
+        <CreateTaskModal
+            open={isCreateTaskOpen}
             onOpenChange={setIsCreateTaskOpen}
             defaultProjectId={id}
+        />
+
+        {/* Delete Project Dialog */}
+        <TypeToConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Delete Project"
+          description="This action cannot be undone. All tasks will be deleted."
+          confirmText={project.name}
+          onConfirm={handleDeleteProject}
         />
       </div>
     </AppShell>
