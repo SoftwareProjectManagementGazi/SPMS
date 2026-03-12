@@ -100,7 +100,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Safety (SAFE)
 
-- [ ] **SAFE-01**: Proje silme, model değiştirme, veri dışa aktarma gibi kritik işlemler öncesi onay penceresi gösterilir
+- [x] **SAFE-01**: Proje silme, model değiştirme, veri dışa aktarma gibi kritik işlemler öncesi onay penceresi gösterilir
 - [ ] **SAFE-02**: Oturum süresi (JWT expiry) dolduğunda kullanıcı uyarı mesajıyla sistemden otomatik çıkarılır
 - [ ] **SAFE-03**: Log izleme servisi entegrasyon altyapısı oluşturulur (gelecek monitoring entegrasyonu için)
 
@@ -194,7 +194,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-04 | Phase 2 | Complete |
 | SEC-01 | Phase 2 | Complete |
 | SEC-04 | Phase 2 | Pending |
-| SAFE-01 | Phase 2 | Pending |
+| SAFE-01 | Phase 2 | Complete |
 | TASK-01 | Phase 3 | Pending |
 | TASK-02 | Phase 3 | Pending |
 | TASK-03 | Phase 3 | Pending |
