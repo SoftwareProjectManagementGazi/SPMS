@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 02-04-PLAN.md — team use cases, SqlAlchemyTeamRepository, teams router
-last_updated: "2026-03-12T20:27:10.514Z"
+stopped_at: Completed 02-05-PLAN.md — password reset, lockout, rate limiting
+last_updated: "2026-03-12T20:28:02.390Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 11
   percent: 64
 ---
 
@@ -63,6 +63,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | 02 - Authentication & Team Management | 2/8 | In progress |
 | Phase 02 P03 | 15 | 2 tasks | 5 files |
 | Phase 02 P04 | 198 | 2 tasks | 8 files |
+| Phase 02 P05 | 4 | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [Phase 02-03]: Avatar paths stored as relative strings (uploads/avatars/uuid.ext) not absolute paths
 - [Phase 02]: UserListDTO.username maps to User.full_name — no separate username column, full_name is display identifier in search results
 - [Phase 02]: add_member is idempotent via IntegrityError catch-and-rollback at repository layer (SqlAlchemyTeamRepository)
+- [Phase 02-05]: In-memory dict (_lockout_store) used for lockout state — restarts clear state (intentional for dev)
+- [Phase 02-05]: slowapi Limiter at app.state.limiter with key_func=get_remote_address; request: Request is first param on rate-limited endpoints (slowapi requirement)
+- [Phase 02-05]: update_password() added to IUserRepository interface and SqlAlchemyUserRepository to support password reset confirm flow
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:27:10.511Z
-Stopped at: Completed 02-04-PLAN.md — team use cases, SqlAlchemyTeamRepository, teams router
+Last session: 2026-03-12T20:27:50.315Z
+Stopped at: Completed 02-05-PLAN.md — password reset, lockout, rate limiting
 Resume file: None
