@@ -7,7 +7,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: admin           # Kullanıcı adı
-      POSTGRES_PASSWORD: secretpassword # Şifre (Projede .env ile yönetilmeli)
+      POSTGRES_PASSWORD: spms_local_dev_2024 # Şifre (.env ile eşleşmeli)
       POSTGRES_DB: spms_db           # Veritabanı adı
     ports:
       - "5433:5432"                  # Dışarıya açılan port
