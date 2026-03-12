@@ -3,31 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-03-11T19:59:40.866Z"
-last_activity: 2026-03-11 — Completed Plan 01-03 (RBAC enforcement on all task endpoints, startup RuntimeError on insecure defaults, CORS from env var)
+stopped_at: "Completed 01-06-PLAN.md — Phase 1 all plans done, awaiting verification"
+last_updated: "2026-03-12T19:30:00Z"
+last_activity: 2026-03-12 — Completed Plan 01-06 (frontend live API wiring, session expiry, structured logging, init.sql full schema)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
-  percent: 67
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: in-progress
-stopped_at: "Completed 01-03-PLAN.md"
-last_updated: "2026-03-11T20:35:00Z"
-last_activity: 2026-03-11 — Completed Plan 01-03 (RBAC on task endpoints, startup secret validation, CORS env var, SQLAlchemy echo=DEBUG)
-progress:
-  [███████░░░] 67%
-  completed_phases: 0
-  total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -37,37 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve görevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 1 — Foundation & Security Hardening
+**Current focus:** Phase 1 complete — awaiting gsd-verifier goal verification before Phase 2
 
 ## Current Position
 
 Phase: 1 of 7 (Foundation & Security Hardening)
-Plan: 5 of 6 in current phase
-Status: In progress
-Last activity: 2026-03-12 — Completed Plan 01-05 (UserListDTO canonicalized, ProjectResponseDTO manager fields, task create/update single round-trip, frontend taskService duplicates merged)
+Plan: 6 of 6 — ALL PLANS COMPLETE
+Status: Pending phase verification
+Last activity: 2026-03-12 — Completed Plan 01-06 (frontend wired to live API, SAFE-02/SAFE-03, init.sql updated)
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100% (Phase 1 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 19 min
-- Total execution time: 0.9 hours
+- Total plans completed: 6
+- Phase 1 total plans: 6/6
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01 - Foundation & Security Hardening | 3 | 56 min | 19 min |
-
-**Recent Trend:**
-- Last 5 plans: 01-01 (6 min), 01-02 (15 min), 01-03 (35 min)
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 01 P04 | 6 | 2 tasks | 9 files |
-| Phase 01 P05 | 16 | 2 tasks | 9 files |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 01 - Foundation & Security Hardening | 6/6 | ✓ All plans done |
 
 ## Accumulated Context
 
@@ -94,21 +69,25 @@ Recent decisions affecting current work:
 - [01-05]: UserListDTO defined only in auth_dtos.py; routers must import, never redefine inline
 - [01-05]: manager_name/manager_avatar added to Project domain entity so model_validate() works via from_attributes without custom router mapping
 - [01-05]: task_repo.create() uses _get_base_query() inline after flush+commit — single round-trip, no internal get_by_id delegation
+- [01-06]: AUTH_TOKEN_KEY = 'auth_token' (not 'jwt_token') — localStorage key for JWT
+- [01-06]: init.sql is now single source of truth for fresh DB schema; Alembic migration remains for existing DBs
+- [01-06]: Activity endpoint returns raw audit log fields (no formal DTO) — sufficient for Phase 1
+- [01-06]: logs table replaced by audit_log throughout (seeder, init.sql, models)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
 - RESOLVED: Task endpoints RBAC enforcement — fixed in Plan 01-03 (ARCH-10)
 - RESOLVED: JWT_SECRET and DB_PASSWORD hardcoded defaults — startup validation added in Plan 01-03 (ARCH-08)
-- High: Dashboard, Settings, and Task Activity show mock data — not usable for real users (addressed in Phase 1, ARCH-09)
-- Medium: Integration tests reference non-existent status_id field — RESOLVED in Plan 01-01 (status_id removed from test_auth_rbac.py)
-- Note: tests/integration/conftest.py uses main spms_db directly (not a test DB) — Alembic migrations must be applied before integration tests run
+- RESOLVED: Dashboard, Settings, Task Activity mock data — fixed in Plan 01-06 (ARCH-09)
+- RESOLVED: Integration tests status_id field — fixed in Plan 01-01
+- Note: tests/integration/conftest.py uses main spms_db directly (not a test DB) — DB must be running before integration tests
 
 ## Session Continuity
 
-Last session: 2026-03-12T15:24:47Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-03-12T19:30:00Z
+Stopped at: Phase 1 all plans complete, human verification approved. Next: /gsd:verify-work or Phase 2.
 Resume file: None
