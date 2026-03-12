@@ -684,3 +684,141 @@ Bu belge, SRS'te belirtilen eksik kalan isterlerin Clean Architecture, SOLID ve 
 
 ---
 
+---
+
+## BÖLÜM 7 — MİMARİ UYGULAMA REVİZYONLARI (Faz 1 — Foundation & Security Hardening)
+
+Bu bölüm, geliştirme sürecinde (Faz 1) SDD'deki tasarım kararlarından sapılan veya güncellenen alanları belgelemektedir. Her madde için eskinin ne olduğu, yeninin ne olduğu ve neden değiştirildiği açıklanmaktadır.
+
+---
+
+### REV-01: LOGS Tablosu → AUDIT_LOG Tablosu (Faz 1, Plan 01-02 ve 01-04)
+
+**İlgili SDD bölümü:** 5.2.1 (Tablo: LOGS), 5.2.3.4 (Loglama Mekanizması)
+
+**Eski tasarım (SDD v1.0):**
+
+`logs` tablosu proje ve görev değişikliklerini kaydetmek için tasarlanmıştı:
+
+```
+LOGS: id, project_id (FK→projects), task_id (FK→tasks), user_id (FK→users),
+      action VARCHAR(100), changes JSONB, timestamp
+```
+
+- `changes` alanına tüm değişiklikler tek bir JSON blob olarak yazılıyordu.
+- Tablo proje-bağımlıydı (`project_id` zorunluydu); proje-seviye ve görev-seviye olaylar aynı tabloda karışık tutuluyordu.
+- SDD 5.2.3.4'te "veritabanı tetikleyicisi veya Interceptor" ile doldurmak tarif edilmişti.
+
+**Yeni tasarım (Faz 1 sonrası):**
+
+`logs` tablosu tamamen kaldırıldı. Yerine `audit_log` tablosu eklendi:
+
+```
+AUDIT_LOG: id, entity_type VARCHAR(50), entity_id INTEGER,
+           field_name VARCHAR(100), old_value TEXT, new_value TEXT,
+           user_id (FK→users, ON DELETE SET NULL), action VARCHAR(50), timestamp
+```
+
+Temel farklar:
+
+| Özellik | Eski (logs) | Yeni (audit_log) |
+|---|---|---|
+| Kapsam | Proje-bağımlı (`project_id` FK) | Entity-agnostic (`entity_type` + `entity_id`) |
+| Granülarite | Tüm değişiklikler tek JSON blob | Alan başına ayrı satır (`field_name`, `old_value`, `new_value`) |
+| Yazma yöntemi | Seeder + DB trigger önerisi | Repository katmanında Python kodu (audit diff) |
+| Kullanımı | Seeder'da elle yazılıyor, API'de okunmuyordu | `audit_repo.get_by_entity()` ile API'den okunuyor |
+| Immutability | Güvence yoktu | `TimestampedMixin` yok — intentionally immutable, append-only |
+| Silme davranışı | CASCADE (proje silinince log da gider) | `user_id` ON DELETE SET NULL — log korunur |
+
+**Neden değiştirildi:**
+
+- SPMS-02.10 (görev geçmişi ve işlem logları) için activity feed API endpoint'i (`GET /api/v1/tasks/activity/me`) eklendi. Bu endpoint alan bazlı sorgulama gerektiriyor (`field_name = 'status'` gibi), JSON blob'da sorgu yapılamıyor.
+- SPMS-DATA-03 (audit trail) gereksinimi, her güncelleme işleminde repository katmanında `update()` çağrısı sırasında otomatik diff hesaplayıp yazmayı mümkün kılıyor.
+- `project_id` FK'si loglama amacını proje kapsamıyla gereksiz yere bağlıyordu; kullanıcı silme veya başka entity değişikliklerini loglamak mümkün değildi.
+
+**Uygulama noktaları:**
+- `Backend/app/infrastructure/database/models/log.py` — **silindi**
+- `Backend/app/infrastructure/database/models/audit_log.py` — **yeni eklendi**
+- `Backend/app/infrastructure/database/repositories/audit_repo.py` — `SqlAlchemyAuditRepository` (yeni)
+- `Backend/app/infrastructure/database/repositories/task_repo.py` — `update()` artık her değişen alan için `AuditLogModel` satırı yazıyor
+- `Backend/app/infrastructure/database/repositories/project_repo.py` — aynı şekilde `update()` audit diff yazıyor
+- `Backend/app/infrastructure/database/seeder.py` — `LogModel` kaldırıldı, `AuditLogModel` ile seed eklendi
+- `Backend/database/init.sql` — `logs` tablosu kaldırıldı, `audit_log` tablosu eklendi
+
+---
+
+### REV-02: TimestampedMixin — Tüm Ana Modellere Soft-Delete ve Versioning Eklendi (Faz 1, Plan 01-02)
+
+**İlgili SDD bölümü:** 3.3 (Veri Tabanı Görünürlüğüne İlişkin Tasarım Kararları), 5.x.1 (her modülün tablo yapıları)
+
+**Eski tasarım (SDD v1.0):**
+
+SDD 3.3'te "Soft-delete yapısı kullanılır; veriler doğrudan silinmez, işaretlenir" yazıyordu; ancak hiçbir tabloda `is_deleted`, `deleted_at`, `version`, `updated_at` sütunları tanımlanmamıştı.
+
+**Yeni tasarım (Faz 1 sonrası):**
+
+`TimestampedMixin` adlı bir SQLAlchemy mixin sınıfı oluşturuldu ve 7 ana modele uygulandı:
+
+```python
+class TimestampedMixin:
+    version    = Column(Integer, default=1, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+```
+
+Mixin'in uygulandığı tablolar: `tasks`, `projects`, `users`, `comments`, `files`, `labels`, `sprints`
+
+Kapsam dışı: `NotificationModel` (hard delete), `AuditLogModel` (immutable append-only).
+
+| Sütun | Amaç | SPMS gereksinimi |
+|---|---|---|
+| `is_deleted` | Soft-delete işareti | SPMS-DATA-07 |
+| `deleted_at` | Silinme zamanı (audit için) | SPMS-DATA-07 |
+| `version` | Optimistic locking | SPMS-DATA-02 |
+| `updated_at` | Son güncelleme zamanı | SPMS-DATA-02 |
+
+---
+
+### REV-03: JWT_SECRET ve DB_PASSWORD Startup Doğrulaması (Faz 1, Plan 01-03)
+
+**İlgili SDD bölümü:** 3.4 (Emniyet, Güvenlik ve Gizlilik Yaklaşımı)
+
+**Eski durum:** JWT_SECRET ve DB_PASSWORD `config.py`'de hardcoded default değerlerle tanımlıydı. Ortam değişkeni tanımlanmadan sistem çalışıyordu.
+
+**Yeni durum:** `main.py` lifespan başlangıcında `_validate_startup_secrets()` çağrılıyor. Default değerler tespit edilirse `RuntimeError` fırlatılarak uygulama ayağa kalkmıyor. Tüm gizli değerler `.env` dosyasında tutulmalı. **Gereksinim:** ARCH-08.
+
+---
+
+### REV-04: RBAC Task Endpoint'lerinde Uygulandı (Faz 1, Plan 01-03)
+
+**İlgili SDD bölümü:** 3.4, 4.1.1 (SPMS-MOD-AUTH)
+
+**Eski durum:** Task endpoint'leri yalnızca `get_current_user` kontrolü yapıyordu. Herhangi bir oturum açık kullanıcı başkasının görevini silebiliyordu (ARCH-10).
+
+**Yeni durum:** Her task endpoint'i `get_project_member()` ile proje üyeliği ve rol kontrolü yapıyor. Admin rolü tüm projelere erişebilir, görev silme yalnızca Proje Yöneticisi veya Admin. **Gereksinim:** SPMS-SEC-04.
+
+---
+
+### REV-05: Structured Logging Middleware (Faz 1, Plan 01-06)
+
+**İlgili SDD bölümü:** 3.5 (İdame Ettirilebilirlik), SPMS-SAFE-04
+
+**Eski durum:** "Hata ve olay loglamaları merkezi bir yapıdan izlenir" (SDD 3.5) yazıyordu; altyapı yoktu.
+
+**Yeni durum:** `RequestLoggingMiddleware` (`BaseHTTPMiddleware`) `main.py`'e eklendi. Her HTTP isteğinde stdout'a JSON log satırı yazılıyor. Harici izleme araçları (Sentry, Datadog) bu logları parse edebilir. Yeni bağımlılık eklenmedi — yalnızca stdlib `logging` + `json`.
+
+---
+
+### REV-06: Frontend Mock Data → Canlı API Bağlantısı (Faz 1, Plan 01-06)
+
+**İlgili SDD bölümü:** 4.3 (Arayüz Tasarımı)
+
+**Eski durum:** Dashboard ve Settings sayfaları `@/lib/mock-data` dosyasından statik veri okuyordu.
+
+**Yeni durum:**
+- `settings/page.tsx` → `GET /auth/me`
+- `manager-view.tsx` → `GET /api/v1/projects` (React Query)
+- `member-view.tsx` → `GET /api/v1/tasks/activity/me` (yeni endpoint)
+- `api-client.ts` → 401 yanıtında `session_expired` flag'i set edip `/login`'e yönlendirme (SAFE-02)
+

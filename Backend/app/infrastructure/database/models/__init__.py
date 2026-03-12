@@ -7,7 +7,6 @@ from .board_column import BoardColumnModel
 from .task import TaskModel
 from .comment import CommentModel
 from .notification import NotificationModel
-from .log import LogModel
 from .file import FileModel
 from .label import LabelModel
 from .audit_log import AuditLogModel

@@ -109,16 +109,20 @@ CREATE TABLE notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. LOGS TABLOSU (SDD 5.2.1 - Audit Trail)
-CREATE TABLE logs (
+-- 10. AUDIT_LOG TABLOSU (SDD Revizyon - Alan bazlı değişiklik izleme)
+-- logs tablosunun yerini alan, entity-agnostic audit trail.
+CREATE TABLE audit_log (
     id SERIAL PRIMARY KEY,
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL, 
-    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, -- İşlemi yapan
-    action VARCHAR(100) NOT NULL, -- "TASK_UPDATED", "SPRINT_CREATED" vb.
-    changes JSONB, -- Değişiklik detayları (Eski/Yeni değer) JSON formatında
+    entity_type VARCHAR(50) NOT NULL,   -- 'task' veya 'project'
+    entity_id INTEGER NOT NULL,
+    field_name VARCHAR(100) NOT NULL,   -- hangi alan değişti
+    old_value TEXT,                     -- önceki değer
+    new_value TEXT,                     -- yeni değer
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,        -- 'created', 'updated', 'deleted'
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX ix_audit_log_entity_id ON audit_log(entity_id);
 -- 11. DOSYA VE ETİKETLER (ER Diyagramına göre ekler)
 CREATE TABLE files (
     id SERIAL PRIMARY KEY,
