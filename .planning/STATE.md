@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: "Completed 02-01-PLAN.md — Phase 2 Wave 0 test scaffolds done"
-last_updated: "2026-03-12T20:16:51Z"
-last_activity: 2026-03-12 — Completed Plan 02-01 (Wave 0 xfail stubs for AUTH-01/02/03/04, SEC-01)
+stopped_at: "Completed 02-02-PLAN.md — Phase 2 domain entities, models, migration 002, and DTOs"
+last_updated: "2026-03-12T20:40:00Z"
+last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 8
-  completed_plans: 1
-  percent: 12
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -26,25 +26,25 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 2 of 7 (Authentication & Team Management)
-Plan: 1 of 8 — Plan 02-01 COMPLETE
+Plan: 2 of 8 — Plan 02-02 COMPLETE
 Status: In progress
-Last activity: 2026-03-12 — Completed Plan 02-01 (Wave 0 xfail stubs: AUTH-01/02/03/04, SEC-01)
+Last activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 
-Progress: [█░░░░░░░░░] 12% (Phase 2 Plan 1/8)
+Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 
 ## Performance Metrics
 
 **Velocity:**
 - Total plans completed: 7 (6 Phase 1 + 1 Phase 2)
 - Phase 1 total plans: 6/6
-- Phase 2 total plans: 1/8
+- Phase 2 total plans: 2/8
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 01 - Foundation & Security Hardening | 6/6 | All plans done |
-| 02 - Authentication & Team Management | 1/8 | In progress |
+| 02 - Authentication & Team Management | 2/8 | In progress |
 
 ## Accumulated Context
 
@@ -77,6 +77,9 @@ Recent decisions affecting current work:
 - [01-06]: logs table replaced by audit_log throughout (seeder, init.sql, models)
 - [02-01]: No app imports in stub files — stubs assert False immediately, no use-case or repo imports needed (avoids import errors from not-yet-existing modules)
 - [02-01]: Async unit stubs use @pytest.mark.asyncio; sync integration stubs use plain def — mirrors Phase 1 pattern
+- [02-02]: No TimestampedMixin on PasswordResetTokenModel — append-only reference data per CONTEXT.md
+- [02-02]: Config lives at Backend/app/infrastructure/config.py (not app/core/config.py) — SMTP fields added there
+- [02-02]: Dual migration files: standard Alembic in alembic/versions/ + async helper in app/infrastructure/database/migrations/
 
 ### Pending Todos
 
@@ -92,6 +95,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:16:51Z
-Stopped at: Completed 02-01-PLAN.md — Phase 2 Wave 0 test scaffolds done
-Resume file: .planning/phases/02-authentication-team-management/02-02-PLAN.md
+Last session: 2026-03-12T20:40:00Z
+Stopped at: Completed 02-02-PLAN.md — Phase 2 domain entities, models, migration 002, and DTOs
+Resume file: .planning/phases/02-authentication-team-management/02-03-PLAN.md
