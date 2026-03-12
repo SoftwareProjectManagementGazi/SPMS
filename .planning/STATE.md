@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 02-03-PLAN.md — UpdateUserProfileUseCase, avatar upload/serve endpoints
-last_updated: "2026-03-12T20:25:45.480Z"
+stopped_at: Completed 02-04-PLAN.md — team use cases, SqlAlchemyTeamRepository, teams router
+last_updated: "2026-03-12T20:27:10.514Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 64
 ---
 
@@ -62,6 +62,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | 01 - Foundation & Security Hardening | 6/6 | All plans done |
 | 02 - Authentication & Team Management | 2/8 | In progress |
 | Phase 02 P03 | 15 | 2 tasks | 5 files |
+| Phase 02 P04 | 198 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: password_hash field name used (not hashed_password) — matched to actual User entity definition
 - [Phase 02-03]: Authenticated avatar serving via /auth/avatar/{filename} with no StaticFiles mount — enforces JWT gate
 - [Phase 02-03]: Avatar paths stored as relative strings (uploads/avatars/uuid.ext) not absolute paths
+- [Phase 02]: UserListDTO.username maps to User.full_name — no separate username column, full_name is display identifier in search results
+- [Phase 02]: add_member is idempotent via IntegrityError catch-and-rollback at repository layer (SqlAlchemyTeamRepository)
 
 ### Pending Todos
 
@@ -115,6 +118,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:25:45.477Z
-Stopped at: Completed 02-03-PLAN.md — UpdateUserProfileUseCase, avatar upload/serve endpoints
+Last session: 2026-03-12T20:27:10.511Z
+Stopped at: Completed 02-04-PLAN.md — team use cases, SqlAlchemyTeamRepository, teams router
 Resume file: None
