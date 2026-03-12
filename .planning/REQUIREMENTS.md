@@ -26,10 +26,10 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Authentication / User (AUTH)
 
-- [ ] **AUTH-01**: Kullanıcı profil bilgilerini (isim, e-posta, avatar) düzenleyebilir
-- [ ] **AUTH-02**: Kullanıcı ekip oluşturabilir ve diğer kullanıcıları ekibe davet edebilir
-- [ ] **AUTH-03**: Kullanıcı parola sıfırlama talebinde bulunabilir; e-posta ile tek kullanımlık 30 dakika geçerli link alır
-- [ ] **AUTH-04**: Hatalı giriş 5 defa tekrarlandığında hesap geçici olarak kilitlenir
+- [x] **AUTH-01**: Kullanıcı profil bilgilerini (isim, e-posta, avatar) düzenleyebilir
+- [x] **AUTH-02**: Kullanıcı ekip oluşturabilir ve diğer kullanıcıları ekibe davet edebilir
+- [x] **AUTH-03**: Kullanıcı parola sıfırlama talebinde bulunabilir; e-posta ile tek kullanımlık 30 dakika geçerli link alır
+- [x] **AUTH-04**: Hatalı giriş 5 defa tekrarlandığında hesap geçici olarak kilitlenir
 
 ---
 
@@ -91,7 +91,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Security & API Hardening (SEC)
 
-- [ ] **SEC-01**: Auth endpoint'lerine (login, register) rate limiting uygulanır
+- [x] **SEC-01**: Auth endpoint'lerine (login, register) rate limiting uygulanır
 - [x] **SEC-02**: API endpoint'leri standart HTTP hata kodları döner (400, 401, 403, 404, 500)
 - [x] **SEC-03**: CORS politikası katı şekilde tanımlanır; yalnızca güvenilir domain'lerden gelen istekler kabul edilir
 - [ ] **SEC-04**: Kullanıcı verileri işlenmesi KVKK/GDPR gerekliliklerine uygun şekilde belgelenir ve uygulanır
@@ -188,11 +188,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 1 | Complete |
 | SAFE-02 | Phase 1 | Pending |
 | SAFE-03 | Phase 1 | Pending |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
-| SEC-01 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
+| SEC-01 | Phase 2 | Complete |
 | SEC-04 | Phase 2 | Pending |
 | SAFE-01 | Phase 2 | Pending |
 | TASK-01 | Phase 3 | Pending |
