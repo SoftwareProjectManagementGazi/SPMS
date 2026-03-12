@@ -185,3 +185,48 @@ CREATE TABLE task_labels (
     label_id INTEGER REFERENCES labels(id) ON DELETE CASCADE,
     PRIMARY KEY (task_id, label_id)
 );
+
+-- 12. PHASE 2 TABLOLARI (AUTH-02, AUTH-03)
+
+-- teams tablosu — global ekip varlığı
+-- TimestampedMixin: version, updated_at, is_deleted, deleted_at
+CREATE TABLE IF NOT EXISTS teams (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    owner_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- team_members — kullanıcı-ekip çoka çok ilişkisi (join table)
+CREATE TABLE IF NOT EXISTS team_members (
+    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (team_id, user_id)
+);
+
+-- team_projects — ekip-proje çoka çok ilişkisi (join table)
+CREATE TABLE IF NOT EXISTS team_projects (
+    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (team_id, project_id)
+);
+
+-- password_reset_tokens — tek kullanımlık şifre sıfırlama tokenleri
+-- Append-only: TimestampedMixin uygulanmaz (CONTEXT.md kararı)
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS ix_password_reset_tokens_user_id ON password_reset_tokens(user_id);
