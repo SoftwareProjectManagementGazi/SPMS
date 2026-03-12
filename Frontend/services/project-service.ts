@@ -68,5 +68,9 @@ export const projectService = {
   create: async (data: CreateProjectDTO): Promise<Project> => {
     const response = await apiClient.post<ProjectResponse>('/projects/', data);
     return mapProjectResponseToProject(response.data);
-  }
+  },
+
+  deleteProject: async (id: string): Promise<void> => {
+    await apiClient.delete(`/projects/${id}`);
+  },
 };
