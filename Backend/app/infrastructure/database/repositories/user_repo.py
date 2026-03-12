@@ -53,6 +53,22 @@ class SqlAlchemyUserRepository(IUserRepository):
         # unique() prevents row duplication from joinedload on collections
         return [self._to_entity(m) for m in result.unique().scalars().all()]
 
+    async def search_by_email_or_name(self, query: str) -> List[User]:
+        """Search users by case-insensitive match on email or full_name."""
+        pattern = f"%{query.lower()}%"
+        stmt = (
+            self._get_base_query()
+            .where(
+                or_(
+                    UserModel.email.ilike(pattern),
+                    UserModel.full_name.ilike(pattern),
+                )
+            )
+            .limit(20)
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]
+
     async def delete(self, user_id: int) -> bool:
         """Soft-delete: set is_deleted=True and deleted_at; do NOT issue SQL DELETE."""
         stmt = select(UserModel).where(UserModel.id == user_id, UserModel.is_deleted == False)

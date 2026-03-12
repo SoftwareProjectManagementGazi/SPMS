@@ -17,6 +17,8 @@ from app.domain.repositories.audit_repository import IAuditRepository
 from app.infrastructure.database.repositories.audit_repo import SqlAlchemyAuditRepository
 from app.application.ports.security_port import ISecurityService
 from app.infrastructure.adapters.security_adapter import SecurityAdapter
+from app.domain.repositories.team_repository import ITeamRepository
+from app.infrastructure.database.repositories.team_repo import SqlAlchemyTeamRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -34,6 +36,9 @@ def get_task_repo(session: AsyncSession = Depends(get_db)) -> ITaskRepository:
 
 def get_audit_repo(session: AsyncSession = Depends(get_db)) -> IAuditRepository:
     return SqlAlchemyAuditRepository(session)
+
+def get_team_repo(session: AsyncSession = Depends(get_db)) -> ITeamRepository:
+    return SqlAlchemyTeamRepository(session)
 
 def get_security_service() -> ISecurityService:
     return SecurityAdapter()

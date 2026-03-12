@@ -13,7 +13,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from app.api.v1 import auth, projects, tasks
+from app.api.v1.teams import router as teams_router
 from app.infrastructure.database.database import AsyncSessionLocal
 from app.infrastructure.database.seeder import seed_data
 from app.infrastructure.config import settings
@@ -97,6 +101,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SPMS API", version="1.0.0", lifespan=lifespan)
 
+# ---------------------------------------------------------------------------
+# slowapi rate limiting (SEC-01)
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Structured request logging middleware (SAFE-03)
 app.add_middleware(RequestLoggingMiddleware)
 
@@ -112,6 +123,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Tasks"])
+app.include_router(teams_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
