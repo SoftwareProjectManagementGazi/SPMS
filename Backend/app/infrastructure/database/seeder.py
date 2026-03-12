@@ -1,6 +1,5 @@
 import logging
 import random
-import json
 from datetime import date, timedelta, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -14,8 +13,8 @@ from app.infrastructure.database.models.sprint import SprintModel
 from app.infrastructure.database.models.task import TaskModel, TaskPriority
 from app.infrastructure.database.models.comment import CommentModel
 from app.infrastructure.database.models.notification import NotificationModel, NotificationType
-from app.infrastructure.database.models.log import LogModel
 from app.infrastructure.database.models.label import LabelModel
+from app.infrastructure.database.models.audit_log import AuditLogModel
 
 from app.infrastructure.security import get_password_hash
 
@@ -277,18 +276,22 @@ async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectMod
                 # sub_task.labels.append(random.choice(labels)) 
                 pass
             
-            # LOG (Create)
-            session.add(LogModel(
-                project_id=project.id, task_id=sub_task.id, user_id=sub_task.reporter_id,
-                action="CREATE", changes=json.dumps({"status": "Open"}), timestamp=sub_task.created_at
+            # AUDIT LOG (Create) — activity feed endpoint reads from audit_log table
+            session.add(AuditLogModel(
+                entity_type="task", entity_id=sub_task.id,
+                field_name="status", old_value=None, new_value="Open",
+                user_id=sub_task.reporter_id, action="created",
+                timestamp=sub_task.created_at
             ))
 
-            # LOG (Status Change - Eğer ilerlediyse)
+            # AUDIT LOG (Status Change - Eğer ilerlediyse)
             if s_status_name not in ["Backlog", "To Do", "Gereksinim"]:
-                session.add(LogModel(
-                    project_id=project.id, task_id=sub_task.id, user_id=sub_task.assignee_id,
-                    action="STATUS_CHANGE", changes=json.dumps({"new_status": s_status_name}),
-                    timestamp=datetime.now() - timedelta(days=random.randint(0, 5))
+                status_changed_at = datetime.now() - timedelta(days=random.randint(0, 5))
+                session.add(AuditLogModel(
+                    entity_type="task", entity_id=sub_task.id,
+                    field_name="status", old_value="Open", new_value=s_status_name,
+                    user_id=sub_task.assignee_id, action="updated",
+                    timestamp=status_changed_at
                 ))
 
             # Yorum (%50 ihtimal)
