@@ -144,18 +144,8 @@ export const taskService = {
         return response.data.map(mapTaskResponseToParentTask);
     },
 
-    getTasksByProject: async (projectId: string): Promise<ParentTask[]> => {
-        const response = await apiClient.get<TaskResponseDTO[]>(`/tasks/project/${projectId}`);
-        return response.data.map(mapTaskResponseToParentTask);
-    },
-
     getTask: async (taskId: string): Promise<ParentTask> => {
         const response = await apiClient.get<TaskResponseDTO>(`/tasks/${taskId}`);
-        return mapTaskResponseToParentTask(response.data);
-    },
-
-    createTask: async (taskData: any) => {
-        const response = await apiClient.post<TaskResponseDTO>('/tasks', taskData);
         return mapTaskResponseToParentTask(response.data);
     },
 
