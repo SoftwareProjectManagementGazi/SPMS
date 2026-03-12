@@ -11,3 +11,4 @@ pytest-asyncio
 httpx
 aiosqlite
 pydantic[email]
+slowapi
