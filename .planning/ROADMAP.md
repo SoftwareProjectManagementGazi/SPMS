@@ -52,7 +52,17 @@ Plans:
   3. User can request a password reset and receives an email with a single-use link valid for 30 minutes; clicking the link allows setting a new password
   4. After 5 consecutive failed login attempts the account is locked; further attempts are rejected without a valid unlock mechanism
   5. Auth endpoints (login, register) reject requests beyond the rate limit; a confirmation dialog appears before critical destructive actions in the UI
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0 test scaffolds: 6 xfail stub files for AUTH-01/02/03/04 and SEC-01 (Nyquist compliance)
+- [ ] 02-02-PLAN.md — DB schema + domain contracts: teams/team_members/team_projects/password_reset_tokens migration, domain entities, repository interfaces, DTOs
+- [ ] 02-03-PLAN.md — Profile editing backend: PUT /auth/me, POST /auth/me/avatar (authenticated), GET /auth/avatar/{filename}
+- [ ] 02-04-PLAN.md — Team management backend: CreateTeam/AddMember/RemoveMember use cases, SqlAlchemyTeamRepository, /teams router
+- [ ] 02-05-PLAN.md — Password reset + account lockout + rate limiting: RequestPasswordReset/ConfirmPasswordReset use cases, in-memory lockout module, slowapi on /login and /register
+- [ ] 02-06-PLAN.md — Settings frontend save wiring + confirmation dialogs: PUT /auth/me form, avatar upload, ConfirmDialog/TypeToConfirmDialog components
+- [ ] 02-07-PLAN.md — Teams frontend: /teams list page, /teams/[id] detail with member management, team-service.ts
+- [ ] 02-08-PLAN.md — Password reset UI + GDPR/KVKK note: /forgot-password and /reset-password pages, sdd_revizyon.md compliance section
 
 ### Phase 3: Project & Task Completion
 **Goal**: The project and task module is fully functional — managers can assign members to projects, tasks have dependencies and recurrence, comments and file attachments work, sprints are manageable via API, and list endpoints paginate
@@ -119,8 +129,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Security Hardening | 4/6 | In Progress|  |
-| 2. Authentication & Team Management | 0/TBD | Not started | - |
+| 1. Foundation & Security Hardening | 6/6 | In Progress (awaiting verification) | - |
+| 2. Authentication & Team Management | 0/8 | Not started | - |
 | 3. Project & Task Completion | 0/TBD | Not started | - |
 | 4. Views & UI | 0/TBD | Not started | - |
 | 5. Notifications | 0/TBD | Not started | - |
