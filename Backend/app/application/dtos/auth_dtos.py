@@ -33,4 +33,19 @@ class UserListDTO(BaseModel):
     id: int
     email: str
     username: str
-    avatar_url: str | None = None        
+    avatar_url: str | None = None
+
+
+class UserUpdateDTO(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    current_password: Optional[str] = None  # Required when email field is provided
+
+
+class PasswordResetRequestDTO(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmDTO(BaseModel):
+    token: str
+    new_password: str  # min length 8 — same rule as register
