@@ -16,7 +16,12 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         self.session = session
 
     def _to_entity(self, model: ProjectModel) -> Project:
-        return Project.model_validate(model)
+        project = Project.model_validate(model)
+        # ARCH-03: populate manager display fields from eagerly loaded manager relationship
+        if model.manager is not None:
+            project.manager_name = model.manager.full_name
+            project.manager_avatar = model.manager.avatar
+        return project
 
     def _to_model(self, entity: Project) -> ProjectModel:
         # Exclude columns to handle them manually as relationship objects
@@ -35,11 +40,14 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         return model
 
     def _get_base_query(self):
-        """Return a base select with is_deleted filter and eager-loaded columns."""
+        """Return a base select with is_deleted filter and eager-loaded columns and manager."""
         return (
             select(ProjectModel)
             .where(ProjectModel.is_deleted == False)
-            .options(joinedload(ProjectModel.columns))
+            .options(
+                joinedload(ProjectModel.columns),
+                joinedload(ProjectModel.manager),  # ARCH-03: eager load manager user
+            )
         )
 
     async def create(self, project: Project) -> Project:

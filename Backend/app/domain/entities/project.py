@@ -18,6 +18,8 @@ class Project(BaseModel):
     end_date: Optional[datetime] = None
     methodology: Methodology
     manager_id: Optional[int] = None
+    manager_name: Optional[str] = None
+    manager_avatar: Optional[str] = None
     created_at: Optional[datetime] = None
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None

@@ -30,9 +30,11 @@ class ProjectResponseDTO(BaseModel):
     start_date: datetime
     end_date: Optional[datetime]
     methodology: Methodology
-    manager_id: int
+    manager_id: Optional[int] = None
+    manager_name: Optional[str] = None
+    manager_avatar: Optional[str] = None
     created_at: datetime
-    
+
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None
 
