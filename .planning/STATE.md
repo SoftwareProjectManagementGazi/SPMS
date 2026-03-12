@@ -42,11 +42,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 1 of 7 (Foundation & Security Hardening)
-Plan: 4 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-03-11 — Completed Plan 01-03 (RBAC enforcement on all task endpoints, startup RuntimeError on insecure defaults, CORS from env var)
+Last activity: 2026-03-12 — Completed Plan 01-05 (UserListDTO canonicalized, ProjectResponseDTO manager fields, task create/update single round-trip, frontend taskService duplicates merged)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 01 P04 | 6 | 2 tasks | 9 files |
+| Phase 01 P05 | 16 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 01]: Soft-delete implemented at repository layer per Clean Architecture — use cases stay clean
 - [Phase 01]: deleted_at set via datetime.utcnow() in Python code, not via server_default or onupdate (Pitfall 2)
 - [Phase 01]: project_repo.update() uses dynamic field mapping via updatable_fields list (ARCH-06 resolved)
+- [01-05]: UserListDTO defined only in auth_dtos.py; routers must import, never redefine inline
+- [01-05]: manager_name/manager_avatar added to Project domain entity so model_validate() works via from_attributes without custom router mapping
+- [01-05]: task_repo.create() uses _get_base_query() inline after flush+commit — single round-trip, no internal get_by_id delegation
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T19:59:40.864Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-03-12T15:24:47Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
