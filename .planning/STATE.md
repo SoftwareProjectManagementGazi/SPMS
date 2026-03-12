@@ -3,30 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-12T16:42:32.633Z"
-last_activity: 2026-03-12 — Completed Plan 01-06 (frontend wired to live API, SAFE-02/SAFE-03, init.sql updated)
+stopped_at: "Completed 02-01-PLAN.md — Phase 2 Wave 0 test scaffolds done"
+last_updated: "2026-03-12T20:16:51Z"
+last_activity: 2026-03-12 — Completed Plan 02-01 (Wave 0 xfail stubs for AUTH-01/02/03/04, SEC-01)
 progress:
   total_phases: 7
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: in-progress
-stopped_at: "Completed 01-06-PLAN.md — Phase 1 all plans done, awaiting verification"
-last_updated: "2026-03-12T19:30:00Z"
-last_activity: 2026-03-12 — Completed Plan 01-06 (frontend live API wiring, session expiry, structured logging, init.sql full schema)
-progress:
-  total_phases: 7
-  completed_phases: 0
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 1
+  percent: 12
 ---
 
 # Project State
@@ -36,28 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve görevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 1 complete — awaiting gsd-verifier goal verification before Phase 2
+**Current focus:** Phase 2 Wave 1 — test scaffolds complete, ready for implementation plans (02-02 onward)
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation & Security Hardening)
-Plan: 6 of 6 — ALL PLANS COMPLETE
-Status: Pending phase verification
-Last activity: 2026-03-12 — Completed Plan 01-06 (frontend wired to live API, SAFE-02/SAFE-03, init.sql updated)
+Phase: 2 of 7 (Authentication & Team Management)
+Plan: 1 of 8 — Plan 02-01 COMPLETE
+Status: In progress
+Last activity: 2026-03-12 — Completed Plan 02-01 (Wave 0 xfail stubs: AUTH-01/02/03/04, SEC-01)
 
-Progress: [██████████] 100% (Phase 1 plans)
+Progress: [█░░░░░░░░░] 12% (Phase 2 Plan 1/8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7 (6 Phase 1 + 1 Phase 2)
 - Phase 1 total plans: 6/6
+- Phase 2 total plans: 1/8
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 01 - Foundation & Security Hardening | 6/6 | ✓ All plans done |
+| 01 - Foundation & Security Hardening | 6/6 | All plans done |
+| 02 - Authentication & Team Management | 1/8 | In progress |
 
 ## Accumulated Context
 
@@ -88,6 +75,8 @@ Recent decisions affecting current work:
 - [01-06]: init.sql is now single source of truth for fresh DB schema; Alembic migration remains for existing DBs
 - [01-06]: Activity endpoint returns raw audit log fields (no formal DTO) — sufficient for Phase 1
 - [01-06]: logs table replaced by audit_log throughout (seeder, init.sql, models)
+- [02-01]: No app imports in stub files — stubs assert False immediately, no use-case or repo imports needed (avoids import errors from not-yet-existing modules)
+- [02-01]: Async unit stubs use @pytest.mark.asyncio; sync integration stubs use plain def — mirrors Phase 1 pattern
 
 ### Pending Todos
 
@@ -103,6 +92,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T16:42:32.631Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-authentication-team-management/02-CONTEXT.md
+Last session: 2026-03-12T20:16:51Z
+Stopped at: Completed 02-01-PLAN.md — Phase 2 Wave 0 test scaffolds done
+Resume file: .planning/phases/02-authentication-team-management/02-02-PLAN.md
