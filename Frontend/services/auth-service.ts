@@ -24,6 +24,15 @@ interface UserResponseDTO {
     }
 }
 
+const mapUserResponseToUser = (data: UserResponseDTO): User => ({
+    id: data.id.toString(),
+    name: data.full_name,
+    email: data.email,
+    avatar: data.avatar || "/placeholder-user.jpg",
+    // DİNAMİK ROL ATAMASI
+    role: data.role ? { name: data.role.name } : { name: "Member" } // Güvenlik ağı: Backend rol dönmezse varsayılan
+});
+
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
@@ -32,19 +41,7 @@ export const authService = {
 
   getCurrentUser: async (): Promise<User> => {
       const response = await apiClient.get<UserResponseDTO>('/auth/me');
-      const data = response.data;
-      
-      return {
-          id: data.id.toString(),
-          name: data.full_name,
-          email: data.email,
-          avatar: data.avatar || "/placeholder-user.jpg",
-          // DİNAMİK ROL ATAMASI
-          role: data.role ? { 
-              name: data.role.name, 
-              description: data.role.description 
-          } : { name: "Member" } // Güvenlik ağı: Backend rol dönmezse varsayılan
-      };
+      return mapUserResponseToUser(response.data);
   },
 
   logout: () => {
@@ -69,5 +66,23 @@ export const authService = {
   isAuthenticated: (): boolean => {
       const token = authService.getToken();
       return !!token;
-  }
+  },
+
+  updateProfile: async (data: {
+    full_name?: string;
+    email?: string;
+    current_password?: string;
+  }): Promise<User> => {
+    const response = await apiClient.put<UserResponseDTO>('/auth/me', data);
+    return mapUserResponseToUser(response.data);
+  },
+
+  uploadAvatar: async (file: File): Promise<User> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<UserResponseDTO>('/auth/me/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return mapUserResponseToUser(response.data);
+  },
 };
