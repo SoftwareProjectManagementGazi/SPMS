@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
+stopped_at: Completed 02-03-PLAN.md — UpdateUserProfileUseCase, avatar upload/serve endpoints
+last_updated: "2026-03-12T20:25:45.480Z"
+last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 14
+  completed_plans: 9
+  percent: 64
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: in-progress
 stopped_at: "Completed 02-02-PLAN.md — Phase 2 domain entities, models, migration 002, and DTOs"
 last_updated: "2026-03-12T20:40:00Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
-  total_phases: 7
+  [██████░░░░] 64%
   completed_phases: 1
   total_plans: 8
   completed_plans: 2
@@ -45,6 +61,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 |-------|-------|--------|
 | 01 - Foundation & Security Hardening | 6/6 | All plans done |
 | 02 - Authentication & Team Management | 2/8 | In progress |
+| Phase 02 P03 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +97,9 @@ Recent decisions affecting current work:
 - [02-02]: No TimestampedMixin on PasswordResetTokenModel — append-only reference data per CONTEXT.md
 - [02-02]: Config lives at Backend/app/infrastructure/config.py (not app/core/config.py) — SMTP fields added there
 - [02-02]: Dual migration files: standard Alembic in alembic/versions/ + async helper in app/infrastructure/database/migrations/
+- [Phase 02-03]: password_hash field name used (not hashed_password) — matched to actual User entity definition
+- [Phase 02-03]: Authenticated avatar serving via /auth/avatar/{filename} with no StaticFiles mount — enforces JWT gate
+- [Phase 02-03]: Avatar paths stored as relative strings (uploads/avatars/uuid.ext) not absolute paths
 
 ### Pending Todos
 
@@ -95,6 +115,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:40:00Z
-Stopped at: Completed 02-02-PLAN.md — Phase 2 domain entities, models, migration 002, and DTOs
-Resume file: .planning/phases/02-authentication-team-management/02-03-PLAN.md
+Last session: 2026-03-12T20:25:45.477Z
+Stopped at: Completed 02-03-PLAN.md — UpdateUserProfileUseCase, avatar upload/serve endpoints
+Resume file: None
