@@ -7,6 +7,7 @@ import {
   CheckSquare,
   BarChart3,
   Settings,
+  Users,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projeler", icon: FolderKanban },
   { href: "/my-tasks", label: "Görevlerim", icon: CheckSquare },
+  { href: "/teams", label: "Teams", icon: Users },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ]
