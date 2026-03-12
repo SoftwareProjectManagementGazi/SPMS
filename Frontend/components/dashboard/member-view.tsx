@@ -9,10 +9,22 @@ import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { activities } from "@/lib/mock-data"
 import type { ParentTask, SubTask } from "@/lib/types"
 import { useQuery } from "@tanstack/react-query"
 import { taskService } from "@/services/task-service"
+import { apiClient } from "@/lib/api-client"
+
+// Shape returned by GET /api/v1/tasks/activity/me
+interface AuditEvent {
+  entity_type: string
+  entity_id: number
+  field_name: string
+  old_value: string | null
+  new_value: string | null
+  user_id: number | null
+  action: string
+  timestamp: string
+}
 
 const statusColors: Record<string, string> = {
   todo: "bg-slate-100 text-slate-700",
@@ -223,6 +235,16 @@ export function MemberView() {
       queryFn: taskService.getMyTasks
   })
 
+  const { data: recentActivity } = useQuery<AuditEvent[]>({
+    queryKey: ["taskActivity"],
+    queryFn: async () => {
+      const res = await apiClient.get<AuditEvent[]>("/tasks/activity/me")
+      return res.data
+    },
+    // If endpoint is not yet available, return empty array gracefully
+    retry: false,
+  })
+
   // 1. Hiyerarşiyi Kur
   const hierarchicalTasks = React.useMemo(() => {
     if (!myTasks) return [];
@@ -301,25 +323,25 @@ export function MemberView() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {activities.slice(0, 4).map((activity) => (
-              <div key={activity.id} className="flex gap-3">
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarImage src={activity.user.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>
-                    {activity.user.name.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
+            {!recentActivity || recentActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent activity.</p>
+            ) : (
+              recentActivity.slice(0, 4).map((event, idx) => (
+                <div key={idx} className="flex flex-col gap-1">
                   <p className="text-sm">
-                    <span className="font-medium">{activity.user.name}</span>{" "}
-                    <span className="text-muted-foreground">{activity.content}</span>
+                    <span className="font-medium capitalize">{event.action}</span>{" "}
+                    <span className="text-muted-foreground">
+                      {event.field_name
+                        ? `${event.field_name}: ${event.old_value ?? "—"} → ${event.new_value ?? "—"}`
+                        : `task #${event.entity_id}`}
+                    </span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(activity.timestamp).toLocaleString()}
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(event.timestamp).toLocaleString()}
                   </p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/services/auth-service"
+import { SESSION_EXPIRED_KEY } from "@/lib/api-client"
 import { useAuth } from "@/context/auth-context" // EKLENDİ: useAuth import edildi
 import {
   Form,
@@ -49,6 +50,21 @@ export default function LoginPage() {
             router.replace("/projects")
         }
     }, [router])
+
+    // SAFE-02: Show session expiry message when redirected from an expired session
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const expired = localStorage.getItem(SESSION_EXPIRED_KEY)
+            if (expired) {
+                localStorage.removeItem(SESSION_EXPIRED_KEY)
+                toast({
+                    variant: "destructive",
+                    title: "Session expired",
+                    description: "Your session has expired. Please log in again.",
+                })
+            }
+        }
+    }, [toast])
     
 
     async function onSubmit(data: LoginFormValues) {
