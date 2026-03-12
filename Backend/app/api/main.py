@@ -1,4 +1,7 @@
 import sys
+import json
+import time
+import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -8,10 +11,64 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from app.api.v1 import auth, projects, tasks
 from app.infrastructure.database.database import AsyncSessionLocal
 from app.infrastructure.database.seeder import seed_data
 from app.infrastructure.config import settings
+
+# ---------------------------------------------------------------------------
+# Structured logging configuration (SAFE-03)
+# Configure root logger to emit to stdout at INFO level.
+# External tools (Sentry, Datadog) can consume these stdout JSON lines.
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",   # We emit pre-serialised JSON; no extra formatting needed
+    stream=sys.stdout,
+)
+logger = logging.getLogger("spms")
+
+
+# ---------------------------------------------------------------------------
+# RequestLoggingMiddleware — emits one JSON log line per HTTP request
+# ---------------------------------------------------------------------------
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.monotonic()
+        response = await call_next(request)
+        duration_ms = round((time.monotonic() - start) * 1000, 2)
+
+        # Optionally extract user_id from JWT without blocking the response
+        user_id = None
+        try:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                from jose import jwt as _jwt
+                token = auth_header.split(" ", 1)[1]
+                payload = _jwt.decode(
+                    token,
+                    settings.JWT_SECRET,
+                    algorithms=[settings.JWT_ALGORITHM],
+                    options={"verify_exp": False},
+                )
+                user_id = payload.get("sub")
+        except Exception:
+            pass  # Never fail a request due to logging
+
+        log_record = {
+            "event": "http_request",
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": duration_ms,
+        }
+        if user_id is not None:
+            log_record["user_id"] = user_id
+
+        logger.info(json.dumps(log_record))
+        return response
 
 
 def _validate_startup_secrets(s) -> None:
@@ -39,6 +96,9 @@ async def lifespan(app: FastAPI):
     # Shutdown logic (if any) can go here
 
 app = FastAPI(title="SPMS API", version="1.0.0", lifespan=lifespan)
+
+# Structured request logging middleware (SAFE-03)
+app.add_middleware(RequestLoggingMiddleware)
 
 # Configure CORS — origins read from env var
 app.add_middleware(

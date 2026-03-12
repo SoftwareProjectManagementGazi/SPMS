@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import (
     get_task_repo,
@@ -6,6 +6,7 @@ from app.api.dependencies import (
     get_current_user,
     get_project_member,
     get_task_project_member,
+    get_audit_repo,
 )
 from app.application.dtos.task_dtos import TaskCreateDTO, TaskUpdateDTO, TaskResponseDTO
 from app.application.use_cases.manage_tasks import (
@@ -18,6 +19,7 @@ from app.application.use_cases.manage_tasks import (
 )
 from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.project_repository import IProjectRepository
+from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.entities.user import User
 from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError
 
@@ -62,6 +64,28 @@ async def list_my_tasks(
 ):
     use_case = ListMyTasksUseCase(task_repo)
     return await use_case.execute(current_user.id) # type: ignore
+
+@router.get("/activity/me", response_model=List[Any])
+async def get_my_task_activity(
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the last 20 audit log entries for tasks assigned to the current user."""
+    # 1. Get all tasks assigned to the current user
+    my_tasks = await task_repo.get_all_by_assignee(current_user.id)  # type: ignore
+
+    # 2. Collect audit events for each task, merge, sort, and return top 20
+    all_events: List[dict] = []
+    for task in my_tasks:
+        events = await audit_repo.get_by_entity("task", task.id)  # type: ignore
+        all_events.extend(events)
+
+    # Sort descending by timestamp (string ISO format sorts correctly)
+    all_events.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
+
+    return all_events[:20]
+
 
 @router.get("/{task_id}", response_model=TaskResponseDTO)
 async def get_task(
