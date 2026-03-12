@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 02-05-PLAN.md — password reset, lockout, rate limiting
-last_updated: "2026-03-12T20:28:02.390Z"
+stopped_at: Completed 02-06-PLAN.md — settings form wiring, avatar upload, confirmation dialogs
+last_updated: "2026-03-12T20:33:31.131Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 64
 ---
 
@@ -64,6 +64,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 02 P03 | 15 | 2 tasks | 5 files |
 | Phase 02 P04 | 198 | 2 tasks | 8 files |
 | Phase 02 P05 | 4 | 2 tasks | 14 files |
+| Phase 02 P06 | 18 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,9 @@ Recent decisions affecting current work:
 - [Phase 02-05]: In-memory dict (_lockout_store) used for lockout state — restarts clear state (intentional for dev)
 - [Phase 02-05]: slowapi Limiter at app.state.limiter with key_func=get_remote_address; request: Request is first param on rate-limited endpoints (slowapi requirement)
 - [Phase 02-05]: update_password() added to IUserRepository interface and SqlAlchemyUserRepository to support password reset confirm flow
+- [Phase 02-06]: mapUserResponseToUser extracted as module-level function in auth-service.ts for reuse across updateProfile and uploadAvatar
+- [Phase 02-06]: User.role type is { name: string } — description field stripped from mapper to match existing type definition
+- [Phase 02-06]: ConfirmDialog/TypeToConfirmDialog use controlled open state — callers manage open prop, no internal trigger
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T20:27:50.315Z
-Stopped at: Completed 02-05-PLAN.md — password reset, lockout, rate limiting
+Last session: 2026-03-12T20:33:21.423Z
+Stopped at: Completed 02-06-PLAN.md — settings form wiring, avatar upload, confirmation dialogs
 Resume file: None
