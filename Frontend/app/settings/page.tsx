@@ -12,16 +12,34 @@ import { Loader2 } from "lucide-react"
 import { authService } from "@/services/auth-service"
 import type { User } from "@/lib/types"
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+
 export default function SettingsPage() {
   const [user, setUser] = React.useState<User | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+
+  // Form state
+  const [fullName, setFullName] = React.useState("")
+  const [email, setEmail] = React.useState("")
+  const [originalEmail, setOriginalEmail] = React.useState("")
+  const [currentPassword, setCurrentPassword] = React.useState("")
+
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [formError, setFormError] = React.useState<string | null>(null)
+  const [formSuccess, setFormSuccess] = React.useState(false)
+
+  const showCurrentPassword = email !== originalEmail
 
   React.useEffect(() => {
     authService
       .getCurrentUser()
       .then((u) => {
         setUser(u)
+        setFullName(u.name ?? "")
+        setEmail(u.email ?? "")
+        setOriginalEmail(u.email ?? "")
       })
       .catch(() => {
         setError("Failed to load profile. Please try again later.")
@@ -30,6 +48,49 @@ export default function SettingsPage() {
         setIsLoading(false)
       })
   }, [])
+
+  const handleSave = async () => {
+    setIsSubmitting(true)
+    setFormError(null)
+    setFormSuccess(false)
+    try {
+      const updated = await authService.updateProfile({
+        full_name: fullName,
+        email,
+        current_password: showCurrentPassword ? currentPassword : undefined,
+      })
+      setUser(updated)
+      setFullName(updated.name ?? "")
+      setEmail(updated.email ?? "")
+      setOriginalEmail(updated.email ?? "")
+      setCurrentPassword("")
+      setFormSuccess(true)
+      setTimeout(() => setFormSuccess(false), 3000)
+    } catch (err: any) {
+      setFormError(err.response?.data?.detail || "Failed to save changes")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const updated = await authService.uploadAvatar(file)
+      setUser(updated)
+    } catch (err: any) {
+      setFormError(err.response?.data?.detail || "Failed to upload avatar")
+    }
+  }
+
+  const getAvatarSrc = (): string => {
+    if (!user?.avatar) return "/placeholder.svg"
+    if (user.avatar.startsWith("uploads/")) {
+      return `${API_BASE}/auth/avatar/${user.avatar.replace("uploads/avatars/", "")}`
+    }
+    return user.avatar
+  }
 
   return (
     <AppShell>
@@ -53,9 +114,10 @@ export default function SettingsPage() {
               <p className="text-sm text-red-600">{error}</p>
             ) : user ? (
               <>
+                {/* Avatar section */}
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
-                    <AvatarImage src={user.avatar || "/placeholder.svg"} />
+                    <AvatarImage src={getAvatarSrc()} />
                     <AvatarFallback>
                       {user.name
                         .split(" ")
@@ -63,21 +125,76 @@ export default function SettingsPage() {
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  <Button variant="outline">Change Avatar</Button>
+                  <div>
+                    <Label
+                      htmlFor="avatar-upload"
+                      className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+                    >
+                      Change Avatar
+                    </Label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                  </div>
                 </div>
 
+                {/* Name and email fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input defaultValue={user.name} />
+                    <Label htmlFor="full-name">Full Name</Label>
+                    <Input
+                      id="full-name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input defaultValue={user.email} type="email" />
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      type="email"
+                    />
                   </div>
                 </div>
 
-                <Button>Save Changes</Button>
+                {/* Conditional current password field when email changes */}
+                {showCurrentPassword && (
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Required to change email"
+                    />
+                  </div>
+                )}
+
+                {/* Feedback messages */}
+                {formError && (
+                  <p className="text-sm text-red-600">{formError}</p>
+                )}
+                {formSuccess && (
+                  <p className="text-sm text-green-600">Changes saved successfully</p>
+                )}
+
+                <Button onClick={handleSave} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </>
             ) : null}
           </CardContent>
