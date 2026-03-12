@@ -59,3 +59,46 @@ Tek kullanımlık şifre sıfırlama tokenleri (append-only; TimestampedMixin uy
 | created_at | TIMESTAMPTZ | DEFAULT now() | |
 
 İndeksler: `ix_password_reset_tokens_token_hash`, `ix_password_reset_tokens_user_id`
+
+---
+
+## GDPR/KVKK Uyumluluk Notu
+
+**Tarih:** 2026-03-12
+**Kapsam:** Phase 2 — Kimlik Doğrulama ve Ekip Yönetimi
+
+### İşlenen Kişisel Veriler
+
+| Veri Alanı | Amaç | Saklama Süresi |
+|------------|------|----------------|
+| Ad Soyad (full_name) | Kullanıcı kimliği ve profil görüntüleme | Hesap silinene kadar |
+| E-posta adresi | Kimlik doğrulama, şifre sıfırlama | Hesap silinene kadar |
+| Şifre (bcrypt hash) | Kimlik doğrulama | Hesap silinene kadar |
+| Avatar dosyası (isteğe bağlı) | Profil fotoğrafı | Hesap silinene kadar veya kullanıcı değiştirene kadar |
+| IP adresi (rate limiting) | Güvenlik — brute force koruması | Oturum süresince (bellekte) |
+| Şifre sıfırlama tokeni (SHA-256 hash) | Tek kullanımlık parola sıfırlama | 30 dakika geçerlilik, kullanım sonrası işaretlenir |
+| Giriş başarısızlık sayacı | Güvenlik — hesap kilitleme (5 deneme) | Bellekte, sunucu yeniden başlayana veya başarılı girişe kadar |
+
+### Veri Minimizasyonu
+
+- Yalnızca sistem işlevleri için zorunlu veriler toplanmaktadır.
+- Avatar yükleme isteğe bağlıdır; varsayılan avatar gerekmez.
+- Şifre sıfırlama tokenleri ham değil, SHA-256 hash olarak saklanır.
+
+### Kullanıcı Hakları
+
+- **Erişim:** Kullanıcı kendi profil verilerine `GET /auth/me` ile erişebilir.
+- **Düzeltme:** Kullanıcı profil bilgilerini `PUT /auth/me` ile güncelleyebilir.
+- **Silme:** Kullanıcı hesabı silindiğinde ilgili veriler kaldırılır (soft delete; kalıcı silme admin yetkisi gerektirir).
+
+### Veri Güvenliği
+
+- Şifreler bcrypt algoritması ile hashlenir; plaintext saklanmaz.
+- JWT token'ları localStorage'da tutulmaktadır (v2'de HttpOnly cookie'ye geçiş planlanmaktadır).
+- Avatar dizinine kimlik doğrulamasız erişim engellenmektedir.
+- Rate limiting ve hesap kilitleme, brute force saldırılarına karşı koruma sağlar.
+
+### Otomatik Silme ve İhracat
+
+Bu fazda otomatik veri silme veya dışa aktarım akışı uygulanmamıştır.
+KVKK "Silme Hakkı" tam uygulaması v2 kapsamında planlanmaktadır.

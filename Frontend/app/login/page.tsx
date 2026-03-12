@@ -208,6 +208,12 @@ export default function LoginPage() {
                                 )}
                             />
 
+                            <div className="text-right">
+                              <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground">
+                                Forgot password?
+                              </Link>
+                            </div>
+
                             <Button type="submit" disabled={isLoading} className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
                                 {isLoading && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
