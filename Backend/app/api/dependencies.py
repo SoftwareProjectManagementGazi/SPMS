@@ -19,6 +19,8 @@ from app.application.ports.security_port import ISecurityService
 from app.infrastructure.adapters.security_adapter import SecurityAdapter
 from app.domain.repositories.team_repository import ITeamRepository
 from app.infrastructure.database.repositories.team_repo import SqlAlchemyTeamRepository
+from app.domain.repositories.password_reset_repository import IPasswordResetRepository
+from app.infrastructure.database.repositories.password_reset_repo import SqlAlchemyPasswordResetRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -39,6 +41,9 @@ def get_audit_repo(session: AsyncSession = Depends(get_db)) -> IAuditRepository:
 
 def get_team_repo(session: AsyncSession = Depends(get_db)) -> ITeamRepository:
     return SqlAlchemyTeamRepository(session)
+
+def get_password_reset_repo(session: AsyncSession = Depends(get_db)) -> IPasswordResetRepository:
+    return SqlAlchemyPasswordResetRepository(session)
 
 def get_security_service() -> ISecurityService:
     return SecurityAdapter()

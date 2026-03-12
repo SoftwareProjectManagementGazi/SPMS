@@ -1,15 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status, UploadFile, File
 from fastapi.responses import FileResponse
 from pathlib import Path
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import uuid
 import os
 
-from app.application.dtos.auth_dtos import UserRegisterDTO, UserLoginDTO, TokenDTO, UserResponseDTO, UserListDTO, UserUpdateDTO
+from app.application.dtos.auth_dtos import (
+    UserRegisterDTO,
+    UserLoginDTO,
+    TokenDTO,
+    UserResponseDTO,
+    UserListDTO,
+    UserUpdateDTO,
+    PasswordResetRequestDTO,
+    PasswordResetConfirmDTO,
+)
 from app.application.use_cases.register_user import RegisterUserUseCase
 from app.application.use_cases.login_user import LoginUserUseCase
 from app.application.use_cases.update_user_profile import UpdateUserProfileUseCase
-from app.api.dependencies import get_user_repo, get_security_service, get_current_user
+from app.application.use_cases.request_password_reset import RequestPasswordResetUseCase
+from app.application.use_cases.confirm_password_reset import ConfirmPasswordResetUseCase
+from app.api.dependencies import get_user_repo, get_security_service, get_current_user, get_password_reset_repo
 from app.domain.repositories.user_repository import IUserRepository
+from app.domain.repositories.password_reset_repository import IPasswordResetRepository
 from app.application.ports.security_port import ISecurityService
 from app.domain.entities.user import User
 from app.domain.exceptions import UserAlreadyExistsError, InvalidCredentialsError
@@ -19,6 +33,8 @@ AVATAR_DIR = Path("static/uploads/avatars")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2MB
 
+limiter = Limiter(key_func=get_remote_address)
+
 router = APIRouter()
 
 @router.get("/me", response_model=UserResponseDTO)
@@ -26,10 +42,12 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.post("/register", response_model=UserResponseDTO, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     dto: UserRegisterDTO,
     user_repo: IUserRepository = Depends(get_user_repo),
-    security_service: ISecurityService = Depends(get_security_service)
+    security_service: ISecurityService = Depends(get_security_service),
 ):
     try:
         use_case = RegisterUserUseCase(user_repo, security_service)
@@ -38,10 +56,12 @@ async def register(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/login", response_model=TokenDTO)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     dto: UserLoginDTO,
     user_repo: IUserRepository = Depends(get_user_repo),
-    security_service: ISecurityService = Depends(get_security_service)
+    security_service: ISecurityService = Depends(get_security_service),
 ):
     try:
         use_case = LoginUserUseCase(user_repo, security_service)
@@ -119,3 +139,32 @@ async def serve_avatar(
     if not path.exists():
         raise HTTPException(status_code=404, detail="Avatar not found")
     return FileResponse(path)
+
+
+# ---------------------------------------------------------------------------
+# Password Reset endpoints (AUTH-03)
+# ---------------------------------------------------------------------------
+
+@router.post("/password-reset/request", status_code=204)
+async def request_password_reset(
+    dto: PasswordResetRequestDTO,
+    user_repo: IUserRepository = Depends(get_user_repo),
+    reset_repo: IPasswordResetRepository = Depends(get_password_reset_repo),
+):
+    """Request a password reset link. Always returns 204 (no user enumeration)."""
+    use_case = RequestPasswordResetUseCase(user_repo, reset_repo)
+    await use_case.execute(dto)
+    return Response(status_code=204)
+
+
+@router.post("/password-reset/confirm", status_code=204)
+async def confirm_password_reset(
+    dto: PasswordResetConfirmDTO,
+    user_repo: IUserRepository = Depends(get_user_repo),
+    reset_repo: IPasswordResetRepository = Depends(get_password_reset_repo),
+    security_service: ISecurityService = Depends(get_security_service),
+):
+    """Confirm a password reset using a valid token. Returns 204 on success, 400 on invalid/expired/used token."""
+    use_case = ConfirmPasswordResetUseCase(user_repo, reset_repo, security_service)
+    await use_case.execute(dto)
+    return Response(status_code=204)
