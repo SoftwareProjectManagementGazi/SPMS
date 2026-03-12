@@ -83,3 +83,13 @@ class SqlAlchemyUserRepository(IUserRepository):
     async def update_avatar(self, user_id: int, relative_path: str) -> None:
         """Store relative avatar path (e.g. 'uploads/avatars/uuid.jpg') in DB."""
         await self.update(user_id, {"avatar": relative_path})
+
+    async def update_password(self, user_id: int, password_hash: str) -> None:
+        """Update the user's password hash directly (used by password reset flow)."""
+        stmt = select(UserModel).where(UserModel.id == user_id, UserModel.is_deleted == False)
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        user.password_hash = password_hash
+        await self.session.commit()
