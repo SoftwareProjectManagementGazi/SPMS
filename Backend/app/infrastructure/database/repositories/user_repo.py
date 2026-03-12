@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import joinedload
+from fastapi import HTTPException
 
 from app.domain.entities.user import User
 from app.domain.repositories.user_repository import IUserRepository
@@ -63,3 +64,22 @@ class SqlAlchemyUserRepository(IUserRepository):
             await self.session.commit()
             return True
         return False
+
+    async def update(self, user_id: int, fields: dict) -> None:
+        """Update arbitrary user fields. Only allows: full_name, email, avatar."""
+        allowed = {"full_name", "email", "avatar"}
+        safe_fields = {k: v for k, v in fields.items() if k in allowed}
+        if not safe_fields:
+            return
+        stmt = select(UserModel).where(UserModel.id == user_id, UserModel.is_deleted == False)
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        for k, v in safe_fields.items():
+            setattr(user, k, v)
+        await self.session.commit()
+
+    async def update_avatar(self, user_id: int, relative_path: str) -> None:
+        """Store relative avatar path (e.g. 'uploads/avatars/uuid.jpg') in DB."""
+        await self.update(user_id, {"avatar": relative_path})
