@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -124,6 +125,11 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Tasks"])
 app.include_router(teams_router, prefix="/api/v1")
+
+# Public static file serving for uploaded avatars (profile pictures are not sensitive)
+_static_dir = Path(__file__).resolve().parent.parent.parent / "static"
+_static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 @app.get("/")
 def read_root():

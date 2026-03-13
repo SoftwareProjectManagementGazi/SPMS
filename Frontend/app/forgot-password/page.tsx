@@ -69,14 +69,14 @@ export default function ForgotPasswordPage() {
           {submitted ? (
             <div className="space-y-6">
               <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                If this email is registered, you&apos;ll receive a reset link shortly.
+                Bu e-posta kayıtlıysa kısa süre içinde sıfırlama bağlantısı gönderilecek.
               </div>
               <div className="text-center">
                 <Link
                   href="/login"
                   className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
                 >
-                  Back to login
+                  Giriş sayfasına dön
                 </Link>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function ForgotPasswordPage() {
                   href="/login"
                   className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
                 >
-                  Back to login
+                  Giriş sayfasına dön
                 </Link>
               </div>
             </form>

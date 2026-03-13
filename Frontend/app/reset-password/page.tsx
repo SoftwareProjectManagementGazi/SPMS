@@ -24,14 +24,14 @@ function ResetPasswordForm() {
     return (
       <div className="space-y-6">
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Invalid or missing reset link.
+          Geçersiz veya eksik sıfırlama bağlantısı.
         </div>
         <div className="text-center">
           <Link
             href="/forgot-password"
             className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
           >
-            Request a new password reset
+            Yeni sıfırlama bağlantısı talep et
           </Link>
         </div>
       </div>
@@ -43,23 +43,23 @@ function ResetPasswordForm() {
     setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.")
+      setError("Şifreler eşleşmiyor.")
       return
     }
 
     if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters.")
+      setError("Şifre en az 8 karakter olmalıdır.")
       return
     }
 
     setIsSubmitting(true)
     try {
-      await authService.confirmPasswordReset(token!, newPassword)
+      await authService.confirmPasswordReset(token!.trim(), newPassword)
       setSuccess(true)
     } catch (err: any) {
       const serverMessage =
         err?.response?.data?.detail ||
-        "This link has expired or has already been used. Request a new password reset."
+        "Bu bağlantının süresi dolmuş veya daha önce kullanılmış. Yeni bir sıfırlama bağlantısı talep edin."
       setError(serverMessage)
     } finally {
       setIsSubmitting(false)
@@ -70,14 +70,14 @@ function ResetPasswordForm() {
     return (
       <div className="space-y-6">
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-          Password updated successfully! You can now log in.
+          Şifren başarıyla güncellendi. Artık giriş yapabilirsin.
         </div>
         <div className="text-center">
           <Link
             href="/login"
             className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
           >
-            Go to login
+            Giriş sayfasına git
           </Link>
         </div>
       </div>
@@ -89,13 +89,13 @@ function ResetPasswordForm() {
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
-          {error.includes("expired") || error.includes("already been used") ? (
+          {error.includes("dolmuş") || error.includes("kullanılmış") ? (
             <div className="mt-2">
               <Link
                 href="/forgot-password"
                 className="underline underline-offset-4 hover:text-destructive/80"
               >
-                Request a new password reset
+                Yeni sıfırlama bağlantısı talep et
               </Link>
             </div>
           ) : null}
@@ -103,7 +103,7 @@ function ResetPasswordForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="newPassword">New Password</Label>
+        <Label htmlFor="newPassword">Yeni Şifre</Label>
         <Input
           id="newPassword"
           type="password"
@@ -118,7 +118,7 @@ function ResetPasswordForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword">Şifreyi Onayla</Label>
         <Input
           id="confirmPassword"
           type="password"

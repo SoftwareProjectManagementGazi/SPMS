@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react"
 import { authService } from "@/services/auth-service"
 import type { User } from "@/lib/types"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
 export default function SettingsPage() {
   const [user, setUser] = React.useState<User | null>(null)
@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [formError, setFormError] = React.useState<string | null>(null)
   const [formSuccess, setFormSuccess] = React.useState(false)
+  const [avatarCacheBust, setAvatarCacheBust] = React.useState(Date.now())
 
   const showCurrentPassword = email !== originalEmail
 
@@ -56,7 +57,7 @@ export default function SettingsPage() {
     try {
       const updated = await authService.updateProfile({
         full_name: fullName,
-        email,
+        email: email !== originalEmail ? email : undefined,
         current_password: showCurrentPassword ? currentPassword : undefined,
       })
       setUser(updated)
@@ -67,7 +68,7 @@ export default function SettingsPage() {
       setFormSuccess(true)
       setTimeout(() => setFormSuccess(false), 3000)
     } catch (err: any) {
-      setFormError(err.response?.data?.detail || "Failed to save changes")
+      setFormError(err.response?.data?.detail || "Değişiklikler kaydedilemedi.")
     } finally {
       setIsSubmitting(false)
     }
@@ -79,15 +80,16 @@ export default function SettingsPage() {
     try {
       const updated = await authService.uploadAvatar(file)
       setUser(updated)
+      setAvatarCacheBust(Date.now())
     } catch (err: any) {
-      setFormError(err.response?.data?.detail || "Failed to upload avatar")
+      setFormError(err.response?.data?.detail || "Fotoğraf yüklenemedi.")
     }
   }
 
   const getAvatarSrc = (): string => {
-    if (!user?.avatar) return "/placeholder.svg"
+    if (!user?.avatar || user.avatar === "/placeholder-user.jpg") return "/placeholder.svg"
     if (user.avatar.startsWith("uploads/")) {
-      return `${API_BASE}/auth/avatar/${user.avatar.replace("uploads/avatars/", "")}`
+      return `${BACKEND_BASE}/static/${user.avatar}?t=${avatarCacheBust}`
     }
     return user.avatar
   }
@@ -102,8 +104,8 @@ export default function SettingsPage() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Update your personal information</CardDescription>
+            <CardTitle>Profil</CardTitle>
+            <CardDescription>Kişisel bilgilerini güncelle</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isLoading ? (
@@ -130,7 +132,7 @@ export default function SettingsPage() {
                       htmlFor="avatar-upload"
                       className="cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
                     >
-                      Change Avatar
+                      Fotoğraf Değiştir
                     </Label>
                     <input
                       id="avatar-upload"
@@ -166,13 +168,15 @@ export default function SettingsPage() {
                 {/* Conditional current password field when email changes */}
                 {showCurrentPassword && (
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
+                    <Label htmlFor="current-password">
+                      Mevcut Şifre <span className="text-xs text-muted-foreground">(e-posta değişimi için gerekli)</span>
+                    </Label>
                     <Input
                       id="current-password"
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Required to change email"
+                      placeholder="••••••••"
                     />
                   </div>
                 )}
@@ -182,17 +186,17 @@ export default function SettingsPage() {
                   <p className="text-sm text-red-600">{formError}</p>
                 )}
                 {formSuccess && (
-                  <p className="text-sm text-green-600">Changes saved successfully</p>
+                  <p className="text-sm text-green-600">Değişiklikler kaydedildi.</p>
                 )}
 
                 <Button onClick={handleSave} disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Kaydediliyor...
                     </>
                   ) : (
-                    "Save Changes"
+                    "Değişiklikleri Kaydet"
                   )}
                 </Button>
               </>

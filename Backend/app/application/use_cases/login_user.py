@@ -22,7 +22,7 @@ class LoginUserUseCase:
         if locked_until:
             raise HTTPException(
                 status_code=423,
-                detail=f"Account locked until {locked_until.isoformat()}",
+                detail=f"ACCOUNT_LOCKED:{locked_until.isoformat()}",
             )
 
         # Step 3: Verify password — record failure or clear on success

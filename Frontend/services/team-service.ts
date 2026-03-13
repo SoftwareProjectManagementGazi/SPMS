@@ -41,7 +41,12 @@ export const teamService = {
 
   searchUsers: async (query: string): Promise<TeamMember[]> => {
     if (query.length < 2) return [];
-    const response = await apiClient.get<TeamMember[]>('/teams/users/search', { params: { q: query } });
-    return response.data;
+    const response = await apiClient.get<Array<{ id: number; email: string; username: string; avatar_url?: string }>>('/teams/users/search', { params: { q: query } });
+    return response.data.map((u) => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.username ?? "",
+      avatar: u.avatar_url,
+    }));
   },
 };
