@@ -2,6 +2,14 @@ import { apiClient } from '@/lib/api-client';
 import { User } from '@/lib/types';
 import { AUTH_TOKEN_KEY } from '@/lib/constants';
 
+const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
+export function resolveAvatarUrl(rawAvatar?: string | null): string {
+  if (!rawAvatar) return '/placeholder.svg';
+  if (rawAvatar.startsWith('uploads/')) return `${BACKEND_BASE}/static/${rawAvatar}`;
+  return rawAvatar;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -28,9 +36,8 @@ const mapUserResponseToUser = (data: UserResponseDTO): User => ({
     id: data.id.toString(),
     name: data.full_name,
     email: data.email,
-    avatar: data.avatar || "/placeholder-user.jpg",
-    // DİNAMİK ROL ATAMASI
-    role: data.role ? { name: data.role.name } : { name: "Member" } // Güvenlik ağı: Backend rol dönmezse varsayılan
+    avatar: resolveAvatarUrl(data.avatar),
+    role: data.role ? { name: data.role.name } : { name: "Member" },
 });
 
 export const authService = {

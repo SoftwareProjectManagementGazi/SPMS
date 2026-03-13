@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import { resolveAvatarUrl } from '@/services/auth-service';
 
 export interface TeamCreateRequest {
   name: string;
@@ -20,10 +21,33 @@ export interface Team {
   members: TeamMember[];
 }
 
+type RawUserListDTO = { id: number; email: string; username: string; avatar_url?: string };
+
+function mapRawUser(u: RawUserListDTO): TeamMember {
+  return {
+    id: u.id,
+    email: u.email,
+    full_name: u.username ?? "",
+    avatar: resolveAvatarUrl(u.avatar_url),
+  };
+}
+
 export const teamService = {
   listMyTeams: async (): Promise<Team[]> => {
     const response = await apiClient.get<Team[]>('/teams');
     return response.data;
+  },
+
+  getTeam: async (teamId: number): Promise<Team> => {
+    const response = await apiClient.get<{ id: number; name: string; description?: string; owner_id: number; members: RawUserListDTO[] }>(`/teams/${teamId}`);
+    const d = response.data;
+    return {
+      id: d.id,
+      name: d.name,
+      description: d.description,
+      owner_id: d.owner_id,
+      members: d.members.map(mapRawUser),
+    };
   },
 
   createTeam: async (data: TeamCreateRequest): Promise<Team> => {
@@ -39,14 +63,9 @@ export const teamService = {
     await apiClient.delete(`/teams/${teamId}/members/${userId}`);
   },
 
-  searchUsers: async (query: string): Promise<TeamMember[]> => {
-    if (query.length < 2) return [];
-    const response = await apiClient.get<Array<{ id: number; email: string; username: string; avatar_url?: string }>>('/teams/users/search', { params: { q: query } });
-    return response.data.map((u) => ({
-      id: u.id,
-      email: u.email,
-      full_name: u.username ?? "",
-      avatar: u.avatar_url,
-    }));
+  /** Load all users once for client-side filtering in the invite search box. */
+  getAllUsers: async (): Promise<TeamMember[]> => {
+    const response = await apiClient.get<RawUserListDTO[]>('/teams/users/all');
+    return response.data.map(mapRawUser);
   },
 };
