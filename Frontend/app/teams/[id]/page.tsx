@@ -23,19 +23,15 @@ export default function TeamDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
-  // Add member search state
+  // All users fetched once for client-side search — no per-keystroke requests
+  const [allUsers, setAllUsers] = React.useState<TeamMember[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [searchResults, setSearchResults] = React.useState<TeamMember[]>([])
-  const [isSearching, setIsSearching] = React.useState(false)
   const [addingUserId, setAddingUserId] = React.useState<number | null>(null)
 
   // Remove member confirm dialog state
   const [removeDialogOpen, setRemoveDialogOpen] = React.useState(false)
   const [memberToRemove, setMemberToRemove] = React.useState<TeamMember | null>(null)
   const [isRemoving, setIsRemoving] = React.useState(false)
-
-  // Debounce timer ref
-  const searchTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   React.useEffect(() => {
     loadTeam()
@@ -45,49 +41,40 @@ export default function TeamDetailPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const teams = await teamService.listMyTeams()
-      const found = teams.find((t) => t.id === teamId)
-      if (!found) {
-        setError("Team not found or you do not have access.")
-      } else {
-        setTeam(found)
-      }
+      const data = await teamService.getTeam(teamId)
+      setTeam(data)
     } catch (err) {
-      setError((err as Error).message || "Failed to load team")
+      setError((err as Error).message || "Takım yüklenemedi.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const q = e.target.value
-    setSearchQuery(q)
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-    if (q.length < 2) {
-      setSearchResults([])
-      return
-    }
-    searchTimerRef.current = setTimeout(async () => {
-      setIsSearching(true)
-      try {
-        const results = await teamService.searchUsers(q)
-        setSearchResults(results)
-      } catch {
-        setSearchResults([])
-      } finally {
-        setIsSearching(false)
-      }
-    }, 300)
-  }
+  const isOwner = user && team ? parseInt(user.id, 10) === team.owner_id : false
+
+  // Load all users once when the owner's add-member card becomes visible
+  React.useEffect(() => {
+    if (!isOwner || allUsers.length > 0) return
+    teamService.getAllUsers().then(setAllUsers).catch(() => {})
+  }, [isOwner])
+
+  // Client-side filtering — instant, no network cost per keystroke
+  const searchResults = React.useMemo(() => {
+    if (searchQuery.length < 2 || !team) return []
+    const q = searchQuery.toLowerCase()
+    return allUsers.filter(
+      (u) =>
+        !team.members.some((m) => m.id === u.id) &&
+        ((u.full_name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    )
+  }, [searchQuery, allUsers, team])
 
   const handleAddMember = async (member: TeamMember) => {
     setAddingUserId(member.id)
     try {
       await teamService.addMember(teamId, member.id)
-      // Refresh team data
       await loadTeam()
       setSearchQuery("")
-      setSearchResults([])
     } catch (err) {
       console.error("Failed to add member", err)
     } finally {
@@ -115,12 +102,12 @@ export default function TeamDetailPage() {
     }
   }
 
-  const isOwner = user && team ? parseInt(user.id, 10) === team.owner_id : false
-
-  // Filter out already-added members from search results
-  const filteredResults = searchResults.filter(
-    (r) => !team?.members.some((m) => m.id === r.id)
-  )
+  const getInitials = (name: string) =>
+    (name ?? "")
+      .split(" ")
+      .map((n) => n[0] ?? "")
+      .join("")
+      .toUpperCase() || "?"
 
   if (isLoading) {
     return (
@@ -138,12 +125,12 @@ export default function TeamDetailPage() {
         <div className="max-w-3xl mx-auto space-y-4 p-6">
           <Button variant="ghost" onClick={() => router.push("/teams")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Teams
+            Takımlara Dön
           </Button>
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error || "Team not found"}</AlertDescription>
+            <AlertTitle>Hata</AlertTitle>
+            <AlertDescription>{error || "Takım bulunamadı."}</AlertDescription>
           </Alert>
         </div>
       </AppShell>
@@ -156,7 +143,7 @@ export default function TeamDetailPage() {
         <div>
           <Button variant="ghost" onClick={() => router.push("/teams")} className="mb-2">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Teams
+            Takımlara Dön
           </Button>
           <h1 className="text-2xl font-bold">{team.name}</h1>
           {team.description && (
@@ -167,11 +154,11 @@ export default function TeamDetailPage() {
         {/* Members Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Members ({team.members.length})</CardTitle>
+            <CardTitle>Üyeler ({team.members.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {team.members.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No members yet.</p>
+              <p className="text-sm text-muted-foreground">Henüz üye yok.</p>
             ) : (
               <ul className="space-y-2">
                 {team.members.map((member) => {
@@ -183,25 +170,14 @@ export default function TeamDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={member.avatar || "/placeholder-user.jpg"}
-                            alt={member.full_name}
-                          />
-                          <AvatarFallback>
-                            {member.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarImage src={member.avatar || "/placeholder.svg"} alt={member.full_name} />
+                          <AvatarFallback>{getInitials(member.full_name)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-sm font-medium">
                             {member.full_name}
                             {isTeamOwner && (
-                              <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                (Owner)
-                              </span>
+                              <span className="ml-2 text-xs text-muted-foreground font-normal">(Sahip)</span>
                             )}
                           </p>
                           <p className="text-xs text-muted-foreground">{member.email}</p>
@@ -215,7 +191,7 @@ export default function TeamDetailPage() {
                           onClick={() => handleRemoveClick(member)}
                         >
                           <UserMinus className="h-4 w-4" />
-                          <span className="ml-1">Remove</span>
+                          <span className="ml-1">Çıkar</span>
                         </Button>
                       )}
                     </li>
@@ -232,43 +208,27 @@ export default function TeamDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5" />
-                Add Member
+                Üye Ekle
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="relative">
-                <Input
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  placeholder="Search by name or email (min 2 characters)..."
-                />
-                {isSearching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="İsim veya e-posta ile ara (en az 2 karakter)..."
+              />
 
-              {filteredResults.length > 0 && (
+              {searchResults.length > 0 && (
                 <ul className="border rounded-md divide-y">
-                  {filteredResults.map((result) => (
+                  {searchResults.map((result) => (
                     <li
                       key={result.id}
                       className="flex items-center justify-between gap-3 px-3 py-2"
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-7 w-7">
-                          <AvatarImage
-                            src={result.avatar || "/placeholder-user.jpg"}
-                            alt={result.full_name}
-                          />
-                          <AvatarFallback>
-                            {result.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </AvatarFallback>
+                          <AvatarImage src={result.avatar || "/placeholder.svg"} alt={result.full_name} />
+                          <AvatarFallback>{getInitials(result.full_name)}</AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="text-sm font-medium">{result.full_name}</p>
@@ -283,7 +243,7 @@ export default function TeamDetailPage() {
                         {addingUserId === result.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
-                          "Add"
+                          "Ekle"
                         )}
                       </Button>
                     </li>
@@ -291,9 +251,9 @@ export default function TeamDetailPage() {
                 </ul>
               )}
 
-              {searchQuery.length >= 2 && !isSearching && filteredResults.length === 0 && (
+              {searchQuery.length >= 2 && searchResults.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  No users found matching &quot;{searchQuery}&quot;.
+                  &quot;{searchQuery}&quot; ile eşleşen kullanıcı bulunamadı.
                 </p>
               )}
             </CardContent>
@@ -304,13 +264,13 @@ export default function TeamDetailPage() {
         <ConfirmDialog
           open={removeDialogOpen}
           onOpenChange={setRemoveDialogOpen}
-          title="Remove Team Member"
+          title="Üyeyi Çıkar"
           description={
             memberToRemove
-              ? `Are you sure you want to remove ${memberToRemove.full_name} from this team?`
-              : "Are you sure you want to remove this member?"
+              ? `${memberToRemove.full_name} adlı üyeyi takımdan çıkarmak istediğinizden emin misiniz?`
+              : "Bu üyeyi takımdan çıkarmak istediğinizden emin misiniz?"
           }
-          confirmLabel={isRemoving ? "Removing..." : "Remove"}
+          confirmLabel={isRemoving ? "Çıkarılıyor..." : "Çıkar"}
           onConfirm={handleRemoveConfirm}
           destructive={true}
         />

@@ -98,3 +98,48 @@ async def search_users_for_invite(
         for u in users
         if u.id != current_user.id
     ]
+
+
+@router.get("/users/all", response_model=List[UserListDTO])
+async def list_all_users_for_invite(
+    current_user: User = Depends(get_current_user),
+    user_repo: IUserRepository = Depends(get_user_repo),
+):
+    """Return all users for client-side search in team invite flow."""
+    users = await user_repo.get_all()
+    return [
+        UserListDTO(
+            id=u.id,
+            email=u.email,
+            username=u.full_name,
+            avatar_url=u.avatar,
+        )
+        for u in users
+        if u.id != current_user.id
+    ]
+
+
+@router.get("/{team_id}", response_model=TeamResponseDTO)
+async def get_team(
+    team_id: int,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+    user_repo: IUserRepository = Depends(get_user_repo),
+):
+    """Get a single team with full member details."""
+    team = await team_repo.get_by_id(team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    member_ids = await team_repo.get_members(team_id)
+    members = []
+    for uid in member_ids:
+        u = await user_repo.get_by_id(uid)
+        if u:
+            members.append(UserListDTO(id=u.id, email=u.email, username=u.full_name, avatar_url=u.avatar))
+    return TeamResponseDTO(
+        id=team.id,
+        name=team.name,
+        description=team.description,
+        owner_id=team.owner_id,
+        members=members,
+    )

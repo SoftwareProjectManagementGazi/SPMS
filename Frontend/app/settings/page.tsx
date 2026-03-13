@@ -12,8 +12,6 @@ import { Loader2 } from "lucide-react"
 import { authService } from "@/services/auth-service"
 import type { User } from "@/lib/types"
 
-const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
-
 export default function SettingsPage() {
   const [user, setUser] = React.useState<User | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
@@ -87,11 +85,10 @@ export default function SettingsPage() {
   }
 
   const getAvatarSrc = (): string => {
-    if (!user?.avatar || user.avatar === "/placeholder-user.jpg") return "/placeholder.svg"
-    if (user.avatar.startsWith("uploads/")) {
-      return `${BACKEND_BASE}/static/${user.avatar}?t=${avatarCacheBust}`
-    }
-    return user.avatar
+    const base = user?.avatar || "/placeholder.svg"
+    // Append cache-bust only for backend-served images
+    if (base.startsWith("http")) return `${base}?t=${avatarCacheBust}`
+    return base
   }
 
   return (
