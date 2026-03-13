@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2 } from "lucide-react"
 import { authService } from "@/services/auth-service"
+import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog"
 import type { User } from "@/lib/types"
 
 export default function SettingsPage() {
@@ -28,6 +29,8 @@ export default function SettingsPage() {
   const [formError, setFormError] = React.useState<string | null>(null)
   const [formSuccess, setFormSuccess] = React.useState(false)
   const [avatarCacheBust, setAvatarCacheBust] = React.useState(Date.now())
+  const [cropFile, setCropFile] = React.useState<File | null>(null)
+  const avatarInputRef = React.useRef<HTMLInputElement>(null)
 
   const showCurrentPassword = email !== originalEmail
 
@@ -72,9 +75,17 @@ export default function SettingsPage() {
     }
   }
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    // Reset input so the same file can be re-selected after cancelling
+    e.target.value = ""
+    setCropFile(file)
+  }
+
+  const handleCropConfirm = async (croppedBlob: Blob) => {
+    setCropFile(null)
+    const file = new File([croppedBlob], "avatar.jpg", { type: "image/jpeg" })
     try {
       const updated = await authService.uploadAvatar(file)
       setUser(updated)
@@ -83,6 +94,8 @@ export default function SettingsPage() {
       setFormError(err.response?.data?.detail || "Fotoğraf yüklenemedi.")
     }
   }
+
+  const handleCropCancel = () => setCropFile(null)
 
   const getAvatarSrc = (): string => {
     const base = user?.avatar || "/placeholder.svg"
@@ -132,6 +145,7 @@ export default function SettingsPage() {
                       Fotoğraf Değiştir
                     </Label>
                     <input
+                      ref={avatarInputRef}
                       id="avatar-upload"
                       type="file"
                       accept="image/*"
@@ -231,6 +245,13 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+      {cropFile && (
+        <AvatarCropDialog
+          file={cropFile}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </AppShell>
   )
 }

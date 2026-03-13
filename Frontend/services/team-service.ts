@@ -63,9 +63,9 @@ export const teamService = {
     await apiClient.delete(`/teams/${teamId}/members/${userId}`);
   },
 
-  /** Load all users once for client-side filtering in the invite search box. */
-  getAllUsers: async (): Promise<TeamMember[]> => {
-    const response = await apiClient.get<RawUserListDTO[]>('/teams/users/all');
+  /** Search users by name or email for team invite (debounced, server-side). */
+  searchUsers: async (query: string): Promise<TeamMember[]> => {
+    const response = await apiClient.get<RawUserListDTO[]>('/teams/users/search', { params: { q: query } });
     return response.data.map(mapRawUser);
   },
 };

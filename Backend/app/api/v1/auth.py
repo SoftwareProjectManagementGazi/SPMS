@@ -119,6 +119,11 @@ async def upload_avatar(
     content = await file.read()
     if len(content) > MAX_AVATAR_SIZE:
         raise HTTPException(status_code=413, detail="File exceeds 2MB limit")
+    # Delete old avatar file before saving the new one
+    if current_user.avatar and current_user.avatar.startswith("uploads/avatars/"):
+        old_path = AVATAR_DIR / Path(current_user.avatar).name
+        if old_path.exists():
+            old_path.unlink(missing_ok=True)
     filename = f"{uuid.uuid4()}{ext}"
     AVATAR_DIR.mkdir(parents=True, exist_ok=True)
     (AVATAR_DIR / filename).write_bytes(content)

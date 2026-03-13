@@ -23,10 +23,11 @@ export default function TeamDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
-  // All users fetched once for client-side search — no per-keystroke requests
-  const [allUsers, setAllUsers] = React.useState<TeamMember[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [searchResults, setSearchResults] = React.useState<TeamMember[]>([])
+  const [isSearching, setIsSearching] = React.useState(false)
   const [addingUserId, setAddingUserId] = React.useState<number | null>(null)
+  const searchDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Remove member confirm dialog state
   const [removeDialogOpen, setRemoveDialogOpen] = React.useState(false)
@@ -52,22 +53,26 @@ export default function TeamDetailPage() {
 
   const isOwner = user && team ? parseInt(user.id, 10) === team.owner_id : false
 
-  // Load all users once when the owner's add-member card becomes visible
-  React.useEffect(() => {
-    if (!isOwner || allUsers.length > 0) return
-    teamService.getAllUsers().then(setAllUsers).catch(() => {})
-  }, [isOwner])
-
-  // Client-side filtering — instant, no network cost per keystroke
-  const searchResults = React.useMemo(() => {
-    if (searchQuery.length < 2 || !team) return []
-    const q = searchQuery.toLowerCase()
-    return allUsers.filter(
-      (u) =>
-        !team.members.some((m) => m.id === u.id) &&
-        ((u.full_name ?? "").toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-    )
-  }, [searchQuery, allUsers, team])
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value
+    setSearchQuery(q)
+    if (searchDebounce.current) clearTimeout(searchDebounce.current)
+    if (q.length < 2) {
+      setSearchResults([])
+      return
+    }
+    setIsSearching(true)
+    searchDebounce.current = setTimeout(async () => {
+      try {
+        const results = await teamService.searchUsers(q)
+        setSearchResults(results.filter((u) => !team?.members.some((m) => m.id === u.id)))
+      } catch {
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 500)
+  }
 
   const handleAddMember = async (member: TeamMember) => {
     setAddingUserId(member.id)
@@ -75,6 +80,7 @@ export default function TeamDetailPage() {
       await teamService.addMember(teamId, member.id)
       await loadTeam()
       setSearchQuery("")
+      setSearchResults([])
     } catch (err) {
       console.error("Failed to add member", err)
     } finally {
@@ -214,11 +220,17 @@ export default function TeamDetailPage() {
             <CardContent className="space-y-3">
               <Input
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder="İsim veya e-posta ile ara (en az 2 karakter)..."
               />
 
-              {searchResults.length > 0 && (
+              {isSearching && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Aranıyor...
+                </p>
+              )}
+
+              {!isSearching && searchResults.length > 0 && (
                 <ul className="border rounded-md divide-y">
                   {searchResults.map((result) => (
                     <li
@@ -251,7 +263,7 @@ export default function TeamDetailPage() {
                 </ul>
               )}
 
-              {searchQuery.length >= 2 && searchResults.length === 0 && (
+              {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   &quot;{searchQuery}&quot; ile eşleşen kullanıcı bulunamadı.
                 </p>
