@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/services/auth-service"
-import { SESSION_EXPIRED_KEY } from "@/lib/api-client"
-import { useAuth } from "@/context/auth-context" // EKLENDİ: useAuth import edildi
+import { useAuth } from "@/context/auth-context"
 import {
   Form,
   FormControl,
@@ -33,6 +32,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const [lockedUntil, setLockedUntil] = useState<Date | null>(null)
     const router = useRouter()
     const { toast } = useToast()
     const { login } = useAuth() // EKLENDİ: Context'ten login fonksiyonu alındı
@@ -51,47 +51,35 @@ export default function LoginPage() {
         }
     }, [router])
 
-    // SAFE-02: Show session expiry message when redirected from an expired session
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const expired = localStorage.getItem(SESSION_EXPIRED_KEY)
-            if (expired) {
-                localStorage.removeItem(SESSION_EXPIRED_KEY)
-                toast({
-                    variant: "destructive",
-                    title: "Session expired",
-                    description: "Your session has expired. Please log in again.",
-                })
-            }
-        }
-    }, [toast])
-    
 
     async function onSubmit(data: LoginFormValues) {
         setIsLoading(true)
+        setLockedUntil(null)
 
         try {
-            // ÖNCE: Sadece token alınıp kaydediliyordu, context güncellenmiyordu.
-            // const response = await authService.login(data)
-            // authService.setToken(response.access_token)
-            
-            // ŞİMDİ: Token'ı alıp context'teki login fonksiyonuna veriyoruz.
             const response = await authService.login(data)
-            await login(response.access_token) // Context state'ini günceller ve yönlendirir
-            
+            await login(response.access_token)
+
             toast({
-                title: "Login successful",
-                description: "Redirecting to dashboard...",
+                title: "Giriş başarılı",
+                description: "Yönlendiriliyorsunuz...",
             })
-            
-            // router.push("/projects") // Context içindeki login zaten yönlendirme yapıyor, burayı kaldırabilir veya tutabilirsiniz.
         } catch (error: any) {
-            console.error("Login failed:", error)
-            toast({
-                variant: "destructive",
-                title: "Login failed",
-                description: error.response?.data?.detail || "Please check your credentials and try again.",
-            })
+            const status = error.response?.status
+            const detail: string = error.response?.data?.detail || ""
+
+            if (status === 423 && detail.startsWith("ACCOUNT_LOCKED:")) {
+                const until = new Date(detail.replace("ACCOUNT_LOCKED:", ""))
+                setLockedUntil(until)
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Giriş başarısız",
+                    description: status === 401
+                        ? "E-posta veya şifre hatalı."
+                        : "Bir hata oluştu. Lütfen tekrar deneyin.",
+                })
+            }
         } finally {
             setIsLoading(false)
         }
@@ -147,6 +135,24 @@ export default function LoginPage() {
                             Devam etmek için hesabına giriş yap.
                         </p>
                     </div>
+                    {lockedUntil && (
+                        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive space-y-2">
+                            <p className="font-medium">Hesabın geçici olarak kilitlendi.</p>
+                            <p>
+                                Çok fazla hatalı giriş denemesi yapıldı. Hesabın{" "}
+                                <span className="font-medium">
+                                    {lockedUntil.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>{" "}
+                                itibarıyla açılacak.
+                            </p>
+                            <p>
+                                Şifreni mi unuttun?{" "}
+                                <Link href="/forgot-password" className="font-medium underline underline-offset-4 hover:text-destructive/80">
+                                    Şifreni sıfırla
+                                </Link>
+                            </p>
+                        </div>
+                    )}
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             {/* ... Form alanları aynı ... */}
@@ -210,7 +216,7 @@ export default function LoginPage() {
 
                             <div className="text-right">
                               <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground">
-                                Forgot password?
+                                Şifremi unuttum
                               </Link>
                             </div>
 

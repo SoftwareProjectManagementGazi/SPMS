@@ -33,8 +33,8 @@ apiClient.interceptors.request.use(
 
 // 2. RESPONSE INTERCEPTOR — handle 401 globally (SAFE-02)
 // On any 401 that is NOT from the /auth/login endpoint:
-//   • store session_expired flag so the login page can display a message
-//   • redirect to /login
+//   • store session_expired flag
+//   • redirect to /session-expired ara sayfası
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -42,11 +42,12 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       typeof window !== 'undefined' &&
       !window.location.pathname.includes('/login') &&
+      !window.location.pathname.includes('/session-expired') &&
       !error.config?.url?.includes('/auth/login')
     ) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
-      window.location.href = '/login';
+      window.location.href = '/session-expired';
     }
 
     console.error('API Error:', error.response?.data || error.message);

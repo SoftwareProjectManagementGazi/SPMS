@@ -12,23 +12,23 @@ class UpdateUserProfileUseCase:
         self._security = security_service
 
     async def execute(self, current_user: User, dto: UserUpdateDTO) -> Optional[User]:
-        if dto.email is not None:
-            # Email change requires current password confirmation
+        email_is_changing = dto.email is not None and dto.email != current_user.email
+        if email_is_changing:
             if not dto.current_password:
                 raise HTTPException(
                     status_code=400,
-                    detail="current_password required to change email",
+                    detail="E-posta değiştirmek için mevcut şifrenizi girmeniz gerekiyor.",
                 )
             if not self._security.verify_password(dto.current_password, current_user.password_hash):
                 raise HTTPException(
                     status_code=401,
-                    detail="Current password is incorrect",
+                    detail="Mevcut şifre hatalı.",
                 )
 
         update_fields = {}
         if dto.full_name is not None:
             update_fields["full_name"] = dto.full_name
-        if dto.email is not None:
+        if email_is_changing:
             update_fields["email"] = dto.email
 
         if update_fields:

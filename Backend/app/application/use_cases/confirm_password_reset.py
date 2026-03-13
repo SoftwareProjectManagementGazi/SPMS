@@ -5,6 +5,7 @@ from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.password_reset_repository import IPasswordResetRepository
 from app.application.dtos.auth_dtos import PasswordResetConfirmDTO
 from app.application.ports.security_port import ISecurityService
+from app.application.services.lockout import clear_lockout
 
 
 class ConfirmPasswordResetUseCase:
@@ -21,21 +22,13 @@ class ConfirmPasswordResetUseCase:
     async def execute(self, dto: PasswordResetConfirmDTO) -> None:
         token_hash = hashlib.sha256(dto.token.encode()).hexdigest()
         record = await self._reset_repo.get_by_hash(token_hash)
-        if not record:
+        if not record or record.used_at is not None or datetime.utcnow() > record.expires_at:
             raise HTTPException(
                 status_code=400,
-                detail="This link has expired or has already been used. Request a new password reset.",
-            )
-        if record.used_at is not None:
-            raise HTTPException(
-                status_code=400,
-                detail="This link has expired or has already been used. Request a new password reset.",
-            )
-        if datetime.utcnow() > record.expires_at:
-            raise HTTPException(
-                status_code=400,
-                detail="This link has expired or has already been used. Request a new password reset.",
+                detail="Bu bağlantının süresi dolmuş veya daha önce kullanılmış. Yeni bir sıfırlama bağlantısı talep edin.",
             )
         new_hash = self._security.get_password_hash(dto.new_password)
         await self._user_repo.update_password(record.user_id, new_hash)
         await self._reset_repo.mark_used(record.id)
+        # Clear any account lockout so the user can log in with the new password
+        clear_lockout(record.user_id)
