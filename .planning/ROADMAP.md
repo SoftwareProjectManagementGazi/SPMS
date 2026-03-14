@@ -13,7 +13,7 @@ SPMS is a brownfield project with a Clean Architecture backend already in place.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation & Security Hardening** - Fix architecture violations, patch the critical RBAC bug, and establish data infrastructure (soft delete, indexes, versioning, audit trail)
-- [x] **Phase 2: Authentication & Team Management** - User profile editing, team creation, password reset, account lockout, and remaining security/safety hardening (completed 2026-03-12)
+- [x] **Phase 2: Authentication & Team Management** - User profile editing, team creation, password reset, account lockout, and remaining security/safety hardening (completed 2026-03-12)
 - [ ] **Phase 3: Project & Task Completion** - Sprint endpoints, comments, file attachments, task dependencies, recurring tasks, similar-task warnings, pagination, and task logs
 - [ ] **Phase 4: Views & UI** - Kanban board with drag-and-drop, calendar module, Gantt/timeline view, and modular project boards
 - [ ] **Phase 5: Notifications** - Real-time in-app notifications, event-triggered alerts, email notifications, messaging permissions, and notification preferences
@@ -74,7 +74,17 @@ Plans:
   3. User can define a finish-to-start or start-to-start dependency between two tasks and the dependency is visible in the task detail
   4. User can add a comment to a task and upload a file attachment; both are retrievable from the task detail page
   5. Sprint list, create, and management endpoints respond; all task and project list endpoints accept pagination parameters and return a subset of results with total count
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0 test scaffolds: 9 xfail stub files for all TASK requirements (Nyquist compliance)
+- [ ] 03-02-PLAN.md — DB schema + domain contracts: migration 003 (task_dependencies table, task_key/series_id/task_seq/file_size columns), TaskDependency entity, sprint/comment/attachment repo interfaces and DTOs
+- [ ] 03-03-PLAN.md — Sprint CRUD backend + project member management: Sprint use cases + router, AddProjectMember/RemoveProjectMember use cases + /projects/{id}/members endpoints
+- [ ] 03-04-PLAN.md — Comment CRUD backend + attachment upload/download: comment use cases + router, attachment use cases + router with 25MB limit and extension blocking
+- [ ] 03-05-PLAN.md — Task enhancements backend: pagination on task list, task key generation, similarity search endpoint, audit history endpoint, dependency use cases + endpoints, recurring task generation on completion
+- [ ] 03-06-PLAN.md — Task detail frontend wiring: Comments tab + History tab + Attachments section wired to real APIs; comment-service.ts + attachment-service.ts
+- [ ] 03-07-PLAN.md — Task sidebar new cards + project members tab: Dependencies card, Recurrence card, Sprint dropdown in sidebar; Members tab in project detail page
+- [ ] 03-08-PLAN.md — Create task modal + pagination UI: recurring config panel, similar-task warning, Load more button on task list
 
 ### Phase 4: Views & UI
 **Goal**: Users can interact with project work through a drag-and-drop Kanban board, a calendar showing tasks and events, a Gantt timeline showing dependencies, and can switch between view modes per project
@@ -131,7 +141,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation & Security Hardening | 6/6 | In Progress (awaiting verification) | - |
 | 2. Authentication & Team Management | 8/8 | Complete   | 2026-03-12 |
-| 3. Project & Task Completion | 0/TBD | Not started | - |
+| 3. Project & Task Completion | 0/8 | Not started | - |
 | 4. Views & UI | 0/TBD | Not started | - |
 | 5. Notifications | 0/TBD | Not started | - |
 | 6. Reporting & Analytics | 0/TBD | Not started | - |
