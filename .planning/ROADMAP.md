@@ -77,14 +77,14 @@ Plans:
 **Plans**: 8 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Wave 0 test scaffolds: 9 xfail stub files for all TASK requirements (Nyquist compliance)
-- [ ] 03-02-PLAN.md — DB schema + domain contracts: migration 003 (task_dependencies table, task_key/series_id/task_seq/file_size columns), TaskDependency entity, sprint/comment/attachment repo interfaces and DTOs
-- [ ] 03-03-PLAN.md — Sprint CRUD backend + project member management: Sprint use cases + router, AddProjectMember/RemoveProjectMember use cases + /projects/{id}/members endpoints
-- [ ] 03-04-PLAN.md — Comment CRUD backend + attachment upload/download: comment use cases + router, attachment use cases + router with 25MB limit and extension blocking
-- [ ] 03-05-PLAN.md — Task enhancements backend: pagination on task list, task key generation, similarity search endpoint, audit history endpoint, dependency use cases + endpoints, recurring task generation on completion
-- [ ] 03-06-PLAN.md — Task detail frontend wiring: Comments tab + History tab + Attachments section wired to real APIs; comment-service.ts + attachment-service.ts
-- [ ] 03-07-PLAN.md — Task sidebar new cards + project members tab: Dependencies card, Recurrence card, Sprint dropdown in sidebar; Members tab in project detail page
-- [ ] 03-08-PLAN.md — Create task modal + pagination UI: recurring config panel, similar-task warning, Load more button on task list
+- [x] 03-01-PLAN.md — Wave 0 test scaffolds: 9 xfail stub files for all TASK requirements (Nyquist compliance)
+- [x] 03-02-PLAN.md — DB schema + domain contracts: migration 003 (task_dependencies table, task_key/series_id/task_seq/file_size columns), TaskDependency entity, sprint/comment/attachment repo interfaces and DTOs
+- [x] 03-03-PLAN.md — Sprint CRUD backend + project member management: Sprint use cases + router, AddProjectMember/RemoveProjectMember use cases + /projects/{id}/members endpoints
+- [x] 03-04-PLAN.md — Comment CRUD backend + attachment upload/download: comment use cases + router, attachment use cases + router with 25MB limit and extension blocking
+- [x] 03-05-PLAN.md — Task enhancements backend: pagination on task list, task key generation, similarity search endpoint, audit history endpoint, dependency use cases + endpoints, recurring task generation on completion
+- [x] 03-06-PLAN.md — Task detail frontend wiring: Comments tab + History tab + Attachments section wired to real APIs; comment-service.ts + attachment-service.ts
+- [x] 03-07-PLAN.md — Task sidebar new cards + project members tab: Dependencies card, Recurrence card, Sprint dropdown in sidebar; Members tab in project detail page
+- [x] 03-08-PLAN.md — Create task modal + pagination UI: recurring config panel, similar-task warning, Load more button on task list
 
 ### Phase 4: Views & UI
 **Goal**: Users can interact with project work through a drag-and-drop Kanban board, a calendar showing tasks and events, a Gantt timeline showing dependencies, and can switch between view modes per project
