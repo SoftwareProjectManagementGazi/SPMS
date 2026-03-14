@@ -13,6 +13,8 @@ class FileModel(TimestampedMixin, Base):
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Phase 3: file size in bytes; stored at upload time
+    file_size = Column(Integer, nullable=True)
     # updated_at provided by TimestampedMixin
 
     task = relationship("TaskModel", backref="files")
