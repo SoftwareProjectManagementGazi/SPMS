@@ -1,6 +1,13 @@
 import { apiClient } from '@/lib/api-client';
 import { Project, User, Methodology, BoardColumn } from '@/lib/types';
 
+export interface ProjectMember {
+  id: number
+  full_name: string
+  avatar_path: string | null
+  role_name: string
+}
+
 // Backend Response Type (Backend'den gelen ham veri tipi)
 interface ProjectResponse {
   id: number;
@@ -72,5 +79,10 @@ export const projectService = {
 
   deleteProject: async (id: string): Promise<void> => {
     await apiClient.delete(`/projects/${id}`);
+  },
+
+  getMembers: async (projectId: string | number): Promise<ProjectMember[]> => {
+    const response = await apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`);
+    return response.data;
   },
 };
