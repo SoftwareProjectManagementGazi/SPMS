@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-07-PLAN.md — Members tab, Dependencies/Recurrence/Sprint sidebar cards
-last_updated: "2026-03-14T15:53:55.218Z"
+stopped_at: Completed 03-08-PLAN.md — Recurring task UI, similar task warning, load-more pagination
+last_updated: "2026-03-14T15:58:30.274Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 64
 ---
 
@@ -73,6 +73,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 03-project-task-completion P05 | 5 | 2 tasks | 9 files |
 | Phase 03-project-task-completion P06 | 15 | 2 tasks | 4 files |
 | Phase 03-project-task-completion P07 | 4 | 2 tasks | 8 files |
+| Phase 03 P08 | 185 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,9 @@ Recent decisions affecting current work:
 - [Phase 03-project-task-completion]: [03-06]: currentUserId derived via parseInt(currentUser.id, 10) — AuthContext.user.id is string, CommentAuthor.id is number
 - [Phase 03-project-task-completion]: currentUser fetched inside task-sidebar.tsx via useQuery to avoid breaking existing caller interface
 - [Phase 03-project-task-completion]: sprintId/recurrenceInterval/recurrenceEndDate/recurrenceCount added to ParentTask type and task-service mapper
+- [Phase 03-project-task-completion]: [03-08]: getByProjectId backward-compat via Array.isArray guard; getByProjectPaginated is opt-in paginated method
+- [Phase 03-project-task-completion]: [03-08]: similar task debounce uses useRef timeout, 600ms, stop-word filtered, cleared on unmount
+- [Phase 03-project-task-completion]: [03-08]: Board tab uses allTasks accumulation — page 1 replaces, subsequent pages append
 
 ### Pending Todos
 
@@ -152,6 +156,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:53:50.535Z
-Stopped at: Completed 03-07-PLAN.md — Members tab, Dependencies/Recurrence/Sprint sidebar cards
+Last session: 2026-03-14T15:58:23.085Z
+Stopped at: Completed 03-08-PLAN.md — Recurring task UI, similar task warning, load-more pagination
 Resume file: None
