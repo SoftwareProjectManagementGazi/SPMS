@@ -1,10 +1,12 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, insert, delete
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.domain.entities.project import Project
+from app.domain.entities.user import User
 from app.domain.repositories.project_repository import IProjectRepository
-from app.infrastructure.database.models.project import ProjectModel
+from app.infrastructure.database.models.project import ProjectModel, project_members
 from app.infrastructure.database.models.user import UserModel
 from app.infrastructure.database.models.board_column import BoardColumnModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
@@ -162,3 +164,34 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             await self.session.commit()
             return True
         return False
+
+    async def add_member(self, project_id: int, user_id: int) -> None:
+        """Add user to project. Idempotent — silently ignores duplicate membership."""
+        stmt = (
+            pg_insert(project_members)
+            .values(project_id=project_id, user_id=user_id)
+            .on_conflict_do_nothing()
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+    async def remove_member(self, project_id: int, user_id: int) -> None:
+        """Remove user from project_members table."""
+        stmt = delete(project_members).where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == user_id,
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+    async def get_members(self, project_id: int) -> List[User]:
+        """Return all project members as User domain entities."""
+        stmt = (
+            select(UserModel)
+            .join(project_members, project_members.c.user_id == UserModel.id)
+            .where(project_members.c.project_id == project_id)
+            .options(joinedload(UserModel.role))
+        )
+        result = await self.session.execute(stmt)
+        models = result.unique().scalars().all()
+        return [User.model_validate(m) for m in models]

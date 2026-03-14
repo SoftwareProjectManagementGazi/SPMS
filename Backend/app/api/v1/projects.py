@@ -1,7 +1,21 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.dependencies import get_project_repo, get_current_user
-from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
+from pydantic import BaseModel
+from app.api.dependencies import (
+    get_project_repo,
+    get_current_user,
+    get_project_member,
+    get_user_repo,
+    get_team_repo,
+    get_task_repo,
+    _is_admin,
+)
+from app.application.dtos.project_dtos import (
+    ProjectCreateDTO,
+    ProjectUpdateDTO,
+    ProjectResponseDTO,
+    ProjectMemberDTO,
+)
 from app.application.use_cases.manage_projects import (
     CreateProjectUseCase,
     ListProjectsUseCase,
@@ -9,12 +23,31 @@ from app.application.use_cases.manage_projects import (
     UpdateProjectUseCase,
     DeleteProjectUseCase
 )
+from app.application.use_cases.manage_project_members import (
+    AddProjectMemberUseCase,
+    AddTeamToProjectUseCase,
+    RemoveProjectMemberUseCase,
+)
 from app.domain.repositories.project_repository import IProjectRepository
+from app.domain.repositories.user_repository import IUserRepository
+from app.domain.repositories.team_repository import ITeamRepository
+from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.entities.user import User
-from app.domain.exceptions import ProjectNotFoundError
-from app.application.use_cases.get_project_details import GetProjectDetailsUseCase
+from app.domain.entities.project import Project
+from app.domain.exceptions import ProjectNotFoundError, UserNotFoundError
 
 router = APIRouter()
+
+
+class MemberAddDTO(BaseModel):
+    user_id: Optional[int] = None  # individual add
+    team_id: Optional[int] = None  # team add; one of these must be set
+
+
+def _is_manager_or_admin(user: User, project: Project) -> bool:
+    """Return True if user is project manager or admin role."""
+    return user.id == project.manager_id or _is_admin(user)
+
 
 @router.post("/", response_model=ProjectResponseDTO, status_code=status.HTTP_201_CREATED)
 async def create_project(
@@ -70,4 +103,83 @@ async def delete_project(
         use_case = DeleteProjectUseCase(project_repo)
         await use_case.execute(project_id, current_user.id) # type: ignore
     except ProjectNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Project Member Management endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/{project_id}/members", response_model=List[ProjectMemberDTO])
+async def list_project_members(
+    project_id: int,
+    current_user: User = Depends(get_project_member),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+):
+    members = await project_repo.get_members(project_id)
+    return [
+        ProjectMemberDTO(
+            id=m.id,
+            full_name=m.full_name,
+            avatar_path=m.avatar,
+            role_name=m.role.name if m.role else "member",
+            is_current_member=True,
+        )
+        for m in members
+    ]
+
+
+@router.post("/{project_id}/members", status_code=status.HTTP_201_CREATED)
+async def add_project_member(
+    project_id: int,
+    dto: MemberAddDTO,
+    current_user: User = Depends(get_project_member),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+    user_repo: IUserRepository = Depends(get_user_repo),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    # Verify actor is manager or admin
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project {project_id} not found")
+    if not _is_manager_or_admin(current_user, project):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only managers or admins can add members")
+
+    if dto.team_id is not None:
+        use_case = AddTeamToProjectUseCase(project_repo, team_repo)
+        await use_case.execute(project_id, dto.team_id, current_user)
+    elif dto.user_id is not None:
+        use_case = AddProjectMemberUseCase(project_repo, user_repo)
+        try:
+            await use_case.execute(project_id, dto.user_id, current_user)
+        except UserNotFoundError as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Either user_id or team_id must be provided",
+        )
+    return {"detail": "Member(s) added successfully"}
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_project_member(
+    project_id: int,
+    user_id: int,
+    current_user: User = Depends(get_project_member),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+    user_repo: IUserRepository = Depends(get_user_repo),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+):
+    # Verify actor is manager or admin
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project {project_id} not found")
+    if not _is_manager_or_admin(current_user, project):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only managers or admins can remove members")
+
+    try:
+        use_case = RemoveProjectMemberUseCase(project_repo, user_repo, task_repo)
+        await use_case.execute(project_id, user_id, current_user)
+    except (ProjectNotFoundError, UserNotFoundError) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

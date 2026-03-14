@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from app.domain.entities.project import Project
+from app.domain.entities.user import User
+
 
 class IProjectRepository(ABC):
     @abstractmethod
@@ -25,4 +27,16 @@ class IProjectRepository(ABC):
 
     @abstractmethod
     async def delete(self, project_id: int) -> bool:
+        pass
+
+    @abstractmethod
+    async def add_member(self, project_id: int, user_id: int) -> None:
+        pass
+
+    @abstractmethod
+    async def remove_member(self, project_id: int, user_id: int) -> None:
+        pass
+
+    @abstractmethod
+    async def get_members(self, project_id: int) -> List[User]:
         pass
