@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundation & Security Hardening** - Fix architecture violations, patch the critical RBAC bug, and establish data infrastructure (soft delete, indexes, versioning, audit trail)
 - [x] **Phase 2: Authentication & Team Management** - User profile editing, team creation, password reset, account lockout, and remaining security/safety hardening (completed 2026-03-12)
-- [x] **Phase 3: Project & Task Completion** - Sprint endpoints, comments, file attachments, task dependencies, recurring tasks, similar-task warnings, pagination, and task logs (completed 2026-03-14)
+- [x] **Phase 3: Project & Task Completion** - Sprint endpoints, comments, file attachments, task dependencies, recurring tasks, similar-task warnings, pagination, and task logs (completed 2026-03-14)
 - [ ] **Phase 4: Views & UI** - Kanban board with drag-and-drop, calendar module, Gantt/timeline view, and modular project boards
 - [ ] **Phase 5: Notifications** - Real-time in-app notifications, event-triggered alerts, email notifications, messaging permissions, and notification preferences
 - [ ] **Phase 6: Reporting & Analytics** - Graphical progress dashboards, filterable reports, PDF/Excel export, and user performance metrics
@@ -95,7 +95,13 @@ Plans:
   2. User can open the Calendar view and see tasks with due dates and recurring events plotted on the correct dates
   3. User can open the Gantt/Timeline view and see tasks rendered as bars; tasks with finish-to-start dependencies are visually linked
   4. User can switch a project between Kanban, Gantt, and List/Calendar view modes; the chosen view persists across sessions
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend foundation: board column CRUD API, sprint close/delete with task reassignment, patchTask in task-service
+- [ ] 04-02-PLAN.md — Calendar tab + Gantt tab: FullCalendar with external sidebar drag, frappe-gantt direct DOM integration
+- [ ] 04-03-PLAN.md — Kanban board tab + view persistence: @dnd-kit multi-container DnD, board-column-service, localStorage view persistence in page.tsx
+- [ ] 04-04-PLAN.md — List view tab + Phase management page + Board columns settings
 
 ### Phase 5: Notifications
 **Goal**: Users receive timely in-app and email notifications about task and project events, can configure their notification preferences, and message history is durably stored
@@ -142,7 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation & Security Hardening | 6/6 | In Progress (awaiting verification) | - |
 | 2. Authentication & Team Management | 8/8 | Complete   | 2026-03-12 |
 | 3. Project & Task Completion | 8/8 | Complete   | 2026-03-14 |
-| 4. Views & UI | 0/TBD | Not started | - |
+| 4. Views & UI | 0/4 | Not started | - |
 | 5. Notifications | 0/TBD | Not started | - |
 | 6. Reporting & Analytics | 0/TBD | Not started | - |
 | 7. Process Models, Adaptation & Integrations | 0/TBD | Not started | - |
