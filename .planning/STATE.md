@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-14T11:20:19.524Z"
+stopped_at: Completed 03-01-PLAN.md — Phase 3 Wave 0 test scaffolds (9 stub files, 40 xfail tests)
+last_updated: "2026-03-14T15:15:31.561Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 22
+  completed_plans: 15
   percent: 64
 ---
 
@@ -66,6 +66,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 02 P05 | 4 | 2 tasks | 14 files |
 | Phase 02 P06 | 18 | 2 tasks | 6 files |
 | Phase 02 P07 | 3 | 2 tasks | 4 files |
+| Phase 03-project-task-completion P01 | 2 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase 02-06]: User.role type is { name: string } — description field stripped from mapper to match existing type definition
 - [Phase 02-06]: ConfirmDialog/TypeToConfirmDialog use controlled open state — callers manage open prop, no internal trigger
 - [Phase 02]: Teams nav added to sidebar.tsx not layout.tsx — sidebar is where all nav items live in this project's AppShell architecture
+- [Phase 03-01]: [03-01]: Unit stubs use @pytest.mark.asyncio + async def; integration stubs use plain sync def — mirrors Phase 1/2 pattern
+- [Phase 03-01]: [03-01]: No app imports in any stub files — avoids import errors from not-yet-existing modules
+- [Phase 03-01]: [03-01]: All 40 tests marked xfail(strict=False) so they appear in collection without failing the suite
 
 ### Pending Todos
 
@@ -128,6 +132,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T11:20:19.519Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-project-task-completion/03-CONTEXT.md
+Last session: 2026-03-14T15:15:31.557Z
+Stopped at: Completed 03-01-PLAN.md — Phase 3 Wave 0 test scaffolds (9 stub files, 40 xfail tests)
+Resume file: None

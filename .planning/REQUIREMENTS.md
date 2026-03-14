@@ -35,17 +35,17 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Project & Task (TASK)
 
-- [ ] **TASK-01**: Proje yöneticisi projeye ekip üyesi atayabilir ve atamayı kaldırabilir
-- [ ] **TASK-02**: Görevler arası bağımlılık tanımlanabilir (finish-to-start, start-to-start vb.)
-- [ ] **TASK-03**: Tekrarlayan görev oluşturulabilir (günlük/haftalık/aylık periyot ile)
-- [ ] **TASK-04**: Tekrarlayan görev düzenlenirken "tümünü mü / yalnızca bu örneği mi?" onay kontrolü gösterilir
-- [ ] **TASK-05**: Tekrarlayan görev için bitiş kriteri belirlenebilir (tarih veya tekrar sayısı)
-- [ ] **TASK-06**: Aynı içerikte benzer görev oluşturulurken "benzer görev mevcut" uyarısı gösterilir
-- [ ] **TASK-07**: Görev geçmişi ve işlem logları API üzerinden sorgulanabilir
-- [ ] **TASK-08**: Görev detay sayfasında yorum oluşturulabilir, düzenlenebilir ve silinebilir
-- [ ] **TASK-09**: Görev detay sayfasına dosya eklenebilir ve ekli dosyalar indirilebilir
-- [ ] **TASK-10**: Sprint'ler API üzerinden listelenebilir, oluşturulabilir ve yönetilebilir (Sprint endpoint'leri)
-- [ ] **TASK-11**: Liste endpoint'leri (görev, proje) sayfalama (pagination) desteği ile döner
+- [x] **TASK-01**: Proje yöneticisi projeye ekip üyesi atayabilir ve atamayı kaldırabilir
+- [x] **TASK-02**: Görevler arası bağımlılık tanımlanabilir (finish-to-start, start-to-start vb.)
+- [x] **TASK-03**: Tekrarlayan görev oluşturulabilir (günlük/haftalık/aylık periyot ile)
+- [x] **TASK-04**: Tekrarlayan görev düzenlenirken "tümünü mü / yalnızca bu örneği mi?" onay kontrolü gösterilir
+- [x] **TASK-05**: Tekrarlayan görev için bitiş kriteri belirlenebilir (tarih veya tekrar sayısı)
+- [x] **TASK-06**: Aynı içerikte benzer görev oluşturulurken "benzer görev mevcut" uyarısı gösterilir
+- [x] **TASK-07**: Görev geçmişi ve işlem logları API üzerinden sorgulanabilir
+- [x] **TASK-08**: Görev detay sayfasında yorum oluşturulabilir, düzenlenebilir ve silinebilir
+- [x] **TASK-09**: Görev detay sayfasına dosya eklenebilir ve ekli dosyalar indirilebilir
+- [x] **TASK-10**: Sprint'ler API üzerinden listelenebilir, oluşturulabilir ve yönetilebilir (Sprint endpoint'leri)
+- [x] **TASK-11**: Liste endpoint'leri (görev, proje) sayfalama (pagination) desteği ile döner
 
 ---
 
@@ -195,17 +195,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-01 | Phase 2 | Complete |
 | SEC-04 | Phase 2 | Pending |
 | SAFE-01 | Phase 2 | Complete |
-| TASK-01 | Phase 3 | Pending |
-| TASK-02 | Phase 3 | Pending |
-| TASK-03 | Phase 3 | Pending |
-| TASK-04 | Phase 3 | Pending |
-| TASK-05 | Phase 3 | Pending |
-| TASK-06 | Phase 3 | Pending |
-| TASK-07 | Phase 3 | Pending |
-| TASK-08 | Phase 3 | Pending |
-| TASK-09 | Phase 3 | Pending |
-| TASK-10 | Phase 3 | Pending |
-| TASK-11 | Phase 3 | Pending |
+| TASK-01 | Phase 3 | Complete |
+| TASK-02 | Phase 3 | Complete |
+| TASK-03 | Phase 3 | Complete |
+| TASK-04 | Phase 3 | Complete |
+| TASK-05 | Phase 3 | Complete |
+| TASK-06 | Phase 3 | Complete |
+| TASK-07 | Phase 3 | Complete |
+| TASK-08 | Phase 3 | Complete |
+| TASK-09 | Phase 3 | Complete |
+| TASK-10 | Phase 3 | Complete |
+| TASK-11 | Phase 3 | Complete |
 | VIEW-01 | Phase 4 | Pending |
 | VIEW-02 | Phase 4 | Pending |
 | VIEW-03 | Phase 4 | Pending |
