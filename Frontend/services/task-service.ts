@@ -1,6 +1,13 @@
 import { apiClient } from '@/lib/api-client';
 import { ParentTask, TaskPriority, User } from '@/lib/types';
 
+export interface PaginatedResponse<T> {
+    items: T[];
+    total: number;
+    page: number;
+    page_size: number;
+}
+
 // Backend Response DTO ile birebir eşleşmeli
 export interface TaskResponseDTO {
     id: number;
@@ -137,7 +144,33 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
 
 export const taskService = {
     getByProjectId: async (projectId: string | number): Promise<ParentTask[]> => {
-        const response = await apiClient.get<TaskResponseDTO[]>(`/tasks/project/${Number(projectId)}`);
+        const response = await apiClient.get<TaskResponseDTO[] | PaginatedResponse<TaskResponseDTO>>(`/tasks/project/${Number(projectId)}`, {
+            params: { page: 1, page_size: 100 }
+        });
+        const items = Array.isArray(response.data) ? response.data : response.data.items;
+        return items.map(mapTaskResponseToParentTask);
+    },
+
+    getByProjectPaginated: async (
+        projectId: string | number,
+        page: number = 1,
+        pageSize: number = 20
+    ): Promise<PaginatedResponse<ParentTask>> => {
+        const response = await apiClient.get<PaginatedResponse<TaskResponseDTO>>(`/tasks/project/${Number(projectId)}`, {
+            params: { page, page_size: pageSize }
+        });
+        return {
+            items: response.data.items.map(mapTaskResponseToParentTask),
+            total: response.data.total,
+            page: response.data.page,
+            page_size: response.data.page_size,
+        };
+    },
+
+    searchSimilar: async (projectId: number, query: string): Promise<ParentTask[]> => {
+        const response = await apiClient.get<TaskResponseDTO[]>('/tasks/search', {
+            params: { project_id: projectId, q: query }
+        });
         return response.data.map(mapTaskResponseToParentTask);
     },
 
