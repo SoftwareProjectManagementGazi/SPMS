@@ -26,3 +26,11 @@ class SprintNotFoundError(DomainError):
 class UserNotFoundError(DomainError):
     def __init__(self, user_id: int):
         super().__init__(f"User with id {user_id} not found")
+
+class CommentNotFoundError(DomainError):
+    def __init__(self, comment_id: int):
+        super().__init__(f"Comment with id {comment_id} not found")
+
+class AttachmentNotFoundError(DomainError):
+    def __init__(self, file_id: int):
+        super().__init__(f"Attachment with id {file_id} not found")
