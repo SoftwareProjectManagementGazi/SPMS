@@ -79,6 +79,10 @@ function buildTaskHierarchy(tasks: ParentTask[]) {
           reporter: null,
           dueDate: null,
           isRecurring: false,
+          sprintId: null,
+          recurrenceInterval: null,
+          recurrenceEndDate: null,
+          recurrenceCount: null,
           loggedTime: 0,
           estimatedTime: 0,
           labels: []

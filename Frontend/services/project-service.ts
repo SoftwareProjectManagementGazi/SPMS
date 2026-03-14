@@ -44,7 +44,7 @@ const mapProjectResponseToProject = (data: ProjectResponse): Project => {
     name: "Project Manager", // Backend'den gelmediği için
     email: "manager@example.com",
     avatar: "/placeholder-user.jpg",
-    role: "manager"
+    role: { name: "Manager" }
   };
 
   return {
@@ -85,4 +85,10 @@ export const projectService = {
     const response = await apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`);
     return response.data;
   },
+
+  addMember: (projectId: string | number, data: { user_id?: number; team_id?: number }) =>
+    apiClient.post(`/projects/${projectId}/members`, data).then(r => r.data),
+
+  removeMember: (projectId: string | number, userId: number) =>
+    apiClient.delete(`/projects/${projectId}/members/${userId}`).then(r => r.data),
 };

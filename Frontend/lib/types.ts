@@ -80,6 +80,10 @@ export interface ParentTask {
   updatedAt: string
   dueDate: string | null
   isRecurring: boolean
+  sprintId: number | null
+  recurrenceInterval: string | null
+  recurrenceEndDate: string | null
+  recurrenceCount: number | null
   loggedTime: number
   estimatedTime: number
   labels: string[]
