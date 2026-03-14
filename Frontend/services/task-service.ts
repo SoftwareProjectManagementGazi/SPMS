@@ -20,6 +20,9 @@ export interface TaskResponseDTO {
     };
     
     sprint_id: number | null;
+    recurrence_interval: string | null;
+    recurrence_end_date: string | null;
+    recurrence_count: number | null;
     column_id: number | null;
     assignee_id: number | null;
     assignee?: {
@@ -122,6 +125,10 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
         updatedAt: data.updated_at || data.created_at,
         dueDate: data.due_date,
         isRecurring: data.is_recurring,
+        sprintId: data.sprint_id,
+        recurrenceInterval: data.recurrence_interval ?? null,
+        recurrenceEndDate: data.recurrence_end_date ?? null,
+        recurrenceCount: data.recurrence_count ?? null,
         loggedTime: 0,
         estimatedTime: 0,
         labels: []
