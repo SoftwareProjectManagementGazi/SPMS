@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-02-PLAN.md — Phase 3 schema contracts (migration 003, TaskDependencyModel, 3 repo interfaces, 6 DTO modules)
-last_updated: "2026-03-14T15:21:05.587Z"
+stopped_at: Completed 03-03-PLAN.md — Sprint CRUD and Project Member Management
+last_updated: "2026-03-14T15:28:04.595Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 22
-  completed_plans: 16
+  completed_plans: 17
   percent: 64
 ---
 
@@ -68,6 +68,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 02 P07 | 3 | 2 tasks | 4 files |
 | Phase 03-project-task-completion P01 | 2 | 2 tasks | 9 files |
 | Phase 03-project-task-completion P02 | 220 | 2 tasks | 14 files |
+| Phase 03-project-task-completion P03 | 291 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 03-project-task-completion]: [03-02]: task_dependencies uses hard delete only — no TimestampedMixin per research (no audit value for dependency records)
 - [Phase 03-project-task-completion]: [03-02]: Migration 003 backfills task_key = project.key || '-' || task.id for all existing tasks
 - [Phase 03-project-task-completion]: [03-02]: Dual migration file pattern maintained: alembic/versions/ for CLI, migrations/ for async lifespan
+- [Phase 03-03]: POST /sprints uses inline project membership check (project_id in body) rather than get_sprint_project_member dependency
+- [Phase 03-03]: pg_insert with on_conflict_do_nothing() for idempotent project member add
 
 ### Pending Todos
 
@@ -136,6 +139,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:21:05.585Z
-Stopped at: Completed 03-02-PLAN.md — Phase 3 schema contracts (migration 003, TaskDependencyModel, 3 repo interfaces, 6 DTO modules)
+Last session: 2026-03-14T15:28:04.593Z
+Stopped at: Completed 03-03-PLAN.md — Sprint CRUD and Project Member Management
 Resume file: None
