@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-05-PLAN.md — Task Pagination, Search, Dependencies, Recurring Logic
-last_updated: "2026-03-14T15:41:22.968Z"
+stopped_at: Completed 03-06-PLAN.md — Comments/History/Attachments API wiring in task-content.tsx
+last_updated: "2026-03-14T15:47:10.538Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 22
-  completed_plans: 19
+  completed_plans: 20
   percent: 64
 ---
 
@@ -71,6 +71,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 03-project-task-completion P03 | 291 | 2 tasks | 13 files |
 | Phase 03-project-task-completion P04 | 233 | 2 tasks | 11 files |
 | Phase 03-project-task-completion P05 | 5 | 2 tasks | 9 files |
+| Phase 03-project-task-completion P06 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 03-04]: [03-04]: UploadAttachment raises ValueError for validation; router translates to HTTP 400 (blocked extension) or HTTP 413 (>25MB)
 - [Phase 03-project-task-completion]: [03-05]: /search endpoint placed before /{task_id} in router to avoid FastAPI path param conflict
 - [Phase 03-project-task-completion]: [03-05]: update_series() applies to future instances only (due_date >= utcnow())
+- [Phase 03-project-task-completion]: [03-06]: getMembers() added to projectService immediately (plan 03-07 can skip adding it; 03-06 uses it first)
+- [Phase 03-project-task-completion]: [03-06]: History tab uses enabled: activeTab === 'history' to lazy-load audit log only when tab is visible
+- [Phase 03-project-task-completion]: [03-06]: currentUserId derived via parseInt(currentUser.id, 10) — AuthContext.user.id is string, CommentAuthor.id is number
 
 ### Pending Todos
 
@@ -145,6 +149,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:41:22.965Z
-Stopped at: Completed 03-05-PLAN.md — Task Pagination, Search, Dependencies, Recurring Logic
+Last session: 2026-03-14T15:47:10.534Z
+Stopped at: Completed 03-06-PLAN.md — Comments/History/Attachments API wiring in task-content.tsx
 Resume file: None
