@@ -73,6 +73,10 @@ export interface CreateTaskDTO {
     parent_task_id?: number;
     assignee_id?: number;
     column_id?: number; // Status yerine Column ID gönderiyoruz
+    is_recurring?: boolean;
+    recurrence_interval?: 'daily' | 'weekly' | 'monthly';
+    recurrence_end_date?: string;
+    recurrence_count?: number;
 }
 
 const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
