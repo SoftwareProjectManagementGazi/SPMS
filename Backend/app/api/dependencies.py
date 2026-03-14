@@ -23,6 +23,10 @@ from app.domain.repositories.password_reset_repository import IPasswordResetRepo
 from app.infrastructure.database.repositories.password_reset_repo import SqlAlchemyPasswordResetRepository
 from app.domain.repositories.sprint_repository import ISprintRepository
 from app.infrastructure.database.repositories.sprint_repo import SqlAlchemySprintRepository
+from app.domain.repositories.comment_repository import ICommentRepository
+from app.infrastructure.database.repositories.comment_repo import SqlAlchemyCommentRepository
+from app.domain.repositories.attachment_repository import IAttachmentRepository
+from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyAttachmentRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -52,6 +56,12 @@ def get_security_service() -> ISecurityService:
 
 def get_sprint_repo(session: AsyncSession = Depends(get_db)) -> ISprintRepository:
     return SqlAlchemySprintRepository(session)
+
+def get_comment_repo(session: AsyncSession = Depends(get_db)) -> ICommentRepository:
+    return SqlAlchemyCommentRepository(session)
+
+def get_attachment_repo(session: AsyncSession = Depends(get_db)) -> IAttachmentRepository:
+    return SqlAlchemyAttachmentRepository(session)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
