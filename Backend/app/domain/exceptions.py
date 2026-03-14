@@ -34,3 +34,7 @@ class CommentNotFoundError(DomainError):
 class AttachmentNotFoundError(DomainError):
     def __init__(self, file_id: int):
         super().__init__(f"Attachment with id {file_id} not found")
+
+class DependencyAlreadyExistsError(DomainError):
+    def __init__(self, task_id: int, depends_on_id: int):
+        super().__init__(f"Dependency between task {task_id} and task {depends_on_id} already exists")
