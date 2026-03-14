@@ -90,5 +90,25 @@ class TaskResponseDTO(BaseModel):
     updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
-    
+
     # compute_data validatörü TAMAMEN SİLİNDİ.
+
+
+# Phase 3: Task dependency DTOs
+
+class TaskDependencyCreateDTO(BaseModel):
+    task_id: int
+    depends_on_id: int
+    dependency_type: str = "blocks"
+
+
+class TaskDependencySummaryDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    task_id: int
+    depends_on_id: int
+    dependency_type: str
+    # resolved task info for display
+    depends_on_key: Optional[str] = None
+    depends_on_title: Optional[str] = None
