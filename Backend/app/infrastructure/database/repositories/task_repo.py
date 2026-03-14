@@ -1,7 +1,7 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, or_, text
 from sqlalchemy.orm import joinedload, selectinload
 from app.domain.entities.task import Task
 from app.domain.repositories.task_repository import ITaskRepository
@@ -33,6 +33,11 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             "due_date": model.due_date,
             "points": model.points,
             "is_recurring": model.is_recurring,
+            "recurrence_interval": model.recurrence_interval,
+            "recurrence_end_date": model.recurrence_end_date,
+            "recurrence_count": model.recurrence_count,
+            "task_key": model.task_key,
+            "series_id": model.series_id,
             "project_id": model.project_id,
             "sprint_id": model.sprint_id,
             "column_id": model.column_id,
@@ -117,10 +122,78 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             )
         )
 
+    async def generate_task_key(self, project_id: int, project_key: str) -> str:
+        result = await self.session.execute(
+            text("UPDATE projects SET task_seq = task_seq + 1 WHERE id = :pid RETURNING task_seq"),
+            {"pid": project_id}
+        )
+        seq = result.scalar_one()
+        return f"{project_key}-{seq}"
+
+    async def get_all_by_project_paginated(
+        self, project_id: int, page: int = 1, page_size: int = 20
+    ) -> Tuple[List[Task], int]:
+        base = self._get_base_query().where(TaskModel.project_id == project_id)
+        count_stmt = select(func.count()).select_from(base.subquery())
+        total = (await self.session.execute(count_stmt)).scalar_one()
+        stmt = base.offset((page - 1) * page_size).limit(page_size)
+        result = await self.session.execute(stmt)
+        models = result.unique().scalars().all()
+        return [self._to_entity(m) for m in models], total
+
+    async def search_by_title(self, project_id: int, words: List[str]) -> List[Task]:
+        conditions = [TaskModel.title.ilike(f"%{w}%") for w in words]
+        stmt = (
+            select(TaskModel)
+            .where(
+                TaskModel.project_id == project_id,
+                TaskModel.is_deleted == False,
+                or_(*conditions),
+            )
+            .limit(5)
+            .options(
+                joinedload(TaskModel.project),
+                joinedload(TaskModel.column),
+                joinedload(TaskModel.assignee).joinedload(UserModel.role),
+                selectinload(TaskModel.subtasks).options(
+                    joinedload(TaskModel.column),
+                    joinedload(TaskModel.assignee).joinedload(UserModel.role),
+                    joinedload(TaskModel.project),
+                ),
+            )
+        )
+        result = await self.session.execute(stmt)
+        models = result.unique().scalars().all()
+        return [self._to_entity(m) for m in models]
+
+    async def update_series(self, series_id: str, fields: Dict[str, Any]) -> None:
+        from datetime import datetime as dt
+        if not series_id or not fields:
+            return
+        stmt = (
+            update(TaskModel)
+            .where(
+                TaskModel.series_id == series_id,
+                TaskModel.is_deleted == False,
+                TaskModel.due_date >= dt.utcnow(),
+            )
+            .values(**fields)
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
     async def create(self, task: Task) -> Task:
         model = self._to_model(task)
         self.session.add(model)
         await self.session.flush()
+        # Generate and store task_key atomically if not already set
+        if not model.task_key:
+            # Need to load project to get key
+            proj_stmt = select(ProjectModel).where(ProjectModel.id == model.project_id)
+            proj_result = await self.session.execute(proj_stmt)
+            project = proj_result.scalar_one_or_none()
+            project_key = project.key if project else "TASK"
+            model.task_key = await self.generate_task_key(model.project_id, project_key)
         await self.session.commit()
         # ARCH-04: fetch full entity with eager loading in a single query (no separate get_by_id call)
         stmt = self._get_base_query().where(TaskModel.id == model.id)
