@@ -21,10 +21,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { projectService } from "@/services/project-service"
 import { taskService } from "@/services/task-service"
+import { authService } from "@/services/auth-service"
 import { format } from "date-fns"
 // YENİ: Modal import edildi
 import { CreateTaskModal } from "@/components/create-task-modal"
 import { TypeToConfirmDialog } from "@/components/ui/confirm-dialog"
+import { MembersTab } from "@/components/project/members-tab"
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -43,6 +45,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryKey: ['tasks', id],
     queryFn: () => taskService.getByProjectId(id),
     enabled: !!id
+  })
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: authService.getCurrentUser,
   })
 
   const handleDeleteProject = async () => {
@@ -143,6 +150,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <TabsTrigger value="board">Board</TabsTrigger>
                 <TabsTrigger value="list">List</TabsTrigger>
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="members">Members</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
@@ -208,6 +216,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             
             <TabsContent value="list">
                 <div className="py-12 text-center text-muted-foreground">Liste görünümü yakında ..</div>
+            </TabsContent>
+
+            <TabsContent value="members" className="mt-6">
+                <MembersTab projectId={id} currentUser={currentUser ?? null} />
             </TabsContent>
         </Tabs>
         
