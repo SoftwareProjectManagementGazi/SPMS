@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-06-PLAN.md — Comments/History/Attachments API wiring in task-content.tsx
-last_updated: "2026-03-14T15:47:10.538Z"
+stopped_at: Completed 03-07-PLAN.md — Members tab, Dependencies/Recurrence/Sprint sidebar cards
+last_updated: "2026-03-14T15:53:55.218Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 64
 ---
 
@@ -72,6 +72,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 03-project-task-completion P04 | 233 | 2 tasks | 11 files |
 | Phase 03-project-task-completion P05 | 5 | 2 tasks | 9 files |
 | Phase 03-project-task-completion P06 | 15 | 2 tasks | 4 files |
+| Phase 03-project-task-completion P07 | 4 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,8 @@ Recent decisions affecting current work:
 - [Phase 03-project-task-completion]: [03-06]: getMembers() added to projectService immediately (plan 03-07 can skip adding it; 03-06 uses it first)
 - [Phase 03-project-task-completion]: [03-06]: History tab uses enabled: activeTab === 'history' to lazy-load audit log only when tab is visible
 - [Phase 03-project-task-completion]: [03-06]: currentUserId derived via parseInt(currentUser.id, 10) — AuthContext.user.id is string, CommentAuthor.id is number
+- [Phase 03-project-task-completion]: currentUser fetched inside task-sidebar.tsx via useQuery to avoid breaking existing caller interface
+- [Phase 03-project-task-completion]: sprintId/recurrenceInterval/recurrenceEndDate/recurrenceCount added to ParentTask type and task-service mapper
 
 ### Pending Todos
 
@@ -149,6 +152,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:47:10.534Z
-Stopped at: Completed 03-06-PLAN.md — Comments/History/Attachments API wiring in task-content.tsx
+Last session: 2026-03-14T15:53:50.535Z
+Stopped at: Completed 03-07-PLAN.md — Members tab, Dependencies/Recurrence/Sprint sidebar cards
 Resume file: None
