@@ -4,6 +4,16 @@ from datetime import datetime
 from app.domain.entities.project import Methodology
 from app.domain.entities.board_column import BoardColumn
 
+
+class ProjectMemberDTO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    full_name: str
+    avatar_path: Optional[str] = None
+    role_name: str
+    is_current_member: bool = True
+
 class ProjectCreateDTO(BaseModel):
     key: str
     name: str

@@ -26,3 +26,10 @@ class ITaskRepository(ABC):
     @abstractmethod
     async def delete(self, task_id: int) -> bool:
         pass
+
+    @abstractmethod
+    async def unassign_incomplete_tasks(self, project_id: int, user_id: int) -> None:
+        """Set assignee_id=NULL for all incomplete tasks in project assigned to user.
+        Tasks in 'done' columns are preserved.
+        """
+        pass

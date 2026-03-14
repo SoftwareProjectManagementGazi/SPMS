@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload, selectinload
 from app.domain.entities.task import Task
 from app.domain.repositories.task_repository import ITaskRepository
@@ -10,6 +10,7 @@ from app.infrastructure.database.models.audit_log import AuditLogModel
 # YENİ İMPORT: Nested eager loading için gerekli
 from app.infrastructure.database.models.user import UserModel
 from app.infrastructure.database.models.project import ProjectModel
+from app.infrastructure.database.models.board_column import BoardColumnModel
 
 
 class SqlAlchemyTaskRepository(ITaskRepository):
@@ -193,3 +194,31 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             await self.session.commit()
             return True
         return False
+
+    async def unassign_incomplete_tasks(self, project_id: int, user_id: int) -> None:
+        """Set assignee_id=NULL for all incomplete tasks assigned to user in this project.
+        Tasks in board columns whose name contains 'done' (case-insensitive) are preserved.
+        """
+        # Find done column ids for this project
+        done_cols_stmt = select(BoardColumnModel.id).where(
+            BoardColumnModel.project_id == project_id,
+            BoardColumnModel.name.ilike("%done%"),
+        )
+        done_cols_result = await self.session.execute(done_cols_stmt)
+        done_column_ids = list(done_cols_result.scalars().all())
+
+        # Update incomplete tasks: set assignee_id=NULL
+        stmt = (
+            update(TaskModel)
+            .where(
+                TaskModel.project_id == project_id,
+                TaskModel.assignee_id == user_id,
+                TaskModel.is_deleted == False,
+            )
+        )
+        if done_column_ids:
+            stmt = stmt.where(TaskModel.column_id.notin_(done_column_ids))
+
+        stmt = stmt.values(assignee_id=None)
+        await self.session.execute(stmt)
+        await self.session.commit()
