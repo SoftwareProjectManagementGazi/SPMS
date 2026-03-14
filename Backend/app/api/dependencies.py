@@ -21,6 +21,8 @@ from app.domain.repositories.team_repository import ITeamRepository
 from app.infrastructure.database.repositories.team_repo import SqlAlchemyTeamRepository
 from app.domain.repositories.password_reset_repository import IPasswordResetRepository
 from app.infrastructure.database.repositories.password_reset_repo import SqlAlchemyPasswordResetRepository
+from app.domain.repositories.sprint_repository import ISprintRepository
+from app.infrastructure.database.repositories.sprint_repo import SqlAlchemySprintRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -47,6 +49,9 @@ def get_password_reset_repo(session: AsyncSession = Depends(get_db)) -> IPasswor
 
 def get_security_service() -> ISecurityService:
     return SecurityAdapter()
+
+def get_sprint_repo(session: AsyncSession = Depends(get_db)) -> ISprintRepository:
+    return SqlAlchemySprintRepository(session)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -93,6 +98,27 @@ async def get_project_member(
         return current_user
     project = await project_repo.get_by_id_and_user(project_id, current_user.id)
     if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this project",
+        )
+    return current_user
+
+
+async def get_sprint_project_member(
+    project_id: int,  # query param from /sprints?project_id=X
+    current_user: User = Depends(get_current_user),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+) -> User:
+    """
+    Verify project membership for sprint endpoints that use ?project_id=X query param.
+    Admin users bypass the membership check.
+    Raises HTTP 403 for non-members.
+    """
+    if _is_admin(current_user):
+        return current_user
+    project = await project_repo.get_by_id_and_user(project_id, current_user.id)
+    if not project:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this project",

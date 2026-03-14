@@ -18,3 +18,11 @@ class ProjectNotFoundError(DomainError):
 class TaskNotFoundError(DomainError):
     def __init__(self, task_id: int):
         super().__init__(f"Task with id {task_id} not found")
+
+class SprintNotFoundError(DomainError):
+    def __init__(self, sprint_id: int):
+        super().__init__(f"Sprint with id {sprint_id} not found")
+
+class UserNotFoundError(DomainError):
+    def __init__(self, user_id: int):
+        super().__init__(f"User with id {user_id} not found")
