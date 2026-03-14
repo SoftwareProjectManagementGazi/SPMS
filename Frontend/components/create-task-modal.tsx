@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon, Loader2, AlertTriangle } from "lucide-react"
 import { format } from "date-fns"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { toast } from "sonner" 
+import { toast } from "sonner"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,8 +22,8 @@ import { cn } from "@/lib/utils"
 
 import { taskService, CreateTaskDTO } from "@/services/task-service"
 import { userService } from "@/services/user-service"
-import { projectService } from "@/services/project-service" 
-import { TaskPriority } from "@/lib/types"
+import { projectService } from "@/services/project-service"
+import { ParentTask, TaskPriority } from "@/lib/types"
 
 interface CreateTaskModalProps {
   open: boolean
@@ -45,12 +46,42 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
   const [description, setDescription] = React.useState("")
   const [taskType, setTaskType] = React.useState<string>("task")
   const [isRecurring, setIsRecurring] = React.useState(false)
+  const [recurrenceInterval, setRecurrenceInterval] = React.useState<'daily' | 'weekly' | 'monthly'>('weekly')
+  const [endCriteria, setEndCriteria] = React.useState<'never' | 'date' | 'count'>('never')
+  const [endDate, setEndDate] = React.useState<string>('')
+  const [endCount, setEndCount] = React.useState<number>(1)
   const [dueDate, setDueDate] = React.useState<Date>()
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>(defaultProjectId || "")
   const [priority, setPriority] = React.useState<TaskPriority>("MEDIUM")
   const [assigneeId, setAssigneeId] = React.useState<string>("")
   const [parentTaskId, setParentTaskId] = React.useState<string>("")
   const [points, setPoints] = React.useState<string>("")
+
+  // --- SIMILAR TASK WARNING ---
+  const [similarTasks, setSimilarTasks] = React.useState<ParentTask[]>([])
+  const debouncedTitle = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const STOP_WORDS = React.useRef(new Set(['the','a','an','is','in','on','at','to','for','of','and','or']))
+
+  const handleTitleChange = (value: string) => {
+    setTitle(value)
+    if (debouncedTitle.current) clearTimeout(debouncedTitle.current)
+    debouncedTitle.current = setTimeout(async () => {
+      const projectIdNum = selectedProjectId ? parseInt(selectedProjectId) : null
+      const words = value.toLowerCase().split(/\s+/).filter(w => !STOP_WORDS.current.has(w) && w.length > 2)
+      if (words.length === 0 || !projectIdNum) { setSimilarTasks([]); return }
+      try {
+        const results = await taskService.searchSimilar(projectIdNum, words.join(' '))
+        setSimilarTasks(results)
+      } catch { setSimilarTasks([]) }
+    }, 600)
+  }
+
+  // Clear debounce on unmount
+  React.useEffect(() => {
+    return () => {
+      if (debouncedTitle.current) clearTimeout(debouncedTitle.current)
+    }
+  }, [])
 
   // --- DATA FETCHING ---
   
@@ -99,6 +130,13 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
     setAssigneeId("")
     setDueDate(undefined)
     setPoints("")
+    setIsRecurring(false)
+    setRecurrenceInterval('weekly')
+    setEndCriteria('never')
+    setEndDate('')
+    setEndCount(1)
+    setSimilarTasks([])
+    if (debouncedTitle.current) clearTimeout(debouncedTitle.current)
     if (!defaultProjectId) setSelectedProjectId("")
   }
 
@@ -117,14 +155,19 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
       description,
       priority,
       project_id: parseInt(selectedProjectId),
-      // DÜZELTME: 'status' alanı kaldırıldı. 
       // Backend column_id gelmezse varsayılan olarak null kaydeder ve "todo" olarak gösterir.
-      
+
       // Opsiyonel alanlar
       assignee_id: assigneeId && assigneeId !== "0" ? parseInt(assigneeId) : undefined,
       parent_task_id: taskType === "sub-task" && parentTaskId ? parseInt(parentTaskId) : undefined,
       due_date: dueDate ? dueDate.toISOString() : undefined,
       points: points ? parseInt(points) : undefined,
+
+      // Recurring fields
+      is_recurring: isRecurring,
+      recurrence_interval: isRecurring ? recurrenceInterval : undefined,
+      recurrence_end_date: isRecurring && endCriteria === 'date' ? endDate : undefined,
+      recurrence_count: isRecurring && endCriteria === 'count' ? endCount : undefined,
     }
 
     createTaskMutation.mutate(payload)
@@ -179,11 +222,29 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
           {/* Main Info */}
           <div className="space-y-2">
             <Label>Title</Label>
-            <Input 
-              placeholder="Enter task title" 
+            <Input
+              placeholder="Enter task title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => handleTitleChange(e.target.value)}
             />
+            {similarTasks.length > 0 && (
+              <div className="flex items-start gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 mt-1">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-600" />
+                <div>
+                  <span className="font-medium">Similar task found: </span>
+                  {similarTasks.map((t, i) => (
+                    <span key={t.id}>
+                      {i > 0 && ', '}
+                      <a href={`/tasks/${t.id}`} target="_blank" rel="noreferrer"
+                         className="underline font-mono text-xs">{t.key ?? t.id}</a>
+                      {' — '}{t.title}
+                      <a href={`/tasks/${t.id}`} target="_blank" rel="noreferrer"
+                         className="ml-1 underline text-xs">View ↗</a>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -301,7 +362,7 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
           </div>
 
           {/* Recurring */}
-          <div className="flex items-center gap-4">
+          <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="recurring"
@@ -314,16 +375,56 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
             </div>
 
             {isRecurring && (
-              <Select>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-3 pl-4 border-l-2 border-muted ml-1">
+                <div>
+                  <Label className="text-xs">Repeat every</Label>
+                  <Select value={recurrenceInterval} onValueChange={(v) => setRecurrenceInterval(v as 'daily' | 'weekly' | 'monthly')}>
+                    <SelectTrigger className="w-full mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Day</SelectItem>
+                      <SelectItem value="weekly">Week</SelectItem>
+                      <SelectItem value="monthly">Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Ends</Label>
+                  <RadioGroup value={endCriteria} onValueChange={(v) => setEndCriteria(v as 'never' | 'date' | 'count')} className="mt-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="never" id="end-never" />
+                      <Label htmlFor="end-never" className="font-normal">Never</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="date" id="end-date" />
+                      <Label htmlFor="end-date" className="font-normal">On date</Label>
+                      {endCriteria === 'date' && (
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-36 ml-2"
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="count" id="end-count" />
+                      <Label htmlFor="end-count" className="font-normal">After</Label>
+                      {endCriteria === 'count' && (
+                        <>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={endCount}
+                            onChange={(e) => setEndCount(Number(e.target.value))}
+                            className="w-16 ml-2"
+                          />
+                          <span className="text-sm ml-1">times</span>
+                        </>
+                      )}
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
             )}
           </div>
         </div>

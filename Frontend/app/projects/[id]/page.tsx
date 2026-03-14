@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Loader2, Plus, Calendar, User as UserIcon, MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -22,6 +22,7 @@ import {
 import { projectService } from "@/services/project-service"
 import { taskService } from "@/services/task-service"
 import { authService } from "@/services/auth-service"
+import { ParentTask } from "@/lib/types"
 import { format } from "date-fns"
 // YENİ: Modal import edildi
 import { CreateTaskModal } from "@/components/create-task-modal"
@@ -36,16 +37,41 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
+  // Paginated task list state
+  const PAGE_SIZE = 20
+  const [page, setPage] = useState(1)
+  const [allTasks, setAllTasks] = useState<ParentTask[]>([])
+  const [taskTotal, setTaskTotal] = useState(0)
+
   const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectService.getById(id)
   })
 
-  const { data: tasks, isLoading: isTasksLoading } = useQuery({
-    queryKey: ['tasks', id],
-    queryFn: () => taskService.getByProjectId(id),
-    enabled: !!id
+  const { data: taskPage, isLoading: isTasksLoading } = useQuery({
+    queryKey: ['project-tasks-paginated', id, page],
+    queryFn: () => taskService.getByProjectPaginated(id, page, PAGE_SIZE),
+    enabled: !!id,
   })
+
+  // Append new page to accumulated task list
+  useEffect(() => {
+    if (taskPage) {
+      if (page === 1) {
+        setAllTasks(taskPage.items)
+      } else {
+        setAllTasks(prev => [...prev, ...taskPage.items])
+      }
+      setTaskTotal(taskPage.total)
+    }
+  }, [taskPage, page])
+
+  // Reset to page 1 when project changes
+  useEffect(() => {
+    setPage(1)
+    setAllTasks([])
+    setTaskTotal(0)
+  }, [id])
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -155,11 +181,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </TabsList>
             
             <TabsContent value="board" className="mt-6">
-                {isTasksLoading ? (
+                {isTasksLoading && allTasks.length === 0 ? (
                     <div className="flex justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
-                ) : !tasks || tasks.length === 0 ? (
+                ) : allTasks.length === 0 ? (
                     <Card className="border-dashed">
                         <CardHeader className="text-center py-12">
                             <CardTitle>Henüz bir görev yok.</CardTitle>
@@ -167,7 +193,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 Yeni bir görev oluşturarak projene başla.
                             </CardDescription>
                             <div className="pt-4">
-                                {/* DÜZELTME: Buton onClick ile modalı açıyor */}
                                 <Button variant="outline" onClick={() => setIsCreateTaskOpen(true)}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Görev Oluştur
@@ -176,41 +201,52 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </CardHeader>
                     </Card>
                 ) : (
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                       {tasks.map(task => (
-                           // Not: Board görünümü için burası geçicidir, listelenmesi yeterli şu an.
-                           <Card 
-                                key={task.id} 
-                                className="cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => router.push(`/tasks/${task.id}`)}
-                           >
-                               <CardHeader className="pb-2">
-                                   <div className="flex justify-between items-start">
-                                       {/* HATA DÜZELTİLDİ: 'critical' -> 'CRITICAL' */}
-                                       <Badge variant={task.priority === 'CRITICAL' ? 'destructive' : 'secondary'} className="uppercase text-[10px]">
-                                           {task.priority}
-                                       </Badge>
-                                       <span className="text-xs text-muted-foreground font-mono">{task.key}</span>
-                                   </div>
-                                   <CardTitle className="text-base mt-2 line-clamp-2">{task.title}</CardTitle>
-                               </CardHeader>
-                               <CardContent>
-                                   <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                                       <div className="flex items-center gap-1">
-                                            <Avatar className="h-5 w-5">
-                                                <AvatarImage src={task.assignee?.avatar} />
-                                                <AvatarFallback className="text-[10px]">{task.assignee?.name?.charAt(0) || "?"}</AvatarFallback>
-                                            </Avatar>
-                                            <span>{task.assignee?.name || "Unassigned"}</span>
-                                       </div>
-                                       {task.points && (
-                                           <Badge variant="outline" className="font-mono text-[10px]">{task.points} puan</Badge>
-                                       )}
-                                   </div>
-                               </CardContent>
-                           </Card>
-                       ))}
-                   </div>
+                   <>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                         {allTasks.map(task => (
+                             <Card
+                                  key={task.id}
+                                  className="cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={() => router.push(`/tasks/${task.id}`)}
+                             >
+                                 <CardHeader className="pb-2">
+                                     <div className="flex justify-between items-start">
+                                         <Badge variant={task.priority === 'CRITICAL' ? 'destructive' : 'secondary'} className="uppercase text-[10px]">
+                                             {task.priority}
+                                         </Badge>
+                                         <span className="text-xs text-muted-foreground font-mono">{task.key}</span>
+                                     </div>
+                                     <CardTitle className="text-base mt-2 line-clamp-2">{task.title}</CardTitle>
+                                 </CardHeader>
+                                 <CardContent>
+                                     <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                                         <div className="flex items-center gap-1">
+                                              <Avatar className="h-5 w-5">
+                                                  <AvatarImage src={task.assignee?.avatar} />
+                                                  <AvatarFallback className="text-[10px]">{task.assignee?.name?.charAt(0) || "?"}</AvatarFallback>
+                                              </Avatar>
+                                              <span>{task.assignee?.name || "Unassigned"}</span>
+                                         </div>
+                                         {task.points && (
+                                             <Badge variant="outline" className="font-mono text-[10px]">{task.points} puan</Badge>
+                                         )}
+                                     </div>
+                                 </CardContent>
+                             </Card>
+                         ))}
+                     </div>
+                     {allTasks.length < taskTotal && (
+                       <div className="flex justify-center mt-4">
+                         <Button
+                           variant="outline"
+                           onClick={() => setPage(p => p + 1)}
+                           disabled={isTasksLoading}
+                         >
+                           {isTasksLoading ? 'Loading...' : `Load more (${taskTotal - allTasks.length} remaining)`}
+                         </Button>
+                       </div>
+                     )}
+                   </>
                 )}
             </TabsContent>
             
