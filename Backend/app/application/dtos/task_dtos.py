@@ -1,7 +1,16 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar
 from datetime import datetime
 from app.domain.entities.task import TaskPriority
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    page_size: int
 
 class ProjectSummaryDTO(BaseModel):
     id: int
@@ -42,6 +51,9 @@ class TaskCreateDTO(BaseModel):
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool = False
+    recurrence_interval: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+    recurrence_count: Optional[int] = None
     project_id: int
     sprint_id: Optional[int] = None
     column_id: Optional[int] = None
@@ -71,6 +83,7 @@ class TaskResponseDTO(BaseModel):
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool
+    task_key: Optional[str] = None
     
     project_id: int
     project: Optional[ProjectSummaryDTO] = None

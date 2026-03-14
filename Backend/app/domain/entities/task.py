@@ -28,7 +28,12 @@ class Task(BaseModel):
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool = False
-    
+    recurrence_interval: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+    recurrence_count: Optional[int] = None
+    task_key: Optional[str] = None
+    series_id: Optional[str] = None
+
     project_id: int
     sprint_id: Optional[int] = None
     column_id: Optional[int] = None
