@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 03-04-PLAN.md — Comment CRUD and File Attachment Backend
-last_updated: "2026-03-14T15:34:05.610Z"
+stopped_at: Completed 03-05-PLAN.md — Task Pagination, Search, Dependencies, Recurring Logic
+last_updated: "2026-03-14T15:41:22.968Z"
 last_activity: 2026-03-12 — Completed Plan 02-02 (domain entities, repository interfaces, DTOs, SQLAlchemy models, Alembic migration 002, sdd_revizyon.md)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 22
-  completed_plans: 18
+  completed_plans: 19
   percent: 64
 ---
 
@@ -70,6 +70,7 @@ Progress: [██░░░░░░░░] 25% (Phase 2 Plan 2/8)
 | Phase 03-project-task-completion P02 | 220 | 2 tasks | 14 files |
 | Phase 03-project-task-completion P03 | 291 | 2 tasks | 13 files |
 | Phase 03-project-task-completion P04 | 233 | 2 tasks | 11 files |
+| Phase 03-project-task-completion P05 | 5 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,8 @@ Recent decisions affecting current work:
 - [Phase 03-03]: pg_insert with on_conflict_do_nothing() for idempotent project member add
 - [Phase 03-04]: [03-04]: POST /comments/ uses inline project membership check (task_id in body) rather than get_task_project_member path-param dependency
 - [Phase 03-04]: [03-04]: UploadAttachment raises ValueError for validation; router translates to HTTP 400 (blocked extension) or HTTP 413 (>25MB)
+- [Phase 03-project-task-completion]: [03-05]: /search endpoint placed before /{task_id} in router to avoid FastAPI path param conflict
+- [Phase 03-project-task-completion]: [03-05]: update_series() applies to future instances only (due_date >= utcnow())
 
 ### Pending Todos
 
@@ -142,6 +145,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:34:05.608Z
-Stopped at: Completed 03-04-PLAN.md — Comment CRUD and File Attachment Backend
+Last session: 2026-03-14T15:41:22.965Z
+Stopped at: Completed 03-05-PLAN.md — Task Pagination, Search, Dependencies, Recurring Logic
 Resume file: None
