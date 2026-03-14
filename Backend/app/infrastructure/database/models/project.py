@@ -28,6 +28,8 @@ class ProjectModel(TimestampedMixin, Base):
     manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     custom_fields = Column(JSON, nullable=True)
+    # Phase 3: per-project task key counter (incremented at task creation)
+    task_seq = Column(Integer, nullable=False, server_default="0")
 
     manager = relationship("UserModel", backref="managed_projects")
     sprints = relationship("SprintModel", back_populates="project", cascade="all, delete-orphan")
