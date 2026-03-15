@@ -30,6 +30,12 @@ const sprintService = {
 
   delete: (sprintId: number): Promise<void> =>
     apiClient.delete(`/sprints/${sprintId}`).then(r => r.data),
+
+  close: (sprintId: number, moveTasksToSprintId: number | null): Promise<void> =>
+    apiClient.patch(`/sprints/${sprintId}/close`, { move_tasks_to_sprint_id: moveTasksToSprintId }).then(r => r.data),
+
+  deleteWithMove: (sprintId: number, moveTasksTo: number | null): Promise<void> =>
+    apiClient.delete(`/sprints/${sprintId}`, { params: { move_tasks_to: moveTasksTo } }).then(r => r.data),
 }
 
 export default sprintService

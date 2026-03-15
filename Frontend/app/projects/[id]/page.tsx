@@ -28,6 +28,7 @@ import { CreateTaskModal } from "@/components/create-task-modal"
 import { TypeToConfirmDialog } from "@/components/ui/confirm-dialog"
 import { MembersTab } from "@/components/project/members-tab"
 import { BoardTab } from "@/components/project/board-tab"
+import { ListTab } from "@/components/project/list-tab"
 
 // Dynamic imports for heavy/SSR-incompatible tabs
 const CalendarTab = dynamic(
@@ -242,11 +243,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             )}
           </TabsContent>
 
-          {/* List tab — placeholder; plan 04-04 replaces with real ListTab */}
-          <TabsContent value="list">
-            <div className="py-12 text-center text-muted-foreground">
-              Liste görünümü yakında ..
-            </div>
+          {/* List tab: sortable/filterable task table with Load More */}
+          <TabsContent value="list" className="mt-6">
+            <ListTab
+              tasks={allTasks}
+              total={taskTotal}
+              page={page}
+              onLoadMore={() => setPage(p => p + 1)}
+              isLoading={isTasksLoading}
+            />
           </TabsContent>
 
           {/* Timeline tab: Gantt chart */}
