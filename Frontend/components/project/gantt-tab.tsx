@@ -24,15 +24,26 @@ export function GanttTab({ tasks }: Props) {
 
   const ganttTasks = tasks
     .filter(t => t.dueDate != null)
-    .map(t => ({
-      id: t.id,
-      name: t.key + ' ' + t.title,
-      start: t.createdAt.split('T')[0], // fallback: no start_date on ParentTask type
-      end: t.dueDate!.split('T')[0],
-      progress: 0,
-      dependencies: '', // Phase 7: populate when task dependency IDs are in ParentTask
-      custom_class: `priority-${t.priority.toLowerCase()}`,
-    }))
+    .map(t => {
+      const startStr = t.createdAt.split('T')[0]
+      const endRaw = t.dueDate!.split('T')[0]
+      // frappe-gantt requires end > start; ensure at least 1 day gap
+      let endStr = endRaw
+      if (endRaw <= startStr) {
+        const d = new Date(startStr)
+        d.setDate(d.getDate() + 1)
+        endStr = d.toISOString().split('T')[0]
+      }
+      return {
+        id: String(t.id),
+        name: t.key + ' ' + t.title,
+        start: startStr,
+        end: endStr,
+        progress: 0,
+        dependencies: '',
+        custom_class: `priority-${t.priority.toLowerCase()}`,
+      }
+    })
 
   useEffect(() => {
     if (!containerRef.current || ganttTasks.length === 0) return

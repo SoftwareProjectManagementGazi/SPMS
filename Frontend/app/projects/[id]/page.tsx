@@ -1,7 +1,7 @@
 "use client"
 
 import { use, useState, useEffect } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Plus, Calendar, User as UserIcon, MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
@@ -112,6 +112,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryFn: authService.getCurrentUser,
   })
 
+  const queryClient = useQueryClient()
+
   const { data: sprints = [] } = useQuery({
     queryKey: ["project-sprints", id],
     queryFn: () => sprintService.list(Number(id)),
@@ -121,6 +123,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const handleDeleteProject = async () => {
     try {
       await projectService.deleteProject(id)
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       router.push("/projects")
     } catch {
       // Error is logged by apiClient interceptor
