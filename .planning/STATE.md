@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-14T21:33:42.175Z"
+stopped_at: Completed 04-01-PLAN.md — board column API + sprint close/delete + patchTask
+last_updated: "2026-03-15T07:43:26.195Z"
 last_activity: 2026-03-14 — Phase 3 complete (8/8 plans, verification 5/5)
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 22
-  completed_plans: 22
+  total_plans: 26
+  completed_plans: 23
 ---
 
 ---
@@ -72,6 +72,7 @@ Progress: [████████░░] 64% (3/7 phases complete, Phase 1 pen
 | Phase 03-project-task-completion P06 | 15 | 2 tasks | 4 files |
 | Phase 03-project-task-completion P07 | 4 | 2 tasks | 8 files |
 | Phase 03 P08 | 185 | 2 tasks | 3 files |
+| Phase 04-views-ui P01 | 4 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,10 @@ Recent decisions affecting current work:
 - [Phase 03-project-task-completion]: [03-08]: getByProjectId backward-compat via Array.isArray guard; getByProjectPaginated is opt-in paginated method
 - [Phase 03-project-task-completion]: [03-08]: similar task debounce uses useRef timeout, 600ms, stop-word filtered, cleared on unmount
 - [Phase 03-project-task-completion]: [03-08]: Board tab uses allTasks accumulation — page 1 replaces, subsequent pages append
+- [Phase 04-views-ui]: [04-01]: move_tasks_to_sprint added to ISprintRepository interface for Clean Architecture — no SQLAlchemy in use cases
+- [Phase 04-views-ui]: [04-01]: Sprint done detection uses ilike('%done%') column name matching — simpler than last-column-by-order_index
+- [Phase 04-views-ui]: [04-01]: Board column router registered under /api/v1/projects prefix — full path /api/v1/projects/{id}/columns
+- [Phase 04-views-ui]: [04-01]: ProjectCreateDTO columns default changed from [] to 5 named defaults — all new projects auto-get columns
 
 ### Pending Todos
 
@@ -154,6 +159,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T21:33:42.172Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-views-ui/04-CONTEXT.md
+Last session: 2026-03-15T07:43:26.192Z
+Stopped at: Completed 04-01-PLAN.md — board column API + sprint close/delete + patchTask
+Resume file: None
