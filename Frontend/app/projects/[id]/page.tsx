@@ -29,6 +29,7 @@ import { TypeToConfirmDialog } from "@/components/ui/confirm-dialog"
 import { MembersTab } from "@/components/project/members-tab"
 import { BoardTab } from "@/components/project/board-tab"
 import { ListTab } from "@/components/project/list-tab"
+import { BoardColumnsSettings } from "@/components/project/board-columns-settings"
 
 // Dynamic imports for heavy/SSR-incompatible tabs
 const CalendarTab = dynamic(
@@ -194,6 +195,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <DropdownMenuLabel>Project Actions</DropdownMenuLabel>
                 <DropdownMenuItem>Edit Project</DropdownMenuItem>
                 <DropdownMenuItem>Manage Team</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/projects/${id}/sprints`)}>
+                  Manage Phases
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
@@ -269,10 +273,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <MembersTab projectId={id} currentUser={currentUser ?? null} />
           </TabsContent>
 
-          {/* Settings tab — plan 04-04 adds Board Columns section */}
+          {/* Settings tab — Board Columns configuration */}
           <TabsContent value="settings" className="mt-6">
-            <div className="py-12 text-center text-muted-foreground">
-              Proje ayarları yakında ..
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Board Columns</h3>
+                <BoardColumnsSettings projectId={id} currentUser={currentUser ?? null} />
+              </div>
             </div>
           </TabsContent>
         </Tabs>
