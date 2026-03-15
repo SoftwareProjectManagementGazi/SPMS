@@ -51,10 +51,10 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Views & UI (VIEW)
 
-- [ ] **VIEW-01**: Proje board'u sürükle-bırak destekli Kanban panosu olarak çalışır; görev kartları renk/etiketle durum bildirir
-- [ ] **VIEW-02**: Takvim modülü görevlerin ve tekrarlayan etkinliklerin zaman çizelgesini gösterir
-- [ ] **VIEW-03**: Zaman çizelgesi / Gantt görünümü görev bağımlılıklarını ve süre çakışmalarını gösterir
-- [ ] **VIEW-04**: Kullanıcı projelerine isteğe göre Kanban, Gantt veya Liste/Takvim görünümü ekleyebilir (modüler panolar)
+- [x] **VIEW-01**: Proje board'u sürükle-bırak destekli Kanban panosu olarak çalışır; görev kartları renk/etiketle durum bildirir
+- [x] **VIEW-02**: Takvim modülü görevlerin ve tekrarlayan etkinliklerin zaman çizelgesini gösterir
+- [x] **VIEW-03**: Zaman çizelgesi / Gantt görünümü görev bağımlılıklarını ve süre çakışmalarını gösterir
+- [x] **VIEW-04**: Kullanıcı projelerine isteğe göre Kanban, Gantt veya Liste/Takvim görünümü ekleyebilir (modüler panolar)
 
 ---
 
@@ -206,10 +206,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TASK-09 | Phase 3 | Complete |
 | TASK-10 | Phase 3 | Complete |
 | TASK-11 | Phase 3 | Complete |
-| VIEW-01 | Phase 4 | Pending |
-| VIEW-02 | Phase 4 | Pending |
-| VIEW-03 | Phase 4 | Pending |
-| VIEW-04 | Phase 4 | Pending |
+| VIEW-01 | Phase 4 | Complete |
+| VIEW-02 | Phase 4 | Complete |
+| VIEW-03 | Phase 4 | Complete |
+| VIEW-04 | Phase 4 | Complete |
 | NOTIF-01 | Phase 5 | Pending |
 | NOTIF-02 | Phase 5 | Pending |
 | NOTIF-03 | Phase 5 | Pending |
