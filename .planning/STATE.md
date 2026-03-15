@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 04-04-PLAN.md — List view tab, Phase management page, Board Columns settings
-last_updated: "2026-03-15T08:01:37.782Z"
+stopped_at: Completed 04-05-PLAN.md — Sprint bands wiring (CalendarTab receives live sprint data)
+last_updated: "2026-03-15T08:20:51.930Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 26
-  completed_plans: 26
+  total_plans: 27
+  completed_plans: 27
   percent: 96
 ---
 
@@ -91,6 +91,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 04-views-ui P01 | 4 | 2 tasks | 13 files |
 | Phase 04-views-ui P03 | 4 | 2 tasks | 5 files |
 | Phase 04-views-ui P04 | 202 | 2 tasks | 6 files |
+| Phase 04-views-ui P05 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,7 @@ Recent decisions affecting current work:
 - [Phase 04-views-ui]: [04-03]: DragOverlay uses overlay=true prop on KanbanCard to skip drag listeners and prevent double sensor registration
 - [Phase 04-views-ui]: [04-04]: Progress bars show approximate values (0/50/100%) based on sprint status — no per-sprint task count on DTO without extra API calls
 - [Phase 04-views-ui]: [04-04]: Multi-select filter uses DropdownMenuCheckboxItem pattern; client-side sort+filter over full accumulated task array via useMemo
+- [Phase 04-views-ui]: Sprint query placed after currentUser query — consistent grouping with other project-scoped queries; enabled: !!id guard prevents query firing with undefined id
 
 ### Pending Todos
 
@@ -186,6 +188,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-15T08:01:37.779Z
-Stopped at: Completed 04-04-PLAN.md — List view tab, Phase management page, Board Columns settings
+Last session: 2026-03-15T08:20:51.927Z
+Stopped at: Completed 04-05-PLAN.md — Sprint bands wiring (CalendarTab receives live sprint data)
 Resume file: None
