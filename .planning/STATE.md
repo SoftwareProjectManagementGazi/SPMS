@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 04-01-PLAN.md — board column API + sprint close/delete + patchTask
-last_updated: "2026-03-15T07:43:26.195Z"
-last_activity: 2026-03-14 — Phase 3 complete (8/8 plans, verification 5/5)
+stopped_at: Completed 04-02-PLAN.md — CalendarTab + UndatedTasksSidebar + GanttTab
+last_updated: "2026-03-15T07:47:00.000Z"
+last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab VIEW-02, GanttTab VIEW-03)
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 26
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 ---
@@ -40,11 +40,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 3 COMPLETE — next up: Phase 4 (Views & UI)
-Status: Phase 3 verified and complete. Phase 4 not yet planned.
-Last activity: 2026-03-14 — Phase 3 complete (8/8 plans, verification 5/5)
+Phase: 4 IN PROGRESS — 04-02 complete, next: 04-03 (project page integration)
+Status: Phase 4 plan 02 complete. CalendarTab (VIEW-02) and GanttTab (VIEW-03) built.
+Last activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 
-Progress: [████████░░] 64% (3/7 phases complete, Phase 1 pending verification)
+Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in progress: 2/4 plans done)
 
 ## Performance Metrics
 
@@ -144,6 +144,10 @@ Recent decisions affecting current work:
 - [Phase 04-views-ui]: [04-01]: Sprint done detection uses ilike('%done%') column name matching — simpler than last-column-by-order_index
 - [Phase 04-views-ui]: [04-01]: Board column router registered under /api/v1/projects prefix — full path /api/v1/projects/{id}/columns
 - [Phase 04-views-ui]: [04-01]: ProjectCreateDTO columns default changed from [] to 5 named defaults — all new projects auto-get columns
+- [Phase 04-views-ui]: [04-02]: frappe-gantt TypeScript types not available on npm; created lib/frappe-gantt.d.ts module declaration file
+- [Phase 04-views-ui]: [04-02]: Dependency arrows deferred to Phase 7 — ParentTask type has no dependency IDs field; dependencies: '' with TODO comment
+- [Phase 04-views-ui]: [04-02]: Recurring event expansion done client-side using date-fns; cap at min(recurrenceCount, 52) and view window end
+- [Phase 04-views-ui]: [04-02]: frappe-gantt Gantt constructor called via dynamic import() inside useEffect for belt-and-suspenders SSR safety; parent must wrap with dynamic({ ssr: false })
 
 ### Pending Todos
 
