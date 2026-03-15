@@ -15,10 +15,19 @@ interface Props {
   tasks: ParentTask[]
 }
 
+type ViewMode = 'Day' | 'Week' | 'Month'
+
+// Column widths (px) per view mode — wider in Week/Month so bars are visible
+const COLUMN_WIDTH: Record<ViewMode, number> = {
+  Day:   38,
+  Week: 120,
+  Month: 160,
+}
+
 export function GanttTab({ tasks }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const ganttRef = useRef<unknown>(null)
-  const [viewMode, setViewMode] = useState<'Day' | 'Week'>('Day')
+  const [viewMode, setViewMode] = useState<ViewMode>('Week')
 
   const undatedCount = tasks.filter(t => !t.dueDate).length
 
@@ -63,13 +72,17 @@ export function GanttTab({ tasks }: Props) {
     // Dynamic import — belt-and-suspenders SSR safety
     import('frappe-gantt').then(({ default: Gantt }) => {
       if (!containerRef.current) return
+
       ganttRef.current = new Gantt(
         containerRef.current,
         ganttTasks,
         {
           view_mode: viewMode,
-          draggable: false, // read-only per CONTEXT.md
+          draggable: false,
           date_format: 'YYYY-MM-DD',
+          column_width: COLUMN_WIDTH[viewMode],
+          // Scroll to where the tasks actually are instead of "today"
+          scroll_to: ganttTasks[0]?.start,
           custom_popup_html: (task: any) => `
             <div style="padding:8px;background:white;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);min-width:200px;">
               <strong style="font-size:13px;">${task.name}</strong>
@@ -98,37 +111,34 @@ export function GanttTab({ tasks }: Props) {
           </p>
         )}
         <div className="flex gap-2 ml-auto">
-          <button
-            onClick={() => setViewMode('Day')}
-            className={`px-3 py-1 text-sm rounded transition-colors ${
-              viewMode === 'Day'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'
-            }`}
-          >
-            Day
-          </button>
-          <button
-            onClick={() => setViewMode('Week')}
-            className={`px-3 py-1 text-sm rounded transition-colors ${
-              viewMode === 'Week'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'
-            }`}
-          >
-            Week
-          </button>
+          {(['Day', 'Week', 'Month'] as ViewMode[]).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-3 py-1 text-sm rounded transition-colors ${
+                viewMode === mode
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Gantt chart */}
+      {/* Gantt chart — let frappe-gantt manage its own horizontal scroll */}
       {ganttTasks.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           No tasks with dates to display on the timeline.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <div ref={containerRef} />
+        <div
+          className="w-full rounded border border-border"
+          // GPU-composited layer reduces scroll jank
+          style={{ transform: 'translateZ(0)', maxHeight: '65vh', overflowY: 'auto' }}
+        >
+          <div ref={containerRef} className="w-full" />
         </div>
       )}
     </div>

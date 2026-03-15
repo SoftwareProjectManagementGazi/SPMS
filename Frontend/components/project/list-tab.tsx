@@ -7,13 +7,21 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ParentTask } from "@/lib/types"
+import { ParentTask, TaskPriority } from "@/lib/types"
+
+const priorityStyles: Record<TaskPriority, string> = {
+  CRITICAL: 'bg-red-100 text-red-700 border-red-300',
+  HIGH:     'bg-orange-100 text-orange-700 border-orange-300',
+  MEDIUM:   'bg-yellow-100 text-yellow-700 border-yellow-300',
+  LOW:      'bg-gray-100 text-gray-600 border-gray-300',
+}
 
 type SortField = "key" | "title" | "status" | "priority" | "due_date"
 type SortDir = "asc" | "desc"
@@ -282,9 +290,25 @@ export function ListTab({ tasks, total, page, onLoadMore, isLoading }: ListTabPr
                   <td className="px-4 py-3">
                     <Badge variant="outline">{task.status}</Badge>
                   </td>
-                  <td className="px-4 py-3">{task.assignee?.name ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <Badge variant="secondary">{task.priority}</Badge>
+                    {task.assignee ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={task.assignee.avatar} />
+                          <AvatarFallback className="text-[10px]">
+                            {task.assignee.name?.[0] ?? '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{task.assignee.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge className={`text-[10px] uppercase border ${priorityStyles[task.priority as TaskPriority] ?? ''}`}>
+                      {task.priority}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {task.dueDate ? format(new Date(task.dueDate), "MMM d, yyyy") : "—"}

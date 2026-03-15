@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect } from "react"
+import { use, useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, Plus, Calendar, User as UserIcon, MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -31,6 +31,7 @@ import { MembersTab } from "@/components/project/members-tab"
 import { BoardTab } from "@/components/project/board-tab"
 import { ListTab } from "@/components/project/list-tab"
 import { BoardColumnsSettings } from "@/components/project/board-columns-settings"
+import { EditProjectModal } from "@/components/project/edit-project-modal"
 
 // Dynamic imports for heavy/SSR-incompatible tabs
 const CalendarTab = dynamic(
@@ -49,6 +50,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editProjectOpen, setEditProjectOpen] = useState(false)
 
   // View persistence: restore last-used tab from localStorage
   const [activeView, setActiveView] = useState<string>(() => {
@@ -68,6 +70,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const [page, setPage] = useState(1)
   const [allTasks, setAllTasks] = useState<ParentTask[]>([])
   const [taskTotal, setTaskTotal] = useState(0)
+  // Track whether this is the initial mount so we don't wipe allTasks on remount
+  const didMountRef = useRef(false)
 
   const { data: project, isLoading: isProjectLoading, error: projectError } = useQuery({
     queryKey: ["project", id],
@@ -93,8 +97,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     }
   }, [taskPage, page])
 
-  // Reset to page 1 when project changes
+  // Reset to page 1 only when the project ID actually changes (not on initial mount).
+  // Without the guard, this effect fires on every remount and wipes allTasks after
+  // useEffect([taskPage, page]) has already populated it — causing the blank-tab bug.
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
     setPage(1)
     setAllTasks([])
     setTaskTotal(0)
@@ -204,8 +214,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Project Actions</DropdownMenuLabel>
-                <DropdownMenuItem>Edit Project</DropdownMenuItem>
-                <DropdownMenuItem>Manage Team</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEditProjectOpen(true)}>
+                  Edit Project
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleViewChange("members")}>
+                  Manage Team
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/projects/${id}/sprints`)}>
                   Manage Phases
                 </DropdownMenuItem>
@@ -307,6 +321,15 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           onOpenChange={setIsCreateTaskOpen}
           defaultProjectId={id}
         />
+
+        {/* Edit Project Modal */}
+        {project && (
+          <EditProjectModal
+            open={editProjectOpen}
+            onOpenChange={setEditProjectOpen}
+            project={project}
+          />
+        )}
 
         {/* Delete Project Dialog */}
         <TypeToConfirmDialog

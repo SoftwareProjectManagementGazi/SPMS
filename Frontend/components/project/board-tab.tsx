@@ -46,6 +46,8 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
   const [activeColumnIndex, setActiveColumnIndex] = useState(0)
   const [activeSprintId, setActiveSprintId] = useState<number | 'all' | 'backlog'>('all')
   const [sprintDefaultSet, setSprintDefaultSet] = useState(false)
+  // Optimistic move: show task in destination column immediately before server confirms
+  const [pendingMove, setPendingMove] = useState<{ taskId: string; destColId: string } | null>(null)
 
   // Fetch board columns
   const { data: columns, isLoading: isColumnsLoading } = useQuery<BoardColumn[]>({
@@ -70,9 +72,9 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
     }
   }, [sprints, sprintDefaultSet])
 
-  // Sensors for drag-and-drop
+  // Sensors: PointerSensor with distance constraint so single clicks pass through to onClick
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -98,23 +100,26 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
     return tasks.filter(t => t.sprintId === activeSprintId)
   }, [tasks, activeSprintId])
 
-  // Group tasks by column
+  // Group tasks by column — applies pendingMove optimistically so the card
+  // appears in the destination column immediately without waiting for the server.
   const tasksByColumn = useMemo((): Record<string, ParentTask[]> => {
     const map: Record<string, ParentTask[]> = {}
     if (!columns) return map
     columns.forEach((col: BoardColumn) => { map[String(col.id)] = [] })
     filteredTasks.forEach(task => {
       const colId = task.columnId ?? String(columns[0]?.id ?? '')
-      if (colId && map[colId] !== undefined) {
-        map[colId].push(task)
+      const effectiveColId =
+        pendingMove?.taskId === task.id ? pendingMove.destColId : colId
+      if (effectiveColId && map[effectiveColId] !== undefined) {
+        map[effectiveColId].push(task)
       } else if (columns[0]) {
         map[String(columns[0].id)].push(task)
       }
     })
     return map
-  }, [filteredTasks, columns])
+  }, [filteredTasks, columns, pendingMove])
 
-  // Helper: find the column id for a given task id
+  // Helper: find the column id for a given task id (reads pre-move state)
   function getColumnIdForTask(taskId: string): string | undefined {
     if (!columns) return undefined
     for (const col of columns) {
@@ -137,7 +142,6 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
     if (!over) return
 
     const overId = String(over.id)
-    // over.id is either 'col-{columnId}' (droppable) or a task id (sortable)
     const destColId = overId.startsWith('col-')
       ? overId.replace('col-', '')
       : getColumnIdForTask(overId)
@@ -157,7 +161,12 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
       }
     }
 
-    mutation.mutate({ taskId: String(active.id), columnId: Number(destColId) })
+    const taskId = String(active.id)
+    // Optimistic: move card to new column immediately (no teleport on server response)
+    setPendingMove({ taskId, destColId })
+    mutation.mutate({ taskId, columnId: Number(destColId) }, {
+      onSettled: () => setPendingMove(null),
+    })
   }
 
   const sortedColumns = useMemo(
@@ -225,6 +234,11 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        autoScroll={{
+          threshold: { x: 0.15, y: 0.2 },
+          acceleration: 8,
+          interval: 5,
+        }}
       >
         {/* Mobile layout: single column with tab strip */}
         <div className="block sm:hidden">
@@ -252,8 +266,8 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
           )}
         </div>
 
-        {/* Desktop layout: all columns */}
-        <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
+        {/* Desktop layout: all columns in a horizontally scrollable container with fixed height */}
+        <div className="hidden sm:flex gap-3 overflow-x-auto pb-3 h-[70vh] min-h-[400px]">
           {sortedColumns.map(col => (
             <KanbanColumn
               key={col.id}
