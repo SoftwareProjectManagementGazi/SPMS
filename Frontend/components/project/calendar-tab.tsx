@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -205,6 +206,10 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
     setHoverPopover(null)
   }, [])
 
+  const handleEventDragStart = useCallback(() => {
+    setHoverPopover(null)
+  }, [])
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
@@ -227,6 +232,7 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
           ref={calendarRef}
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
+          timeZone="UTC"
           editable={true}
           droppable={true}
           headerToolbar={{
@@ -240,6 +246,7 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
           eventClick={handleEventClick}
           eventMouseEnter={handleEventMouseEnter}
           eventMouseLeave={handleEventMouseLeave}
+          eventDragStart={handleEventDragStart}
           datesSet={arg => {
             viewWindowRef.current = { start: arg.start, end: arg.end }
           }}
@@ -258,8 +265,8 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
       )}
       </div>
 
-      {/* Hover popover */}
-      {hoverPopover && (
+      {/* Hover popover — rendered in portal to avoid layout reflow */}
+      {hoverPopover && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed z-50 bg-popover text-popover-foreground border rounded-lg shadow-lg p-3 min-w-48 max-w-64 pointer-events-none"
           style={{
@@ -285,7 +292,8 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
           {hoverPopover.event.extendedProps?.isRecurring && (
             <p className="text-xs text-muted-foreground mt-0.5">↺ Recurring</p>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )  // end outer space-y-2
