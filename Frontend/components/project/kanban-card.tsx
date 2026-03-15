@@ -80,7 +80,14 @@ function RichContent({ task }: { task: ParentTask }) {
     <div className="p-3 space-y-2">
       <div className="flex justify-between items-center">
         <span className="text-xs font-mono text-muted-foreground">{task.key}</span>
-        <Badge variant="secondary" className="text-[10px] uppercase">
+        <Badge
+          className={`text-[10px] uppercase border ${
+            task.priority === 'CRITICAL' ? 'bg-red-100 text-red-700 border-red-300' :
+            task.priority === 'HIGH'     ? 'bg-orange-100 text-orange-700 border-orange-300' :
+            task.priority === 'MEDIUM'   ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                                           'bg-gray-100 text-gray-600 border-gray-300'
+          }`}
+        >
           {task.priority}
         </Badge>
       </div>

@@ -31,6 +31,7 @@ import { User } from "@/lib/types"
 interface BoardColumnsSettingsProps {
   projectId: string
   currentUser: User | null
+  isProjectManager?: boolean
 }
 
 interface DeleteDialogState {
@@ -38,11 +39,12 @@ interface DeleteDialogState {
   column: BoardColumn | null
 }
 
-export function BoardColumnsSettings({ projectId, currentUser }: BoardColumnsSettingsProps) {
+export function BoardColumnsSettings({ projectId, currentUser, isProjectManager }: BoardColumnsSettingsProps) {
   const queryClient = useQueryClient()
   const queryKey = ["project-columns", projectId]
 
   const isManagerOrAdmin =
+    isProjectManager ||
     currentUser?.role?.name?.toLowerCase() === "manager" ||
     currentUser?.role?.name?.toLowerCase() === "admin"
 

@@ -208,7 +208,19 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex gap-4 h-full relative">
+    <div className="space-y-2">
+      {/* Toggle button above the calendar, aligned right */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setSidebarOpen(o => !o)}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border bg-background hover:bg-accent/50 transition-colors"
+          title={sidebarOpen ? 'Hide undated tasks' : 'Show undated tasks'}
+        >
+          {sidebarOpen ? '→ Hide undated' : '← Undated tasks'}
+        </button>
+      </div>
+
+      <div className="flex gap-4 h-full">
       {/* Calendar area */}
       <div className="flex-1 min-w-0">
         <FullCalendar
@@ -235,15 +247,6 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
         />
       </div>
 
-      {/* Sidebar toggle button */}
-      <button
-        onClick={() => setSidebarOpen(o => !o)}
-        className="absolute top-0 right-0 z-10 flex items-center gap-1 px-2 py-1 text-xs rounded border bg-background hover:bg-accent/50 transition-colors"
-        title={sidebarOpen ? 'Hide undated tasks' : 'Show undated tasks'}
-      >
-        {sidebarOpen ? '→ Hide' : '← Undated'}
-      </button>
-
       {/* Undated tasks sidebar */}
       {sidebarOpen && (
         <aside className="w-72 flex flex-col border rounded-lg p-3 bg-card shrink-0">
@@ -253,6 +256,7 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
           <UndatedTasksSidebar tasks={tasks} />
         </aside>
       )}
+      </div>
 
       {/* Hover popover */}
       {hoverPopover && (
@@ -284,5 +288,5 @@ export function CalendarTab({ projectId, tasks, sprints }: Props) {
         </div>
       )}
     </div>
-  )
+  )  // end outer space-y-2
 }
