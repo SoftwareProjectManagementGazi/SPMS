@@ -78,6 +78,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryKey: ["project-tasks-paginated", id, page],
     queryFn: () => taskService.getByProjectPaginated(id, page, PAGE_SIZE),
     enabled: !!id,
+    staleTime: 30_000,
   })
 
   // Append new page to accumulated task list
@@ -230,49 +231,51 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Board tab: full Kanban with DnD */}
           <TabsContent value="board" className="mt-6">
-            {isTasksLoading && allTasks.length === 0 ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : allTasks.length === 0 ? (
-              <Card className="border-dashed">
-                <CardHeader className="text-center py-12">
-                  <CardTitle>Henüz bir görev yok.</CardTitle>
-                  <CardDescription>
-                    Yeni bir görev oluşturarak projene başla.
-                  </CardDescription>
-                  <div className="pt-4">
-                    <Button variant="outline" onClick={() => setIsCreateTaskOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Görev Oluştur
-                    </Button>
-                  </div>
-                </CardHeader>
-              </Card>
-            ) : (
-              <BoardTab projectId={id} tasks={allTasks} />
-            )}
+            <div className="rounded-xl border bg-card shadow-sm p-4">
+              {isTasksLoading && allTasks.length === 0 ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : allTasks.length === 0 ? (
+                <div className="text-center py-12 space-y-4">
+                  <p className="text-xl font-semibold">Henüz bir görev yok.</p>
+                  <p className="text-muted-foreground">Yeni bir görev oluşturarak projene başla.</p>
+                  <Button variant="outline" onClick={() => setIsCreateTaskOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Görev Oluştur
+                  </Button>
+                </div>
+              ) : (
+                <BoardTab projectId={id} tasks={allTasks} />
+              )}
+            </div>
           </TabsContent>
 
           {/* List tab: sortable/filterable task table with Load More */}
           <TabsContent value="list" className="mt-6">
-            <ListTab
-              tasks={allTasks}
-              total={taskTotal}
-              page={page}
-              onLoadMore={() => setPage(p => p + 1)}
-              isLoading={isTasksLoading}
-            />
+            <div className="rounded-xl border bg-card shadow-sm p-4">
+              <ListTab
+                tasks={allTasks}
+                total={taskTotal}
+                page={page}
+                onLoadMore={() => setPage(p => p + 1)}
+                isLoading={isTasksLoading}
+              />
+            </div>
           </TabsContent>
 
           {/* Timeline tab: Gantt chart */}
           <TabsContent value="timeline" className="mt-6">
-            <GanttTab tasks={allTasks} />
+            <div className="rounded-xl border bg-card shadow-sm p-4">
+              <GanttTab tasks={allTasks} />
+            </div>
           </TabsContent>
 
           {/* Calendar tab */}
           <TabsContent value="calendar" className="mt-6">
-            <CalendarTab projectId={id} tasks={allTasks} sprints={sprints} />
+            <div className="rounded-xl border bg-card shadow-sm p-4">
+              <CalendarTab projectId={id} tasks={allTasks} sprints={sprints} />
+            </div>
           </TabsContent>
 
           {/* Members tab */}
@@ -282,10 +285,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Settings tab — Board Columns configuration */}
           <TabsContent value="settings" className="mt-6">
-            <div className="space-y-6">
+            <div className="rounded-xl border bg-card shadow-sm p-4 space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">Board Columns</h3>
-                <BoardColumnsSettings projectId={id} currentUser={currentUser ?? null} />
+                <BoardColumnsSettings
+                  projectId={id}
+                  currentUser={currentUser ?? null}
+                  isProjectManager={!!currentUser && !!project && currentUser.id === project.lead?.id}
+                />
               </div>
             </div>
           </TabsContent>

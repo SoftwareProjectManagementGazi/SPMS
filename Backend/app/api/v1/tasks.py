@@ -148,6 +148,24 @@ async def update_task(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.patch("/{task_id}", response_model=TaskResponseDTO)
+async def patch_task(
+    task_id: int,
+    dto: TaskUpdateDTO,
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+    current_user: User = Depends(get_task_project_member),
+):
+    try:
+        use_case = UpdateTaskUseCase(task_repo, project_repo)
+        return await use_case.execute(task_id, dto, current_user.id)  # type: ignore
+    except TaskNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ProjectNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: int,

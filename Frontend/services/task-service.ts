@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api-client';
 import { ParentTask, TaskPriority, User } from '@/lib/types';
+import { resolveAvatarUrl } from '@/services/auth-service';
 
 export interface PaginatedResponse<T> {
     items: T[];
@@ -91,7 +92,7 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
         id: data.assignee.id.toString(),
         name: data.assignee.username, // Backend DTO'da username olarak mapledik
         email: data.assignee.email,
-        avatar: data.assignee.avatar_url
+        avatar: resolveAvatarUrl(data.assignee.avatar_url)
     } : null;
     return {
         id: data.id.toString(),
