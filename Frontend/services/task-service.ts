@@ -199,6 +199,14 @@ export const taskService = {
         return mapTaskResponseToParentTask(response.data);
     },
 
+    patchTask: async (
+        taskId: string,
+        partial: Partial<{ column_id: number; due_date: string | null; sprint_id: number | null }>
+    ): Promise<ParentTask> => {
+        const response = await apiClient.patch<TaskResponseDTO>(`/tasks/${taskId}`, partial);
+        return mapTaskResponseToParentTask(response.data);
+    },
+
     deleteTask: async (taskId: string) => {
         await apiClient.delete(`/tasks/${taskId}`);
     }

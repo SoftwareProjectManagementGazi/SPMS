@@ -18,3 +18,16 @@ class ISprintRepository(ABC):
 
     @abstractmethod
     async def delete(self, sprint_id: int) -> bool: ...
+
+    @abstractmethod
+    async def move_tasks_to_sprint(
+        self,
+        from_sprint_id: int,
+        to_sprint_id: Optional[int],
+        incomplete_only: bool = False,
+    ) -> int:
+        """Move tasks from one sprint to another (or backlog if to_sprint_id is None).
+        Returns the count of tasks moved.
+        If incomplete_only is True, only moves tasks not in a 'Done' column.
+        """
+        ...

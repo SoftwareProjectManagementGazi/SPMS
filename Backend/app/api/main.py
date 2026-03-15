@@ -19,6 +19,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.api.v1 import auth, projects, tasks, sprints, comments, attachments
 from app.api.v1.teams import router as teams_router
+from app.api.v1.board_columns import router as board_columns_router
 from app.infrastructure.database.database import AsyncSessionLocal
 from app.infrastructure.database.seeder import seed_data
 from app.infrastructure.config import settings
@@ -123,6 +124,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
+app.include_router(board_columns_router, prefix="/api/v1/projects", tags=["Board Columns"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Tasks"])
 app.include_router(teams_router, prefix="/api/v1")
 app.include_router(sprints.router, prefix="/api/v1/sprints", tags=["Sprints"])
