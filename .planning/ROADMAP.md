@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Foundation & Security Hardening** - Fix architecture violations, patch the critical RBAC bug, and establish data infrastructure (soft delete, indexes, versioning, audit trail)
 - [x] **Phase 2: Authentication & Team Management** - User profile editing, team creation, password reset, account lockout, and remaining security/safety hardening (completed 2026-03-12)
 - [x] **Phase 3: Project & Task Completion** - Sprint endpoints, comments, file attachments, task dependencies, recurring tasks, similar-task warnings, pagination, and task logs (completed 2026-03-14)
-- [ ] **Phase 4: Views & UI** - Kanban board with drag-and-drop, calendar module, Gantt/timeline view, and modular project boards
+- [x] **Phase 4: Views & UI** - Kanban board with drag-and-drop, calendar module, Gantt/timeline view, and modular project boards (completed 2026-03-15)
 - [ ] **Phase 5: Notifications** - Real-time in-app notifications, event-triggered alerts, email notifications, messaging permissions, and notification preferences
 - [ ] **Phase 6: Reporting & Analytics** - Graphical progress dashboards, filterable reports, PDF/Excel export, and user performance metrics
 - [ ] **Phase 7: Process Models, Adaptation & Integrations** - Scrum/Kanban/Waterfall/Iterative model support, template customization, adaptive configuration panel, and external service integrations
@@ -148,7 +148,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation & Security Hardening | 6/6 | In Progress (awaiting verification) | - |
 | 2. Authentication & Team Management | 8/8 | Complete   | 2026-03-12 |
 | 3. Project & Task Completion | 8/8 | Complete   | 2026-03-14 |
-| 4. Views & UI | 3/4 | In Progress|  |
+| 4. Views & UI | 4/4 | Complete   | 2026-03-15 |
 | 5. Notifications | 0/TBD | Not started | - |
 | 6. Reporting & Analytics | 0/TBD | Not started | - |
 | 7. Process Models, Adaptation & Integrations | 0/TBD | Not started | - |
