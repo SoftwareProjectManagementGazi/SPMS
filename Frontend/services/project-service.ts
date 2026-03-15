@@ -77,6 +77,14 @@ export const projectService = {
     return mapProjectResponseToProject(response.data);
   },
 
+  updateProject: async (
+    id: string,
+    data: Partial<Pick<CreateProjectDTO, 'name' | 'description' | 'start_date' | 'end_date'>>
+  ): Promise<Project> => {
+    const response = await apiClient.patch<ProjectResponse>(`/projects/${id}`, data);
+    return mapProjectResponseToProject(response.data);
+  },
+
   deleteProject: async (id: string): Promise<void> => {
     await apiClient.delete(`/projects/${id}`);
   },

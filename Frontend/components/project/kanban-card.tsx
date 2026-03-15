@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from 'next/navigation'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { format } from 'date-fns'
@@ -21,6 +22,8 @@ interface KanbanCardProps {
 }
 
 export function KanbanCard({ task, compact = false, overlay = false }: KanbanCardProps) {
+  const router = useRouter()
+
   const {
     setNodeRef,
     attributes,
@@ -61,6 +64,9 @@ export function KanbanCard({ task, compact = false, overlay = false }: KanbanCar
       style={style}
       {...attributes}
       {...listeners}
+      // PointerSensor has activationConstraint: { distance: 8 } on the board,
+      // so a plain click (< 8px movement) passes through to this onClick.
+      onClick={() => router.push(`/tasks/${task.id}`)}
       className={`${baseClass} ${cursorClass}`}
     >
       {compact ? (

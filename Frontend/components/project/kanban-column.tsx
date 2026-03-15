@@ -17,9 +17,13 @@ export function KanbanColumn({ column, tasks, compact }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${column.id}` })
 
   return (
-    <div className="flex flex-col w-72 shrink-0">
-      {/* Column header */}
-      <div className="flex items-center justify-between mb-3 px-1">
+    <div
+      className={`flex flex-col w-72 shrink-0 rounded-lg border overflow-hidden transition-colors duration-150 ${
+        isOver ? 'border-primary/60 ring-2 ring-primary/20' : 'border-border'
+      }`}
+    >
+      {/* Column header — lives outside the scroll area so it's always visible */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-card shrink-0">
         <h3 className="font-semibold text-sm">{column.name}</h3>
         <Badge variant="secondary" className="text-xs">
           {tasks.length}
@@ -27,15 +31,15 @@ export function KanbanColumn({ column, tasks, compact }: KanbanColumnProps) {
         </Badge>
       </div>
 
-      {/* Droppable area */}
+      {/* Droppable card list — scrolls independently, fills remaining column height */}
       <SortableContext
         items={tasks.map(t => t.id)}
         strategy={verticalListSortingStrategy}
       >
         <div
           ref={setNodeRef}
-          className={`flex flex-col gap-2 min-h-[100px] p-2 rounded-lg transition-colors ${
-            isOver ? 'bg-muted/70 ring-2 ring-primary/30' : 'bg-muted/40'
+          className={`flex flex-col gap-2 flex-1 overflow-y-auto min-h-0 p-2 transition-colors duration-150 ${
+            isOver ? 'bg-primary/5' : 'bg-muted/30'
           }`}
         >
           {tasks.map(t => (
