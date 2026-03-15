@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
+stopped_at: Completed 04-03-PLAN.md — Kanban board + view persistence + Calendar/Gantt integration
+last_updated: "2026-03-15T07:55:55.575Z"
+last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
+progress:
+  total_phases: 7
+  completed_phases: 3
+  total_plans: 26
+  completed_plans: 25
+  percent: 96
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: in-progress
 stopped_at: Completed 04-02-PLAN.md — CalendarTab + UndatedTasksSidebar + GanttTab
 last_updated: "2026-03-15T07:47:00.000Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab VIEW-02, GanttTab VIEW-03)
 progress:
-  total_phases: 7
+  [██████████] 96%
   completed_phases: 3
   total_plans: 26
   completed_plans: 24
@@ -73,6 +89,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 03-project-task-completion P07 | 4 | 2 tasks | 8 files |
 | Phase 03 P08 | 185 | 2 tasks | 3 files |
 | Phase 04-views-ui P01 | 4 | 2 tasks | 13 files |
+| Phase 04-views-ui P03 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -148,6 +165,9 @@ Recent decisions affecting current work:
 - [Phase 04-views-ui]: [04-02]: Dependency arrows deferred to Phase 7 — ParentTask type has no dependency IDs field; dependencies: '' with TODO comment
 - [Phase 04-views-ui]: [04-02]: Recurring event expansion done client-side using date-fns; cap at min(recurrenceCount, 52) and view window end
 - [Phase 04-views-ui]: [04-02]: frappe-gantt Gantt constructor called via dynamic import() inside useEffect for belt-and-suspenders SSR safety; parent must wrap with dynamic({ ssr: false })
+- [Phase 04-views-ui]: [04-03]: onSuccess removed from useQuery in React Query v5; sprint default uses useEffect + sprintDefaultSet flag
+- [Phase 04-views-ui]: [04-03]: drag-to-done warning is generic toast (no dependency IDs on ParentTask); deferred dependency check to Phase 7
+- [Phase 04-views-ui]: [04-03]: DragOverlay uses overlay=true prop on KanbanCard to skip drag listeners and prevent double sensor registration
 
 ### Pending Todos
 
@@ -163,6 +183,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-15T07:43:26.192Z
-Stopped at: Completed 04-01-PLAN.md — board column API + sprint close/delete + patchTask
+Last session: 2026-03-15T07:55:55.572Z
+Stopped at: Completed 04-03-PLAN.md — Kanban board + view persistence + Calendar/Gantt integration
 Resume file: None
