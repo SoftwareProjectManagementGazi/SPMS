@@ -22,6 +22,7 @@ import {
 import { projectService } from "@/services/project-service"
 import { taskService } from "@/services/task-service"
 import { authService } from "@/services/auth-service"
+import sprintService from "@/services/sprint-service"
 import { ParentTask } from "@/lib/types"
 import { format } from "date-fns"
 import { CreateTaskModal } from "@/components/create-task-modal"
@@ -108,6 +109,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: authService.getCurrentUser,
+  })
+
+  const { data: sprints = [] } = useQuery({
+    queryKey: ["project-sprints", id],
+    queryFn: () => sprintService.list(Number(id)),
+    enabled: !!id,
   })
 
   const handleDeleteProject = async () => {
@@ -265,7 +272,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Calendar tab */}
           <TabsContent value="calendar" className="mt-6">
-            <CalendarTab projectId={id} tasks={allTasks} sprints={[]} />
+            <CalendarTab projectId={id} tasks={allTasks} sprints={sprints} />
           </TabsContent>
 
           {/* Members tab */}
