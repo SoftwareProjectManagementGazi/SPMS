@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 04-05-PLAN.md — Sprint bands wiring (CalendarTab receives live sprint data)
-last_updated: "2026-03-15T08:20:51.930Z"
-last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
+stopped_at: Phase 4 approved and closed — Kanban DnD polish, blank-tab fix, list/gantt/members improvements, Edit Project, Manage Team
+last_updated: "2026-03-15T13:00:00.000Z"
+last_activity: 2026-03-15 — Phase 4 closed (UAT + post-UAT bug fixes approved). Ready for Phase 5 (Notifications)
 progress:
   total_phases: 7
   completed_phases: 4
