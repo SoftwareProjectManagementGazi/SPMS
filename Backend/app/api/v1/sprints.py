@@ -1,7 +1,8 @@
 """Sprint CRUD router — /api/v1/sprints"""
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
 from app.api.dependencies import (
     get_sprint_repo,
@@ -16,7 +17,12 @@ from app.application.use_cases.manage_sprints import (
     ListSprintsUseCase,
     UpdateSprintUseCase,
     DeleteSprintUseCase,
+    CloseSprintUseCase,
 )
+
+
+class CloseSprintDTO(BaseModel):
+    move_tasks_to_sprint_id: Optional[int] = None
 from app.domain.repositories.sprint_repository import ISprintRepository
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.entities.user import User
@@ -68,14 +74,29 @@ async def update_sprint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.patch("/{sprint_id}/close", response_model=SprintResponseDTO)
+async def close_sprint(
+    sprint_id: int,
+    dto: CloseSprintDTO,
+    current_user: User = Depends(get_current_user),
+    sprint_repo: ISprintRepository = Depends(get_sprint_repo),
+):
+    try:
+        use_case = CloseSprintUseCase(sprint_repo)
+        return await use_case.execute(sprint_id, dto.move_tasks_to_sprint_id)
+    except SprintNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
 @router.delete("/{sprint_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_sprint(
     sprint_id: int,
+    move_tasks_to: Optional[int] = Query(None, description="Target sprint ID to move tasks to (null = backlog)"),
     current_user: User = Depends(get_current_user),
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
 ):
     try:
         use_case = DeleteSprintUseCase(sprint_repo)
-        await use_case.execute(sprint_id, current_user)
+        await use_case.execute(sprint_id, current_user, move_tasks_to_sprint_id=move_tasks_to)
     except SprintNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -21,7 +21,7 @@ class ProjectCreateDTO(BaseModel):
     start_date: datetime
     end_date: Optional[datetime] = None
     methodology: Methodology
-    columns: List[str] = []
+    columns: List[str] = ["Backlog", "Todo", "In Progress", "In Review", "Done"]
     custom_fields: Optional[Dict[str, Any]] = None
 
 class ProjectUpdateDTO(BaseModel):

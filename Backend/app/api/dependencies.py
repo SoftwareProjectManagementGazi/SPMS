@@ -28,6 +28,8 @@ from app.infrastructure.database.repositories.comment_repo import SqlAlchemyComm
 from app.domain.repositories.attachment_repository import IAttachmentRepository
 from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyAttachmentRepository
 from app.infrastructure.database.repositories.task_dependency_repo import SqlAlchemyTaskDependencyRepository
+from app.domain.repositories.board_column_repository import IBoardColumnRepository
+from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -66,6 +68,9 @@ def get_attachment_repo(session: AsyncSession = Depends(get_db)) -> IAttachmentR
 
 def get_dependency_repo(session: AsyncSession = Depends(get_db)) -> SqlAlchemyTaskDependencyRepository:
     return SqlAlchemyTaskDependencyRepository(session)
+
+def get_board_column_repo(session: AsyncSession = Depends(get_db)) -> IBoardColumnRepository:
+    return SqlAlchemyBoardColumnRepository(session)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),

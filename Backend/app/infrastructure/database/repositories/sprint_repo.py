@@ -1,12 +1,14 @@
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
 
 from app.domain.entities.sprint import Sprint
 from app.domain.repositories.sprint_repository import ISprintRepository
 from app.infrastructure.database.models.sprint import SprintModel
+from app.infrastructure.database.models.task import TaskModel
+from app.infrastructure.database.models.board_column import BoardColumnModel
 
 
 class SqlAlchemySprintRepository(ISprintRepository):
@@ -86,3 +88,56 @@ class SqlAlchemySprintRepository(ISprintRepository):
         await self.session.delete(model)
         await self.session.commit()
         return True
+
+    async def move_tasks_to_sprint(
+        self,
+        from_sprint_id: int,
+        to_sprint_id: Optional[int],
+        incomplete_only: bool = False,
+    ) -> int:
+        """Move tasks from one sprint to another (or backlog if to_sprint_id is None).
+        Returns the count of tasks moved.
+        If incomplete_only is True, only moves tasks not in a 'Done' column.
+        """
+        # Base filter: tasks in the source sprint that are not soft-deleted
+        base_conditions = [
+            TaskModel.sprint_id == from_sprint_id,
+            TaskModel.is_deleted == False,
+        ]
+
+        if incomplete_only:
+            # Find the project_id from the sprint
+            sprint_stmt = select(SprintModel).where(SprintModel.id == from_sprint_id)
+            sprint_result = await self.session.execute(sprint_stmt)
+            sprint_model = sprint_result.scalar_one_or_none()
+
+            if sprint_model is not None:
+                # Find done column ids for this project (case-insensitive 'done' match)
+                done_cols_stmt = select(BoardColumnModel.id).where(
+                    BoardColumnModel.project_id == sprint_model.project_id,
+                    BoardColumnModel.name.ilike("%done%"),
+                )
+                done_cols_result = await self.session.execute(done_cols_stmt)
+                done_column_ids = list(done_cols_result.scalars().all())
+
+                if done_column_ids:
+                    base_conditions.append(TaskModel.column_id.notin_(done_column_ids))
+
+        # Count tasks to be moved
+        count_stmt = (
+            select(TaskModel.id)
+            .where(*base_conditions)
+        )
+        count_result = await self.session.execute(count_stmt)
+        task_ids = list(count_result.scalars().all())
+
+        if task_ids:
+            update_stmt = (
+                update(TaskModel)
+                .where(TaskModel.id.in_(task_ids))
+                .values(sprint_id=to_sprint_id)
+            )
+            await self.session.execute(update_stmt)
+            await self.session.commit()
+
+        return len(task_ids)
