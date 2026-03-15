@@ -5,7 +5,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import 'frappe-gantt/dist/frappe-gantt.css'
 import { ParentTask } from '@/lib/types'
 
 // TODO (Phase 7): When ParentTask receives a `dependencies: string[]` field
@@ -40,6 +39,15 @@ export function GanttTab({ tasks }: Props) {
     // Cleanup previous instance
     containerRef.current.innerHTML = ''
     ganttRef.current = null
+
+    // Inject CSS once (package exports field blocks direct subpath import)
+    if (!document.getElementById('frappe-gantt-css')) {
+      const link = document.createElement('link')
+      link.id = 'frappe-gantt-css'
+      link.rel = 'stylesheet'
+      link.href = '/frappe-gantt.css'
+      document.head.appendChild(link)
+    }
 
     // Dynamic import — belt-and-suspenders SSR safety
     import('frappe-gantt').then(({ default: Gantt }) => {
