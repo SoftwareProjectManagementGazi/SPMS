@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select as sa_select
 
@@ -12,8 +12,13 @@ from app.api.dependencies import (
     get_project_repo,
     get_comment_repo,
     get_notification_service,
+    get_user_repo,
+    get_notification_preference_repo,
     _is_admin,
 )
+from app.domain.repositories.user_repository import IUserRepository
+from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
+from app.infrastructure.email.email_service import send_notification_email
 from app.application.services.notification_service import PollingNotificationService
 from app.domain.entities.notification import NotificationType
 from app.domain.entities.user import User
@@ -50,12 +55,15 @@ async def list_comments(
 @router.post("/", response_model=CommentResponseDTO, status_code=status.HTTP_201_CREATED)
 async def create_comment(
     dto: CommentCreateDTO,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     notif_service: PollingNotificationService = Depends(get_notification_service),
     session: AsyncSession = Depends(get_db),
+    user_repo: IUserRepository = Depends(get_user_repo),
+    pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
 ):
     # Enforce project membership: task_id comes from body (not path param)
     task = await task_repo.get_by_id(dto.task_id)
@@ -84,6 +92,25 @@ async def create_comment(
             related_entity_type="task",
             actor_id=current_user.id,
         )
+        # Email: comment added — notify assignee if email preference enabled
+        recipient = await user_repo.get_by_id(task.assignee_id)
+        if recipient:
+            pref = await pref_repo.get_by_user(task.assignee_id)
+            email_ok = (pref is None or pref.email_enabled) and (
+                pref is None or pref.preferences.get("COMMENT_ADDED", {}).get("email", True)
+            )
+            if email_ok:
+                await send_notification_email(
+                    background_tasks=background_tasks,
+                    to_email=str(recipient.email),
+                    subject=f"SPMS: '{task.title}' görevine yorum eklendi",
+                    template_name="comment_added.html",
+                    body={
+                        "task_title": task.title,
+                        "commenter_name": current_user.full_name,
+                        "task_id": task.id,
+                    },
+                )
 
     # Notification: notify watchers about new comment
     result = await session.execute(

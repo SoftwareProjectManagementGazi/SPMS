@@ -1,5 +1,5 @@
 from typing import List, Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select as sa_select
 from app.api.dependencies import (
@@ -12,7 +12,12 @@ from app.api.dependencies import (
     get_audit_repo,
     get_dependency_repo,
     get_notification_service,
+    get_user_repo,
+    get_notification_preference_repo,
 )
+from app.domain.repositories.user_repository import IUserRepository
+from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
+from app.infrastructure.email.email_service import send_notification_email
 from app.application.dtos.task_dtos import (
     TaskCreateDTO,
     TaskUpdateDTO,
@@ -140,12 +145,15 @@ async def get_task(
 async def update_task(
     task_id: int,
     dto: TaskUpdateDTO,
+    background_tasks: BackgroundTasks,
     apply_to: str = Query("this", description="'this' or 'all' — apply update to all future series instances"),
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
     notif_service: PollingNotificationService = Depends(get_notification_service),
     session: AsyncSession = Depends(get_db),
+    user_repo: IUserRepository = Depends(get_user_repo),
+    pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
 ):
     try:
         use_case = UpdateTaskUseCase(task_repo, project_repo)
@@ -167,6 +175,25 @@ async def update_task(
             related_entity_type="task",
             actor_id=current_user.id,
         )
+        # Email: task assigned — send if email preference enabled
+        recipient = await user_repo.get_by_id(dto.assignee_id)
+        if recipient:
+            pref = await pref_repo.get_by_user(dto.assignee_id)
+            email_ok = (pref is None or pref.email_enabled) and (
+                pref is None or pref.preferences.get("TASK_ASSIGNED", {}).get("email", True)
+            )
+            if email_ok:
+                await send_notification_email(
+                    background_tasks=background_tasks,
+                    to_email=str(recipient.email),
+                    subject=f"SPMS: '{updated_task.title}' görevine atandınız",
+                    template_name="task_assigned.html",
+                    body={
+                        "task_title": updated_task.title,
+                        "assigner_name": current_user.full_name,
+                        "task_id": updated_task.id,
+                    },
+                )
 
     # Notification: status change — notify assignee and watchers
     if dto.status_id is not None:
@@ -201,11 +228,14 @@ async def update_task(
 async def patch_task(
     task_id: int,
     dto: TaskUpdateDTO,
+    background_tasks: BackgroundTasks,
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
     notif_service: PollingNotificationService = Depends(get_notification_service),
     session: AsyncSession = Depends(get_db),
+    user_repo: IUserRepository = Depends(get_user_repo),
+    pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
 ):
     try:
         use_case = UpdateTaskUseCase(task_repo, project_repo)
@@ -227,6 +257,25 @@ async def patch_task(
             related_entity_type="task",
             actor_id=current_user.id,
         )
+        # Email: task assigned — send if email preference enabled
+        recipient = await user_repo.get_by_id(dto.assignee_id)
+        if recipient:
+            pref = await pref_repo.get_by_user(dto.assignee_id)
+            email_ok = (pref is None or pref.email_enabled) and (
+                pref is None or pref.preferences.get("TASK_ASSIGNED", {}).get("email", True)
+            )
+            if email_ok:
+                await send_notification_email(
+                    background_tasks=background_tasks,
+                    to_email=str(recipient.email),
+                    subject=f"SPMS: '{updated_task.title}' görevine atandınız",
+                    template_name="task_assigned.html",
+                    body={
+                        "task_title": updated_task.title,
+                        "assigner_name": current_user.full_name,
+                        "task_id": updated_task.id,
+                    },
+                )
 
     # Notification: status change — notify assignee and watchers
     if dto.status_id is not None:
