@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@spms.local"
 
+    # Notification polling interval for frontend SSE (Phase 5)
+    NOTIFICATION_POLL_INTERVAL_MS: int = 30000
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

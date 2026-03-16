@@ -13,6 +13,7 @@ class NotificationModel(Base):
     type = Column(SqlEnum(NotificationType, name="notification_type"), nullable=False)
     is_read = Column(Boolean, default=False)
     related_entity_id = Column(Integer, nullable=True)
+    related_entity_type = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("UserModel", backref="notifications")

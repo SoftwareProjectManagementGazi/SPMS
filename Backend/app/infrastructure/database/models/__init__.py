@@ -12,3 +12,5 @@ from .label import LabelModel
 from .audit_log import AuditLogModel
 from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
 from app.infrastructure.database.models.password_reset_token import PasswordResetTokenModel
+from app.infrastructure.database.models.notification_preference import NotificationPreferenceModel
+from app.infrastructure.database.models.task_watcher import TaskWatcherModel
