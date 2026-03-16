@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: "Completed 05-02-PLAN.md — notification contracts: interfaces, use cases, DTOs, INotificationService"
-last_updated: "2026-03-16T07:47:13.003Z"
+stopped_at: "Completed 05-03-PLAN.md — infrastructure layer: SQLAlchemy repos, email service, APScheduler jobs"
+last_updated: "2026-03-16T07:54:20.589Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 33
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 ---
@@ -108,6 +108,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 04-views-ui P04 | 202 | 2 tasks | 6 files |
 | Phase 04-views-ui P05 | 1 | 1 tasks | 1 files |
 | Phase 05-notifications P02 | 2 | 2 tasks | 6 files |
+| Phase 05-notifications P03 | 5 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -194,6 +195,7 @@ Recent decisions affecting current work:
 - [Phase 05-01]: notification_preferences uses TimestampedMixin (lifecycle-tracked); task_watchers has no mixin (ephemeral join table)
 - [Phase 05-02]: INotificationService abstraction: API callers use notify(); switching to WebSocket replaces only PollingNotificationService
 - [Phase 05-02]: PollingNotificationService: self-suppression (actor_id == user_id) prevents noisy self-notifications; per-type in_app defaults to True
+- [Phase 05-03]: purge_old_read uses Python timedelta cutoff for portability; SMTP_HOST guard silently skips email in dev; scheduler is module-level singleton; get_tasks_approaching_deadline casts to ::date for same-day matching
 
 ### Pending Todos
 
@@ -209,6 +211,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T07:47:12.998Z
-Stopped at: Completed 05-02-PLAN.md — notification contracts: interfaces, use cases, DTOs, INotificationService
+Last session: 2026-03-16T07:54:20.582Z
+Stopped at: Completed 05-03-PLAN.md — infrastructure layer: SQLAlchemy repos, email service, APScheduler jobs
 Resume file: None
