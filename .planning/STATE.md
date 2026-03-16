@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: "Completed 05-03-PLAN.md — infrastructure layer: SQLAlchemy repos, email service, APScheduler jobs"
-last_updated: "2026-03-16T07:54:20.589Z"
+stopped_at: "Completed 05-04-PLAN.md — API router wiring: notification CRUD routers, trigger wiring in tasks/comments/projects, APScheduler registration"
+last_updated: "2026-03-16T08:02:14.798Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 33
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 ---
@@ -109,6 +109,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 04-views-ui P05 | 1 | 1 tasks | 1 files |
 | Phase 05-notifications P02 | 2 | 2 tasks | 6 files |
 | Phase 05-notifications P03 | 5 | 2 tasks | 12 files |
+| Phase 05-notifications P04 | 10 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -196,6 +197,9 @@ Recent decisions affecting current work:
 - [Phase 05-02]: INotificationService abstraction: API callers use notify(); switching to WebSocket replaces only PollingNotificationService
 - [Phase 05-02]: PollingNotificationService: self-suppression (actor_id == user_id) prevents noisy self-notifications; per-type in_app defaults to True
 - [Phase 05-03]: purge_old_read uses Python timedelta cutoff for portability; SMTP_HOST guard silently skips email in dev; scheduler is module-level singleton; get_tasks_approaching_deadline casts to ::date for same-day matching
+- [Phase 05-04]: Fixed-path routes (mark-all-read, clear-read) registered before parametric routes in notifications.py — prevents FastAPI path param conflict
+- [Phase 05-04]: delete_task pre-fetches task entity and watchers before DeleteTaskUseCase — CASCADE delete removes watcher rows during deletion
+- [Phase 05-04]: asyncio.gather for concurrent admin fan-out in project endpoints — avoids sequential blocking for N admins
 
 ### Pending Todos
 
@@ -211,6 +215,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T07:54:20.582Z
-Stopped at: Completed 05-03-PLAN.md — infrastructure layer: SQLAlchemy repos, email service, APScheduler jobs
+Last session: 2026-03-16T08:02:14.793Z
+Stopped at: Completed 05-04-PLAN.md — API router wiring: notification CRUD routers, trigger wiring in tasks/comments/projects, APScheduler registration
 Resume file: None
