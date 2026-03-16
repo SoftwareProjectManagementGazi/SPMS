@@ -20,7 +20,9 @@ from slowapi.errors import RateLimitExceeded
 from app.api.v1 import auth, projects, tasks, sprints, comments, attachments
 from app.api.v1.teams import router as teams_router
 from app.api.v1.board_columns import router as board_columns_router
-from app.infrastructure.database.database import AsyncSessionLocal
+from app.api.v1.notifications import router as notifications_router
+from app.api.v1.notification_preferences import router as notification_preferences_router
+from app.infrastructure.database.database import AsyncSessionLocal, engine
 from app.infrastructure.database.seeder import seed_data
 from app.infrastructure.config import settings
 
@@ -98,8 +100,18 @@ async def lifespan(app: FastAPI):
     # Startup: Seed database
     async with AsyncSessionLocal() as session:
         await seed_data(session)
+    # Startup: Run Phase 5 async migration (notification tables + enum extension)
+    from app.infrastructure.database.migrations.migration_004 import upgrade as upgrade_004
+    await upgrade_004(engine)
+    # Startup: Register and start APScheduler jobs
+    from app.scheduler.jobs import scheduler, deadline_alert_job, purge_notifications_job
+    from apscheduler.triggers.cron import CronTrigger
+    scheduler.add_job(deadline_alert_job, CronTrigger(hour=8, minute=0))
+    scheduler.add_job(purge_notifications_job, CronTrigger(hour=3, minute=0))
+    scheduler.start()
     yield
-    # Shutdown logic (if any) can go here
+    # Shutdown: stop scheduler
+    scheduler.shutdown()
 
 app = FastAPI(title="SPMS API", version="1.0.0", lifespan=lifespan)
 
@@ -130,6 +142,8 @@ app.include_router(teams_router, prefix="/api/v1")
 app.include_router(sprints.router, prefix="/api/v1/sprints", tags=["Sprints"])
 app.include_router(comments.router, prefix="/api/v1/comments", tags=["Comments"])
 app.include_router(attachments.router, prefix="/api/v1/attachments", tags=["Attachments"])
+app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
+app.include_router(notification_preferences_router, prefix="/api/v1/notifications/preferences", tags=["Notification Preferences"])
 
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"

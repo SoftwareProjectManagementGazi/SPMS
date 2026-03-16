@@ -1,6 +1,9 @@
 from typing import List, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select as sa_select
 from app.api.dependencies import (
+    get_db,
     get_task_repo,
     get_project_repo,
     get_current_user,
@@ -8,6 +11,7 @@ from app.api.dependencies import (
     get_task_project_member,
     get_audit_repo,
     get_dependency_repo,
+    get_notification_service,
 )
 from app.application.dtos.task_dtos import (
     TaskCreateDTO,
@@ -32,12 +36,15 @@ from app.application.use_cases.manage_task_dependencies import (
     RemoveDependencyUseCase,
     ListDependenciesUseCase,
 )
+from app.application.services.notification_service import PollingNotificationService
+from app.domain.entities.notification import NotificationType
 from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.entities.user import User
 from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError, DependencyAlreadyExistsError
 from app.infrastructure.database.repositories.task_dependency_repo import SqlAlchemyTaskDependencyRepository
+from app.infrastructure.database.models.task_watcher import TaskWatcherModel
 
 router = APIRouter()
 
@@ -137,16 +144,58 @@ async def update_task(
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
+    session: AsyncSession = Depends(get_db),
 ):
     try:
         use_case = UpdateTaskUseCase(task_repo, project_repo)
-        return await use_case.execute(task_id, dto, current_user.id, apply_to=apply_to)  # type: ignore
+        updated_task = await use_case.execute(task_id, dto, current_user.id, apply_to=apply_to)  # type: ignore
     except TaskNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # Notification: task assigned to someone else
+    if dto.assignee_id and dto.assignee_id != current_user.id:
+        await notif_service.notify(
+            user_id=dto.assignee_id,
+            type=NotificationType.TASK_ASSIGNED,
+            message=f"{current_user.full_name} sizi '{updated_task.title}' görevine atadı",
+            related_entity_id=updated_task.id,
+            related_entity_type="task",
+            actor_id=current_user.id,
+        )
+
+    # Notification: status change — notify assignee and watchers
+    if dto.status_id is not None:
+        if updated_task.assignee_id and updated_task.assignee_id != current_user.id:
+            await notif_service.notify(
+                user_id=updated_task.assignee_id,
+                type=NotificationType.STATUS_CHANGE,
+                message=f"'{updated_task.title}' görevinin durumu değiştirildi",
+                related_entity_id=updated_task.id,
+                related_entity_type="task",
+                actor_id=current_user.id,
+            )
+        # Notify watchers for status change
+        result = await session.execute(
+            sa_select(TaskWatcherModel).where(TaskWatcherModel.task_id == task_id)
+        )
+        watchers = result.scalars().all()
+        for w in watchers:
+            if w.user_id != current_user.id:
+                await notif_service.notify(
+                    user_id=w.user_id,
+                    type=NotificationType.STATUS_CHANGE,
+                    message=f"'{updated_task.title}' görevinin durumu değiştirildi",
+                    related_entity_id=updated_task.id,
+                    related_entity_type="task",
+                    actor_id=current_user.id,
+                )
+
+    return updated_task
 
 @router.patch("/{task_id}", response_model=TaskResponseDTO)
 async def patch_task(
@@ -155,10 +204,12 @@ async def patch_task(
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
+    session: AsyncSession = Depends(get_db),
 ):
     try:
         use_case = UpdateTaskUseCase(task_repo, project_repo)
-        return await use_case.execute(task_id, dto, current_user.id)  # type: ignore
+        updated_task = await use_case.execute(task_id, dto, current_user.id)  # type: ignore
     except TaskNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectNotFoundError as e:
@@ -166,18 +217,94 @@ async def patch_task(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    # Notification: task assigned to someone else
+    if dto.assignee_id and dto.assignee_id != current_user.id:
+        await notif_service.notify(
+            user_id=dto.assignee_id,
+            type=NotificationType.TASK_ASSIGNED,
+            message=f"{current_user.full_name} sizi '{updated_task.title}' görevine atadı",
+            related_entity_id=updated_task.id,
+            related_entity_type="task",
+            actor_id=current_user.id,
+        )
+
+    # Notification: status change — notify assignee and watchers
+    if dto.status_id is not None:
+        if updated_task.assignee_id and updated_task.assignee_id != current_user.id:
+            await notif_service.notify(
+                user_id=updated_task.assignee_id,
+                type=NotificationType.STATUS_CHANGE,
+                message=f"'{updated_task.title}' görevinin durumu değiştirildi",
+                related_entity_id=updated_task.id,
+                related_entity_type="task",
+                actor_id=current_user.id,
+            )
+        # Notify watchers for status change
+        result = await session.execute(
+            sa_select(TaskWatcherModel).where(TaskWatcherModel.task_id == task_id)
+        )
+        watchers = result.scalars().all()
+        for w in watchers:
+            if w.user_id != current_user.id:
+                await notif_service.notify(
+                    user_id=w.user_id,
+                    type=NotificationType.STATUS_CHANGE,
+                    message=f"'{updated_task.title}' görevinin durumu değiştirildi",
+                    related_entity_id=updated_task.id,
+                    related_entity_type="task",
+                    actor_id=current_user.id,
+                )
+
+    return updated_task
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: int,
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
+    session: AsyncSession = Depends(get_db),
 ):
+    # Fetch task BEFORE deletion to get title and assignee_id
+    task = await task_repo.get_by_id(task_id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
+
+    # Fetch watchers BEFORE deletion (CASCADE delete would remove them)
+    result = await session.execute(
+        sa_select(TaskWatcherModel).where(TaskWatcherModel.task_id == task_id)
+    )
+    watchers = result.scalars().all()
+
     try:
         use_case = DeleteTaskUseCase(task_repo, project_repo)
         await use_case.execute(task_id, current_user.id)  # type: ignore
     except TaskNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    # Notify assignee about deletion
+    if task.assignee_id and task.assignee_id != current_user.id:
+        await notif_service.notify(
+            user_id=task.assignee_id,
+            type=NotificationType.TASK_DELETED,
+            message=f"'{task.title}' görevi silindi",
+            related_entity_id=task.id,
+            related_entity_type="task",
+            actor_id=current_user.id,
+        )
+
+    # Notify watchers about deletion
+    for w in watchers:
+        if w.user_id != current_user.id:
+            await notif_service.notify(
+                user_id=w.user_id,
+                type=NotificationType.TASK_DELETED,
+                message=f"'{task.title}' görevi silindi",
+                related_entity_id=task.id,
+                related_entity_type="task",
+                actor_id=current_user.id,
+            )
 
 
 @router.get("/{task_id}/history", response_model=List[Any])

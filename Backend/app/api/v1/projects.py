@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -8,8 +9,11 @@ from app.api.dependencies import (
     get_user_repo,
     get_team_repo,
     get_task_repo,
+    get_notification_service,
     _is_admin,
 )
+from app.application.services.notification_service import PollingNotificationService
+from app.domain.entities.notification import NotificationType
 from app.application.dtos.project_dtos import (
     ProjectCreateDTO,
     ProjectUpdateDTO,
@@ -53,10 +57,28 @@ def _is_manager_or_admin(user: User, project: Project) -> bool:
 async def create_project(
     dto: ProjectCreateDTO,
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    user_repo: IUserRepository = Depends(get_user_repo),
+    current_user: User = Depends(get_current_user),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
     use_case = CreateProjectUseCase(project_repo)
-    return await use_case.execute(dto, current_user.id) # type: ignore
+    project = await use_case.execute(dto, current_user.id)  # type: ignore
+
+    # Notify all admins about new project (excluding the actor)
+    admins = await user_repo.get_all_by_role("admin")
+    await asyncio.gather(*[
+        notif_service.notify(
+            user_id=admin.id,
+            type=NotificationType.PROJECT_CREATED,
+            message=f"'{project.name}' projesi oluşturuldu",
+            related_entity_id=project.id,
+            related_entity_type="project",
+            actor_id=current_user.id,
+        )
+        for admin in admins if admin.id != current_user.id
+    ])
+
+    return project
 
 @router.get("/", response_model=List[ProjectResponseDTO])
 async def list_projects(
@@ -85,25 +107,65 @@ async def update_project(
     project_id: int,
     dto: ProjectUpdateDTO,
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    user_repo: IUserRepository = Depends(get_user_repo),
+    current_user: User = Depends(get_current_user),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
     try:
         use_case = UpdateProjectUseCase(project_repo)
-        return await use_case.execute(project_id, dto, current_user.id) # type: ignore
+        project = await use_case.execute(project_id, dto, current_user.id)  # type: ignore
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    # Notify all admins about project update (excluding the actor)
+    admins = await user_repo.get_all_by_role("admin")
+    await asyncio.gather(*[
+        notif_service.notify(
+            user_id=admin.id,
+            type=NotificationType.PROJECT_UPDATED,
+            message=f"'{project.name}' projesi güncellendi",
+            related_entity_id=project.id,
+            related_entity_type="project",
+            actor_id=current_user.id,
+        )
+        for admin in admins if admin.id != current_user.id
+    ])
+
+    return project
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: int,
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    user_repo: IUserRepository = Depends(get_user_repo),
+    current_user: User = Depends(get_current_user),
+    notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
+    # Fetch project BEFORE deletion to get the name for notification message
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project {project_id} not found")
+    project_name = project.name
+
     try:
         use_case = DeleteProjectUseCase(project_repo)
-        await use_case.execute(project_id, current_user.id) # type: ignore
+        await use_case.execute(project_id, current_user.id)  # type: ignore
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    # Notify all admins about project deletion (excluding the actor)
+    admins = await user_repo.get_all_by_role("admin")
+    await asyncio.gather(*[
+        notif_service.notify(
+            user_id=admin.id,
+            type=NotificationType.PROJECT_DELETED,
+            message=f"'{project_name}' projesi silindi",
+            related_entity_id=project_id,
+            related_entity_type="project",
+            actor_id=current_user.id,
+        )
+        for admin in admins if admin.id != current_user.id
+    ])
 
 
 # ---------------------------------------------------------------------------
