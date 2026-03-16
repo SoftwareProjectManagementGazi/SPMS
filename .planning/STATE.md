@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: "Completed 05-05-PLAN.md — frontend notification bell: polling hook, service, bell dropdown, header wiring"
-last_updated: "2026-03-16T08:07:33.517Z"
+stopped_at: "Completed 05-06-PLAN.md — notifications UI: /notifications page, preferences form, settings Bildirimler section, task sidebar watch toggle"
+last_updated: "2026-03-16T08:13:19.675Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 33
-  completed_plans: 32
+  completed_plans: 33
 ---
 
 ---
@@ -111,6 +111,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 05-notifications P03 | 5 | 2 tasks | 12 files |
 | Phase 05-notifications P04 | 10 | 2 tasks | 7 files |
 | Phase 05-notifications P05 | 10 | 2 tasks | 5 files |
+| Phase 05 P06 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -202,6 +203,8 @@ Recent decisions affecting current work:
 - [Phase 05-04]: delete_task pre-fetches task entity and watchers before DeleteTaskUseCase — CASCADE delete removes watcher rows during deletion
 - [Phase 05-04]: asyncio.gather for concurrent admin fan-out in project endpoints — avoids sequential blocking for N admins
 - [Phase 05-notifications]: 05-05: Used apiClient (axios) for notification-service matching project-wide pattern; pollInterval false on server for SSR safety; toast suppressed on initial load via prevUnreadCount ref
+- [Phase 05-06]: 05-06: useEffect used for data accumulation (React Query v5 — no onSuccess in useQuery)
+- [Phase 05-06]: 05-06: Watch toggle hidden for assignees; watch endpoints in tasks.py via direct SQLAlchemy (no new repository)
 
 ### Pending Todos
 
@@ -217,6 +220,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T08:07:33.510Z
-Stopped at: Completed 05-05-PLAN.md — frontend notification bell: polling hook, service, bell dropdown, header wiring
+Last session: 2026-03-16T08:13:08.502Z
+Stopped at: Completed 05-06-PLAN.md — notifications UI: /notifications page, preferences form, settings Bildirimler section, task sidebar watch toggle
 Resume file: None
