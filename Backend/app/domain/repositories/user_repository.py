@@ -22,3 +22,6 @@ class IUserRepository(ABC):
     @abstractmethod
     async def search_by_email_or_name(self, query: str) -> List[User]:
         pass
+
+    @abstractmethod
+    async def get_all_by_role(self, role_name: str) -> List[User]: ...
