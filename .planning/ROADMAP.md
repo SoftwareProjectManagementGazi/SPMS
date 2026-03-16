@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Authentication & Team Management** - User profile editing, team creation, password reset, account lockout, and remaining security/safety hardening (completed 2026-03-12)
 - [x] **Phase 3: Project & Task Completion** - Sprint endpoints, comments, file attachments, task dependencies, recurring tasks, similar-task warnings, pagination, and task logs (completed 2026-03-14)
 - [x] **Phase 4: Views & UI** - Kanban board with drag-and-drop, calendar module, Gantt/timeline view, and modular project boards (completed 2026-03-15)
-- [x] **Phase 5: Notifications** - Real-time in-app notifications, event-triggered alerts, email notifications, messaging permissions, and notification preferences (completed 2026-03-16)
+- [x] **Phase 5: Notifications** - Real-time in-app notifications, event-triggered alerts, email notifications, messaging permissions, and notification preferences (completed 2026-03-16)
 - [ ] **Phase 6: Reporting & Analytics** - Graphical progress dashboards, filterable reports, PDF/Excel export, and user performance metrics
 - [ ] **Phase 7: Process Models, Adaptation & Integrations** - Scrum/Kanban/Waterfall/Iterative model support, template customization, adaptive configuration panel, and external service integrations
 
@@ -113,7 +113,7 @@ Plans:
   3. User can enable email notifications and receives an email when assigned to a task or when a comment is added
   4. User can mute notifications or set "important events only" mode; preference is saved and respected on subsequent events
   5. Comments and messages remain accessible in their history even after the associated project is archived or deleted
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [ ] 05-01-PLAN.md — Schema foundation: extend NotificationType enum (5 new values), add related_entity_type to notifications, create notification_preferences and task_watchers tables, migrations
@@ -122,6 +122,7 @@ Plans:
 - [ ] 05-04-PLAN.md — API wiring: notification CRUD router, preferences router, trigger notifications in tasks/comments/projects, register scheduler in lifespan
 - [ ] 05-05-PLAN.md — Frontend bell: notification-service.ts, polling hook (visibilitychange pause), NotificationBell dropdown, wire into header
 - [ ] 05-06-PLAN.md — Frontend completion: /notifications full page, notification preferences form in Settings, watch-task toggle in task sidebar
+- [ ] 05-07-PLAN.md — Gap closure: rename migration_004 file (fixes ImportError on startup), wire send_notification_email() into tasks.py and comments.py (NOTIF-04)
 
 ### Phase 6: Reporting & Analytics
 **Goal**: Managers and project owners can view graphical progress summaries, filter reports by user/task/project, export data, and see individual performance metrics
@@ -157,6 +158,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Authentication & Team Management | 8/8 | Complete   | 2026-03-12 |
 | 3. Project & Task Completion | 8/8 | Complete   | 2026-03-14 |
 | 4. Views & UI | 5/5 | Complete   | 2026-03-15 |
-| 5. Notifications | 6/6 | Complete   | 2026-03-16 |
+| 5. Notifications | 6/7 | Gap closure in progress | 2026-03-16 |
 | 6. Reporting & Analytics | 0/TBD | Not started | - |
 | 7. Process Models, Adaptation & Integrations | 0/TBD | Not started | - |
