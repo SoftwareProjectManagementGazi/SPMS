@@ -30,6 +30,8 @@ from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyA
 from app.infrastructure.database.repositories.task_dependency_repo import SqlAlchemyTaskDependencyRepository
 from app.domain.repositories.board_column_repository import IBoardColumnRepository
 from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
+from app.domain.repositories.notification_repository import INotificationRepository
+from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -71,6 +73,24 @@ def get_dependency_repo(session: AsyncSession = Depends(get_db)) -> SqlAlchemyTa
 
 def get_board_column_repo(session: AsyncSession = Depends(get_db)) -> IBoardColumnRepository:
     return SqlAlchemyBoardColumnRepository(session)
+
+
+def get_notification_repo(session: AsyncSession = Depends(get_db)) -> INotificationRepository:
+    from app.infrastructure.database.repositories.notification_repo import SqlAlchemyNotificationRepository
+    return SqlAlchemyNotificationRepository(session)
+
+
+def get_notification_preference_repo(session: AsyncSession = Depends(get_db)) -> INotificationPreferenceRepository:
+    from app.infrastructure.database.repositories.notification_preference_repo import SqlAlchemyNotificationPreferenceRepository
+    return SqlAlchemyNotificationPreferenceRepository(session)
+
+
+def get_notification_service(
+    notification_repo: INotificationRepository = Depends(get_notification_repo),
+    pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
+):
+    from app.application.services.notification_service import PollingNotificationService
+    return PollingNotificationService(notification_repo, pref_repo)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
