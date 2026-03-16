@@ -210,5 +210,18 @@ export const taskService = {
 
     deleteTask: async (taskId: string) => {
         await apiClient.delete(`/tasks/${taskId}`);
-    }
+    },
+
+    getWatchStatus: async (taskId: number): Promise<{ is_watching: boolean }> => {
+        const response = await apiClient.get<{ is_watching: boolean }>(`/tasks/${taskId}/watch`);
+        return response.data;
+    },
+
+    watchTask: async (taskId: number): Promise<void> => {
+        await apiClient.post(`/tasks/${taskId}/watch`);
+    },
+
+    unwatchTask: async (taskId: number): Promise<void> => {
+        await apiClient.delete(`/tasks/${taskId}/watch`);
+    },
 };

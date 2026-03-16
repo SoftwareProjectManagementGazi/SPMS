@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Loader2 } from "lucide-react"
 import { authService } from "@/services/auth-service"
 import { AvatarCropDialog } from "@/components/ui/avatar-crop-dialog"
+import { NotificationPreferencesForm } from "@/components/notifications/notification-preferences-form"
 import type { User } from "@/lib/types"
 
 export default function SettingsPage() {
@@ -217,31 +217,11 @@ export default function SettingsPage() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>Configure your notification preferences</CardDescription>
+            <CardTitle>Bildirimler</CardTitle>
+            <CardDescription>Bildirim tercihlerinizi özelleştirin</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email notifications</p>
-                <p className="text-sm text-muted-foreground">Receive email updates about your tasks</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Push notifications</p>
-                <p className="text-sm text-muted-foreground">Get push notifications for task updates</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Weekly digest</p>
-                <p className="text-sm text-muted-foreground">Receive weekly summary of activities</p>
-              </div>
-              <Switch />
-            </div>
+          <CardContent>
+            <NotificationPreferencesForm />
           </CardContent>
         </Card>
       </div>

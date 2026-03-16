@@ -353,3 +353,60 @@ async def remove_dependency(
 ):
     use_case = RemoveDependencyUseCase(dep_repo)
     await use_case.execute(dependency_id, current_user)
+
+
+@router.get("/{task_id}/watch", response_model=Dict[str, Any])
+async def get_watch_status(
+    task_id: int,
+    current_user: User = Depends(get_task_project_member),
+    session: AsyncSession = Depends(get_db),
+):
+    """Return whether the current user is watching this task."""
+    result = await session.execute(
+        sa_select(TaskWatcherModel).where(
+            TaskWatcherModel.task_id == task_id,
+            TaskWatcherModel.user_id == current_user.id,
+        )
+    )
+    watcher = result.scalar_one_or_none()
+    return {"is_watching": watcher is not None}
+
+
+@router.post("/{task_id}/watch", status_code=status.HTTP_200_OK)
+async def watch_task(
+    task_id: int,
+    current_user: User = Depends(get_task_project_member),
+    session: AsyncSession = Depends(get_db),
+):
+    """Add current user as a watcher of the task (idempotent)."""
+    result = await session.execute(
+        sa_select(TaskWatcherModel).where(
+            TaskWatcherModel.task_id == task_id,
+            TaskWatcherModel.user_id == current_user.id,
+        )
+    )
+    existing = result.scalar_one_or_none()
+    if existing is None:
+        session.add(TaskWatcherModel(task_id=task_id, user_id=current_user.id))
+        await session.commit()
+    return {"message": "Görev izlemeye alındı"}
+
+
+@router.delete("/{task_id}/watch", status_code=status.HTTP_200_OK)
+async def unwatch_task(
+    task_id: int,
+    current_user: User = Depends(get_task_project_member),
+    session: AsyncSession = Depends(get_db),
+):
+    """Remove current user from watchers of the task."""
+    result = await session.execute(
+        sa_select(TaskWatcherModel).where(
+            TaskWatcherModel.task_id == task_id,
+            TaskWatcherModel.user_id == current_user.id,
+        )
+    )
+    watcher = result.scalar_one_or_none()
+    if watcher is not None:
+        await session.delete(watcher)
+        await session.commit()
+    return {"message": "Görev izlemesi kaldırıldı"}

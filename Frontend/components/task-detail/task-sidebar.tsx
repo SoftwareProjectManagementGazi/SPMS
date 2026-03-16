@@ -90,7 +90,34 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
     enabled: !!task.projectId,
   })
 
-  // 7. Update mutation
+  // 7. Watch status query
+  const { data: watchStatusData } = useQuery({
+    queryKey: ["watch-status", task.id],
+    queryFn: () => taskService.getWatchStatus(Number(task.id)),
+    enabled: !!task.id,
+  })
+
+  const isWatching = watchStatusData?.is_watching ?? false
+
+  const watchTaskMutation = useMutation({
+    mutationFn: () => taskService.watchTask(Number(task.id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watch-status", task.id] })
+      toast.success("Görev izlemeye alındı")
+    },
+    onError: () => toast.error("İzleme eklenemedi"),
+  })
+
+  const unwatchTaskMutation = useMutation({
+    mutationFn: () => taskService.unwatchTask(Number(task.id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watch-status", task.id] })
+      toast.success("Görev izlemesi kaldırıldı")
+    },
+    onError: () => toast.error("İzleme kaldırılamadı"),
+  })
+
+  // 8. Update mutation
   const updateTaskMutation = useMutation({
     mutationFn: (data: any) => taskService.updateTask(task.id, data),
     onSuccess: () => {
@@ -175,8 +202,29 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
   const blocksIds = new Set(deps?.blocks?.map((d) => d.depends_on_id) ?? [])
   const alreadyLinked = new Set([...blockedByIds, ...blocksIds])
 
+  // Only show watch toggle for non-assignees
+  const showWatchToggle =
+    currentUser !== undefined && currentUser?.id !== task.assignee?.id
+
   return (
     <div className="space-y-4">
+
+      {/* WATCH TOGGLE — visible only for non-assignees */}
+      {showWatchToggle && (
+        <div className="mb-4">
+          <Button
+            variant={isWatching ? "secondary" : "outline"}
+            size="sm"
+            className="w-full"
+            onClick={() =>
+              isWatching ? unwatchTaskMutation.mutate() : watchTaskMutation.mutate()
+            }
+            disabled={watchTaskMutation.isPending || unwatchTaskMutation.isPending}
+          >
+            {isWatching ? "İzlemeyi Bırak" : "Görevi İzle"}
+          </Button>
+        </div>
+      )}
 
       {/* STATUS */}
       <Card className="shadow-sm">
