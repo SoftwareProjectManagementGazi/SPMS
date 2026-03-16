@@ -12,3 +12,5 @@ httpx
 aiosqlite
 pydantic[email]
 slowapi
+apscheduler
+fastapi-mail

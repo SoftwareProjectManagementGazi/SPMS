@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Görev Tarihi Yaklaşıyor</title></head>
+<body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px;margin:0">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+    <div style="background:#1a1a2e;padding:20px;color:#fff;font-size:20px;font-weight:bold">SPMS</div>
+    <div style="padding:24px">
+      <p style="font-size:16px;color:#333;margin-top:0">Merhaba <strong>{{ recipient_name }}</strong>,</p>
+      <p style="font-size:15px;color:#555">
+        Aşağıdaki görevin son teslim tarihi yaklaşıyor:
+      </p>
+      <p style="font-size:18px;font-weight:bold;color:#1a1a2e;background:#fff8e1;padding:12px 16px;border-radius:6px;border-left:4px solid #f59e0b">
+        {{ task_title }}
+      </p>
+      <table style="margin-top:16px;width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:8px 12px;background:#fff8e1;font-size:14px;color:#555;border-radius:4px 0 0 4px;width:50%">
+            Son Tarih
+          </td>
+          <td style="padding:8px 12px;background:#fff3cd;font-size:14px;font-weight:bold;color:#333;border-radius:0 4px 4px 0">
+            {{ due_date }}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;background:#fef3c7;font-size:14px;color:#555;border-radius:4px 0 0 4px">
+            Kalan Süre
+          </td>
+          <td style="padding:8px 12px;background:#fde68a;font-size:14px;font-weight:bold;color:#d97706">
+            {{ days_remaining }} gün
+          </td>
+        </tr>
+      </table>
+      <p style="text-align:center;margin-top:24px">
+        <a href="{{ task_url }}"
+           style="display:inline-block;background:#f59e0b;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:bold">
+          Görevi Görüntüle
+        </a>
+      </p>
+    </div>
+    <div style="padding:16px;background:#f4f4f4;font-size:12px;color:#666;text-align:center">
+      SPMS Bildirim Servisi
+    </div>
+  </div>
+</body>
+</html>
