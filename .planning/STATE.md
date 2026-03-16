@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 05-01-PLAN.md — Phase 5 schema foundation (NotificationType enum, notification_preferences, task_watchers)
-last_updated: "2026-03-16T07:42:26.170Z"
+stopped_at: "Completed 05-02-PLAN.md — notification contracts: interfaces, use cases, DTOs, INotificationService"
+last_updated: "2026-03-16T07:47:13.003Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 33
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 ---
@@ -107,6 +107,7 @@ Progress: [████████░░] 67% (3/7 phases complete + Phase 4 in
 | Phase 04-views-ui P03 | 4 | 2 tasks | 5 files |
 | Phase 04-views-ui P04 | 202 | 2 tasks | 6 files |
 | Phase 04-views-ui P05 | 1 | 1 tasks | 1 files |
+| Phase 05-notifications P02 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,8 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Legacy PROJECT_UPDATE enum value kept; PROJECT_UPDATED added as new canonical value — both coexist to avoid breaking existing notification rows
 - [Phase 05-01]: Alembic autocommit_block() used for ALTER TYPE ADD VALUE DDL; async lifespan migration uses engine.execution_options(isolation_level=AUTOCOMMIT)
 - [Phase 05-01]: notification_preferences uses TimestampedMixin (lifecycle-tracked); task_watchers has no mixin (ephemeral join table)
+- [Phase 05-02]: INotificationService abstraction: API callers use notify(); switching to WebSocket replaces only PollingNotificationService
+- [Phase 05-02]: PollingNotificationService: self-suppression (actor_id == user_id) prevents noisy self-notifications; per-type in_app defaults to True
 
 ### Pending Todos
 
@@ -206,6 +209,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T07:42:16.336Z
-Stopped at: Completed 05-01-PLAN.md — Phase 5 schema foundation (NotificationType enum, notification_preferences, task_watchers)
+Last session: 2026-03-16T07:47:12.998Z
+Stopped at: Completed 05-02-PLAN.md — notification contracts: interfaces, use cases, DTOs, INotificationService
 Resume file: None
