@@ -1,8 +1,8 @@
 "use client"
-import { Search, Plus, Bell, HelpCircle, LogOut, User as UserIcon, Settings, CreditCard, Users, Keyboard, UserPlus } from "lucide-react"
+import { Search, Plus, HelpCircle, LogOut, User as UserIcon, Settings, CreditCard, Users, Keyboard, UserPlus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,15 +53,7 @@ export function Header({ onCreateClick }: HeaderProps) {
           Oluştur
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <Badge
-            variant="destructive"
-            className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
-          >
-            3
-          </Badge>
-        </Button>
+        <NotificationBell />
 
         <Button variant="ghost" size="icon">
           <HelpCircle className="h-5 w-5" />
