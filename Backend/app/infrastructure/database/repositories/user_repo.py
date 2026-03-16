@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from app.domain.entities.user import User
 from app.domain.repositories.user_repository import IUserRepository
 from app.infrastructure.database.models.user import UserModel
+from app.infrastructure.database.models.role import RoleModel
 
 
 class SqlAlchemyUserRepository(IUserRepository):
@@ -109,3 +110,17 @@ class SqlAlchemyUserRepository(IUserRepository):
             raise HTTPException(status_code=404, detail="User not found")
         user.password_hash = password_hash
         await self.session.commit()
+
+    async def get_all_by_role(self, role_name: str) -> List[User]:
+        """Return all active users whose role name matches (case-insensitive)."""
+        stmt = (
+            select(UserModel)
+            .join(RoleModel, UserModel.role_id == RoleModel.id)
+            .where(
+                RoleModel.name.ilike(role_name),
+                UserModel.is_deleted == False,
+            )
+            .options(joinedload(UserModel.role))
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]
