@@ -60,12 +60,12 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Notifications & Messaging (NOTIF)
 
-- [ ] **NOTIF-01**: Görev/proje değişiklikleri ilgili kullanıcılara gerçek zamanlı uygulama içi bildirim olarak iletilir
-- [ ] **NOTIF-02**: Görev atama, durum değişimi, yorum ve deadline yaklaşımı gibi olaylarda bildirim tetiklenir
+- [x] **NOTIF-01**: Görev/proje değişiklikleri ilgili kullanıcılara gerçek zamanlı uygulama içi bildirim olarak iletilir
+- [x] **NOTIF-02**: Görev atama, durum değişimi, yorum ve deadline yaklaşımı gibi olaylarda bildirim tetiklenir
 - [ ] **NOTIF-03**: Her kullanıcı kendi rolüne göre mesajlaşma yetkisine sahiptir
 - [ ] **NOTIF-04**: E-posta bildirimleri (görev atama, yorum vb.) desteklenir
-- [ ] **NOTIF-05**: Kullanıcı bildirim tercihlerini özelleştirebilir (sessiz mod, yalnızca önemli olaylar)
-- [ ] **NOTIF-06**: Mesaj/yorum geçmişi güvenli şekilde saklanır; proje silinse bile erişim logu tutulur
+- [x] **NOTIF-05**: Kullanıcı bildirim tercihlerini özelleştirebilir (sessiz mod, yalnızca önemli olaylar)
+- [x] **NOTIF-06**: Mesaj/yorum geçmişi güvenli şekilde saklanır; proje silinse bile erişim logu tutulur
 
 ---
 
@@ -210,12 +210,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEW-02 | Phase 4 | Complete |
 | VIEW-03 | Phase 4 | Complete |
 | VIEW-04 | Phase 4 | Complete |
-| NOTIF-01 | Phase 5 | Pending |
-| NOTIF-02 | Phase 5 | Pending |
+| NOTIF-01 | Phase 5 | Complete |
+| NOTIF-02 | Phase 5 | Complete |
 | NOTIF-03 | Phase 5 | Pending |
 | NOTIF-04 | Phase 5 | Pending |
-| NOTIF-05 | Phase 5 | Pending |
-| NOTIF-06 | Phase 5 | Pending |
+| NOTIF-05 | Phase 5 | Complete |
+| NOTIF-06 | Phase 5 | Complete |
 | REPT-01 | Phase 6 | Pending |
 | REPT-02 | Phase 6 | Pending |
 | REPT-03 | Phase 6 | Pending |

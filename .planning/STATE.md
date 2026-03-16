@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-16T06:51:15.285Z"
+stopped_at: Completed 05-01-PLAN.md — Phase 5 schema foundation (NotificationType enum, notification_preferences, task_watchers)
+last_updated: "2026-03-16T07:42:26.170Z"
 last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab, UndatedTasksSidebar, GanttTab)
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 33
+  completed_plans: 28
 ---
 
 ---
@@ -188,6 +188,9 @@ Recent decisions affecting current work:
 - [Phase 04-views-ui]: [04-04]: Progress bars show approximate values (0/50/100%) based on sprint status — no per-sprint task count on DTO without extra API calls
 - [Phase 04-views-ui]: [04-04]: Multi-select filter uses DropdownMenuCheckboxItem pattern; client-side sort+filter over full accumulated task array via useMemo
 - [Phase 04-views-ui]: Sprint query placed after currentUser query — consistent grouping with other project-scoped queries; enabled: !!id guard prevents query firing with undefined id
+- [Phase 05-01]: Legacy PROJECT_UPDATE enum value kept; PROJECT_UPDATED added as new canonical value — both coexist to avoid breaking existing notification rows
+- [Phase 05-01]: Alembic autocommit_block() used for ALTER TYPE ADD VALUE DDL; async lifespan migration uses engine.execution_options(isolation_level=AUTOCOMMIT)
+- [Phase 05-01]: notification_preferences uses TimestampedMixin (lifecycle-tracked); task_watchers has no mixin (ephemeral join table)
 
 ### Pending Todos
 
@@ -203,6 +206,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T06:51:15.277Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-notifications/05-CONTEXT.md
+Last session: 2026-03-16T07:42:16.336Z
+Stopped at: Completed 05-01-PLAN.md — Phase 5 schema foundation (NotificationType enum, notification_preferences, task_watchers)
+Resume file: None
