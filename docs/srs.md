@@ -21,7 +21,7 @@
 **Prof. Dr. HACER KARACAN**
 
 
-_**9.11.2025**_
+_**9.11.2025 (Revizyon: 28.03.2026)**_
 
 
 _2797 Kelime_
@@ -136,6 +136,15 @@ SİMGELER VE KISALTMALAR .......................................................
 
 
 1.18 Gereksinimlerin Önceliği ve Kritikliği ................................................................ 21
+
+
+**REVİZYON GEÇMİŞİ**
+
+
+| Sürüm | Tarih | Açıklama |
+|---|---|---|
+| v1.0 | 09.11.2025 | İlk sürüm — gereksinimler tanımlandı |
+| v1.1 | 28.03.2026 | Uygulama durumuna göre güncelleme: tamamlanan gereksinimler işaretlendi, yeni özellikler eklendi (sprint yönetimi, sayfalama, dosya güvenliği, AI destekli görev önerileri), yazılım yığını güncellendi, ertelenen gereksinimler belirtildi |
 
 
 **ŞEKİLLERİN LİSTESİ**
@@ -296,6 +305,8 @@ algoritmalarla şifrelenmelidir.
 
 ekip üyelerini davet etme işlemlerini gerçekleştirebilmelidir.
 
+
+
   - **SPMS-01.5:** Projelere erişim izinleri proje yöneticisi tarafından yönetilebilmelidir
 
 
@@ -325,6 +336,8 @@ detaylarını (adı, açıklaması, başlangıç-bitiş tarihleri) düzenleyebil
 arşivleyebilmelidir.
 
   - **SPMS-02.2:** Proje yöneticileri, projelere ekip üyelerini atayabilmelidir.
+
+
 
   - **SPMS-02.3:** Kullanıcılar proje içinde görevler oluşturabilmeli, düzenleyebilmeli ve
 
@@ -379,6 +392,15 @@ mümkün olmalıdır.
 izlenebilmelidir.
 
 
+  - **SPMS-02.13:** Sprint yönetimi desteklenmelidir; sprint oluşturma, listeleme, kapatma ve görev atama işlemleri yapılabilmelidir. Sprint kapatıldığında tamamlanmamış görevler bir sonraki sprint'e aktarılabilmelidir.
+
+
+  - **SPMS-02.14:** Görev ve proje listeleme işlemleri sayfalama (pagination) desteğiyle çalışmalı; istemci toplam kayıt sayısını ve mevcut sayfa bilgisini alabilmelidir.
+
+
+  - **SPMS-02.15:** Sisteme yüklenen dosya ekleri için maksimum boyut sınırı uygulanmalı ve güvenlik açısından tehlikeli dosya uzantıları (.exe, .sh vb.) engellenmelidir.
+
+
 **1.2.3 Bildirim ve Mesajlaşma (SPMS-03)**
 
 
@@ -418,6 +440,8 @@ sadece önemli olaylar).
 tutulmalıdır.
 
 
+
+
 **1.2.4 Raporlama ve Analitik (SPMS-04)**
 
 
@@ -439,6 +463,8 @@ teslim oranı) hesaplanmalıdır.
 
 
 göstermelidir.
+
+
 
 
 **1.2.5 Süreç Modeli Seçimi ve Özelleştirme (SPMS-05)**
@@ -466,6 +492,9 @@ sprint uzunluğu, toplantı periyotları).
 
 toplantıları) otomatik olarak planlanmalıdır.
 
+
+
+
   - **SPMS-05.6:** Sistem, kullanıcıların proje verilerini farklı şekillerde görselleştirmek
 
 
@@ -474,20 +503,34 @@ için projeye modüler görünümler eklemesine izin vermelidir. Kullanıcılar
 
 istedikleri panoları projelerine ekleyebilmelidir.
 
+
+
+
   - **SPMS-05.7:** Kullanıcılar, görevleri özel durumlara göre görselleştirmek için projeye
 
 
 bir Kanban panosu ekleyebilmelidir.
+
+
+
 
   - **SPMS-05.8:** Kullanıcılar, zaman çizelgesi ve görev bağımlılıklarını izlemek için
 
 
 projeye bir Gantt şeması ekleyebilmelidir.
 
+
+
+
   - **SPMS-05.9:** Kullanıcılar, görevleri basit bir liste veya takvim üzerinde
 
 
 görebilmelidir.
+
+
+
+
+  - **SPMS-05.10:** Sistem, mevcut görevler ve proje bağlamına dayanarak kullanıcıya akıllı görev önerileri sunabilmelidir; bu öneriler görev oluşturma ekranında kullanıcıya sunulmalıdır.
 
 
 **1.3** **SPMS Dış Arayüz Gereksinimleri**
@@ -502,7 +545,7 @@ Sistem üç temel dış arayüz katmanına sahiptir:
 1. **Kullanıcı Arayüzü (Frontend UI)**
 
 
-     - SPMS Web tabanlı, React teknolojisiyle geliştirilecektir.
+     - SPMS Web tabanlı, Next.js (React) teknolojisiyle geliştirilecektir.
 
 
      - Arayüz, responsive (duyarlı) yapıda olmalı; masaüstü, tablet ve mobil
@@ -802,10 +845,7 @@ modeli ilişkisel (PostgreSQL) temellidir ancak ilerleyen sürümlerde NoSQL vey
 yapılarla da uyumlu hale getirilebilir.
 
 
-  - **SPMS-DATA-1:** Temel tablolar: Users, Roles, Projects, Tasks, Comments,
-
-
-Notifications, Reports, Models, RepeatingEvents.
+  - **SPMS-DATA-1:** Temel tablolar: Users, Roles, Projects, ProjectMembers, Tasks, TaskDependencies, Comments, Attachments, Notifications, Sprints, AuditLogs, PasswordResetTokens, Teams, TeamMembers, BoardColumns.
 
 
   - **SPMS-DATA-2:** Her tablo birincil anahtar (Primary Key) ve sürüm bilgisi
@@ -1078,7 +1118,7 @@ Maksimum işlemci kullanımı %75’i aşmamalıdır.
 **1.10.3 Bilgisayar Yazılım Gereksinimleri**
 
 
-PostgreSQL, FastAPI, Node.js, React, Pandas, Chart.js, Docker.
+PostgreSQL, FastAPI, Python 3.11, SQLAlchemy, Alembic, slowapi, Next.js (React/TypeScript), Tailwind CSS, shadcn/ui, @dnd-kit, FullCalendar, frappe-gantt, Chart.js, Docker.
 
 
 **1.10.4 Bilgisayar İletişim Gereksinimleri**
@@ -1283,7 +1323,7 @@ Numara : 21118080055  22118080006
 Ad Soyad :  Ayşe Öz Yusuf Emre Bayrakcı
 
 
-Tarih :  09/11/2025
+Tarih :  09/11/2025 (v1.0) — 28/03/2026 (v1.1 Revizyon)
 
 
 İmza :

@@ -13,8 +13,17 @@
 **AKADEMİK DANIŞMAN**
 
 **Prof. Dr. HACER KARACAN**
-_**28.11.2025**_
+_**28.03.2026**_
 _7031 Kelime_
+
+---
+
+**Revizyon Geçmişi**
+
+|Sürüm|Tarih|Değişiklik Özeti|
+|---|---|---|
+|v1.0|28.11.2025|İlk yayın|
+|v1.1|28.03.2026|Mimari, veri modeli ve arayüz bölümleri gerçekleştirilen uygulama ile uyumlu hale getirildi; yeni tablolar, DTO'lar ve algoritmalar eklendi|
 
 **İÇİNDEKİLER**
 
@@ -121,9 +130,9 @@ Bu doküman, yazılım geliştirme ekiplerinin proje süreçlerini merkezi bir p
 planlayabilmesi, görev atayabilmesi, döngü süreçlerini yönetebilmesi, bildirim alabilmesi ve
 proje performansını analiz edebilmesini sağlayan Yazılım Projesi Yönetim Sistemi (SPMS)
 yazılımının tasarım detaylarını içermektedir.
-Bu doküman SPMS sürüm 1.0 için hazırlanmıştır ve yayın kodu SPMS-SDD-2025-01 olarak
+Bu doküman SPMS sürüm 1.1 için hazırlanmıştır ve yayın kodu SPMS-SDD-2025-01 olarak
 belirlenmiştir.
-SPMS, web tabanlı bir mimaride çalışan; React (frontend), FastAPI (backend) ve
+SPMS, web tabanlı bir mimaride çalışan; Next.js/React/TypeScript (frontend), FastAPI (backend) ve
 PostgreSQL (veritabanı) teknolojileri üzerine inşa edilmiş bir proje yönetim yazılımıdır.
 Sistem; çok kullanıcılı iş birliği, rol tabanlı yetkilendirme, gerçek zamanlı bildirim akışı ve
 kapsamlı raporlama bileşenleri ile yazılım ekiplerinin çalışma verimliliğini artırmayı
@@ -225,10 +234,14 @@ bileşenleri arasındaki izlenebilirliği sağlamaktadır.
 |Doküman No|Doküman Başlığı|Yayın No|Sürüm|Tarih|
 |---|---|---|---|---|
 |SPMS-SPMP- 2025-01|Yazılım Proje Yönetim Planı (SPMP)|001|v1.0|Ekim 2025|
-|SPMS-SRS- 2025-01|Yazılım Gereksinim Şartnamesi (SRS)|002|v1.0|Kasım 2025|
-|SPMS-SDD- 2025-01|Yazılım Tasarım Dokümanı (SDD) [Bu belge]|003|v1.0|Kasım 2025|
+|SPMS-SRS- 2025-01|Yazılım Gereksinim Şartnamesi (SRS)|002|v1.1|Mart 2026|
+|SPMS-SDD- 2025-01|Yazılım Tasarım Dokümanı (SDD) [Bu belge]|003|v1.1|Mart 2026|
 |PostgreSQL- REF-2025|PostgreSQL Resmi Dokümantasyonu | -|Güncel|2025|
 |FastAPI-REF- 2025|FastAPI Geliştirici Kılavuzu|-|Güncel|2025|
+|NextJS-REF- 2025|Next.js (App Router) Geliştirici Kılavuzu|-|Güncel|2025|
+|DND-KIT-REF|@dnd-kit Kütüphane Dokümantasyonu|-|Güncel|2025|
+|FULLCAL-REF|FullCalendar Kütüphane Dokümantasyonu|-|Güncel|2025|
+|FRAPPEGANTT-REF|frappe-gantt Kütüphane Dokümantasyonu|-|Güncel|2025|
 
 
 Bu dokümanlar; SPMS’nin gereksinim analizinden kullanıcı arayüzü tasarımına, veri tabanı
@@ -375,7 +388,7 @@ SPMS uzun vadeli sürdürülebilirliği hedefleyen modern bir mimariyle tasarlan
   - Sistem çoklu sunucu dağıtımına uygundur (horizontal scaling).
   - Gerçek zamanlı bildirimler mesaj kuyruğu üzerinden yönetilir (Redis/WebSocket).
   - Sunucu çökse bile veriler kaybolmaz (transaction + backup).
-  - Kod yapısı controller → service → repository şeklinde ayrıştırılmıştır.
+  - Sistem Clean Architecture prensiplerine uygun; Domain → Application → Infrastructure → API katman yapısıyla ayrıştırılmıştır. Bağımlılıklar her zaman dışarıdan içeriye yönelir.
   - Her modül bağımsız test edilebilir.
   - Hata ve olay loglamaları merkezi bir yapıdan izlenir.
   - Geliştirme Git akışı ve versiyonlama prensiplerine uygundur.
@@ -421,8 +434,11 @@ Modülün başlıca sorumlulukları:
   - Kullanıcı kaydı, giriş ve çıkış işlemleri
   - JWT tabanlı oturum yönetimi
   - Rol tabanlı erişim kontrolü (Admin / Proje Yöneticisi / Ekip Üyesi)
-  - Profil bilgisi düzenleme
-  - Güvenlik ihlallerine karşı temel koruma mekanizmaları
+  - Profil bilgisi (ad, e-posta, avatar) düzenleme
+  - Ekip oluşturma ve ekip üye yönetimi
+  - Parola sıfırlama (tek kullanımlık token ile)
+  - Ardışık başarısız girişlerde hesap kilitleme
+  - Güvenlik ihlallerine karşı temel koruma mekanizmaları (rate limiting, bcrypt)
 
 SPMS’de yer alan diğer tüm modüller (görev yönetimi, bildirim, raporlama vb.) bu
 modülden gelen kullanıcı kimliği ve yetki bilgisine göre davranış belirler. Bu nedenle
@@ -448,13 +464,26 @@ Bu modülün işlevleri doğal olarak iki ana eksende toplanır:
 
   - Görev oluşturma, düzenleme, silme
   - Görev durumu (todo–in progress–done) güncelleme
-  - Sprintlere görev atama (Scrum)
+  - Sprintlere görev atama (Scrum); sprint CRUD yönetimi
   - Kanban pano hareketleri (drag-and-drop)
-  - Görev bağımlılıklarını kontrol etme
-  - Göreve yorum ekleme
+  - Görev bağımlılıklarını tanımlama ve kontrol etme
+  - Tekrarlayan görev yönetimi (seri/sıra numarası ile)
+  - Göreve yorum ekleme ve dosya eki yükleme/indirme
+  - Görev geçmişi ve denetim izi (audit log) kaydı
+  - Listeleme işlemlerinde sayfalama (pagination) desteği
+  - Benzer görev uyarı mekanizması (başlık benzerliği sorgusu)
 
 Bu modül ayrıca görev hareketlerini SPMS-MOD-NOTIF ile paylaşarak bildirim
 tetiklenmesini sağlar; analitik raporlar için SPMS-MOD-REPORT’a veri kaynağı oluşturur.
+
+**Görünüm Katmanı Bileşenleri (Frontend)**
+
+Proje ve Görev Yönetimi Modülünün sunum katmanında aşağıdaki kütüphaneler kullanılmaktadır:
+  - **@dnd-kit:** Kanban panosunda çok-konteynerli sürükle-bırak görev hareketi için.
+  - **FullCalendar:** Görevlerin takvim görünümünde ve gün/hafta/ay bazlı planlanmasında.
+  - **frappe-gantt:** Görevlerin başlangıç–bitiş tarihleri ve bağımlılıklarıyla birlikte Gantt/zaman çizelgesi görünümünde gösterilmesinde.
+  - **Chart.js:** Raporlama ve istatistik bileşenlerinin grafiksel sunumunda.
+Seçilen görünüm (Kanban, Gantt, Takvim, Liste) projeye özel kalıcı hale getirilir.
 
 **4.1.3 Bildirim ve Mesajlaşma Modülü (SPMS-MOD-NOTIF)**
 
@@ -568,25 +597,33 @@ genişletilebilir olacak şekilde tasarlanmıştır.
 **4.3.1 Kimlik Doğrulama Arayüzü (SPMS-INT-AUTH)**
 
 Bu arayüz, kullanıcıların doğrulanması ve oturum yönetimi için kullanılır.
-Sunucu tarafında FastAPI tabanlı REST endpoint’leri, istemci tarafında React tabanlı form
+Sunucu tarafında FastAPI tabanlı REST endpoint’leri, istemci tarafında Next.js (App Router, TypeScript) tabanlı form
 yapısı ile iletişim sağlar.
 
 Başlıca işlevleri:
-  - Giriş yapma (POST /auth/login)
+  - Giriş yapma (POST /auth/login) ve kayıt (POST /auth/register)
   - JWT üretimi ve doğrulanması
   - Kullanıcı bilgisi sorgulama (GET /auth/me)
-  - Parola sıfırlama taleplerinin işlenmesi
+  - Profil güncelleme (PUT /auth/me)
+  - Avatar yükleme (POST /auth/me/avatar) ve sorgulama (GET /auth/avatar/{filename})
+  - Parola sıfırlama talebi (POST /auth/password-reset/request) ve onayı (POST /auth/password-reset/confirm)
+  - Ekip yönetimi (POST /teams, GET /teams, POST /teams/{id}/members, DELETE /teams/{id}/members/{user_id})
 Veri formatı: JSON.
 
 **4.3.2 Proje ve Görev Arayüzü (SPMS-INT-TASK)**
 Görev ve proje yönetimine dair tüm işlemler bu arayüz üzerinden gerçekleştirilir.
 Bu arayüz şunları sağlar:
-  - Proje detaylarını alma
-  - Yeni görev oluşturma
-  - Görevi güncelleme / silme
+  - Proje CRUD işlemleri (GET/POST/PUT/DELETE /projects); arşivleme desteği
+  - Proje üye yönetimi (POST/DELETE /projects/{id}/members)
+  - Yeni görev oluşturma, güncelleme, silme; sayfalama parametreli listeleme
   - Görevi sprint veya Kanban sütunları arasında taşıma
-  - Göreve yorum ekleme
-  - Görev bağımlılıklarını düzenleme
+  - Yorum CRUD (GET/POST/DELETE /tasks/{id}/comments)
+  - Dosya eki yükleme ve indirme (POST/GET /tasks/{id}/attachments; 25 MB sınırı, tehlikeli uzantı engeli)
+  - Görev bağımlılıklarını düzenleme (POST/DELETE /tasks/{id}/dependencies)
+  - Görev geçmişi/denetim izi sorgulama (GET /tasks/{id}/logs)
+  - Sprint CRUD (GET/POST /sprints, GET/PUT/DELETE /sprints/{id}); sprint kapatma ve görev yeniden atama
+  - Pano kolonu CRUD (GET/POST /board-columns, PUT/DELETE /board-columns/{id})
+  - Benzer görev uyarısı için öneri sorgusu (GET /tasks/similar)
 
 Proje süreçleri hızlı veri akışı gerektirdiği için tüm bu çağrılar optimize edilmiş REST
 
@@ -645,21 +682,44 @@ Diyagrama uygun olarak aşağıdaki tablolar PostgreSQL veri tabanında oluştur
 `o` id (PK): Benzersiz kullanıcı kimliği (UUID veya Integer).
 `o` full_name: Kullanıcının adı ve soyadı.
 `o` email: Sisteme giriş için kullanılan benzersiz e-posta adresi (Unique Index).
-`o` password: Güvenli hash algoritması (bcrypt/argon2) ile saklanmış parola.
+`o` password: Güvenli hash algoritması (bcrypt) ile saklanmış parola.
 `o` avatar: Profil fotoğrafı dosya yolu veya URL'si.
 `o` is_active: Kullanıcı hesabının aktif/pasif durumu (Boolean).
 `o` role_id (FK): Kullanıcının sistemdeki rolünü belirten dış anahtar.
+`o` failed_login_attempts: Ardışık başarısız giriş sayısı (Integer, varsayılan 0).
+`o` locked_until: Hesap kilitleme sona erme zamanı (Timestamp, Nullable).
+
+  - **Tablo: TEAMS (Ekipler)**
+`o` id (PK): Benzersiz ekip kimliği.
+`o` name: Ekip adı.
+`o` owner_id (FK): Ekibi oluşturan kullanıcı.
+`o` created_at, updated_at, is_deleted, deleted_at, version: TimestampedMixin alanları.
+
+  - **Tablo: TEAM_MEMBERS (Ekip Üyeleri)**
+`o` id (PK): Kayıt kimliği.
+`o` team_id (FK): Bağlı ekip.
+`o` user_id (FK): Ekip üyesi kullanıcı.
+`o` role: Ekip içindeki rol (Enum: 'owner', 'member').
+
+  - **Tablo: PASSWORD_RESET_TOKENS (Parola Sıfırlama Tokenleri)**
+`o` id (PK): Kayıt kimliği.
+`o` user_id (FK): Token'ın ait olduğu kullanıcı.
+`o` token: Tek kullanımlık güvenli rastgele token (hashed).
+`o` expires_at: Token geçerlilik süresi (30 dakika).
+`o` is_used: Kullanılıp kullanılmadığı (Boolean).
 
 **5.1.2. Sınıf ve Nesne Tasarımı**
 
-Modül, veri transferi için aşağıdaki DTO (Data Transfer Object) yapılarını kullanacaktır:
-  - **UserRegisterDTO:** İstemciden gelen kayıt verilerini taşır (email, password,
-
-full_name).
+Modül, veri transferi için aşağıdaki DTO (Data Transfer Object) yapılarını kullanır:
+  - **UserRegisterDTO:** İstemciden gelen kayıt verilerini taşır (email, password, full_name).
   - **UserLoginDTO:** Giriş isteğini taşır (email, password).
-  - **TokenResponseDTO:** Başarılı giriş sonrası dönen veridir (access_token,
-refresh_token, token_type).
+  - **TokenResponseDTO:** Başarılı giriş sonrası dönen veridir (access_token, refresh_token, token_type).
   - **UserResponseDTO:** Hassas verilerden (parola) arındırılmış kullanıcı profili.
+  - **UpdateUserProfileDTO:** Profil güncelleme isteğini taşır (full_name, email).
+  - **TeamCreateDTO:** Ekip oluşturma isteğini taşır (name).
+  - **TeamMemberAddDTO:** Ekibe üye ekleme isteğini taşır (user_id).
+  - **PasswordResetRequestDTO:** Parola sıfırlama talebi (email).
+  - **PasswordResetConfirmDTO:** Parola sıfırlama onayı (token, new_password).
 
 **5.1.3. Algoritmalar ve İş Mantığı**
 
@@ -679,6 +739,18 @@ tabanına kaydedilir.
 `o` Her API isteğinde, gelen JWT'nin imzası ve süresi kontrol edilir.
 `o` Token geçerliyse, içindeki role_id okunur ve talep edilen kaynağa erişim
 yetkisi olup olmadığına bakılır.
+
+4. **Hesap Kilitleme (Account Lockout) Algoritması:**
+`o` Her başarısız giriş denemesinde USERS tablosundaki failed_login_attempts sayacı bir artırılır.
+`o` Sayaç 5'e ulaştığında locked_until alanına belirli bir süre sonrası yazılır.
+`o` Kilitleme süresi dolmadan yapılan girişler 403 HTTP yanıtı ile reddedilir.
+`o` Başarılı giriş yapıldığında sayaç sıfırlanır, locked_until temizlenir.
+
+5. **Parola Sıfırlama Algoritması:**
+`o` Kullanıcı e-posta adresini girerek sıfırlama talebinde bulunur.
+`o` Sistem güvenli rastgele bir token üretir, bcrypt ile hash'ler ve PASSWORD_RESET_TOKENS tablosuna 30 dakika geçerlilik süresiyle kaydeder.
+`o` Token, kullanıcı e-posta adresine bağlantı olarak gönderilir.
+`o` Kullanıcı token ile yeni parolasını iletir; sistem token'ın geçerliliğini ve süresini doğrular, is_used=True yaparak token'ı geçersiz kılar ve parolayı günceller.
 **5.2. Proje ve Görev Yönetimi Modülü (SPMS-MOD-TASK)**
 Bu modül, yazılımın çekirdek işlevselliğini oluşturur. Kullanıcıların proje oluşturmasını,
 görev atamasını, sprint planlamasını ve iş akışlarını takip etmesini sağlar. Veri tabanı
@@ -687,16 +759,24 @@ esneklikte yapılandırılmıştır.
 
 **5.2.1. Veri Tabanı Tasarımı ve Tablo Yapıları**
 
-ER diyagramına uygun olarak ilişkisel yapı şu şekildedir:
+ER diyagramına uygun olarak ilişkisel yapı şu şekildedir.
+
+Tüm temel tablolar (PROJECTS, TASKS, SPRINTS, COMMENTS, ATTACHMENTS, TEAMS vb.) **TimestampedMixin** alanlarını içerir: `created_at`, `updated_at`, `version` (iyimser kilitleme için), `is_deleted` (yumuşak silme bayrağı), `deleted_at`. Bu sayede hiçbir kayıt fiziksel olarak veritabanından kaldırılmaz.
 
   - **Tablo: PROJECTS (Projeler)**
 `o` id (PK): Benzersiz proje kimliği.
-`o` key: Proje için kısa kod (Örn: "SPMS"). Görev numaralandırmasında
-kullanılır (SPMS-1, SPMS-2).
+`o` key: Proje için kısa kod (Örn: "SPMS"). Görev numaralandırmasında kullanılır (SPMS-1, SPMS-2).
 `o` name: Proje adı.
-`o` methodology: Seçilen süreç modeli (Enum: 'SCRUM', 'KANBAN',
-'WATERFALL').
+`o` methodology: Seçilen süreç modeli (Enum: 'SCRUM', 'KANBAN', 'WATERFALL').
 `o` start_date / end_date: Proje zaman aralığı.
+`o` manager_id (FK): Proje yöneticisi (USERS tablosuna referans; indekslenmiş).
+`o` is_deleted, deleted_at, version, updated_at: TimestampedMixin alanları.
+
+  - **Tablo: PROJECT_MEMBERS (Proje Üyeleri)**
+`o` id (PK): Üyelik kaydı kimliği.
+`o` project_id (FK): İlgili proje.
+`o` user_id (FK): Projeye dahil edilen kullanıcı.
+`o` role: Projede üstlenilen rol (Örn: 'developer', 'qa', 'manager').
 
   - **Tablo: BOARD_COLUMNS (Pano Kolonları)**
 `o` id (PK): Kolon kimliği.
@@ -715,30 +795,58 @@ kullanılır (SPMS-1, SPMS-2).
   - **Tablo: TASKS (Görevler)**
 
 `o` id (PK): Görev kimliği.
+`o` task_key: İnsan tarafından okunabilir görev numarası (Örn: "SPMS-42"); proje anahtarı + sıra no ile üretilir.
 `o` project_id (FK): Ait olduğu proje.
 `o` sprint_id (FK, Nullable): Atandığı sprint (Sadece Scrum ise dolu).
 `o` column_id (FK): Panoda bulunduğu kolon.
-`o` assignee_id (FK, Nullable): Görevi yapacak kullanıcı (KULLANICI
-tablosuna referans).
+`o` assignee_id (FK, Nullable): Görevi yapacak kullanıcı (USERS tablosuna referans).
 `o` title / description: Başlık ve detay.
 `o` priority: Öncelik (Düşük, Orta, Yüksek, Kritik).
 `o` points: Story point veya efor değeri.
 `o` is_recurring: Görevin tekrarlı olup olmadığını belirtir (Boolean).
-`o` parent_task_id (FK, Nullable): Alt görevler veya bağımlılıklar için kendi
-kendine referans.
+`o` recurrence_type: Tekrarlama periyodu (Enum: 'daily', 'weekly', 'monthly', Nullable).
+`o` recurrence_end_date: Serinin sona ereceği tarih (Date, Nullable).
+`o` recurrence_count: Maksimum tekrar sayısı (Integer, Nullable).
+`o` series_id (FK, Nullable): Tekrarlayan görev serisinin kimliği; aynı seriye ait tüm görevler bu alanla ilişkilendirilir.
+`o` task_seq: Seri içindeki sıra numarası (Integer, Nullable).
+`o` parent_task_id (FK, Nullable): Üst görev; alt görev hiyerarşisi için kendi kendine referans.
+`o` created_at, updated_at, is_deleted, deleted_at, version: TimestampedMixin alanları (yumuşak silme ve versiyon takibi).
 
-  - **Tablo: LOGS (Tarihçe)**
-`o` id (PK), project_id (FK), action (Yapılan işlem), changes (Eski/Yeni değer
-JSON), timestamp. Görev ve projelerdeki her değişikliği denetim (audit)
-amacıyla kaydeder.
+  - **Tablo: TASK_DEPENDENCIES (Görev Bağımlılıkları)**
+`o` id (PK): Bağımlılık kaydı kimliği.
+`o` task_id (FK): Bağımlı olan görev (bu görev beklemektedir).
+`o` depends_on_id (FK): Önce tamamlanması gereken görev.
+`o` dependency_type: Bağımlılık türü (Enum: 'finish_to_start', 'start_to_start').
+
+  - **Tablo: ATTACHMENTS (Dosya Ekleri)**
+`o` id (PK): Ek kimliği.
+`o` task_id (FK): Ekin ait olduğu görev.
+`o` uploaded_by (FK): Yükleyen kullanıcı.
+`o` filename: Özgün dosya adı.
+`o` file_path: Sunucuda depolanan dosya yolu.
+`o` file_size: Dosya boyutu (Integer, byte cinsinden; 25 MB üstü reddedilir).
+`o` mime_type: Dosya türü.
+`o` created_at: Yüklenme zamanı.
+
+  - **Tablo: AUDIT_LOGS (Denetim Kayıtları)**
+`o` id (PK): Kayıt kimliği.
+`o` entity_type: Değişikliğin gerçekleştiği varlık türü (Örn: 'task', 'project').
+`o` entity_id: Değişikliğin gerçekleştiği kaydın kimliği.
+`o` user_id (FK): Değişikliği yapan kullanıcı.
+`o` action: Yapılan işlem (Örn: 'UPDATE', 'DELETE').
+`o` changes: Eski ve yeni değerleri içeren JSON (Örn: `{"priority": {"old": "Low", "new": "High"}}`).
+`o` created_at: İşlem zamanı.
 
 **5.2.2. Sınıf ve Nesne Tasarımı**
   - **ProjectCreateDTO:** name, key, methodology, description.
-  - **TaskCreateDTO:** title, priority, assignee_id, sprint_id, is_recurring.
-  - **TaskUpdateDTO:** Görev sürükle-bırak yapıldığında sadece column_id güncelleyen
-veya detayları değiştiren yapı.
-  - **KanbanBoardDTO:** Bir projeye ait tüm kolonları ve içindeki görevleri hiyerarşik
-olarak (Kolon -> Görev Listesi) döndüren yapı.
+  - **TaskCreateDTO:** title, priority, assignee_id, sprint_id, is_recurring, recurrence_type, recurrence_end_date, recurrence_count.
+  - **TaskUpdateDTO:** Görev sürükle-bırak yapıldığında sadece column_id güncelleyen veya detayları değiştiren yapı.
+  - **KanbanBoardDTO:** Bir projeye ait tüm kolonları ve içindeki görevleri hiyerarşik olarak (Kolon → Görev Listesi) döndüren yapı.
+  - **SprintCreateDTO:** Yeni sprint oluşturma isteği (name, goal, start_date, end_date, project_id).
+  - **TaskDependencyCreateDTO:** Bağımlılık oluşturma isteği (task_id, depends_on_id, dependency_type).
+  - **AttachmentResponseDTO:** Dosya eki bilgisi (id, filename, file_size, mime_type, uploaded_by, created_at).
+  - **PaginatedResponseDTO:** Sayfalı listeleme sonucu (items, total, page, size).
+  - **TaskSimilarityResponseDTO:** Benzer görev uyarısı için dönen yapı (similar_tasks listesi).
 
 **5.2.3. Algoritmalar ve İş Mantığı**
 
@@ -759,18 +867,15 @@ kontrol eder.
 hatası döner.
 
 3. **Tekrarlayan Görev (Recurring Task) Algoritması:**
-`o` Arka planda çalışan bir zamanlayıcı (Scheduler), her gün is_recurring=True
-olan görevleri tarar.
-`o` due_date veya belirlenen periyot geldiyse, mevcut görevi kopyalayarak yeni
-bir görev kaydı (INSERT) oluşturur ve bir sonraki tarihi günceller.
+`o` Görev oluşturulurken is_recurring=True, recurrence_type, recurrence_end_date / recurrence_count alanları doldurulur; bir series_id üretilir ve göreve atanır.
+`o` Görev "Tamamlandı" durumuna taşındığında sistem, bitiş kriteri (tarih veya sayım) henüz dolmamışsa otomatik olarak bir sonraki görev örneğini (task_seq artırılarak) oluşturur.
+`o` Kullanıcı bir seri örneğini düzenlediğinde "Yalnızca bu örnek mi / Tümü mü?" sorusu yöneltilir; "Tümü" seçilirse aynı series_id'ye sahip tüm aktif görevler güncellenir.
 Şekil 5.2. Durum Diyagramı: Tekrarlayan görevler
 
-4. **Loglama Mekanizması:**
-`o` Bir görev üzerinde Update veya Delete işlemi yapıldığında, veri tabanı
-tetikleyicisi (Trigger) veya uygulama katmanındaki "Interceptor", eski ve
-yeni veriyi karşılaştırır.
-`o` Değişiklikleri LOGS tablosuna changes alanına JSON formatında yazar
-(Örn: {"priority": {"old": "Low", "new": "High"}}).
+4. **Denetim İzi (Audit Log) Mekanizması:**
+`o` Bir görev veya proje üzerinde oluşturma, güncelleme veya silme işlemi yapıldığında uygulama katmanındaki interceptor eski ve yeni veriyi karşılaştırır.
+`o` Değişiklikler AUDIT_LOGS tablosuna changes alanına JSON formatında yazılır (Örn: `{"priority": {"old": "Low", "new": "High"}}`).
+`o` Yumuşak silme (soft delete) uygulanır: kayıt fiziksel olarak silinmez, is_deleted=True ve deleted_at alanı güncellenir; bu durum da denetim kaydına yansıtılır.
 
 **5.3. Bildirim ve Mesajlaşma Modülü (SPMS-MOD-NOTIF)**
 
@@ -811,7 +916,7 @@ payload).
 
 1. **Gerçek Zamanlı İletişim (WebSocket) Mantığı:**
 
-`o` Kullanıcı sisteme giriş yaptığında (/auth/login), istemci (React) sunucu ile
+`o` Kullanıcı sisteme giriş yaptığında (/auth/login), istemci (Next.js) sunucu ile
 kalıcı bir **WebSocket** bağlantısı kurar.
 `o` Her kullanıcı, kendi user_id değeri ile bir soket odasına (room) abone olur.
 `o` Sunucu, belirli bir kullanıcıya mesaj göndermek istediğinde bu odaya veri
@@ -841,11 +946,11 @@ olarak sunulur.
 
 Bu modül, ER diyagramında yer alan operasyonel tablolar üzerinden "Okuma" (Read-Only)
 işlemleri gerçekleştirir. Analiz için kullanılan temel veri kaynakları şunlardır:
-  - **TASKS (Görevler) & SPRINT:** Anlık durum raporları (Örn: Bekleyen İşler, Sprint
+  - **TASKS (Görevler) & SPRINTS:** Anlık durum raporları (Örn: Bekleyen İşler, Sprint
 İlerlemesi) için kullanılır.
-  - **LOGS (Tarihçe):** Zaman serisi analizleri için kullanılır. Bir görevin ne zaman
+  - **AUDIT_LOGS (Denetim Kayıtları):** Zaman serisi analizleri için kullanılır. Bir görevin ne zaman
 "Tamamlandı" durumuna geçtiği veya kimin ne kadar işlem yaptığı bu tablodaki
-timestamp ve changes alanlarından analiz edilir.
+created_at ve changes alanlarından analiz edilir.
   - **PROJECTS (Projeler):** Rapor kapsamını belirlemek için kullanılır.
 _Not: Performans optimizasyonu amacıyla, çok büyük veri setlerinde raporlar canlı sorgu_
 _yerine gece çalışan zamanlanmış görevlerle (Batch Job) önceden hesaplanıp önbelleğe_
@@ -972,11 +1077,11 @@ gereksinimleri karşıladığını göstermektedir. SPMS, modüler bir yapıya s
 modül belirli işlevsel gereksinimlere tahsis edilmiştir. Bu doğrultuda:
 
   - **SPMS-MOD-AUTH**, kimlik doğrulama, kayıt/giriş işlemleri, rol bazlı erişim,
-parola güvenliği ve erişim izinleri gibi SPMS-01.x gereksinimlerinin tamamını
+parola güvenliği, hesap kilitleme, parola sıfırlama ve ekip yönetimi gibi SPMS-01.x gereksinimlerinin tamamını
 karşılar.
 
   - **SPMS-MOD-TASK**, proje oluşturma, görev yönetimi, bağımlılıklar, sprint ve
-Kanban akışı, tekrarlayan görevler gibi SPMS-02.x gereksinimlerinin
+Kanban akışı, tekrarlayan görevler, dosya ekleri, yorum sistemi, sayfalama ve denetim izi gibi SPMS-02.x gereksinimlerinin
 karşılanmasından sorumludur.
 
   - **SPMS-MOD-NOTIF**, gerçek zamanlı bildirimler, görev içi yorumlar ve kullanıcı
@@ -1108,6 +1213,10 @@ niteliğindedir.
 |**SPMS-** **05.7**|Görevleri Kanban panosu üzerinden görselleştirebilme|SPMS-MOD- TASK, SPMS- MOD-PROCESS, Frontend UI|Task modülü görevlerin durum bilgilerini sağlar; Process modülü Kanban sütun kurallarını belirler; UI görevleri sütunlara yerleştirerek sürükle–bırak işlemlerine izin verir.|
 |**SPMS-** **05.8**|Görevleri Gantt şemasıyla görselleştirebilme|SPMS-MOD- TASK, Frontend UI|Görevlerin başlangıç/bitiş tarihleri Task modülünden alınır; UI bu veriyi Gantt şemasına dönüştürerek bağımlılık ilişkileriyle birlikte gösterir.|
 |**SPMS-** **05.9**|Görevlerin basit liste veya takvim görünümünde gösterilmesi|SPMS-MOD- TASK, Frontend UI|Task modülü tüm görev verisini sağlar; UI aynı veri setini liste veya takvim görünümünde kullanıcıya sunar; kullanıcı görünüm tipini arayüzden seçebilir.|
+|**SPMS-** **02.13**|Sprint yönetimi (oluşturma, listeleme, kapatma, görev atama)|SPMS-MOD-TASK, Backend API|Sprint CRUD işlemleri Task modülünde gerçekleştirilir; sprint kapatıldığında tamamlanmamış görevler belirlenen kolona taşınır; Scrum görünümünde sprint listesi ve yönetim arayüzü sunulur.|
+|**SPMS-** **02.14**|Görev ve proje listeleme işlemlerinde sayfalama desteği|SPMS-MOD-TASK, Backend API|Task modülü liste endpoint'lerine page ve size parametrelerini kabul eder; PaginatedResponseDTO (items, total, page, size) formatında yanıt döner; bu şekilde büyük veri setlerinde performans korunur.|
+|**SPMS-** **02.15**|Dosya eklerinde boyut sınırı ve tehlikeli uzantı engeli|SPMS-MOD-TASK, Backend API|Ek yükleme endpoint'i gelen dosyayı önce boyut (25 MB) ve uzantı kara listesiyle doğrular; koşullar sağlanmazsa 400 HTTP yanıtı döner; ATTACHMENTS tablosunda file_size ve mime_type kaydedilir.|
+|**SPMS-** **05.10**|Akıllı görev önerisi (AI destekli öneri modülü)|SPMS-MOD-TASK, Frontend UI|Kullanıcı görev başlığı girerken benzerlik sorgusu çalışır; AI öneri modülü mevcut görevlere göre iyileştirme önerileri üretir; sonuçlar ai-recommendation-modal bileşeninde gösterilir.|
 
 
 

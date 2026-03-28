@@ -7,7 +7,7 @@ __pycache__/
 .cache/
 .env
 node_modules/
-
+.venv/
 BM495_PROJE_SRS_Y.E.BAYRAKCI_A.OZ_20252026_GUZ.pdf
 build/
 
