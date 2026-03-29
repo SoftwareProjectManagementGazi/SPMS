@@ -39,6 +39,12 @@ Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve 
 - ✓ SPMS-DATA-5: Çoklu proje desteği (project_id ayrıştırması) — v0
 - ✓ SPMS-DATA-6: Şema modüler genişletilebilirliği — v0
 - ✓ SPMS-DATA-8: Veritabanı kısıtlamaları (Foreign Key constraints) — v0
+- ✓ NOTIF-01: Notification domain model, repository, use cases — Validated in Phase 05: notifications
+- ✓ NOTIF-02: Email delivery via APScheduler with SMTP — Validated in Phase 05: notifications
+- ✓ NOTIF-03: Real-time polling with frontend NotificationBell — Validated in Phase 05: notifications
+- ✓ NOTIF-04: Notification preferences (per-type opt-in/out) — Validated in Phase 05: notifications
+- ✓ NOTIF-05: Project event fan-out to admins — Validated in Phase 05: notifications
+- ✓ NOTIF-06: Task watch/unwatch endpoints — Validated in Phase 05: notifications
 - ✓ SPMS-ENV-01: Modern web tarayıcı desteği — v0
 - ✓ SPMS-ENV-02: Docker tabanlı konteynerizasyon — v0
 - ✓ SPMS-ENV-03: Geliştirme/test/üretim ortam bağımsızlığı — v0
@@ -86,12 +92,12 @@ Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve 
 - [ ] SPMS-UI-04: Raporlama ekranı (filtreleme özellikli)
 
 **Bildirim & Mesajlaşma:**
-- [ ] SPMS-03.1: Gerçek zamanlı bildirim gönderimi
-- [ ] SPMS-03.2: Belirli durumlarda bildirim tetiklenmesi
+- [x] SPMS-03.1: Gerçek zamanlı bildirim gönderimi — Validated in Phase 05: notifications
+- [x] SPMS-03.2: Belirli durumlarda bildirim tetiklenmesi — Validated in Phase 05: notifications
 - [ ] SPMS-03.3: Rol bazlı mesajlaşma yetkisi
 - [ ] SPMS-03.4: Görev içi mesajlaşma / yorum alanı
-- [ ] SPMS-03.5: Uygulama içi ve e-posta/push bildirimleri
-- [ ] SPMS-03.6: Bildirim tercihleri (sessiz mod vb.)
+- [x] SPMS-03.5: Uygulama içi ve e-posta/push bildirimleri — Validated in Phase 05: notifications
+- [x] SPMS-03.6: Bildirim tercihleri (sessiz mod vb.) — Validated in Phase 05: notifications
 - [ ] SPMS-03.7: Mesaj geçmişi güvenli saklanması
 
 **Raporlama & Analitik:**
@@ -203,4 +209,4 @@ Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve 
 | Mevcut ihlalleri düzelt + yeni modüller clean arch yaz | Tam refactor yerine pragmatik yaklaşım | — Pending |
 
 ---
-*Last updated: 2026-03-11 after initialization*
+*Last updated: 2026-03-29 — Phase 05 (notifications) complete*
