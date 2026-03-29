@@ -386,7 +386,7 @@ SPMS uzun vadeli sürdürülebilirliği hedefleyen modern bir mimariyle tasarlan
   - Gelecekte yeni süreç modelleri veya modüller eklenebilir.
   - Raporlama altyapısı yeni grafik türleri eklemeye açıktır.
   - Sistem çoklu sunucu dağıtımına uygundur (horizontal scaling).
-  - Gerçek zamanlı bildirimler mesaj kuyruğu üzerinden yönetilir (Redis/WebSocket).
+  - Bildirimler HTTP polling ile iletilir (istemci her 30 saniyede bir API'yi sorgular; sekme arka plana alındığında polling durur); ilerleyen aşamalarda WebSocket mimarisine geçiş mümkündür.
   - Sunucu çökse bile veriler kaybolmaz (transaction + backup).
   - Sistem Clean Architecture prensiplerine uygun; Domain → Application → Infrastructure → API katman yapısıyla ayrıştırılmıştır. Bağımlılıklar her zaman dışarıdan içeriye yönelir.
   - Her modül bağımsız test edilebilir.
@@ -492,7 +492,7 @@ iletişim altyapısını oluşturur. Görev güncellemeleri, yeni mesajlar, proj
 tüm etkileşimler bu modül üzerinden yayınlanır. Ek olarak, proje üyeleri arasında kısa
 mesajlaşma özelliği sunarak ekip içi iletişimi güçlendirir.
 Modülün sağladığı başlıca özellikler:
-  - WebSocket tabanlı anlık bildirim sistemi
+  - HTTP polling tabanlı bildirim sistemi (30 saniyelik aralıklarla; sekme pasifken duraklar)
   - Görev güncellemesi, yorum, yeni görev, proje güncellemesi gibi tüm olayların iletimi
   - Kullanıcılar arası mesajlaşma ekranı
   - Bildirim okundu/okunmadı takibi
@@ -565,12 +565,13 @@ zamanlı bildirim gönderir; Raporlama Modülü ise değişen veriyi analiz sür
 ve ileride kullanılacak istatistiksel çıktıları günceller. Böylece SPMS içinde her görev
 değişikliği yalnızca veritabanını etkilemekle kalmaz, görev akışı, kullanıcı iletişimi ve
 raporlama süreçlerinin tamamına etki eder.
-Gerçek zamanlı iletişim, sistemin çalışma anındaki davranışının önemli bir kısmını
-oluşturur. Görev güncellemeleri, mesajlaşmalar, proje ayarlarında yapılan değişiklikler veya
-süreç modelinin değiştirilmesi gibi tüm olaylar WebSocket üzerinden ilgili kullanıcılara
-anında iletilir. Bu sayede kullanıcılar sürekli sayfa yenilemek zorunda kalmadan güncel
-proje akışını takip edebilir. Sistem, aynı anda hem veri depolayan hem de canlı iletişim
-sağlayan çift yönlü bir akış yapısına sahiptir.
+Bildirim iletişimi, sistemin çalışma anındaki davranışının önemli bir kısmını oluşturur.
+Görev güncellemeleri, yorumlar ve proje değişiklikleri gibi olaylar veritabanındaki bildirim
+tablosuna yazılır; istemci (Next.js) her 30 saniyede bir REST API'yi sorgulayarak yeni
+bildirimleri çeker. Sekme arka plana alındığında sorgu duraklar, ön plana geldiğinde yeniden
+başlar. Bu yaklaşım (polling) mevcut implementasyonun temelini oluşturmakta olup servis
+soyutlama katmanı (`INotificationService`) ileride WebSocket veya SSE mimarisine geçişe
+olanak tanıyacak şekilde tasarlanmıştır.
 Son olarak, çalışma süreci boyunca kullanıcılar çeşitli raporlama taleplerinde bulunabilir.
 Bu durumda raporlama modülü gerekli verileri görev modülünden çekerek analiz eder,
 grafiksel veri setlerini oluşturur ve istenirse PDF/Excel çıktısı üretir. Bu süreç tamamen arka
@@ -629,14 +630,14 @@ Proje süreçleri hızlı veri akışı gerektirdiği için tüm bu çağrılar 
 
 
 **4.3.3 Bildirim ve Mesajlaşma Arayüzü (SPMS-INT-NOTIF)**
-Bu arayüz SPMS’nin gerçek zamanlı iletişim altyapısını oluşturur.
-  - WebSocket bağlantısı üzerinden bildirim akışı
-  - Kullanıcıya özel mesaj kanalları
-  - Bildirim veri yapısı (event_type, payload, timestamp)
-  - Okundu/okunmadı durum güncellemesi
+Bu arayüz SPMS’nin bildirim iletim altyapısını oluşturur.
+  - HTTP polling ile bildirim akışı (GET /api/v1/notifications); 30 saniyelik aralık, sekme pasifken duraklar
+  - Kullanıcıya özgü bildirim listesi (JWT kimliğiyle filtrelenir)
+  - Bildirim veri yapısı (id, message, type, is_read, related_entity_id, created_at)
+  - Okundu/okunmadı durum güncellemesi (PATCH /notifications/{id}/read, POST /notifications/mark-all-read)
+  - Bildirim tercihleri (GET/PUT /notifications/preferences)
 
-Arayüz, istemci tarafı abonelik sistemiyle çalışır; kullanıcı sadece kendine ait kanalda mesaj
-alır.
+Arayüz, istemci tarafında `use-notifications` hook’u ile yönetilir; kullanıcı yalnızca kendi bildirimlerine erişebilir.
 
 **4.3.4 Raporlama Arayüzü (SPMS-INT-REPORT)**
 
@@ -909,27 +910,22 @@ Veri transferi için kullanılan yapılar:
   - **CommentCreateDTO:** task_id, content. (Kullanıcı ID token'dan alınır).
   - **NotificationResponseDTO:** İstemciye gönderilecek bildirim objesi (id, message,
 type, is_read, timestamp).
-  - **WebSocketMessage:** Soket üzerinden iletilen standart mesaj formatı (event,
-payload).
+  - **NotificationPreferenceDTO:** Kullanıcı tercihleri (email_enabled, per-type in_app/email ayarları, deadline_days).
 
 **5.3.3. Algoritmalar ve İş Mantığı**
 
-1. **Gerçek Zamanlı İletişim (WebSocket) Mantığı:**
+1. **HTTP Polling Bildirim Mekanizması:**
 
-`o` Kullanıcı sisteme giriş yaptığında (/auth/login), istemci (Next.js) sunucu ile
-kalıcı bir **WebSocket** bağlantısı kurar.
-`o` Her kullanıcı, kendi user_id değeri ile bir soket odasına (room) abone olur.
-`o` Sunucu, belirli bir kullanıcıya mesaj göndermek istediğinde bu odaya veri
-paketi (push notification) gönderir.
+`o` Kullanıcı giriş yaptıktan sonra istemci (Next.js) `use-notifications` hook'unu başlatır; hook her 30 saniyede bir `GET /api/v1/notifications` endpoint'ini çağırır.
+`o` `visibilitychange` olayı dinlenir; sekme arka plana alındığında `refetchInterval` devre dışı bırakılır, ön plana geldiğinde yeniden etkinleştirilir.
+`o` Okunan bildirim sayısı bir önceki değerle karşılaştırılır; okunmamış sayısı artmışsa çan simgesi üzerindeki rozet güncellenir.
 2. **Olay Güdümlü Bildirim (Event-Driven Notification) Algoritması:**
 `o` **Adım 1 (Tetikleme):** Görev Modülü'nde bir görev güncellendiğinde (Örn:
 Atanan kişi değişti), sistem bir TaskAssignedEvent yayınlar.
 `o` **Adım 2 (Yakalama):** Bildirim Servisi bu olayı dinler (Listener).
 `o` **Adım 3 (Kayıt):** Servis, yeni atanan kullanıcı için NOTIFICATIONS
 tablosuna "Okunmadı" durumunda bir kayıt atar.
-`o` **Adım 4 (İletim):** Eğer kullanıcı o an çevrimiçiyse (WebSocket bağlıysa),
-bildirim anında ekranına düşer. Çevrimdışı ise bir sonraki girişinde
-veritabanından okunarak gösterilir.
+`o` **Adım 4 (İletim):** Bildirim NOTIFICATIONS tablosuna "okunmadı" olarak yazılır. İstemci bir sonraki polling döngüsünde (en fazla 30 saniye içinde) yeni kaydı çekerek çan rozetini günceller.
 3. **Yorum ve Mesajlaşma Akışı:**
 `o` Kullanıcı bir göreve yorum yazdığında, yorum COMMENTS tablosuna
 kaydedilir.
@@ -1183,13 +1179,13 @@ niteliğindedir.
 |**SPMS-** **02.10**|Görev geçmişi ve işlem loglarının tutulması|SPMS-MOD-TASK, SPMS-MOD-REPORT|Task modülü görev üzerindeki her değişikliği (durum, sorumlu, tarih) log tablosuna kaydeder; Report modülü bu veriyi daha sonra raporlama için kullanır.|
 |**SPMS-** **02.11**|Görev detay sayfasında yorumlaşma ve dosya paylaşımı|SPMS-MOD-TASK, SPMS-MOD-NOTIF|Yorum ve dosya ekleri Task modülünde görev ile ilişkilendirilir; yeni yorum eklendiğinde Notif modülü ilgili kullanıcılara bildirim gönderir.|
 |**SPMS-** **02.12**|Görevlerin timeline /  Gantt benzeri takvim görünümünde izlenebilmesi|SPMS-MOD-TASK, SPMS-MOD-PROCESS, Frontend UI|Görevlerin başlangıç–bitiş tarihleri Task modülünden alınır; Process modülü süreç modeline göre görünümü şekillendirir ve UI bu veriyi zaman çizelgesi veya Gantt görseline dönüştürür.|
-|**SPMS-** **03.1**|Görev ve proje değişiklikleri hakkında gerçek zamanlı bildirim gönderilmesi|SPMS-MOD-NOTIF, SPMS-MOD-TASK|Task modülü değişikliği event olarak üretir; Notif modülü ilgili kullanıcıları belirleyerek WebSocket üzerinden gerçek zamanlı bildirim yayınlar.|
+|**SPMS-** **03.1**|Görev ve proje değişiklikleri hakkında gerçek zamanlı bildirim gönderilmesi|SPMS-MOD-NOTIF, SPMS-MOD-TASK|Task modülü değişikliği tetiklendiğinde Notif modülü ilgili kullanıcılar için NOTIFICATIONS tablosuna kayıt oluşturur; istemci HTTP polling (30 s) ile yeni bildirimleri çeker ve çan rozeti güncellenir.|
 |**SPMS-** **03.2**|Belirli durumlarda ilgili kullanıcılara bildirim gönderilmesi|SPMS-MOD-NOTIF|Bildirim tetikleyicileri (yeni görev, sorumlu değişimi, yorum, durum değişikliği vb.) Notif modülünde kural bazlı olarak tanımlanır ve ilgili kullanıcı listesine bildirilir.|
 |**SPMS-** **03.3**|Kullanıcının rolüne göre mesajlaşma yetkisinin sınırlandırılması|SPMS-MOD-NOTIF, SPMS-MOD-AUTH|Mesaj gönderme ekranında Auth modülü kullanıcı rolünü sağlar; Notif modülü yalnızca izin verilen rol kombinasyonlarına (örn. ekip içi, yönetici–üye) mesajlaşma izni verir.|
 
 |SPMS- 03.4|Görev içi mesajlaşma alanı, yorum bırakma|SPMS-MOD-TASK, SPMS-MOD-NOTIF|Görev detayında yazılan yorumlar Task modülünde saklanır; yorum eklendiğinde Notif modülü ilgili proje üyelerine bilgilendirme yapar.|
 |---|---|---|---|
-|**SPMS-** **03.5**|Bildirimlerin hem uygulama içi hem e- posta/push ile iletilmesi|SPMS-MOD-NOTIF, Dış Bildirim Servisleri|Notif modülü, uygulama içi bildirimleri WebSocket ile; e- posta/push bildirimlerini harici servis entegrasyonları üzerinden iletir; kullanıcı tercihleri doğrultusunda kanal seçimi yapılır.|
+|**SPMS-** **03.5**|Bildirimlerin hem uygulama içi hem e-posta ile iletilmesi|SPMS-MOD-NOTIF, Dış Bildirim Servisleri|Notif modülü, uygulama içi bildirimleri HTTP polling ile; e-posta bildirimlerini Jinja2 HTML şablonları ve SMTP servisi üzerinden iletir; kullanıcı tercihleri doğrultusunda kanal seçimi yapılır.|
 |**SPMS-** **03.6**|Bildirim tercihlerinin kullanıcı tarafından özelleştirilebilmesi|SPMS-MOD-NOTIF, SPMS-MOD-AUTH|Kullanıcı profil ayarlarında bildirim tercihleri tanımlanır; Notif modülü bildirim üretirken bu tercihleri okuyarak hangi olaylarda, hangi kanaldan bildirim gideceğini belirler.|
 |**SPMS-** **03.7**|Mesaj geçmişinin güvenli saklanması ve log tutulması|SPMS-MOD-NOTIF, Veritabanı Katmanı|Gönderilen tüm mesajlar ve sistem içi bildirimler log yapısında saklanır; proje silinse bile erişim izi ve mesaj geçmişi belirlenen süre boyunca korunur.|
 |**SPMS-** **04.1**|Proje ilerleme durumlarının grafiksel olarak sunulması|SPMS-MOD-REPORT, SPMS-MOD-TASK, Frontend UI|Report modülü görev ve proje verilerini analiz eder; grafik veri setleri üretir; UI bu setleri grafik bileşenleriyle (ör. Chart.js) kullanıcıya gösterir.|
