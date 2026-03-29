@@ -424,10 +424,7 @@ göndermelidir.
 
   - **SPMS-03.4:** Görev içi mesajlaşma alanı olmalı, kullanıcılar yorum bırakabilmelidir.
 
-  - **SPMS-03.5:** Bildirimler hem uygulama içi hem e-posta/push bildirimleriyle
-
-
-iletilmelidir.
+  - **SPMS-03.5:** Bildirimler hem uygulama içi (HTTP polling tabanlı) hem e-posta bildirimleriyle iletilmelidir.
 
   - **SPMS-03.6:** Kullanıcılar bildirim tercihlerini özelleştirebilmelidir (ör. sessiz mod,
 
@@ -809,13 +806,7 @@ servis tabanlı (service-oriented) iletişim yöntemleriyle yapılmalıdır.
 değiştiğinde sistemin genel bütünlüğü bozulmadan revizyon yapılabilmelidir.
 
 
-  - **SPMS-INT-4:** Bildirim Modülü, Görev Yönetimi Modülü’nde gerçekleşen
-
-
-değişiklikleri dinleyebilmeli; bu tür olaylar bir mesaj kuyruğu (ör. Redis Queue,
-
-
-Kafka) üzerinden yönetilebilmelidir.
+  - **SPMS-INT-4:** Bildirim Modülü, Görev Yönetimi Modülü’nde gerçekleşen değişiklikleri dinleyebilmeli; bu tür olaylar uygulama servis katmanı üzerinden tetiklenmeli ve bildirim tablosuna yazılmalıdır. Mimari, ilerleyen sürümlerde mesaj kuyruğu (ör. Redis Queue, Kafka) entegrasyonuna açık olmalıdır.
 
 
   - **SPMS-INT-5:** Raporlama Modülü, diğer modüllerden veri çekerken yalnızca sorgu
@@ -996,13 +987,7 @@ saklanamaz. Parolalar, bcrypt veya argon2 gibi güçlü ve geri döndürülemez
 
 kriptografik karma (hash) algoritmaları kullanılarak saklanmalıdır.
 
-  - **SPMS-SEC-03:** İstemci (React) ve sunucu (FastAPI API) arasındaki tüm veri
-
-
-iletişimi, güvenli aktarım sağlamak için zorunlu olarak HTTPS (SSL/TLS) protokolü
-
-
-üzerinden şifrelenmelidir.
+  - **SPMS-SEC-03:** İstemci (Next.js) ve sunucu (FastAPI API) arasındaki tüm veri iletişimi, güvenli aktarım sağlamak için zorunlu olarak HTTPS (SSL/TLS) protokolü üzerinden şifrelenmelidir.
 
   - **SPMS-SEC-04:** Sistem, rol bazlı erişim kontrollerini (RBAC) sunucu tarafında
 
@@ -1028,13 +1013,7 @@ kullanımlık ve kısa süre geçerli (örn. 30 dakika) güvenli bağlantılarla
 
 sağlanmalıdır.
 
-  - **SPMS-SEC-07:** Sunucu, yalnızca izin verilen istemci alan adlarından (React
-
-
-uygulamasının çalıştığı adres) gelen isteklere izin veren katı bir Kaynaklar Arası
-
-
-Çapraz Paylaşım (CORS) politikası uygulamalıdır.
+  - **SPMS-SEC-07:** Sunucu, yalnızca izin verilen istemci alan adlarından (Next.js uygulamasının çalıştığı adres) gelen isteklere izin veren katı bir Kaynaklar Arası Çapraz Paylaşım (CORS) politikası uygulamalıdır.
 
   - **SPMS-SEC-08:** Sistem, kullanıcıların kişisel verilerinin (e-posta, isim vb.) ve proje
 
@@ -1186,7 +1165,7 @@ Sistem tasarımında belirli standartlara uyulacaktır, ancak teknolojik gelişm
 değişiklik yapılabilir.
 
 
-  - **SPMS-CON-1:** Geliştirme dili Python (FastAPI) ve TypeScript (React) olacaktır.
+  - **SPMS-CON-1:** Geliştirme dili Python (FastAPI) ve TypeScript (Next.js/React) olacaktır.
 
 
   - **SPMS-CON-3:** UI kütüphaneleri (Tailwind, shadcn/ui) kullanılacaktır; gerekirse
