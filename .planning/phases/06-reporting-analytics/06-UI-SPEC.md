@@ -55,7 +55,7 @@ Exceptions:
 | Body | 14px | 400 (regular) | 1.5 | Table cell text, filter labels, tooltip text, chart axis labels |
 | Label | 12px | 400 (regular) | 1.4 | Chart axis tick labels (recharts `tick={{ fontSize: 11 }}`), badge text, mini progress bar label |
 | Heading | 20px | 600 (semibold) | 1.2 | Card titles (`CardTitle`), section headings ("Takım Performansı") |
-| Display | 28px | 700 (bold) | 1.1 | Page title ("Raporlar") only |
+| Display | 28px | 600 (semibold) | 1.1 | Page title ("Raporlar") only |
 
 Note: recharts axis tick fontSize is 11px — this is a chart-internal override applied via recharts prop, not a Tailwind class. All other text follows the 4-size scale above.
 
@@ -134,6 +134,8 @@ All components below are already installed via shadcn/ui. No new registry adds n
 ## Layout Contract
 
 ### `/reports` Page Layout
+
+Primary visual anchor: page title "Raporlar" (Display size, 28px semibold, top-left of page header row).
 
 ```
 [AppShell]
