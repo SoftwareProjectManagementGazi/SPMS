@@ -10,6 +10,11 @@ import { Users, BarChart3, PieChart, TrendingUp } from "lucide-react"
 import { reportService, ReportFilters } from "@/services/report-service"
 import { projectService } from "@/services/project-service"
 import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
+import { FilterBar } from "@/components/reports/filter-bar"
+import { SprintBurndownChart } from "@/components/reports/sprint-burndown-chart"
+import { TaskDistributionChart } from "@/components/reports/task-distribution-chart"
+import { VelocityTrendChart } from "@/components/reports/velocity-trend-chart"
+import { ExportButton } from "@/components/reports/export-button"
 
 export default function ReportsPage() {
   const defaultDateFrom = subDays(new Date(), 30).toISOString().split("T")[0];
@@ -85,7 +90,11 @@ export default function ReportsPage() {
             <h1 className="text-2xl font-bold">Raporlar</h1>
             <p className="text-muted-foreground">Projeleriniz için analiz ve içgörüler</p>
           </div>
+          <ExportButton filters={filters} disabled={!filters.projectId} />
         </div>
+
+        {/* Filter bar */}
+        <FilterBar filters={filters} onFiltersChange={setFilters} />
 
         {/* Chart grid: 2x2 */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -97,16 +106,8 @@ export default function ReportsPage() {
                 Sprint Burndown
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              {burndownLoading ? (
-                <Skeleton className="w-full h-full" />
-              ) : burndownError ? (
-                <p className="text-sm text-destructive">Veriler yüklenemedi. Sayfayı yenileyin.</p>
-              ) : !burndownData?.series?.length ? (
-                <p className="text-sm">Bu dönem için veri bulunamadı.</p>
-              ) : (
-                <p className="text-sm">{burndownData.sprint_name}</p>
-              )}
+            <CardContent className="h-64">
+              <SprintBurndownChart data={burndownData ?? null} isLoading={burndownLoading} isError={burndownError} />
             </CardContent>
           </Card>
 
@@ -118,16 +119,13 @@ export default function ReportsPage() {
                 Görev Dağılımı
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              {distStatusLoading || distPriorityLoading ? (
-                <Skeleton className="w-full h-full" />
-              ) : distStatusError ? (
-                <p className="text-sm text-destructive">Veriler yüklenemedi. Sayfayı yenileyin.</p>
-              ) : !statusDistData?.items?.length ? (
-                <p className="text-sm">Bu dönem için veri bulunamadı.</p>
-              ) : (
-                <p className="text-sm">{statusDistData.items.length} durum</p>
-              )}
+            <CardContent className="h-64">
+              <TaskDistributionChart
+                statusData={statusDistData ?? null}
+                priorityData={priorityDistData ?? null}
+                isLoading={distStatusLoading || distPriorityLoading}
+                isError={distStatusError}
+              />
             </CardContent>
           </Card>
 
@@ -139,16 +137,8 @@ export default function ReportsPage() {
                 Velocity Trendi
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              {velocityLoading ? (
-                <Skeleton className="w-full h-full" />
-              ) : velocityError ? (
-                <p className="text-sm text-destructive">Veriler yüklenemedi. Sayfayı yenileyin.</p>
-              ) : !velocityData?.series?.length ? (
-                <p className="text-sm">Bu dönem için veri bulunamadı.</p>
-              ) : (
-                <p className="text-sm">{velocityData.series.length} sprint</p>
-              )}
+            <CardContent className="h-64">
+              <VelocityTrendChart data={velocityData ?? null} isLoading={velocityLoading} isError={velocityError} />
             </CardContent>
           </Card>
 
