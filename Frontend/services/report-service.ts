@@ -81,7 +81,7 @@ export const reportService = {
   },
 
   getBurndown: async (filters: ReportFilters, sprintId?: number): Promise<BurndownData> => {
-    const extra = sprintId ? { sprint_id: String(sprintId) } : {};
+    const extra: Record<string, string> = sprintId ? { sprint_id: String(sprintId) } : {};
     const { data } = await apiClient.get('/reports/burndown', { params: buildParams(filters, extra) });
     return data;
   },

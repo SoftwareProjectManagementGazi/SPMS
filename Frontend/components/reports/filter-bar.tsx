@@ -22,9 +22,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { projectService } from "@/services/project-service"
+import { projectService, ProjectMember } from "@/services/project-service"
 import { ReportFilters } from "@/services/report-service"
 import { Badge } from "@/components/ui/badge"
+import { Project } from "@/lib/types"
 
 interface FilterBarProps {
   filters: ReportFilters;
@@ -90,7 +91,7 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
               <SelectValue placeholder="Proje seçin" />
             </SelectTrigger>
             <SelectContent>
-              {projects.map((project) => (
+              {projects.map((project: Project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name} ({project.key})
                 </SelectItem>
@@ -120,7 +121,7 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
                   {filters.projectId ? "Üye bulunamadı." : "Önce proje seçin."}
                 </div>
               )}
-              {members.map((member) => (
+              {members.map((member: ProjectMember) => (
                 <DropdownMenuCheckboxItem
                   key={member.id}
                   checked={filters.assigneeIds.includes(member.id)}
