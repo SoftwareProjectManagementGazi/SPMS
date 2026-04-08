@@ -73,7 +73,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 - [x] **REPT-01**: Proje ilerleme durumu grafiksel olarak sunulur (görev tamamlanma oranı, sprint ilerleme grafiği)
 - [x] **REPT-02**: Raporlar kullanıcı, görev ve proje bazlı filtrelenebilir
-- [ ] **REPT-03**: Rapor çıktısı PDF veya Excel formatında dışa aktarılabilir
+- [x] **REPT-03**: Rapor çıktısı PDF veya Excel formatında dışa aktarılabilir
 - [x] **REPT-04**: Kullanıcı performans metrikleri hesaplanır (tamamlanan görev sayısı, zamanında teslim oranı)
 - [ ] **REPT-05**: Yönetici dashboard'unda performans verileri özet olarak gösterilir
 
@@ -218,7 +218,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-06 | Phase 5 | Complete |
 | REPT-01 | Phase 6 | Complete |
 | REPT-02 | Phase 6 | Complete |
-| REPT-03 | Phase 6 | Pending |
+| REPT-03 | Phase 6 | Complete |
 | REPT-04 | Phase 6 | Complete |
 | REPT-05 | Phase 6 | Pending |
 | PROC-01 | Phase 7 | Pending |
