@@ -17,7 +17,7 @@ from starlette.requests import Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from app.api.v1 import auth, projects, tasks, sprints, comments, attachments
+from app.api.v1 import auth, projects, tasks, sprints, comments, attachments, reports
 from app.api.v1.teams import router as teams_router
 from app.api.v1.board_columns import router as board_columns_router
 from app.api.v1.notifications import router as notifications_router
@@ -144,6 +144,7 @@ app.include_router(comments.router, prefix="/api/v1/comments", tags=["Comments"]
 app.include_router(attachments.router, prefix="/api/v1/attachments", tags=["Attachments"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
 app.include_router(notification_preferences_router, prefix="/api/v1/notifications/preferences", tags=["Notification Preferences"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["Reports"])
 
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"

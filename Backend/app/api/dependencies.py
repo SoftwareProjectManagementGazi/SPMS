@@ -32,6 +32,7 @@ from app.domain.repositories.board_column_repository import IBoardColumnReposito
 from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
 from app.domain.repositories.notification_repository import INotificationRepository
 from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
+from app.domain.repositories.report_repository import IReportRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -91,6 +92,11 @@ def get_notification_service(
 ):
     from app.application.services.notification_service import PollingNotificationService
     return PollingNotificationService(notification_repo, pref_repo)
+
+
+def get_report_repo(session: AsyncSession = Depends(get_db)) -> IReportRepository:
+    from app.infrastructure.database.repositories.report_repo import SqlAlchemyReportRepository
+    return SqlAlchemyReportRepository(session)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
