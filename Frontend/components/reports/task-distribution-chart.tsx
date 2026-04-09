@@ -14,7 +14,26 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DistributionData } from "@/services/report-service"
 
-const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4"];
+// Semantic colors for known status/priority labels (indigo-based palette)
+const STATUS_COLORS: Record<string, string> = {
+  "Done":        "#22c55e",  // green
+  "In Progress": "#6366f1",  // indigo
+  "To Do":       "#94a3b8",  // slate
+  "Backlog":     "#cbd5e1",  // light slate
+  "Code Review": "#f59e0b",  // amber
+  "Review":      "#f97316",  // orange
+};
+const PRIORITY_COLORS: Record<string, string> = {
+  "CRITICAL": "#ef4444",  // red
+  "HIGH":     "#f97316",  // orange
+  "MEDIUM":   "#f59e0b",  // amber
+  "LOW":      "#6366f1",  // indigo
+};
+const FALLBACK_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4", "#ec4899"];
+
+function resolveColor(label: string, index: number): string {
+  return STATUS_COLORS[label] ?? PRIORITY_COLORS[label] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
 
 interface TaskDistributionChartProps {
   statusData: DistributionData | undefined;
@@ -64,7 +83,7 @@ function DistributionPieChart({ data, isLoading, isError }: {
             {data.items.map((item, i) => (
               <Cell
                 key={`cell-${i}`}
-                fill={item.color || COLORS[i % COLORS.length]}
+                fill={resolveColor(item.label, i)}
               />
             ))}
           </Pie>
