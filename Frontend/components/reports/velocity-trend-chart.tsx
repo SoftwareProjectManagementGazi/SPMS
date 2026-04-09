@@ -18,9 +18,13 @@ interface VelocityTrendChartProps {
   data: VelocityData | undefined;
   isLoading: boolean;
   isError: boolean;
+  methodology?: string;
 }
 
-export function VelocityTrendChart({ data, isLoading, isError }: VelocityTrendChartProps) {
+export function VelocityTrendChart({ data, isLoading, isError, methodology }: VelocityTrendChartProps) {
+  const isScrum = !methodology || methodology === "SCRUM";
+  const title = isScrum ? "Sprint Velocity" : "Haftalık Tamamlanan";
+  const tooltipLabel = isScrum ? "Tamamlanan Görev" : "Tamamlanan";
   const renderContent = () => {
     if (isLoading) {
       return <Skeleton className="w-full h-64" />;
@@ -49,7 +53,7 @@ export function VelocityTrendChart({ data, isLoading, isError }: VelocityTrendCh
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
             <YAxis />
-            <Tooltip />
+            <Tooltip formatter={(v: number) => [v, tooltipLabel]} />
             <Bar
               dataKey="completed_count"
               fill="#6366f1"
@@ -66,7 +70,7 @@ export function VelocityTrendChart({ data, isLoading, isError }: VelocityTrendCh
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
-          Velocity Trendi
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent>{renderContent()}</CardContent>

@@ -74,6 +74,10 @@ export default function ReportsPage() {
     enabled: !!filters.projectId,
   });
 
+  const selectedProject = projects?.find((p) => Number(p.id) === filters.projectId);
+  const methodology = selectedProject?.methodology as string | undefined;
+  const isScrum = !methodology || methodology === "SCRUM";
+
   const handleLeaderboardRowClick = (userId: number) => {
     setFilters((prev) => ({ ...prev, assigneeIds: [userId] }));
   };
@@ -112,8 +116,10 @@ export default function ReportsPage() {
               icon: <TrendingUp className="h-4 w-4 text-primary" />,
             },
             {
-              label: "Aktif Sprint",
-              value: burndownData?.sprint_name || (burndownData ? "—" : undefined),
+              label: isScrum ? "Aktif Sprint" : "Devam Eden",
+              value: isScrum
+                ? (burndownData?.sprint_name || (burndownData ? "—" : undefined))
+                : (statusDistData?.items.find((i) => i.label === "In Progress")?.count?.toString() ?? undefined),
               icon: <Users className="h-4 w-4 text-muted-foreground" />,
             },
           ].map(({ label, value, icon }) => (
@@ -140,6 +146,8 @@ export default function ReportsPage() {
             isLoading={burndownLoading}
             isError={burndownError}
             projectId={filters.projectId}
+            methodology={methodology}
+            wipData={statusDistData}
           />
 
           <TaskDistributionChart
@@ -153,6 +161,7 @@ export default function ReportsPage() {
             data={velocityData}
             isLoading={velocityLoading}
             isError={velocityError}
+            methodology={methodology}
           />
 
           {/* Team Performance — no self-wrapping, needs its own Card */}
