@@ -1,9 +1,12 @@
 import io
+import logging
 from datetime import date as date_type, datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from app.api.dependencies import (
     get_current_user,
@@ -156,24 +159,24 @@ async def export_pdf(
         if project is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
 
-    project_obj = await project_repo.get_by_id(project_id)
-    if not project_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-
-    parsed_ids = _parse_assignee_ids(assignee_ids)
-    tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
-
-    filter_parts = []
-    if parsed_ids:
-        filter_parts.append(f"Atanan: {', '.join(str(i) for i in parsed_ids)}")
-    if date_from:
-        filter_parts.append(f"Baslangic: {date_from}")
-    if date_to:
-        filter_parts.append(f"Bitis: {date_to}")
-    filter_summary = " | ".join(filter_parts) if filter_parts else "Tum veriler"
-    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
-
     try:
+        project_obj = await project_repo.get_by_id(project_id)
+        if not project_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+        parsed_ids = _parse_assignee_ids(assignee_ids)
+        tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
+
+        filter_parts = []
+        if parsed_ids:
+            filter_parts.append(f"Atanan: {', '.join(str(i) for i in parsed_ids)}")
+        if date_from:
+            filter_parts.append(f"Baslangic: {date_from}")
+        if date_to:
+            filter_parts.append(f"Bitis: {date_to}")
+        filter_summary = " | ".join(filter_parts) if filter_parts else "Tum veriler"
+        generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+
         from fpdf import FPDF
 
         UNICODE_FONT = "/Library/Fonts/Arial Unicode.ttf"
@@ -232,20 +235,21 @@ async def export_pdf(
             alt = not alt
 
         pdf_bytes = bytes(pdf.output())
+        project_key = getattr(project_obj, 'key', 'UNKNOWN')
+        filename = f"SPMS_Report_{project_key}_{date_type.today()}.pdf"
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
     except Exception as exc:
+        logger.exception("PDF export failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"PDF olusturulamadi: {exc}",
+            detail=f"PDF olusturulamadi: {type(exc).__name__}: {exc}",
         )
-
-    project_key = getattr(project_obj, 'key', 'UNKNOWN')
-    filename = f"SPMS_Report_{project_key}_{date_type.today()}.pdf"
-
-    return StreamingResponse(
-        io.BytesIO(pdf_bytes),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
 
 
 @router.get("/export/excel")
@@ -264,69 +268,70 @@ async def export_excel(
         if project is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
 
-    project_obj = await project_repo.get_by_id(project_id)
-    if not project_obj:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-
-    parsed_ids = _parse_assignee_ids(assignee_ids)
-    tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
-
     try:
+        project_obj = await project_repo.get_by_id(project_id)
+        if not project_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+        parsed_ids = _parse_assignee_ids(assignee_ids)
+        tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
+
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
-    except ImportError as exc:
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "SPMS Raporu"
+
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=10)
+        header_alignment = Alignment(horizontal="left", vertical="center")
+
+        headers = ["Gorev Kodu", "Baslik", "Durum", "Atanan", "Oncelik",
+                   "Sprint", "Puan", "Olusturulma", "Bitis Tarihi", "Guncelleme", "Raporlayan"]
+        col_widths = [14, 40, 16, 24, 14, 20, 8, 18, 18, 18, 24]
+
+        for col_idx, (header, width) in enumerate(zip(headers, col_widths), 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+        ws.row_dimensions[1].height = 20
+
+        for task in tasks:
+            ws.append([
+                task.task_key or "",
+                task.title,
+                task.status or "",
+                task.assignee or "",
+                task.priority or "",
+                task.sprint or "",
+                task.points,
+                task.created_at.strftime("%Y-%m-%d %H:%M") if task.created_at else "",
+                task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
+                task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else "",
+                task.reporter or "",
+            ])
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        project_key = getattr(project_obj, 'key', 'UNKNOWN')
+        filename = f"SPMS_Report_{project_key}_{date_type.today()}.xlsx"
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Excel export failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Excel kütüphanesi yüklenemedi: {exc}",
+            detail=f"Excel olusturulamadi: {type(exc).__name__}: {exc}",
         )
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "SPMS Raporu"
-
-    # Header row styling: #4F46E5 background, white bold text
-    header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True, size=10)
-    header_alignment = Alignment(horizontal="left", vertical="center")
-
-    headers = ["Görev Kodu", "Başlık", "Durum", "Atanan", "Öncelik",
-               "Sprint", "Puan", "Oluşturulma", "Bitiş Tarihi", "Güncelleme", "Raporlayan"]
-    col_widths = [14, 40, 16, 24, 14, 20, 8, 18, 18, 18, 24]
-
-    for col_idx, (header, width) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=1, column=col_idx, value=header)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = header_alignment
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
-
-    ws.row_dimensions[1].height = 20
-
-    # Data rows
-    for task in tasks:
-        ws.append([
-            task.task_key or "",
-            task.title,
-            task.status or "",
-            task.assignee or "",
-            task.priority or "",
-            task.sprint or "",
-            task.points,
-            task.created_at.strftime("%Y-%m-%d %H:%M") if task.created_at else "",
-            task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
-            task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else "",
-            task.reporter or "",
-        ])
-
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-
-    project_key = getattr(project_obj, 'key', 'UNKNOWN')
-    filename = f"SPMS_Report_{project_key}_{date_type.today()}.xlsx"
-
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
