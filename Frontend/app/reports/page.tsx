@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query"
 import { subDays } from "date-fns"
 import { AppShell } from "@/components/app-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { CheckCircle2, ListTodo, TrendingUp, Users } from "lucide-react"
 import { reportService, ReportFilters } from "@/services/report-service"
 import { projectService } from "@/services/project-service"
 import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
@@ -61,6 +62,12 @@ export default function ReportsPage() {
     enabled: !!filters.projectId,
   });
 
+  const { data: summaryData, isLoading: summaryLoading } = useQuery({
+    queryKey: ["reports", "summary", filters],
+    queryFn: () => reportService.getSummary(filters),
+    enabled: !!filters.projectId,
+  });
+
   const { data: performanceData, isLoading: perfLoading, isError: perfError } = useQuery({
     queryKey: ["reports", "performance", filters],
     queryFn: () => reportService.getPerformance(filters),
@@ -85,6 +92,46 @@ export default function ReportsPage() {
 
         {/* Filter bar */}
         <FilterBar filters={filters} onFiltersChange={setFilters} />
+
+        {/* Summary stat cards */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            {
+              label: "Toplam Görev",
+              value: summaryData?.total_tasks,
+              icon: <ListTodo className="h-4 w-4 text-muted-foreground" />,
+            },
+            {
+              label: "Tamamlanan",
+              value: summaryData?.completed_tasks,
+              icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+            },
+            {
+              label: "Tamamlanma Oranı",
+              value: summaryData ? `${summaryData.completion_rate.toFixed(1)}%` : undefined,
+              icon: <TrendingUp className="h-4 w-4 text-primary" />,
+            },
+            {
+              label: "Aktif Sprint",
+              value: burndownData?.sprint_name || (burndownData ? "—" : undefined),
+              icon: <Users className="h-4 w-4 text-muted-foreground" />,
+            },
+          ].map(({ label, value, icon }) => (
+            <Card key={label} className="shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground font-medium">{label}</span>
+                  {icon}
+                </div>
+                {summaryLoading ? (
+                  <Skeleton className="h-7 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">{value ?? "—"}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {/* Chart grid: 2×2 — chart components self-wrap in Card */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -171,10 +171,10 @@ async def export_pdf(
         if parsed_ids:
             filter_parts.append(f"Atanan: {', '.join(str(i) for i in parsed_ids)}")
         if date_from:
-            filter_parts.append(f"Baslangic: {date_from}")
+            filter_parts.append(f"Başlangıç: {date_from}")
         if date_to:
-            filter_parts.append(f"Bitis: {date_to}")
-        filter_summary = " | ".join(filter_parts) if filter_parts else "Tum veriler"
+            filter_parts.append(f"Bitiş: {date_to}")
+        filter_summary = " | ".join(filter_parts) if filter_parts else "Tüm veriler"
         generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
         from fpdf import FPDF
@@ -200,13 +200,12 @@ async def export_pdf(
         # Subtitle
         pdf.set_font(fn, size=9)
         pdf.cell(0, 6, f"Filtre: {filter_summary}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 6, f"Olusturulma: {generated_at} UTC", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"Oluşturulma: {generated_at} UTC", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
 
         # Column widths — total must fit within 267mm usable width
-        # [18+65+25+34+20+28+12+26+23] = 251mm, leaves 16mm breathing room
         col_widths = [18, 65, 25, 34, 20, 28, 12, 26, 23]
-        headers = ["Kod", "Baslik", "Durum", "Atanan", "Oncelik", "Sprint", "Puan", "Olusturulma", "Bitis"]
+        headers = ["Kod", "Başlık", "Durum", "Atanan", "Öncelik", "Sprint", "Puan", "Oluşturulma", "Bitiş"]
 
         # Header row
         pdf.set_fill_color(79, 70, 229)

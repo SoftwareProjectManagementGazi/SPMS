@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, distinct, and_, or_
+from sqlalchemy import select, func, distinct, and_, or_, union
 
 from app.domain.repositories.report_repository import IReportRepository
 from app.application.dtos.report_dtos import (
@@ -132,13 +132,25 @@ class SqlAlchemyReportRepository(IReportRepository):
             current = sprint.start_date
             while current <= end:
                 if done_ids:
-                    done_stmt = select(func.count(distinct(AuditLogModel.entity_id))).where(
+                    # Hybrid: audit log entries OR current column status by updated_at.
+                    # Audit log is accurate for tasks moved via the API; updated_at
+                    # fallback handles seeded/imported tasks that have no audit history.
+                    via_audit = select(AuditLogModel.entity_id.label("tid")).where(
                         AuditLogModel.entity_type == "task",
                         AuditLogModel.field_name == "column_id",
                         AuditLogModel.new_value.in_([str(c) for c in done_ids]),
                         func.date(AuditLogModel.timestamp) <= current,
                     )
-                    done_result = await self.session.execute(done_stmt)
+                    via_column = select(TaskModel.id.label("tid")).where(
+                        TaskModel.sprint_id == sprint.id,
+                        TaskModel.column_id.in_(done_ids),
+                        TaskModel.deleted_at.is_(None),
+                        func.date(TaskModel.updated_at) <= current,
+                    )
+                    combined = union(via_audit, via_column).subquery()
+                    done_result = await self.session.execute(
+                        select(func.count()).select_from(combined)
+                    )
                     done_by_day = done_result.scalar() or 0
                 else:
                     done_by_day = 0
