@@ -116,6 +116,14 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-44" align="start">
+              {members.length > 0 && (
+                <DropdownMenuCheckboxItem
+                  checked={filters.assigneeIds.length === 0}
+                  onCheckedChange={() => onFiltersChange({ ...filters, assigneeIds: [] })}
+                >
+                  Tümü
+                </DropdownMenuCheckboxItem>
+              )}
               {members.length === 0 && (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
                   {filters.projectId ? "Üye bulunamadı." : "Önce proje seçin."}

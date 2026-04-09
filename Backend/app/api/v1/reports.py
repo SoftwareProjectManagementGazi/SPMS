@@ -190,8 +190,14 @@ async def export_pdf(
     )
 
     # Generate PDF via WeasyPrint
-    from weasyprint import HTML
-    pdf_bytes = HTML(string=html_string).write_pdf()
+    try:
+        from weasyprint import HTML
+        pdf_bytes = HTML(string=html_string).write_pdf()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDF oluşturulamadı: {exc}",
+        )
 
     project_key = getattr(project_obj, 'key', 'UNKNOWN')
     filename = f"SPMS_Report_{project_key}_{date_type.today()}.pdf"
@@ -226,8 +232,14 @@ async def export_excel(
     parsed_ids = _parse_assignee_ids(assignee_ids)
     tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
 
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Excel kütüphanesi yüklenemedi: {exc}",
+        )
 
     wb = openpyxl.Workbook()
     ws = wb.active

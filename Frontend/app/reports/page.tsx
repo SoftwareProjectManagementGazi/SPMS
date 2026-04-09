@@ -5,8 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { subDays } from "date-fns"
 import { AppShell } from "@/components/app-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Users, BarChart3, PieChart, TrendingUp } from "lucide-react"
+import { Users } from "lucide-react"
 import { reportService, ReportFilters } from "@/services/report-service"
 import { projectService } from "@/services/project-service"
 import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
@@ -27,7 +26,6 @@ export default function ReportsPage() {
     dateTo: defaultDateTo,
   });
 
-  // Fetch all projects and default to the first one
   const { data: projects } = useQuery({
     queryKey: ["projects"],
     queryFn: projectService.getAll,
@@ -39,35 +37,30 @@ export default function ReportsPage() {
     }
   }, [projects, filters.projectId]);
 
-  // Burndown data
   const { data: burndownData, isLoading: burndownLoading, isError: burndownError } = useQuery({
     queryKey: ["reports", "burndown", filters],
     queryFn: () => reportService.getBurndown(filters),
     enabled: !!filters.projectId,
   });
 
-  // Distribution status data
   const { data: statusDistData, isLoading: distStatusLoading, isError: distStatusError } = useQuery({
     queryKey: ["reports", "distribution-status", filters],
     queryFn: () => reportService.getDistribution(filters, "status"),
     enabled: !!filters.projectId,
   });
 
-  // Distribution priority data
   const { data: priorityDistData, isLoading: distPriorityLoading } = useQuery({
     queryKey: ["reports", "distribution-priority", filters],
     queryFn: () => reportService.getDistribution(filters, "priority"),
     enabled: !!filters.projectId,
   });
 
-  // Velocity data
   const { data: velocityData, isLoading: velocityLoading, isError: velocityError } = useQuery({
     queryKey: ["reports", "velocity", filters],
     queryFn: () => reportService.getVelocity(filters),
     enabled: !!filters.projectId,
   });
 
-  // Performance data (Team Performance panel — Plan 04)
   const { data: performanceData, isLoading: perfLoading, isError: perfError } = useQuery({
     queryKey: ["reports", "performance", filters],
     queryFn: () => reportService.getPerformance(filters),
@@ -75,16 +68,13 @@ export default function ReportsPage() {
   });
 
   const handleLeaderboardRowClick = (userId: number) => {
-    setFilters((prev) => ({
-      ...prev,
-      assigneeIds: [userId],
-    }));
+    setFilters((prev) => ({ ...prev, assigneeIds: [userId] }));
   };
 
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Page header row */}
+        {/* Page header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">Raporlar</h1>
@@ -96,53 +86,29 @@ export default function ReportsPage() {
         {/* Filter bar */}
         <FilterBar filters={filters} onFiltersChange={setFilters} />
 
-        {/* Chart grid: 2x2 */}
+        {/* Chart grid: 2×2 — chart components self-wrap in Card */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Sprint Burndown Panel */}
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Sprint Burndown
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64">
-              <SprintBurndownChart data={burndownData ?? null} isLoading={burndownLoading} isError={burndownError} />
-            </CardContent>
-          </Card>
+          <SprintBurndownChart
+            data={burndownData}
+            isLoading={burndownLoading}
+            isError={burndownError}
+            projectId={filters.projectId}
+          />
 
-          {/* Task Distribution Panel */}
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="h-5 w-5 text-primary" />
-                Görev Dağılımı
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64">
-              <TaskDistributionChart
-                statusData={statusDistData ?? null}
-                priorityData={priorityDistData ?? null}
-                isLoading={distStatusLoading || distPriorityLoading}
-                isError={distStatusError}
-              />
-            </CardContent>
-          </Card>
+          <TaskDistributionChart
+            statusData={statusDistData}
+            priorityData={priorityDistData}
+            isLoading={distStatusLoading || distPriorityLoading}
+            isError={distStatusError}
+          />
 
-          {/* Velocity Trend Panel */}
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Velocity Trendi
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64">
-              <VelocityTrendChart data={velocityData ?? null} isLoading={velocityLoading} isError={velocityError} />
-            </CardContent>
-          </Card>
+          <VelocityTrendChart
+            data={velocityData}
+            isLoading={velocityLoading}
+            isError={velocityError}
+          />
 
-          {/* Team Performance Panel — Plan 04 */}
+          {/* Team Performance — no self-wrapping, needs its own Card */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

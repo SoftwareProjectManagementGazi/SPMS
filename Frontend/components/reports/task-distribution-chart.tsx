@@ -14,13 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DistributionData } from "@/services/report-service"
 
-const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
+const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4"];
 
 interface TaskDistributionChartProps {
   statusData: DistributionData | undefined;
@@ -70,13 +64,7 @@ function DistributionPieChart({ data, isLoading, isError }: {
             {data.items.map((item, i) => (
               <Cell
                 key={`cell-${i}`}
-                fill={
-                  item.color
-                    ? item.color.startsWith("--")
-                      ? `hsl(var(${item.color}))`
-                      : item.color
-                    : COLORS[i % COLORS.length]
-                }
+                fill={item.color || COLORS[i % COLORS.length]}
               />
             ))}
           </Pie>

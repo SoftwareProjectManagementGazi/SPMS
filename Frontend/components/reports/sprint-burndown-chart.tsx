@@ -63,8 +63,9 @@ export function SprintBurndownChart({
               <Area
                 type="monotone"
                 dataKey="remaining"
-                stroke="hsl(var(--chart-1))"
-                fill="hsl(var(--chart-1) / 0.15)"
+                stroke="#6366f1"
+                fill="#6366f1"
+                fillOpacity={0.15}
               />
             </AreaChart>
           </ResponsiveContainer>

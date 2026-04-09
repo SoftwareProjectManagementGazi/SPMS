@@ -52,7 +52,7 @@ export function VelocityTrendChart({ data, isLoading, isError }: VelocityTrendCh
             <Tooltip />
             <Bar
               dataKey="completed_count"
-              fill="hsl(var(--chart-1))"
+              fill="#6366f1"
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
