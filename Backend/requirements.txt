@@ -15,4 +15,4 @@ slowapi
 apscheduler
 fastapi-mail
 openpyxl
-weasyprint
+fpdf2

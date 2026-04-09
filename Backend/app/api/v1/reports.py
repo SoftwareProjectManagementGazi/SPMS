@@ -4,7 +4,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathlib import Path
-import jinja2
 
 from app.api.dependencies import (
     get_current_user,
@@ -152,13 +151,11 @@ async def export_pdf(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    # Membership check (inline — project_id is query param, not path param)
     if not _is_admin(current_user):
         project = await project_repo.get_by_id_and_user(project_id, current_user.id)
         if project is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
 
-    # Get project details for filename and header
     project_obj = await project_repo.get_by_id(project_id)
     if not project_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -166,37 +163,79 @@ async def export_pdf(
     parsed_ids = _parse_assignee_ids(assignee_ids)
     tasks = await report_repo.get_tasks_for_export(project_id, parsed_ids, date_from, date_to)
 
-    # Build filter summary string
     filter_parts = []
     if parsed_ids:
-        filter_parts.append(f"Atanan ID: {', '.join(str(i) for i in parsed_ids)}")
+        filter_parts.append(f"Atanan: {', '.join(str(i) for i in parsed_ids)}")
     if date_from:
-        filter_parts.append(f"Başlangıç: {date_from}")
+        filter_parts.append(f"Baslangic: {date_from}")
     if date_to:
-        filter_parts.append(f"Bitiş: {date_to}")
-    filter_summary = " | ".join(filter_parts) if filter_parts else "Tüm veriler"
-
+        filter_parts.append(f"Bitis: {date_to}")
+    filter_summary = " | ".join(filter_parts) if filter_parts else "Tum veriler"
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
-    # Render HTML template
-    template_dir = Path(__file__).resolve().parent.parent.parent / "infrastructure" / "email" / "templates"
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(template_dir)))
-    template = env.get_template("report.html")
-    html_string = template.render(
-        project_name=project_obj.name,
-        filter_summary=filter_summary,
-        generated_at=generated_at,
-        tasks=tasks,
-    )
-
-    # Generate PDF via WeasyPrint
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html_string).write_pdf()
+        from fpdf import FPDF
+
+        UNICODE_FONT = "/Library/Fonts/Arial Unicode.ttf"
+        pdf = FPDF(orientation="L", unit="mm", format="A4")
+        pdf.set_auto_page_break(auto=True, margin=10)
+        pdf.add_page()
+
+        if Path(UNICODE_FONT).exists():
+            pdf.add_font("uni", fname=UNICODE_FONT)
+            fn = "uni"
+        else:
+            fn = "Helvetica"
+
+        # Title
+        pdf.set_font(fn, size=14)
+        pdf.cell(0, 10, f"SPMS Raporu - {project_obj.name}", new_x="LMARGIN", new_y="NEXT")
+
+        # Subtitle
+        pdf.set_font(fn, size=9)
+        pdf.cell(0, 6, f"Filtre: {filter_summary}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"Olusturulma: {generated_at} UTC", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(3)
+
+        # Column widths (landscape A4 = 287 mm usable)
+        col_widths = [22, 75, 28, 38, 22, 34, 14, 28, 26]
+        headers = ["Kod", "Baslik", "Durum", "Atanan", "Oncelik", "Sprint", "Puan", "Olusturulma", "Bitis"]
+
+        # Header row
+        pdf.set_fill_color(79, 70, 229)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font(fn, size=9)
+        for w, h in zip(col_widths, headers):
+            pdf.cell(w, 8, h, border=1, fill=True)
+        pdf.ln()
+
+        # Data rows
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font(fn, size=8)
+        alt = False
+        for task in tasks:
+            pdf.set_fill_color(248, 248, 248) if alt else pdf.set_fill_color(255, 255, 255)
+            row_vals = [
+                task.task_key or "",
+                (task.title or "")[:55],
+                task.status or "",
+                task.assignee or "",
+                task.priority or "",
+                task.sprint or "",
+                str(task.points) if task.points is not None else "",
+                task.created_at.strftime("%Y-%m-%d") if task.created_at else "",
+                task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
+            ]
+            for val, w in zip(row_vals, col_widths):
+                pdf.cell(w, 7, str(val), border=1, fill=True)
+            pdf.ln()
+            alt = not alt
+
+        pdf_bytes = bytes(pdf.output())
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"PDF oluşturulamadı: {exc}",
+            detail=f"PDF olusturulamadi: {exc}",
         )
 
     project_key = getattr(project_obj, 'key', 'UNKNOWN')
