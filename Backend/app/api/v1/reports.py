@@ -180,8 +180,11 @@ async def export_pdf(
         from fpdf import FPDF
 
         UNICODE_FONT = "/Library/Fonts/Arial Unicode.ttf"
+        # Landscape A4: 297mm wide. With 15mm margins each side → 267mm usable.
+        MARGIN = 15
         pdf = FPDF(orientation="L", unit="mm", format="A4")
-        pdf.set_auto_page_break(auto=True, margin=10)
+        pdf.set_margins(MARGIN, MARGIN, MARGIN)
+        pdf.set_auto_page_break(auto=True, margin=MARGIN)
         pdf.add_page()
 
         if Path(UNICODE_FONT).exists():
@@ -200,8 +203,9 @@ async def export_pdf(
         pdf.cell(0, 6, f"Olusturulma: {generated_at} UTC", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
 
-        # Column widths (landscape A4 = 287 mm usable)
-        col_widths = [22, 75, 28, 38, 22, 34, 14, 28, 26]
+        # Column widths — total must fit within 267mm usable width
+        # [18+65+25+34+20+28+12+26+23] = 251mm, leaves 16mm breathing room
+        col_widths = [18, 65, 25, 34, 20, 28, 12, 26, 23]
         headers = ["Kod", "Baslik", "Durum", "Atanan", "Oncelik", "Sprint", "Puan", "Olusturulma", "Bitis"]
 
         # Header row
@@ -220,7 +224,7 @@ async def export_pdf(
             pdf.set_fill_color(248, 248, 248) if alt else pdf.set_fill_color(255, 255, 255)
             row_vals = [
                 task.task_key or "",
-                (task.title or "")[:55],
+                (task.title or "")[:50],
                 task.status or "",
                 task.assignee or "",
                 task.priority or "",
@@ -283,13 +287,20 @@ async def export_excel(
         ws = wb.active
         ws.title = "SPMS Raporu"
 
+        # Print settings: landscape A4, fit all columns on one page width
+        ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
+        ws.page_setup.paperSize = ws.PAPERSIZE_A4
+        ws.page_setup.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+
         header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
         header_font = Font(color="FFFFFF", bold=True, size=10)
-        header_alignment = Alignment(horizontal="left", vertical="center")
+        header_alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
 
         headers = ["Gorev Kodu", "Baslik", "Durum", "Atanan", "Oncelik",
-                   "Sprint", "Puan", "Olusturulma", "Bitis Tarihi", "Guncelleme", "Raporlayan"]
-        col_widths = [14, 40, 16, 24, 14, 20, 8, 18, 18, 18, 24]
+                   "Sprint", "Puan", "Olusturulma", "Bitis", "Guncelleme", "Raporlayan"]
+        col_widths = [12, 38, 14, 22, 12, 18, 7, 16, 14, 16, 20]
 
         for col_idx, (header, width) in enumerate(zip(headers, col_widths), 1):
             cell = ws.cell(row=1, column=col_idx, value=header)
@@ -300,8 +311,9 @@ async def export_excel(
 
         ws.row_dimensions[1].height = 20
 
-        for task in tasks:
-            ws.append([
+        data_alignment = Alignment(horizontal="left", vertical="center")
+        for row_idx, task in enumerate(tasks, 2):
+            row_data = [
                 task.task_key or "",
                 task.title,
                 task.status or "",
@@ -309,11 +321,14 @@ async def export_excel(
                 task.priority or "",
                 task.sprint or "",
                 task.points,
-                task.created_at.strftime("%Y-%m-%d %H:%M") if task.created_at else "",
+                task.created_at.strftime("%Y-%m-%d") if task.created_at else "",
                 task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
-                task.updated_at.strftime("%Y-%m-%d %H:%M") if task.updated_at else "",
+                task.updated_at.strftime("%Y-%m-%d") if task.updated_at else "",
                 task.reporter or "",
-            ])
+            ]
+            ws.append(row_data)
+            for col_idx in range(1, len(row_data) + 1):
+                ws.cell(row=row_idx, column=col_idx).alignment = data_alignment
 
         buffer = io.BytesIO()
         wb.save(buffer)
