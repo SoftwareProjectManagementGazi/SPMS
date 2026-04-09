@@ -289,10 +289,11 @@ class SqlAlchemyReportRepository(IReportRepository):
                 "low": "--priority-low",
             }
             for row in result.all():
-                prio_val = str(row.prio).lower() if row.prio else "medium"
-                color = priority_color_map.get(prio_val, "--priority-medium")
-                label = prio_val.capitalize() if row.prio else "Medium"
-                items.append(DistributionItemDTO(label=label, count=row.cnt, color=color))
+                # row.prio may be a Python enum (TaskPriority.MEDIUM) or a plain string
+                raw = row.prio.value if hasattr(row.prio, "value") else str(row.prio)
+                prio_val = raw.upper() if raw else "MEDIUM"
+                color = priority_color_map.get(prio_val.lower(), "--priority-medium")
+                items.append(DistributionItemDTO(label=prio_val, count=row.cnt, color=color))
 
         return DistributionDTO(group_by=group_by, items=items)
 
