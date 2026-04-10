@@ -73,7 +73,7 @@ All color values reference the CSS custom properties defined in `Frontend/app/gl
 **Accent (`--primary`) reserved for:**
 - "Şablon Oluştur" primary button on `/admin/process-templates`
 - "Değişiklikleri Kaydet" primary button in `/admin/settings`
-- "Kaydet" primary button in Project Settings "Süreç Modeli" section
+- "Süreç Modelini Kaydet" primary button in Project Settings "Süreç Modeli" section
 - Active methodology card selection ring/border (`ring-2 ring-primary`)
 - "Bağlantıyı Test Et" button in project integrations section
 - Admin nav sidebar active item indicator (`bg-sidebar-accent`)
@@ -102,14 +102,14 @@ All components below are already installed via shadcn/ui. No new registry instal
 | `Switch` | `@/components/ui/switch` | Module toggles (Raporlama on/off), behavioral flag toggles (enforce_wip_limits etc.), admin master integration switch |
 | `Select`, `SelectTrigger`, `SelectContent`, `SelectItem` | `@/components/ui/select` | Methodology dropdown on PATCH (change methodology); Notification frequency dropdown in admin settings |
 | `Input` | `@/components/ui/input` | Sprint duration (days) input, WIP limit per-column input, webhook URL input, task limit input, theme hex color input |
-| `Button` | `@/components/ui/button` | "Kaydet", "Şablon Oluştur", "Sil", "Bağlantıyı Test Et", "İptal", "Değişiklikleri Kaydet" |
+| `Button` | `@/components/ui/button` | "Şablonu Kaydet", "Değişiklikleri Uygula", "Süreç Modelini Kaydet", "Entegrasyonu Kaydet", "Şablon Oluştur", "Sil", "Bağlantıyı Test Et", "Vazgeç", "Değiştirme", "Silme", "Değişiklikleri Kaydet" |
 | `Badge` | `@/components/ui/badge` | WIP count badge on Kanban column header, methodology tag on template list rows, "Yerleşik" vs "Özel" badge |
 | `Dialog`, `DialogHeader`, `DialogTitle`, `DialogContent`, `DialogFooter` | `@/components/ui/dialog` | Custom template create/edit form dialog |
 | `AlertDialog`, `AlertDialogTrigger`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel`, `AlertDialogAction` | `@/components/ui/alert-dialog` | Delete custom template confirmation; methodology change confirmation |
 | `ConfirmDialog` / `TypeToConfirmDialog` | `@/components/ui/confirm-dialog` | Methodology change confirmation dialog (reuses Phase 2 component) |
 | `Separator` | `@/components/ui/separator` | Visual dividers between settings sections |
 | `Skeleton` | `@/components/ui/skeleton` | Loading skeleton for template list, admin settings form while data fetches |
-| `Tooltip`, `TooltipContent`, `TooltipTrigger` | `@/components/ui/tooltip` | Behavioral flag toggle explanations (hover tooltip on info icon), WIP limit explanation |
+| `Tooltip`, `TooltipContent`, `TooltipTrigger` | `@/components/ui/tooltip` | Behavioral flag toggle explanations (hover tooltip on info icon), WIP limit explanation, icon-only action button labels |
 | `Table`, `TableHeader`, `TableRow`, `TableHead`, `TableBody`, `TableCell` | `@/components/ui/table` | Template list table in `/admin/process-templates` |
 | `Sonner` (toast) | `@/components/ui/sonner` | WIP limit warning toast, save confirmations, webhook test result, integration event send result |
 | `Label` | `@/components/ui/label` | All form field labels in settings panels |
@@ -122,11 +122,11 @@ All components below are already installed via shadcn/ui. No new registry instal
 - `XCircle` — Webhook test failure state inline icon
 - `Loader2` — Spinner during "Bağlantıyı Test Et" request, during save mutations
 - `Plus` — "Şablon Oluştur" button
-- `Trash2` — Delete custom template action
-- `Edit` (or `Pencil`) — Edit custom template action
+- `Trash2` — Delete custom template action (tooltip: "Şablonu Sil")
+- `Edit` (or `Pencil`) — Edit custom template action (tooltip: "Şablonu Düzenle")
 - `Shield` — Admin-only section indicator (optional, subtle)
 - `Puzzle` (or `Plug`) — Integrations section icon
-- `Eye` — View-only indicator on built-in template rows
+- `Eye` — View-only indicator on built-in template rows (tooltip: "Yerleşik şablonlar düzenlenemez.")
 - `Lock` — Built-in template locked state indicator
 
 ---
@@ -166,8 +166,8 @@ Admin pages wrap in `<AppShell>`. Navigation between sub-pages via `Tabs` at the
 
 [Template table]                     ← Table, full-width
   Columns: Şablon Adı | Tür | Kolon Sayısı | Eylemler
-  Built-in rows: read-only; "Yerleşik" Badge (variant="secondary"), Eye icon, no edit/delete
-  Custom rows: "Özel" Badge (variant="outline"), Edit button (ghost), Delete button (ghost, destructive color)
+  Built-in rows: read-only; "Yerleşik" Badge (variant="secondary"), Eye icon (tooltip: "Yerleşik şablonlar düzenlenemez."), no edit/delete
+  Custom rows: "Özel" Badge (variant="outline"), Edit button (ghost, tooltip: "Şablonu Düzenle"), Delete button (ghost, destructive color, tooltip: "Şablonu Sil")
 
 [Create/Edit Dialog]                 ← Dialog, max-w-lg
   DialogTitle: "Yeni Şablon" / "Şablonu Düzenle"
@@ -175,7 +175,8 @@ Admin pages wrap in `<AppShell>`. Navigation between sub-pages via `Tabs` at the
     - Şablon Adı (Input, required)
     - Açıklama (Textarea, optional)
     - Kolonlar (dynamic list: Input per column + Add/Remove buttons)
-  DialogFooter: [İptal Button] [Kaydet Button (primary)]
+  DialogFooter (create mode): [Vazgeç Button] [Şablonu Kaydet Button (primary)]
+  DialogFooter (edit mode):   [Vazgeç Button] [Değişiklikleri Uygula Button (primary)]
 ```
 
 ### `/admin/settings` Content
@@ -237,7 +238,7 @@ Extends the existing Settings tab in `/projects/[id]/page.tsx`. Added above "Boa
     [Sprint Süresi row]              ← flex items-center gap-3 mt-4
       Label: "Sprint Süresi"
       Input (number, w-20) + "gün" suffix label
-    [Kaydet Button]                  ← variant="default", primary, mt-4
+    [Süreç Modelini Kaydet Button]   ← variant="default", primary, mt-4
 
   [Separator]
 
@@ -251,7 +252,7 @@ Extends the existing Settings tab in `/projects/[id]/page.tsx`. Added above "Boa
     [Test button row]                ← mt-2
       [Bağlantıyı Test Et Button]    ← variant="outline"
       [Inline test result]           ← appears after click: CheckCircle2 (green) "Bağlantı başarılı!" or XCircle (red) "Bağlantı başarısız."
-    [Kaydet Button]                  ← variant="default", primary
+    [Entegrasyonu Kaydet Button]     ← variant="default", primary
 
   [Separator]
 
@@ -299,8 +300,8 @@ Add to the existing methodology selection grid in `ProjectCreation`:
 | Interaction | Behavior |
 |-------------|----------|
 | Change Select value to a different methodology | `ConfirmDialog` opens immediately before saving |
-| Confirmation dialog | Title: "Süreç Modelini Değiştir". Body: "Mevcut görevler ve board kolonları korunacak. SCRUM'dan geçiş yapıyorsanız aktif sprint'ler kapatılacak. Devam etmek istiyor musunuz?" [İptal] [Değiştir (primary)] |
-| Confirm | PATCH /projects/{id} fires. Spinner on "Kaydet" button. Sprints archived server-side if switching away from SCRUM. process_config updated. |
+| Confirmation dialog | Title: "Süreç Modelini Değiştir". Body: "Mevcut görevler ve board kolonları korunacak. SCRUM'dan geçiş yapıyorsanız aktif sprint'ler kapatılacak. Devam etmek istiyor musunuz?" [Değiştirme] [Değiştir (primary)] |
+| Confirm | PATCH /projects/{id} fires. Spinner on "Süreç Modelini Kaydet" button. Sprints archived server-side if switching away from SCRUM. process_config updated. |
 | Success | sonner toast: "Süreç modeli güncellendi." Page data refetches. |
 | Error | sonner toast: "Süreç modeli güncellenemedi. Lütfen tekrar deneyin." Select reverts to previous value. |
 
@@ -324,11 +325,11 @@ Add to the existing methodology selection grid in `ProjectCreation`:
 
 | Interaction | Behavior |
 |-------------|----------|
-| Click "Şablon Oluştur" | Dialog opens with blank form. |
+| Click "Şablon Oluştur" | Dialog opens with blank form. Footer shows [Vazgeç] [Şablonu Kaydet]. |
 | Submit create form | POST /process-templates. Button shows Loader2 spinner. Dialog closes on success. Table refetches. sonner toast: "Şablon oluşturuldu." |
-| Click Edit on custom template | Same Dialog opens pre-populated. |
+| Click Edit on custom template (tooltip: "Şablonu Düzenle") | Same Dialog opens pre-populated. Footer shows [Vazgeç] [Değişiklikleri Uygula]. |
 | Submit edit form | PATCH /process-templates/{id}. Same optimistic spinner pattern. sonner toast: "Şablon güncellendi." |
-| Click Delete on custom template | AlertDialog: "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz." [İptal] [Sil (destructive)] |
+| Click Delete on custom template (tooltip: "Şablonu Sil") | AlertDialog: "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz." [Silme] [Sil (destructive)] |
 | Confirm delete | DELETE /process-templates/{id}. AlertDialog closes. Table refetches. sonner toast: "Şablon silindi." |
 | Click Eye on built-in template | No action (read-only). Cursor: `cursor-default`. Tooltip: "Yerleşik şablonlar düzenlenemez." |
 
@@ -377,8 +378,14 @@ All user-facing text in Turkish per CONTEXT.md.
 | Admin tab: Process templates | "Süreç Şablonları" | CONTEXT.md D-08 |
 | Admin tab: System settings | "Sistem Ayarları" | CONTEXT.md D-11 |
 | Create template CTA | "Şablon Oluştur" | default |
-| Save settings CTA | "Değişiklikleri Kaydet" | default |
-| Save project settings CTA | "Kaydet" | default |
+| Save template CTA (create mode) | "Şablonu Kaydet" | checker fix — specific verb+noun |
+| Save template CTA (edit mode) | "Değişiklikleri Uygula" | checker fix — specific verb+noun |
+| Save settings CTA (admin) | "Değişiklikleri Kaydet" | default |
+| Save process model CTA (project settings) | "Süreç Modelini Kaydet" | checker fix — specific verb+noun |
+| Save integration CTA (project settings) | "Entegrasyonu Kaydet" | checker fix — specific verb+noun |
+| Discard template dialog | "Vazgeç" | checker fix — contextual cancel |
+| Cancel methodology change | "Değiştirme" | checker fix — contextual cancel |
+| Cancel template delete | "Silme" | checker fix — contextual cancel |
 | Test webhook CTA | "Bağlantıyı Test Et" | CONTEXT.md D-18 |
 | Webhook test success inline | "Bağlantı başarılı!" | CONTEXT.md specifics |
 | Webhook test failure inline | "Bağlantı başarısız. URL'yi kontrol edin." | default |
@@ -409,7 +416,9 @@ All user-facing text in Turkish per CONTEXT.md.
 | Template delete dialog title | "Şablonu Sil" | default |
 | Template delete dialog body | "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz." | default |
 | Template delete confirm button | "Sil" | default |
-| Built-in template tooltip | "Yerleşik şablonlar düzenlenemez." | CONTEXT.md D-07 |
+| Built-in template tooltip (Eye icon) | "Yerleşik şablonlar düzenlenemez." | CONTEXT.md D-07 |
+| Edit template button tooltip (Edit/Pencil icon) | "Şablonu Düzenle" | checker fix — accessible icon label |
+| Delete template button tooltip (Trash2 icon) | "Şablonu Sil" | checker fix — accessible icon label |
 | Template list: built-in badge | "Yerleşik" | CONTEXT.md D-07 |
 | Template list: custom badge | "Özel" | CONTEXT.md D-07 |
 | Template list: columns count column | "{N} Kolon" | default |
@@ -420,7 +429,7 @@ All user-facing text in Turkish per CONTEXT.md.
 | Empty state: template list (should not occur — built-ins always exist) | Not applicable | — |
 | Empty state: integration not configured | "Henüz bir entegrasyon yapılandırılmamış. Platform seçerek başlayın." | default |
 | Behavioral flag: sequential deps label | "Sıralı Bağımlılık Zorunluluğu" | CONTEXT.md D-05 |
-| Behavioral flag: WIP limits label | "WIP Sınırı Zorunlululuğu" | CONTEXT.md D-05 |
+| Behavioral flag: WIP limits label | "WIP Sınırı Zorunluluğu" | CONTEXT.md D-05 |
 | Behavioral flag: expired sprints label | "Süresi Dolan Sprint Kısıtlaması" | CONTEXT.md D-05 |
 | Project settings: current methodology label | "Mevcut Süreç Modeli" | default |
 | Project settings: change methodology label | "Süreç Modelini Değiştir" | default |
@@ -435,8 +444,8 @@ All user-facing text in Turkish per CONTEXT.md.
 
 | Action | Confirmation Approach |
 |--------|----------------------|
-| Delete custom process template | `AlertDialog` with explicit body: "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz." Two buttons: [İptal] [Sil (destructive)] |
-| Change project methodology | `ConfirmDialog` (reuse Phase 2 component) with sprint-archival warning body. Two buttons: [İptal] [Değiştir (primary)] |
+| Delete custom process template | `AlertDialog` with explicit body: "Bu şablonu silmek istediğinize emin misiniz? Bu işlem geri alınamaz." Two buttons: [Silme] [Sil (destructive)] |
+| Change project methodology | `ConfirmDialog` (reuse Phase 2 component) with sprint-archival warning body. Two buttons: [Değiştirme] [Değiştir (primary)] |
 
 No `TypeToConfirmDialog` (type-to-confirm) for template delete — not critical enough to require typing. ConfirmDialog is sufficient.
 
@@ -469,8 +478,18 @@ No `TypeToConfirmDialog` (type-to-confirm) for template delete — not critical 
 | State | Implementation |
 |-------|---------------|
 | Loading project | Skeleton for methodology badge + flag switches |
-| No changes | "Kaydet" button disabled |
-| Changes pending | "Kaydet" button enabled |
+| No changes | "Süreç Modelini Kaydet" button disabled |
+| Changes pending | "Süreç Modelini Kaydet" button enabled |
+| Saving | Button Loader2 spinner + disabled |
+| Success | toast + data refetch |
+| Error | toast + revert |
+
+### Project Settings "Entegrasyonlar" Form
+
+| State | Implementation |
+|-------|---------------|
+| No changes | "Entegrasyonu Kaydet" button disabled |
+| Changes pending | "Entegrasyonu Kaydet" button enabled |
 | Saving | Button Loader2 spinner + disabled |
 | Success | toast + data refetch |
 | Error | toast + revert |
