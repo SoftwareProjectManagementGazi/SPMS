@@ -83,7 +83,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 - [x] **PROC-01**: Proje oluştururken Scrum, Waterfall, Kanban, Iterative süreç modeli seçilebilir
 - [x] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
-- [ ] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
+- [x] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
 - [x] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
 - [ ] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
 
@@ -118,7 +118,7 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Adaptation & Configuration (ADAPT)
 
-- [ ] **ADAPT-01**: Proje bazında aktif süreç modeli değiştirilebilir (yalnızca o projeyi etkiler)
+- [x] **ADAPT-01**: Proje bazında aktif süreç modeli değiştirilebilir (yalnızca o projeyi etkiler)
 - [ ] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
 - [ ] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
 - [ ] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
@@ -223,10 +223,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPT-05 | Phase 6 | Complete |
 | PROC-01 | Phase 7 | Complete |
 | PROC-02 | Phase 7 | Complete |
-| PROC-03 | Phase 7 | Pending |
+| PROC-03 | Phase 7 | Complete |
 | PROC-04 | Phase 7 | Complete |
 | PROC-05 | Phase 7 | Pending |
-| ADAPT-01 | Phase 7 | Pending |
+| ADAPT-01 | Phase 7 | Complete |
 | ADAPT-02 | Phase 7 | Pending |
 | ADAPT-03 | Phase 7 | Pending |
 | ADAPT-04 | Phase 7 | Pending |
