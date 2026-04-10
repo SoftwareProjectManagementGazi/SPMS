@@ -103,6 +103,9 @@ async def lifespan(app: FastAPI):
     # Startup: Run Phase 5 async migration (notification tables + enum extension)
     from app.infrastructure.database.migrations.migration_004 import upgrade as upgrade_004
     await upgrade_004(engine)
+    # Startup: Run Phase 7 async migration (ITERATIVE enum, process_config, process_templates, system_config)
+    from app.infrastructure.database.migrations.migration_005 import upgrade as upgrade_005
+    await upgrade_005(engine)
     # Startup: Register and start APScheduler jobs
     from app.scheduler.jobs import scheduler, deadline_alert_job, purge_notifications_job
     from apscheduler.triggers.cron import CronTrigger

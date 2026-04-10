@@ -8,6 +8,7 @@ class Methodology(str, Enum):
     SCRUM = "SCRUM"
     KANBAN = "KANBAN"
     WATERFALL = "WATERFALL"
+    ITERATIVE = "ITERATIVE"
 
 class Project(BaseModel):
     id: Optional[int] = None
