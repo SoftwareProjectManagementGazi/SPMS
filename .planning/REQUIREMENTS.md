@@ -119,9 +119,9 @@ Requirements for this milestone. All map to roadmap phases.
 ### Adaptation & Configuration (ADAPT)
 
 - [x] **ADAPT-01**: Proje bazında aktif süreç modeli değiştirilebilir (yalnızca o projeyi etkiler)
-- [ ] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
-- [ ] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
-- [ ] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
+- [x] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
+- [x] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
+- [x] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
 - [x] **ADAPT-05**: Sistem parametreleri (sprint süresi, görev sınırı, bildirim frekansı) yönetim panelinden değiştirilebilir
 - [x] **ADAPT-06**: Uyarlama işlemleri sistem yeniden başlatması gerektirmez
 
@@ -227,9 +227,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROC-04 | Phase 7 | Complete |
 | PROC-05 | Phase 7 | Complete |
 | ADAPT-01 | Phase 7 | Complete |
-| ADAPT-02 | Phase 7 | Pending |
-| ADAPT-03 | Phase 7 | Pending |
-| ADAPT-04 | Phase 7 | Pending |
+| ADAPT-02 | Phase 7 | Complete |
+| ADAPT-03 | Phase 7 | Complete |
+| ADAPT-04 | Phase 7 | Complete |
 | ADAPT-05 | Phase 7 | Complete |
 | ADAPT-06 | Phase 7 | Complete |
 | EXT-01 | Phase 7 | Complete |
