@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon, Layers, Workflow, GitBranch, Loader2 } from "lucide-react"
+import { CalendarIcon, Layers, Workflow, GitBranch, Loader2, RefreshCw } from "lucide-react"
 import { format } from "date-fns"
 import { tr } from "date-fns/locale" // Tarih formatı için Türkçe yerelleştirme (opsiyonel)
 import { useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { Methodology } from "@/lib/types"
 
@@ -29,6 +30,7 @@ const methodologies: { value: Methodology; label: string; description: string; i
   { value: "scrum", label: "Scrum", description: "Sprint tabanlı planlama ve yinelemeli geliştirme", icon: Layers },
   { value: "kanban", label: "Kanban", description: "WIP sınırları ile sürekli akış", icon: Workflow },
   { value: "waterfall", label: "Waterfall", description: "Başlangıçtan bitişe sıralı aşamalar", icon: GitBranch },
+  { value: "iterative" as Methodology, label: "Iteratif", description: "Planlama, analiz, gelistirme ve degerlendirme donguleriyle surekli iyilestirme", icon: RefreshCw },
 ]
 
 export function ProjectCreation() {
@@ -212,7 +214,7 @@ export function ProjectCreation() {
         </CardHeader>
 
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {methodologies.map((method) => (
               <button
                 key={method.value}
@@ -220,7 +222,7 @@ export function ProjectCreation() {
                 className={cn(
                   "flex flex-col items-center gap-3 p-6 rounded-lg border-2 transition-all text-center",
                   selectedMethodology === method.value
-                    ? "border-primary bg-primary/5"
+                    ? "ring-2 ring-primary border-primary bg-primary/5"
                     : "border-border hover:border-primary/50 hover:bg-accent/50",
                 )}
                 type="button"
@@ -240,6 +242,17 @@ export function ProjectCreation() {
               </button>
             ))}
           </div>
+
+          {template && (
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-2">Olusturulacak Kolonlar:</p>
+              <div className="flex flex-wrap gap-2">
+                {template.columns.map((col) => (
+                  <Badge key={col} variant="secondary">{col}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {template ? (
             <div className="mt-6 space-y-4">
