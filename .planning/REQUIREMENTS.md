@@ -81,10 +81,10 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Process Model (PROC)
 
-- [ ] **PROC-01**: Proje oluştururken Scrum, Waterfall, Kanban, Iterative süreç modeli seçilebilir
-- [ ] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
+- [x] **PROC-01**: Proje oluştururken Scrum, Waterfall, Kanban, Iterative süreç modeli seçilebilir
+- [x] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
 - [ ] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
-- [ ] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
+- [x] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
 - [ ] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
 
 ---
@@ -122,8 +122,8 @@ Requirements for this milestone. All map to roadmap phases.
 - [ ] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
 - [ ] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
 - [ ] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
-- [ ] **ADAPT-05**: Sistem parametreleri (sprint süresi, görev sınırı, bildirim frekansı) yönetim panelinden değiştirilebilir
-- [ ] **ADAPT-06**: Uyarlama işlemleri sistem yeniden başlatması gerektirmez
+- [x] **ADAPT-05**: Sistem parametreleri (sprint süresi, görev sınırı, bildirim frekansı) yönetim panelinden değiştirilebilir
+- [x] **ADAPT-06**: Uyarlama işlemleri sistem yeniden başlatması gerektirmez
 
 ---
 
@@ -221,17 +221,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPT-03 | Phase 6 | Complete |
 | REPT-04 | Phase 6 | Complete |
 | REPT-05 | Phase 6 | Complete |
-| PROC-01 | Phase 7 | Pending |
-| PROC-02 | Phase 7 | Pending |
+| PROC-01 | Phase 7 | Complete |
+| PROC-02 | Phase 7 | Complete |
 | PROC-03 | Phase 7 | Pending |
-| PROC-04 | Phase 7 | Pending |
+| PROC-04 | Phase 7 | Complete |
 | PROC-05 | Phase 7 | Pending |
 | ADAPT-01 | Phase 7 | Pending |
 | ADAPT-02 | Phase 7 | Pending |
 | ADAPT-03 | Phase 7 | Pending |
 | ADAPT-04 | Phase 7 | Pending |
-| ADAPT-05 | Phase 7 | Pending |
-| ADAPT-06 | Phase 7 | Pending |
+| ADAPT-05 | Phase 7 | Complete |
+| ADAPT-06 | Phase 7 | Complete |
 | EXT-01 | Phase 7 | Pending |
 | EXT-02 | Phase 7 | Pending |
 | EXT-03 | Phase 7 | Pending |

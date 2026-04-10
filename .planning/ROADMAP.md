@@ -145,12 +145,19 @@ Plans:
   3. Admin can change system parameters (sprint duration, task limits, notification frequency) from the configuration panel; changes take effect immediately without restarting the server
   4. Modules (e.g., reporting) can be toggled off per installation; toggling a module off removes it from the UI without requiring a code change
   5. The system sends at least one event (task assigned or project created) to an external service (Slack, Teams, or Google Calendar) via a dedicated integration service layer; adding a new integration does not require changing existing module code
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [x] 07-01-PLAN.md — Schema foundation: ITERATIVE enum, process_config JSONB column, process_templates table, system_config table, domain entities, ORM models, DTOs, repository interfaces
+- [ ] 07-02-PLAN.md — Backend CRUD: process template repository + system config repository, cached singleton, use cases, API routes for /process-templates and /admin/settings
+- [ ] 07-03-PLAN.md — Template seeding + integrations: extend CreateProject/UpdateProject for template seeding and methodology change, IIntegrationService + Slack/Teams adapters, integration event triggers
+- [ ] 07-04-PLAN.md — Admin frontend: /admin page with Process Templates tab and System Settings tab, SystemConfigContext, sidebar module toggle + admin nav
+- [ ] 07-05-PLAN.md — Project frontend: ITERATIVE methodology card, Turkish template columns, Project Settings process model + integrations sections, Kanban WIP limit visuals
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -160,4 +167,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Views & UI | 5/5 | Complete   | 2026-03-15 |
 | 5. Notifications | 7/7 | Complete   | 2026-03-16 |
 | 6. Reporting & Analytics | 4/4 | Complete | 2026-04-09 |
-| 7. Process Models, Adaptation & Integrations | 0/TBD | Not started | - |
+| 7. Process Models, Adaptation & Integrations | 1/5 | In Progress|  |
