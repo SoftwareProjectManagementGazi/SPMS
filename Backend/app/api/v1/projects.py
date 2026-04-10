@@ -9,6 +9,8 @@ from app.api.dependencies import (
     get_user_repo,
     get_team_repo,
     get_task_repo,
+    get_sprint_repo,
+    get_process_template_repo,
     get_notification_service,
     _is_admin,
 )
@@ -36,6 +38,7 @@ from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.team_repository import ITeamRepository
 from app.domain.repositories.task_repository import ITaskRepository
+from app.domain.repositories.sprint_repository import ISprintRepository
 from app.domain.entities.user import User
 from app.domain.entities.project import Project
 from app.domain.exceptions import ProjectNotFoundError, UserNotFoundError
@@ -53,15 +56,55 @@ def _is_manager_or_admin(user: User, project: Project) -> bool:
     return user.id == project.manager_id or _is_admin(user)
 
 
+def _sanitize_process_config(dto: ProjectResponseDTO) -> ProjectResponseDTO:
+    """Strip webhook_url from process_config.integrations before returning to client (EXT-04, D-19)."""
+    if dto.process_config and "integrations" in dto.process_config:
+        safe_integrations = {
+            k: v
+            for k, v in dto.process_config["integrations"].items()
+            if k != "webhook_url"
+        }
+        dto.process_config = {**dto.process_config, "integrations": safe_integrations}
+    return dto
+
+
+async def _fire_integration_event(process_config, event_type: str, payload: dict) -> None:
+    """Non-blocking: check admin master switch + project webhook config.
+    Fire-and-forget — never raises into caller (EXT-01, D-15, D-16).
+    """
+    try:
+        from app.application.services.system_config_service import get_system_config
+        from app.infrastructure.database.repositories.system_config_repo import SqlAlchemySystemConfigRepository
+        from app.infrastructure.database.database import AsyncSessionLocal
+        from app.infrastructure.integrations.integration_factory import get_integration_service
+
+        async with AsyncSessionLocal() as session:
+            config_repo = SqlAlchemySystemConfigRepository(session)
+            config = await get_system_config(config_repo)
+            # Admin master switch: integrations_enabled must be "true" (string from JSONB)
+            if config.get("integrations_enabled", "true").lower() != "true":
+                return
+            integrations = (process_config or {}).get("integrations", {})
+            webhook_url = integrations.get("webhook_url")
+            platform = integrations.get("platform")
+            if webhook_url and platform:
+                svc = get_integration_service(platform, webhook_url)
+                await svc.send_event(event_type, payload)
+    except Exception:
+        pass  # Fire-and-forget; never raise into caller
+
+
 @router.post("/", response_model=ProjectResponseDTO, status_code=status.HTTP_201_CREATED)
 async def create_project(
     dto: ProjectCreateDTO,
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    template_repo=Depends(get_process_template_repo),
     current_user: User = Depends(get_current_user),
     notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
-    use_case = CreateProjectUseCase(project_repo)
+    use_case = CreateProjectUseCase(project_repo, template_repo, task_repo)
     project = await use_case.execute(dto, current_user.id)  # type: ignore
 
     # Notify all admins about new project (excluding the actor)
@@ -78,7 +121,17 @@ async def create_project(
         for admin in admins if admin.id != current_user.id
     ])
 
-    return project
+    # Fire integration event: project.created (EXT-01)
+    asyncio.create_task(
+        _fire_integration_event(
+            project.process_config,
+            "project.created",
+            {"message": f"\U0001f680 Yeni Proje Olusturuldu: {project.name}"}
+        )
+    )
+
+    return _sanitize_process_config(project)
+
 
 @router.get("/", response_model=List[ProjectResponseDTO])
 async def list_projects(
@@ -86,21 +139,24 @@ async def list_projects(
     current_user: User = Depends(get_current_user)
 ):
     use_case = ListProjectsUseCase(project_repo)
-    return await use_case.execute(current_user.id) # type: ignore
+    results = await use_case.execute(current_user.id)  # type: ignore
+    return [_sanitize_process_config(r) for r in results]
+
 
 @router.get("/{project_id}", response_model=ProjectResponseDTO)
 async def get_project(
     project_id: int,
-    current_user: dict = Depends(get_current_user), # Giriş yapmış olması yeterli
+    current_user: dict = Depends(get_current_user),  # Giriş yapmış olması yeterli
     project_repo: IProjectRepository = Depends(get_project_repo)
 ):
     # DİKKAT: Burada repository'nin 'unique()' eklenmiş get_by_id metodunu kullanıyoruz.
     project = await project_repo.get_by_id(project_id)
-    
+
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {project_id} not found")
-        
-    return ProjectResponseDTO.model_validate(project)
+
+    return _sanitize_process_config(ProjectResponseDTO.model_validate(project))
+
 
 @router.put("/{project_id}", response_model=ProjectResponseDTO)
 async def update_project(
@@ -108,11 +164,12 @@ async def update_project(
     dto: ProjectUpdateDTO,
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
+    sprint_repo: ISprintRepository = Depends(get_sprint_repo),
     current_user: User = Depends(get_current_user),
     notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
     try:
-        use_case = UpdateProjectUseCase(project_repo)
+        use_case = UpdateProjectUseCase(project_repo, sprint_repo)
         project = await use_case.execute(project_id, dto, current_user.id)  # type: ignore
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -131,7 +188,8 @@ async def update_project(
         for admin in admins if admin.id != current_user.id
     ])
 
-    return project
+    return _sanitize_process_config(project)
+
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(

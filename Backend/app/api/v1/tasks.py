@@ -1,7 +1,8 @@
+import asyncio
 from typing import List, Any, Dict
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select as sa_select
+from sqlalchemy import select as sa_select, text
 from app.api.dependencies import (
     get_db,
     get_task_repo,
@@ -222,6 +223,46 @@ async def update_task(
                     actor_id=current_user.id,
                 )
 
+    # Integration event: task.status_changed (EXT-01, D-16)
+    if dto.column_id is not None:
+        project = await project_repo.get_by_id(updated_task.project_id)
+        if project:
+            from app.api.v1.projects import _fire_integration_event
+            from app.infrastructure.database.database import engine
+            old_col_name = "?"
+            new_col_name = "?"
+            try:
+                async with engine.connect() as _conn:
+                    old_row = await _conn.execute(
+                        text("SELECT name FROM board_columns WHERE id = :cid"),
+                        {"cid": updated_task.column_id}
+                    )
+                    new_col_name = (old_row.scalar() or "?")
+            except Exception:
+                pass  # Fallback to "?" if lookup fails — non-blocking
+            asyncio.create_task(
+                _fire_integration_event(
+                    project.process_config,
+                    "task.status_changed",
+                    {"message": f"{updated_task.title} durumu {old_col_name} \u27a1\ufe0f {new_col_name} olarak guncellendi."}
+                )
+            )
+
+    # Integration event: task.assigned (EXT-01, D-16)
+    if dto.assignee_id is not None:
+        project = await project_repo.get_by_id(updated_task.project_id)
+        if project:
+            assignee = await user_repo.get_by_id(dto.assignee_id)
+            assignee_name = assignee.full_name if assignee else str(dto.assignee_id)
+            from app.api.v1.projects import _fire_integration_event
+            asyncio.create_task(
+                _fire_integration_event(
+                    project.process_config,
+                    "task.assigned",
+                    {"message": f"\U0001f464 Yeni Gorev Atandi: {updated_task.title} -> {assignee_name}"}
+                )
+            )
+
     return updated_task
 
 @router.patch("/{task_id}", response_model=TaskResponseDTO)
@@ -303,6 +344,46 @@ async def patch_task(
                     related_entity_type="task",
                     actor_id=current_user.id,
                 )
+
+    # Integration event: task.status_changed (EXT-01, D-16)
+    if dto.column_id is not None:
+        project = await project_repo.get_by_id(updated_task.project_id)
+        if project:
+            from app.api.v1.projects import _fire_integration_event
+            from app.infrastructure.database.database import engine
+            old_col_name = "?"
+            new_col_name = "?"
+            try:
+                async with engine.connect() as _conn:
+                    old_row = await _conn.execute(
+                        text("SELECT name FROM board_columns WHERE id = :cid"),
+                        {"cid": updated_task.column_id}
+                    )
+                    new_col_name = (old_row.scalar() or "?")
+            except Exception:
+                pass  # Fallback to "?" if lookup fails — non-blocking
+            asyncio.create_task(
+                _fire_integration_event(
+                    project.process_config,
+                    "task.status_changed",
+                    {"message": f"{updated_task.title} durumu {old_col_name} \u27a1\ufe0f {new_col_name} olarak guncellendi."}
+                )
+            )
+
+    # Integration event: task.assigned (EXT-01, D-16)
+    if dto.assignee_id is not None:
+        project = await project_repo.get_by_id(updated_task.project_id)
+        if project:
+            assignee = await user_repo.get_by_id(dto.assignee_id)
+            assignee_name = assignee.full_name if assignee else str(dto.assignee_id)
+            from app.api.v1.projects import _fire_integration_event
+            asyncio.create_task(
+                _fire_integration_event(
+                    project.process_config,
+                    "task.assigned",
+                    {"message": f"\U0001f464 Yeni Gorev Atandi: {updated_task.title} -> {assignee_name}"}
+                )
+            )
 
     return updated_task
 
