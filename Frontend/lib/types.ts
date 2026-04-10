@@ -1,7 +1,7 @@
 export type TaskStatus = string // Artık enum değil dinamik string (örn: "todo", "done")
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" // Backend Enum ile eşleşmeli
 export type TaskType = "task" | "sub-task" | "bug"
-export type Methodology = "scrum" | "kanban" | "waterfall"
+export type Methodology = "scrum" | "kanban" | "waterfall" | "iterative"
 
 export interface Role {
   name: string;
@@ -34,6 +34,7 @@ export interface Project {
   endDate: string
   progress: number
   columns?: BoardColumn[]
+  process_config?: Record<string, any>
 }
 
 export interface SubTask {
