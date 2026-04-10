@@ -24,5 +24,6 @@ class Project(BaseModel):
     created_at: Optional[datetime] = None
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None
+    process_config: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)
