@@ -85,7 +85,7 @@ Requirements for this milestone. All map to roadmap phases.
 - [x] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
 - [x] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
 - [x] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
-- [ ] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
+- [x] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
 
 ---
 
@@ -129,11 +129,11 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### External Integrations (EXT)
 
-- [ ] **EXT-01**: Slack, Microsoft Teams veya Google Calendar gibi üçüncü taraf API'lerle entegrasyon altyapısı ve en az bir örnek entegrasyon
-- [ ] **EXT-02**: Entegrasyonlar bağımsız servis katmanında tutulur; core uygulamayı etkilemez
-- [ ] **EXT-03**: Harici sistemlerle veri paylaşımı kullanıcı izni olmadan yapılmaz
-- [ ] **EXT-04**: Entegrasyon API anahtarları güvenli şekilde saklanır (env var / secret manager)
-- [ ] **EXT-05**: Yeni entegrasyon eklenmesi mevcut modüllerde değişiklik gerektirmez
+- [x] **EXT-01**: Slack, Microsoft Teams veya Google Calendar gibi üçüncü taraf API'lerle entegrasyon altyapısı ve en az bir örnek entegrasyon
+- [x] **EXT-02**: Entegrasyonlar bağımsız servis katmanında tutulur; core uygulamayı etkilemez
+- [x] **EXT-03**: Harici sistemlerle veri paylaşımı kullanıcı izni olmadan yapılmaz
+- [x] **EXT-04**: Entegrasyon API anahtarları güvenli şekilde saklanır (env var / secret manager)
+- [x] **EXT-05**: Yeni entegrasyon eklenmesi mevcut modüllerde değişiklik gerektirmez
 
 ---
 
@@ -225,18 +225,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROC-02 | Phase 7 | Complete |
 | PROC-03 | Phase 7 | Complete |
 | PROC-04 | Phase 7 | Complete |
-| PROC-05 | Phase 7 | Pending |
+| PROC-05 | Phase 7 | Complete |
 | ADAPT-01 | Phase 7 | Complete |
 | ADAPT-02 | Phase 7 | Pending |
 | ADAPT-03 | Phase 7 | Pending |
 | ADAPT-04 | Phase 7 | Pending |
 | ADAPT-05 | Phase 7 | Complete |
 | ADAPT-06 | Phase 7 | Complete |
-| EXT-01 | Phase 7 | Pending |
-| EXT-02 | Phase 7 | Pending |
-| EXT-03 | Phase 7 | Pending |
-| EXT-04 | Phase 7 | Pending |
-| EXT-05 | Phase 7 | Pending |
+| EXT-01 | Phase 7 | Complete |
+| EXT-02 | Phase 7 | Complete |
+| EXT-03 | Phase 7 | Complete |
+| EXT-04 | Phase 7 | Complete |
+| EXT-05 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 68 total

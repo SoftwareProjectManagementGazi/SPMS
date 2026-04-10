@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 07-02-PLAN (process template CRUD + system config admin API)
-last_updated: "2026-04-10T22:14:34.239Z"
+stopped_at: Completed 07-03-PLAN.md (integration service layer + template seeding)
+last_updated: "2026-04-10T22:20:33.846Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 43
-  completed_plans: 40
+  completed_plans: 41
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 07 (process-models-adaptation-integrations) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Plan: 3 of 5
 | Phase 06-reporting-analytics P04 | 20 | 2 tasks | 4 files |
 | Phase 07 P01 | 160 | 2 tasks | 13 files |
 | Phase 07-process-models-adaptation-integrations P02 | 126 | 2 tasks | 9 files |
+| Phase 07 P03 | 237 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,9 @@ Recent decisions affecting current work:
 - [Phase 07-02]: require_admin placed after _is_admin and get_current_user in dependencies.py to avoid Python forward-reference NameError at import time
 - [Phase 07-02]: system_config_service uses module-level asyncio.Lock double-checked locking for zero-restart config cache invalidation
 - [Phase 07-02]: UpdateProcessTemplateUseCase uses model_copy(update=...) for partial update, preserving fields not in DTO
+- [Phase 07]: Sprint archival on SCRUM departure uses is_active=False — Sprint entity has is_active:bool, not status:str
+- [Phase 07]: Integration events use asyncio.create_task (fire-and-forget); webhook_url stripped from all GET responses via _sanitize_process_config (EXT-04)
+- [Phase 07]: _fire_integration_event uses lazy imports inside function body to avoid circular import between tasks.py and projects.py
 
 ### Pending Todos
 
@@ -194,6 +198,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-10T22:14:34.234Z
-Stopped at: Completed 07-02-PLAN (process template CRUD + system config admin API)
+Last session: 2026-04-10T22:20:33.841Z
+Stopped at: Completed 07-03-PLAN.md (integration service layer + template seeding)
 Resume file: None
