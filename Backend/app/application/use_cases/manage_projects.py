@@ -102,9 +102,9 @@ class UpdateProjectUseCase:
         self.project_repo = project_repo
         self.sprint_repo = sprint_repo
 
-    async def execute(self, project_id: int, dto: ProjectUpdateDTO, manager_id: int) -> ProjectResponseDTO:
+    async def execute(self, project_id: int, dto: ProjectUpdateDTO, manager_id: int, is_admin: bool = False) -> ProjectResponseDTO:
         project = await self.project_repo.get_by_id(project_id)
-        if not project or project.manager_id != manager_id:
+        if not project or (not is_admin and project.manager_id != manager_id):
             raise ProjectNotFoundError(project_id)
 
         old_methodology = project.methodology
