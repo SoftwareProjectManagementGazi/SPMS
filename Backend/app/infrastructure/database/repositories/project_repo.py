@@ -117,7 +117,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             return project  # Entity not found — return as-is (caller handles)
 
         # ARCH-06: dynamic field mapping — iterate over all updatable fields
-        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields"]
+        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config"]
 
         audit_entries = []
         for field in updatable_fields:

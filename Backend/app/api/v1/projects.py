@@ -158,6 +158,7 @@ async def get_project(
     return _sanitize_process_config(ProjectResponseDTO.model_validate(project))
 
 
+@router.patch("/{project_id}", response_model=ProjectResponseDTO)
 @router.put("/{project_id}", response_model=ProjectResponseDTO)
 async def update_project(
     project_id: int,

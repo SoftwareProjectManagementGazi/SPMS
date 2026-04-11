@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { projectService } from "@/services/project-service"
 import { apiClient } from "@/lib/api-client"
@@ -65,11 +65,15 @@ export function IntegrationSettings({ project, onUpdate }: IntegrationSettingsPr
     if (!webhookUrl) return
     setTestStatus("testing")
     try {
-      await apiClient.post("/api/v1/integrations/test", {
+      const res = await apiClient.post("/api/v1/integrations/test", {
         platform: platform.toLowerCase() || "slack",
         webhook_url: webhookUrl,
       })
-      setTestStatus("success")
+      if (res.data?.status === "failure") {
+        setTestStatus("failure")
+      } else {
+        setTestStatus("success")
+      }
     } catch {
       setTestStatus("failure")
     }
