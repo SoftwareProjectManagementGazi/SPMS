@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { CheckCircle2, ListTodo, TrendingUp, Users } from "lucide-react"
 import { reportService, ReportFilters } from "@/services/report-service"
 import { projectService } from "@/services/project-service"
+import { useSystemConfig } from "@/context/system-config-context"
 import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
 import { FilterBar } from "@/components/reports/filter-bar"
 import { SprintBurndownChart } from "@/components/reports/sprint-burndown-chart"
@@ -74,13 +75,30 @@ export default function ReportsPage() {
     enabled: !!filters.projectId,
   });
 
+  const { config: sysConfig } = useSystemConfig()
+  const reportingEnabled = sysConfig.reporting_module_enabled !== "false"
+
   const selectedProject = projects?.find((p) => Number(p.id) === filters.projectId);
   const methodology = selectedProject?.methodology as string | undefined;
+  // Sprint-based reports only for SCRUM methodology; KANBAN, WATERFALL, ITERATIVE use non-sprint path
   const isScrum = !methodology || methodology === "SCRUM";
 
   const handleLeaderboardRowClick = (userId: number) => {
     setFilters((prev) => ({ ...prev, assigneeIds: [userId] }));
   };
+
+  // Module-disabled 403 enforcement (D-13)
+  if (!reportingEnabled) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+          <span className="text-6xl font-bold text-destructive">403</span>
+          <p className="text-lg text-muted-foreground">Raporlama modulu devre disi birakilmistir.</p>
+          <p className="text-sm text-muted-foreground">Erisim icin yonetici ile iletisime gecin.</p>
+        </div>
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
