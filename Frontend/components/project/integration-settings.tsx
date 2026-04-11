@@ -65,7 +65,7 @@ export function IntegrationSettings({ project, onUpdate }: IntegrationSettingsPr
     if (!webhookUrl) return
     setTestStatus("testing")
     try {
-      const res = await apiClient.post("/api/v1/integrations/test", {
+      const res = await apiClient.post("/integrations/test", {
         platform: platform.toLowerCase() || "slack",
         webhook_url: webhookUrl,
       })

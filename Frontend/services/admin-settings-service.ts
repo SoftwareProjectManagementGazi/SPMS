@@ -6,11 +6,11 @@ export interface SystemConfig {
 
 export const adminSettingsService = {
   get: async (): Promise<SystemConfig> => {
-    const { data } = await apiClient.get('/api/v1/admin/settings');
+    const { data } = await apiClient.get('/admin/settings');
     return data;
   },
   update: async (config: Record<string, string>): Promise<SystemConfig> => {
-    const { data } = await apiClient.put('/api/v1/admin/settings', { config });
+    const { data } = await apiClient.put('/admin/settings', { config });
     return data;
   },
 };
