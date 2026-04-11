@@ -171,7 +171,7 @@ async def update_project(
 ):
     try:
         use_case = UpdateProjectUseCase(project_repo, sprint_repo)
-        project = await use_case.execute(project_id, dto, current_user.id)  # type: ignore
+        project = await use_case.execute(project_id, dto, current_user.id, is_admin=_is_admin(current_user))  # type: ignore
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
