@@ -32,6 +32,7 @@ from app.domain.repositories.board_column_repository import IBoardColumnReposito
 from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
 from app.domain.repositories.notification_repository import INotificationRepository
 from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
+from app.domain.repositories.report_repository import IReportRepository
 
 # Re-export the database dependency
 get_db = get_db_session
@@ -92,6 +93,22 @@ def get_notification_service(
     from app.application.services.notification_service import PollingNotificationService
     return PollingNotificationService(notification_repo, pref_repo)
 
+
+def get_report_repo(session: AsyncSession = Depends(get_db)) -> IReportRepository:
+    from app.infrastructure.database.repositories.report_repo import SqlAlchemyReportRepository
+    return SqlAlchemyReportRepository(session)
+
+
+def get_process_template_repo(session: AsyncSession = Depends(get_db)):
+    from app.infrastructure.database.repositories.process_template_repo import SqlAlchemyProcessTemplateRepository
+    return SqlAlchemyProcessTemplateRepository(session)
+
+
+def get_system_config_repo(session: AsyncSession = Depends(get_db)):
+    from app.infrastructure.database.repositories.system_config_repo import SqlAlchemySystemConfigRepository
+    return SqlAlchemySystemConfigRepository(session)
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     user_repo: IUserRepository = Depends(get_user_repo)
@@ -121,6 +138,16 @@ def _is_admin(user: User) -> bool:
         user.role is not None
         and user.role.name.lower() == "admin"
     )
+
+
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Raises HTTP 403 if the current user is not an admin."""
+    if not _is_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
 
 
 async def get_project_member(

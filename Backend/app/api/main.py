@@ -17,7 +17,10 @@ from starlette.requests import Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from app.api.v1 import auth, projects, tasks, sprints, comments, attachments
+from app.api.v1 import auth, projects, tasks, sprints, comments, attachments, reports
+from app.api.v1 import process_templates as process_templates_router_module
+from app.api.v1 import admin_settings as admin_settings_router_module
+from app.api.v1 import integrations as integrations_router_module
 from app.api.v1.teams import router as teams_router
 from app.api.v1.board_columns import router as board_columns_router
 from app.api.v1.notifications import router as notifications_router
@@ -103,6 +106,9 @@ async def lifespan(app: FastAPI):
     # Startup: Run Phase 5 async migration (notification tables + enum extension)
     from app.infrastructure.database.migrations.migration_004 import upgrade as upgrade_004
     await upgrade_004(engine)
+    # Startup: Run Phase 7 async migration (ITERATIVE enum, process_config, process_templates, system_config)
+    from app.infrastructure.database.migrations.migration_005 import upgrade as upgrade_005
+    await upgrade_005(engine)
     # Startup: Register and start APScheduler jobs
     from app.scheduler.jobs import scheduler, deadline_alert_job, purge_notifications_job
     from apscheduler.triggers.cron import CronTrigger
@@ -144,6 +150,10 @@ app.include_router(comments.router, prefix="/api/v1/comments", tags=["Comments"]
 app.include_router(attachments.router, prefix="/api/v1/attachments", tags=["Attachments"])
 app.include_router(notifications_router, prefix="/api/v1/notifications", tags=["Notifications"])
 app.include_router(notification_preferences_router, prefix="/api/v1/notifications/preferences", tags=["Notification Preferences"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["Reports"])
+app.include_router(process_templates_router_module.router, prefix="/api/v1/process-templates", tags=["Process Templates"])
+app.include_router(admin_settings_router_module.router, prefix="/api/v1/admin/settings", tags=["Admin Settings"])
+app.include_router(integrations_router_module.router, prefix="/api/v1/integrations", tags=["Integrations"])
 
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"

@@ -4,6 +4,7 @@ import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import QueryProvider from "@/components/providers/query-provider"
 import { AuthProvider } from "@/context/auth-context"
+import { SystemConfigProvider } from "@/context/system-config-context"
 import "./globals.css"
 
 const inter = Inter({
@@ -32,7 +33,9 @@ export default function RootLayout({
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <SystemConfigProvider>
+              {children}
+            </SystemConfigProvider>
           </AuthProvider>
         </QueryProvider>
         <Analytics />

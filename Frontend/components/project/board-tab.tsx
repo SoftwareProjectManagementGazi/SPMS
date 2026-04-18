@@ -161,6 +161,19 @@ export function BoardTab({ projectId, tasks }: BoardTabProps) {
       }
     }
 
+    // WIP limit warning toast (D-06)
+    if (columns) {
+      const targetColumn = columns.find(c => String(c.id) === destColId)
+      if (targetColumn && targetColumn.wip_limit > 0) {
+        const tasksInColumn = filteredTasks.filter(t => t.columnId === String(targetColumn.id)).length
+        if (tasksInColumn >= targetColumn.wip_limit) {
+          toast.warning("Uyari: Bu kolon icin belirlenen WIP (Ayni Anda Yapilan Is) limiti asildi!", {
+            duration: 5000,
+          })
+        }
+      }
+    }
+
     const taskId = String(active.id)
     // Optimistic: move card to new column immediately (no teleport on server response)
     setPendingMove({ taskId, destColId })

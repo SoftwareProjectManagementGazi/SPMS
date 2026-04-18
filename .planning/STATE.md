@@ -2,61 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 05-07-PLAN.md — migration rename (004_phase5_schema.py -> migration_004.py) + email wiring in tasks.py and comments.py
-last_updated: "2026-03-29T10:56:17.422Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07-05-PLAN (frontend process models, integrations, WIP visuals, reports 403)
+last_updated: "2026-04-11T10:01:45.156Z"
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 34
-  completed_plans: 34
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: in-progress
-stopped_at: Phase 4 approved and closed — Kanban DnD polish, blank-tab fix, list/gantt/members improvements, Edit Project, Manage Team
-last_updated: "2026-03-15T13:00:00.000Z"
-last_activity: 2026-03-15 — Phase 4 closed (UAT + post-UAT bug fixes approved). Ready for Phase 5 (Notifications)
-progress:
-  total_phases: 7
-  completed_phases: 4
-  total_plans: 27
-  completed_plans: 27
-  percent: 96
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: in-progress
-stopped_at: Completed 04-02-PLAN.md — CalendarTab + UndatedTasksSidebar + GanttTab
-last_updated: "2026-03-15T07:47:00.000Z"
-last_activity: 2026-03-15 — Phase 4 plan 02 complete (CalendarTab VIEW-02, GanttTab VIEW-03)
-progress:
-  [██████████] 96%
-  completed_phases: 3
-  total_plans: 26
-  completed_plans: 24
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: in-progress
-stopped_at: "Completed Phase 03 — all 8 plans done, verification passed 5/5, all 11 TASK requirements satisfied"
-last_updated: "2026-03-14T00:00:00Z"
-last_activity: 2026-03-14 — Phase 3 complete (sprints, comments, attachments, dependencies, recurring tasks, pagination, frontend wiring)
-progress:
-  total_phases: 7
-  completed_phases: 3
-  total_plans: 22
-  completed_plans: 22
-  percent: 64
+  completed_phases: 6
+  total_plans: 43
+  completed_plans: 42
 ---
 
 # Project State
@@ -66,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve görevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 05 — notifications
+**Current focus:** Phase 07 — process-models-adaptation-integrations
 
 ## Current Position
 
-Phase: 05 (notifications) — EXECUTING
-Plan: 1 of 7
+Phase: 07 (process-models-adaptation-integrations) — EXECUTING
+Plan: 5 of 5
 
 ## Performance Metrics
 
@@ -110,6 +63,15 @@ Plan: 1 of 7
 | Phase 05-notifications P05 | 10 | 2 tasks | 5 files |
 | Phase 05 P06 | 3 | 2 tasks | 6 files |
 | Phase 05-notifications P07 | 3 | 2 tasks | 3 files |
+| Phase 06-reporting-analytics P01 | 4 | 2 tasks | 7 files |
+| Phase 06-reporting-analytics P02 | 240 | 2 tasks | 9 files |
+| Phase 06-reporting-analytics P03 | 30 | 2 tasks | 7 files |
+| Phase 06-reporting-analytics P04 | 20 | 2 tasks | 4 files |
+| Phase 07 P01 | 160 | 2 tasks | 13 files |
+| Phase 07-process-models-adaptation-integrations P02 | 126 | 2 tasks | 9 files |
+| Phase 07 P03 | 237 | 2 tasks | 11 files |
+| Phase 07 P04 | 3 | 2 tasks | 9 files |
+| Phase 07-process-models-adaptation-integrations P05 | 5 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -204,6 +166,30 @@ Recent decisions affecting current work:
 - [Phase 05-06]: 05-06: useEffect used for data accumulation (React Query v5 — no onSuccess in useQuery)
 - [Phase 05-06]: 05-06: Watch toggle hidden for assignees; watch endpoints in tasks.py via direct SQLAlchemy (no new repository)
 - [Phase 05-07]: migration_004.py is the canonical name — 004_phase5_schema.py invalid (starts with digit); BackgroundTasks is a FastAPI special param not a Depends(); email preference defaults True when pref row absent
+- [Phase 06-reporting-analytics]: [06-01]: Inline _check_project_membership() helper in reports.py — project_id is query param on all report endpoints, not path param; existing get_project_member Depends() reads path param
+- [Phase 06-reporting-analytics]: [06-01]: TaskExportRowDTO included in IReportRepository.get_tasks_for_export() — Plan 02 (export) can use it without interface changes
+- [Phase 06-reporting-analytics]: [06-01]: Burndown audit log query casts done column IDs to strings (AuditLogModel.new_value is TEXT) per Pitfall 4 pattern
+- [Phase 06-02]: weasyprint lazily imported inside export_pdf endpoint body to avoid ImportError at startup if system pango/cairo libs are missing
+- [Phase 06-02]: get_tasks_for_export uses table aliases for assignee_user and reporter_user since both join to same users table
+- [Phase 06-02]: _parse_assignee_ids helper defined at module level in reports.py and reused across all 7 endpoints
+- [Phase 06-reporting-analytics]: Team Performance panel left as placeholder (Yakında...) in Plan 06-03 — wired to real data in Plan 06-04
+- [Phase 06-reporting-analytics]: distLoading combines both status and priority distribution query loading states for single TaskDistributionChart isLoading prop
+- [Phase 06-04]: report-service.ts created in Plan 04 due to parallel execution — identical to Plan 03's output; no conflict if both create it
+- [Phase 06-04]: Manager dashboard defaultProjectId uses projects[0].id (most recently returned) — consistent with CONTEXT.md 'most recently active project' pattern
+- [Phase 07]: migration_005 uses AUTOCOMMIT pattern for ALTER TYPE ADD VALUE (same as migration_004)
+- [Phase 07]: ProjectCreateDTO.columns default changed from English hardcoded to [] — Plan 03 template seeding provides methodology-appropriate columns
+- [Phase 07]: ProcessTemplateModel and SystemConfigModel have no TimestampedMixin — hard delete and no lifecycle tracking appropriate for these tables
+- [Phase 07-02]: require_admin placed after _is_admin and get_current_user in dependencies.py to avoid Python forward-reference NameError at import time
+- [Phase 07-02]: system_config_service uses module-level asyncio.Lock double-checked locking for zero-restart config cache invalidation
+- [Phase 07-02]: UpdateProcessTemplateUseCase uses model_copy(update=...) for partial update, preserving fields not in DTO
+- [Phase 07]: Sprint archival on SCRUM departure uses is_active=False — Sprint entity has is_active:bool, not status:str
+- [Phase 07]: Integration events use asyncio.create_task (fire-and-forget); webhook_url stripped from all GET responses via _sanitize_process_config (EXT-04)
+- [Phase 07]: _fire_integration_event uses lazy imports inside function body to avoid circular import between tasks.py and projects.py
+- [Phase 07]: SystemConfigProvider wraps app inside AuthProvider so config is globally available to sidebar and all pages
+- [Phase 07]: Sidebar reads reporting_module_enabled !== 'false' so missing config key defaults to enabled
+- [Phase 07]: Methodology type updated to include iterative as fourth union member — frontend-only enum change
+- [Phase 07-process-models-adaptation-integrations]: Task 1 (ITERATIVE card + Turkish columns + process_config) was already committed on main as 7d9d0789 before this agent ran — rebase onto main was performed to pick up that work cleanly
+- [Phase 07-process-models-adaptation-integrations]: WIP badge shows task count / wip_limit with amber at limit, red at 2+ over; reports.page.tsx uses reporting_module_enabled !== 'false' pattern (missing key = enabled)
 
 ### Pending Todos
 
@@ -219,6 +205,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T08:33:27.661Z
-Stopped at: Completed 05-07-PLAN.md — migration rename (004_phase5_schema.py -> migration_004.py) + email wiring in tasks.py and comments.py
+Last session: 2026-04-11T10:01:45.150Z
+Stopped at: Completed 07-05-PLAN (frontend process models, integrations, WIP visuals, reports 403)
 Resume file: None

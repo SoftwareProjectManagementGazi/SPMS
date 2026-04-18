@@ -21,8 +21,9 @@ class ProjectCreateDTO(BaseModel):
     start_date: datetime
     end_date: Optional[datetime] = None
     methodology: Methodology
-    columns: List[str] = ["Backlog", "Todo", "In Progress", "In Review", "Done"]
+    columns: List[str] = []
     custom_fields: Optional[Dict[str, Any]] = None
+    process_config: Optional[Dict[str, Any]] = None
 
 class ProjectUpdateDTO(BaseModel):
     name: Optional[str] = None
@@ -31,6 +32,7 @@ class ProjectUpdateDTO(BaseModel):
     end_date: Optional[datetime] = None
     methodology: Optional[Methodology] = None
     custom_fields: Optional[Dict[str, Any]] = None
+    process_config: Optional[Dict[str, Any]] = None
 
 class ProjectResponseDTO(BaseModel):
     id: int
@@ -47,5 +49,6 @@ class ProjectResponseDTO(BaseModel):
 
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None
+    process_config: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)

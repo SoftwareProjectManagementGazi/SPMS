@@ -71,21 +71,21 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Reporting & Analytics (REPT)
 
-- [ ] **REPT-01**: Proje ilerleme durumu grafiksel olarak sunulur (görev tamamlanma oranı, sprint ilerleme grafiği)
-- [ ] **REPT-02**: Raporlar kullanıcı, görev ve proje bazlı filtrelenebilir
-- [ ] **REPT-03**: Rapor çıktısı PDF veya Excel formatında dışa aktarılabilir
-- [ ] **REPT-04**: Kullanıcı performans metrikleri hesaplanır (tamamlanan görev sayısı, zamanında teslim oranı)
-- [ ] **REPT-05**: Yönetici dashboard'unda performans verileri özet olarak gösterilir
+- [x] **REPT-01**: Proje ilerleme durumu grafiksel olarak sunulur (görev tamamlanma oranı, sprint ilerleme grafiği)
+- [x] **REPT-02**: Raporlar kullanıcı, görev ve proje bazlı filtrelenebilir
+- [x] **REPT-03**: Rapor çıktısı PDF veya Excel formatında dışa aktarılabilir
+- [x] **REPT-04**: Kullanıcı performans metrikleri hesaplanır (tamamlanan görev sayısı, zamanında teslim oranı)
+- [x] **REPT-05**: Yönetici dashboard'unda performans verileri özet olarak gösterilir
 
 ---
 
 ### Process Model (PROC)
 
-- [ ] **PROC-01**: Proje oluştururken Scrum, Waterfall, Kanban, Iterative süreç modeli seçilebilir
-- [ ] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
-- [ ] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
-- [ ] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
-- [ ] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
+- [x] **PROC-01**: Proje oluştururken Scrum, Waterfall, Kanban, Iterative süreç modeli seçilebilir
+- [x] **PROC-02**: Seçilen süreç modeline göre proje şablonu (board yapısı, sütunlar) otomatik oluşturulur
+- [x] **PROC-03**: Kullanıcı süreç şablonunu özelleştirebilir (aktivite sıralaması, sprint uzunluğu, toplantı periyotları)
+- [x] **PROC-04**: Yeni süreç modeli tanımlanabilir (admin seviyesinde)
+- [x] **PROC-05**: Seçilen süreç modeline göre takvim ve tekrarlayan etkinlikler otomatik planlanır (örn. Scrum daily/sprint review)
 
 ---
 
@@ -118,22 +118,22 @@ Requirements for this milestone. All map to roadmap phases.
 
 ### Adaptation & Configuration (ADAPT)
 
-- [ ] **ADAPT-01**: Proje bazında aktif süreç modeli değiştirilebilir (yalnızca o projeyi etkiler)
-- [ ] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
-- [ ] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
-- [ ] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
-- [ ] **ADAPT-05**: Sistem parametreleri (sprint süresi, görev sınırı, bildirim frekansı) yönetim panelinden değiştirilebilir
-- [ ] **ADAPT-06**: Uyarlama işlemleri sistem yeniden başlatması gerektirmez
+- [x] **ADAPT-01**: Proje bazında aktif süreç modeli değiştirilebilir (yalnızca o projeyi etkiler)
+- [x] **ADAPT-02**: Admin yeni süreç modeli şablonu tanımlayabilir veya mevcutları düzenleyebilir
+- [x] **ADAPT-03**: UI öğeleri (renk paleti, durum etiketleri) organizasyon düzeyinde ayarlanabilir
+- [x] **ADAPT-04**: Modüller kurulum esnasında aktif/pasif olarak seçilebilir (raporlama vb. kapatılabilir)
+- [x] **ADAPT-05**: Sistem parametreleri (sprint süresi, görev sınırı, bildirim frekansı) yönetim panelinden değiştirilebilir
+- [x] **ADAPT-06**: Uyarlama işlemleri sistem yeniden başlatması gerektirmez
 
 ---
 
 ### External Integrations (EXT)
 
-- [ ] **EXT-01**: Slack, Microsoft Teams veya Google Calendar gibi üçüncü taraf API'lerle entegrasyon altyapısı ve en az bir örnek entegrasyon
-- [ ] **EXT-02**: Entegrasyonlar bağımsız servis katmanında tutulur; core uygulamayı etkilemez
-- [ ] **EXT-03**: Harici sistemlerle veri paylaşımı kullanıcı izni olmadan yapılmaz
-- [ ] **EXT-04**: Entegrasyon API anahtarları güvenli şekilde saklanır (env var / secret manager)
-- [ ] **EXT-05**: Yeni entegrasyon eklenmesi mevcut modüllerde değişiklik gerektirmez
+- [x] **EXT-01**: Slack, Microsoft Teams veya Google Calendar gibi üçüncü taraf API'lerle entegrasyon altyapısı ve en az bir örnek entegrasyon
+- [x] **EXT-02**: Entegrasyonlar bağımsız servis katmanında tutulur; core uygulamayı etkilemez
+- [x] **EXT-03**: Harici sistemlerle veri paylaşımı kullanıcı izni olmadan yapılmaz
+- [x] **EXT-04**: Entegrasyon API anahtarları güvenli şekilde saklanır (env var / secret manager)
+- [x] **EXT-05**: Yeni entegrasyon eklenmesi mevcut modüllerde değişiklik gerektirmez
 
 ---
 
@@ -216,27 +216,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NOTIF-04 | Phase 5 | Complete |
 | NOTIF-05 | Phase 5 | Complete |
 | NOTIF-06 | Phase 5 | Complete |
-| REPT-01 | Phase 6 | Pending |
-| REPT-02 | Phase 6 | Pending |
-| REPT-03 | Phase 6 | Pending |
-| REPT-04 | Phase 6 | Pending |
-| REPT-05 | Phase 6 | Pending |
-| PROC-01 | Phase 7 | Pending |
-| PROC-02 | Phase 7 | Pending |
-| PROC-03 | Phase 7 | Pending |
-| PROC-04 | Phase 7 | Pending |
-| PROC-05 | Phase 7 | Pending |
-| ADAPT-01 | Phase 7 | Pending |
-| ADAPT-02 | Phase 7 | Pending |
-| ADAPT-03 | Phase 7 | Pending |
-| ADAPT-04 | Phase 7 | Pending |
-| ADAPT-05 | Phase 7 | Pending |
-| ADAPT-06 | Phase 7 | Pending |
-| EXT-01 | Phase 7 | Pending |
-| EXT-02 | Phase 7 | Pending |
-| EXT-03 | Phase 7 | Pending |
-| EXT-04 | Phase 7 | Pending |
-| EXT-05 | Phase 7 | Pending |
+| REPT-01 | Phase 6 | Complete |
+| REPT-02 | Phase 6 | Complete |
+| REPT-03 | Phase 6 | Complete |
+| REPT-04 | Phase 6 | Complete |
+| REPT-05 | Phase 6 | Complete |
+| PROC-01 | Phase 7 | Complete |
+| PROC-02 | Phase 7 | Complete |
+| PROC-03 | Phase 7 | Complete |
+| PROC-04 | Phase 7 | Complete |
+| PROC-05 | Phase 7 | Complete |
+| ADAPT-01 | Phase 7 | Complete |
+| ADAPT-02 | Phase 7 | Complete |
+| ADAPT-03 | Phase 7 | Complete |
+| ADAPT-04 | Phase 7 | Complete |
+| ADAPT-05 | Phase 7 | Complete |
+| ADAPT-06 | Phase 7 | Complete |
+| EXT-01 | Phase 7 | Complete |
+| EXT-02 | Phase 7 | Complete |
+| EXT-03 | Phase 7 | Complete |
+| EXT-04 | Phase 7 | Complete |
+| EXT-05 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 68 total

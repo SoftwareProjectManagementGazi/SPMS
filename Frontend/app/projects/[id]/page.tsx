@@ -31,7 +31,10 @@ import { MembersTab } from "@/components/project/members-tab"
 import { BoardTab } from "@/components/project/board-tab"
 import { ListTab } from "@/components/project/list-tab"
 import { BoardColumnsSettings } from "@/components/project/board-columns-settings"
+import { ProcessModelSettings } from "@/components/project/process-model-settings"
+import { IntegrationSettings } from "@/components/project/integration-settings"
 import { EditProjectModal } from "@/components/project/edit-project-modal"
+import { Separator } from "@/components/ui/separator"
 
 // Dynamic imports for heavy/SSR-incompatible tabs
 const CalendarTab = dynamic(
@@ -300,16 +303,28 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <MembersTab projectId={id} currentUser={currentUser ?? null} />
           </TabsContent>
 
-          {/* Settings tab — Board Columns configuration */}
+          {/* Settings tab — Process Model, Integrations, Board Columns */}
           <TabsContent value="settings" className="mt-6">
             <div className="rounded-xl border bg-card shadow-sm p-4 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Board Columns</h3>
-                <BoardColumnsSettings
-                  projectId={id}
-                  currentUser={currentUser ?? null}
-                  isProjectManager={!!currentUser && !!project && currentUser.id === project.lead?.id}
-                />
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Surec Modeli</h3>
+                  <ProcessModelSettings project={project} onUpdate={() => queryClient.invalidateQueries({ queryKey: ["project", id] })} />
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Entegrasyonlar</h3>
+                  <IntegrationSettings project={project} onUpdate={() => queryClient.invalidateQueries({ queryKey: ["project", id] })} />
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Board Columns</h3>
+                  <BoardColumnsSettings
+                    projectId={id}
+                    currentUser={currentUser ?? null}
+                    isProjectManager={!!currentUser && !!project && currentUser.id === project.lead?.id}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>

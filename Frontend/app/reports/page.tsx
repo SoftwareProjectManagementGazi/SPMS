@@ -1,64 +1,202 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { subDays } from "date-fns"
 import { AppShell } from "@/components/app-shell"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart3, PieChart, TrendingUp, Users } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { CheckCircle2, ListTodo, TrendingUp, Users } from "lucide-react"
+import { reportService, ReportFilters } from "@/services/report-service"
+import { projectService } from "@/services/project-service"
+import { useSystemConfig } from "@/context/system-config-context"
+import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
+import { FilterBar } from "@/components/reports/filter-bar"
+import { SprintBurndownChart } from "@/components/reports/sprint-burndown-chart"
+import { TaskDistributionChart } from "@/components/reports/task-distribution-chart"
+import { VelocityTrendChart } from "@/components/reports/velocity-trend-chart"
+import { ExportButton } from "@/components/reports/export-button"
 
 export default function ReportsPage() {
+  const defaultDateFrom = subDays(new Date(), 30).toISOString().split("T")[0];
+  const defaultDateTo = new Date().toISOString().split("T")[0];
+
+  const [filters, setFilters] = useState<ReportFilters>({
+    projectId: null,
+    assigneeIds: [],
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
+  });
+
+  const { data: projects } = useQuery({
+    queryKey: ["projects"],
+    queryFn: projectService.getAll,
+  });
+
+  useEffect(() => {
+    if (projects && projects.length > 0 && filters.projectId === null) {
+      setFilters((prev) => ({ ...prev, projectId: Number(projects[0].id) }));
+    }
+  }, [projects, filters.projectId]);
+
+  const { data: burndownData, isLoading: burndownLoading, isError: burndownError } = useQuery({
+    queryKey: ["reports", "burndown", filters],
+    queryFn: () => reportService.getBurndown(filters),
+    enabled: !!filters.projectId,
+  });
+
+  const { data: statusDistData, isLoading: distStatusLoading, isError: distStatusError } = useQuery({
+    queryKey: ["reports", "distribution-status", filters],
+    queryFn: () => reportService.getDistribution(filters, "status"),
+    enabled: !!filters.projectId,
+  });
+
+  const { data: priorityDistData, isLoading: distPriorityLoading } = useQuery({
+    queryKey: ["reports", "distribution-priority", filters],
+    queryFn: () => reportService.getDistribution(filters, "priority"),
+    enabled: !!filters.projectId,
+  });
+
+  const { data: velocityData, isLoading: velocityLoading, isError: velocityError } = useQuery({
+    queryKey: ["reports", "velocity", filters],
+    queryFn: () => reportService.getVelocity(filters),
+    enabled: !!filters.projectId,
+  });
+
+  const { data: summaryData, isLoading: summaryLoading } = useQuery({
+    queryKey: ["reports", "summary", filters],
+    queryFn: () => reportService.getSummary(filters),
+    enabled: !!filters.projectId,
+  });
+
+  const { data: performanceData, isLoading: perfLoading, isError: perfError } = useQuery({
+    queryKey: ["reports", "performance", filters],
+    queryFn: () => reportService.getPerformance(filters),
+    enabled: !!filters.projectId,
+  });
+
+  const { config: sysConfig } = useSystemConfig()
+  const reportingEnabled = sysConfig.reporting_module_enabled !== "false"
+
+  const selectedProject = projects?.find((p) => Number(p.id) === filters.projectId);
+  const methodology = selectedProject?.methodology as string | undefined;
+  // Sprint-based reports only for SCRUM methodology; KANBAN, WATERFALL, ITERATIVE use non-sprint path
+  const isScrum = !methodology || methodology === "SCRUM";
+
+  const handleLeaderboardRowClick = (userId: number) => {
+    setFilters((prev) => ({ ...prev, assigneeIds: [userId] }));
+  };
+
+  // Module-disabled 403 enforcement (D-13)
+  if (!reportingEnabled) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+          <span className="text-6xl font-bold text-destructive">403</span>
+          <p className="text-lg text-muted-foreground">Raporlama modulu devre disi birakilmistir.</p>
+          <p className="text-sm text-muted-foreground">Erisim icin yonetici ile iletisime gecin.</p>
+        </div>
+      </AppShell>
+    )
+  }
+
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Reports</h1>
-          <p className="text-muted-foreground">Analytics and insights for your projects</p>
+        {/* Page header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">Raporlar</h1>
+            <p className="text-muted-foreground">Projeleriniz için analiz ve içgörüler</p>
+          </div>
+          <ExportButton filters={filters} disabled={!filters.projectId} />
         </div>
 
+        {/* Filter bar */}
+        <FilterBar filters={filters} onFiltersChange={setFilters} />
+
+        {/* Summary stat cards */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            {
+              label: "Toplam Görev",
+              value: summaryData?.total_tasks,
+              icon: <ListTodo className="h-4 w-4 text-muted-foreground" />,
+            },
+            {
+              label: "Tamamlanan",
+              value: summaryData?.completed_tasks,
+              icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+            },
+            {
+              label: "Tamamlanma Oranı",
+              value: summaryData ? `${summaryData.completion_rate.toFixed(1)}%` : undefined,
+              icon: <TrendingUp className="h-4 w-4 text-primary" />,
+            },
+            {
+              label: isScrum ? "Aktif Sprint" : "Devam Eden",
+              value: isScrum
+                ? (burndownData?.sprint_name || (burndownData ? "—" : undefined))
+                : (statusDistData?.items.find((i) => i.label === "In Progress")?.count?.toString() ?? undefined),
+              icon: <Users className="h-4 w-4 text-muted-foreground" />,
+            },
+          ].map(({ label, value, icon }) => (
+            <Card key={label} className="shadow-sm">
+              <CardContent className="pt-5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground font-medium">{label}</span>
+                  {icon}
+                </div>
+                {summaryLoading ? (
+                  <Skeleton className="h-7 w-16 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">{value ?? "—"}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Chart grid: 2×2 — chart components self-wrap in Card */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                Sprint Burndown
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              Chart visualization coming soon
-            </CardContent>
-          </Card>
+          <SprintBurndownChart
+            data={burndownData}
+            isLoading={burndownLoading}
+            isError={burndownError}
+            projectId={filters.projectId}
+            methodology={methodology}
+            wipData={statusDistData}
+          />
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PieChart className="h-5 w-5 text-primary" />
-                Task Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              Chart visualization coming soon
-            </CardContent>
-          </Card>
+          <TaskDistributionChart
+            statusData={statusDistData}
+            priorityData={priorityDistData}
+            isLoading={distStatusLoading || distPriorityLoading}
+            isError={distStatusError}
+          />
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Velocity Trend
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              Chart visualization coming soon
-            </CardContent>
-          </Card>
+          <VelocityTrendChart
+            data={velocityData}
+            isLoading={velocityLoading}
+            isError={velocityError}
+            methodology={methodology}
+          />
 
+          {/* Team Performance — no self-wrapping, needs its own Card */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Team Performance
+                Takım Performansı
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center text-muted-foreground">
-              Chart visualization coming soon
+            <CardContent>
+              <TeamPerformanceTable
+                data={performanceData?.members ?? []}
+                isLoading={perfLoading}
+                isError={perfError}
+                onRowClick={handleLeaderboardRowClick}
+              />
             </CardContent>
           </Card>
         </div>

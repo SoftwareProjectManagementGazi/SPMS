@@ -372,16 +372,16 @@ export function TaskSidebar({ task }: TaskSidebarProps) {
         <CardContent>
           {isManagerOrAdmin ? (
             <Select
-              value={task.sprintId != null ? String(task.sprintId) : ""}
+              value={task.sprintId != null ? String(task.sprintId) : "none"}
               onValueChange={(val) =>
-                handleFieldUpdate({ sprint_id: val ? Number(val) : null })
+                handleFieldUpdate({ sprint_id: val === "none" ? null : Number(val) })
               }
             >
               <SelectTrigger className="w-full text-sm">
                 <SelectValue placeholder="No sprint (backlog)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No sprint (backlog)</SelectItem>
+                <SelectItem value="none">No sprint (backlog)</SelectItem>
                 {sprints.map((s) => (
                   <SelectItem key={s.id} value={String(s.id)}>
                     {s.name}

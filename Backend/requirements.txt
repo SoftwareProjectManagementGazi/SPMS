@@ -14,3 +14,5 @@ pydantic[email]
 slowapi
 apscheduler
 fastapi-mail
+openpyxl
+fpdf2

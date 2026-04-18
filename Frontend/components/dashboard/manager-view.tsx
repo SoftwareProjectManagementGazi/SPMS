@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useQuery } from "@tanstack/react-query"
+import { subDays } from "date-fns"
+import Link from "next/link"
 import { projectService } from "@/services/project-service"
+import { reportService } from "@/services/report-service"
+import { TeamPerformanceTable } from "@/components/reports/team-performance-table"
 
 const methodologyColors: Record<string, string> = {
   scrum: "bg-blue-100 text-blue-700",
@@ -20,11 +24,34 @@ export function ManagerView() {
   })
 
   const totalProjects = projects?.length ?? 0
+  const defaultProjectId = projects && projects.length > 0 ? Number(projects[0].id) : null
+
+  const { data: summaryData } = useQuery({
+    queryKey: ["reports", "summary", defaultProjectId],
+    queryFn: () => reportService.getSummary({
+      projectId: defaultProjectId!,
+      assigneeIds: [],
+      dateFrom: subDays(new Date(), 30).toISOString().split('T')[0],
+      dateTo: new Date().toISOString().split('T')[0],
+    }),
+    enabled: !!defaultProjectId,
+  })
+
+  const { data: performanceData, isLoading: perfLoading, isError: perfError } = useQuery({
+    queryKey: ["reports", "performance", "dashboard", defaultProjectId],
+    queryFn: () => reportService.getPerformance({
+      projectId: defaultProjectId!,
+      assigneeIds: [],
+      dateFrom: subDays(new Date(), 30).toISOString().split('T')[0],
+      dateTo: new Date().toISOString().split('T')[0],
+    }),
+    enabled: !!defaultProjectId,
+  })
 
   const metrics = [
-    { title: "Total Projects", value: totalProjects, icon: FolderKanban, color: "text-blue-600" },
-    { title: "Active Tasks", value: "-", icon: TrendingUp, color: "text-orange-600" },
-    { title: "Completed Tasks", value: "-", icon: CheckCircle2, color: "text-green-600" },
+    { title: "Toplam Projeler", value: totalProjects, icon: FolderKanban, color: "text-blue-600" },
+    { title: "Aktif Görevler", value: summaryData?.active_tasks ?? "-", icon: TrendingUp, color: "text-orange-600" },
+    { title: "Tamamlanan Görevler", value: summaryData?.completed_tasks ?? "-", icon: CheckCircle2, color: "text-green-600" },
   ]
 
   if (isLoading) {
@@ -60,22 +87,22 @@ export function ManagerView() {
         ))}
       </div>
 
-      {/* Project Portfolio Table */}
+      {/* Proje Portföyü Table */}
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Project Portfolio</CardTitle>
+          <CardTitle>Proje Portföyü</CardTitle>
         </CardHeader>
         <CardContent>
           {!projects || projects.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No projects found.</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">Henüz proje bulunmuyor.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Project Name</TableHead>
-                  <TableHead>Methodology</TableHead>
-                  <TableHead>Manager</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>Proje Adı</TableHead>
+                  <TableHead>Metodoloji</TableHead>
+                  <TableHead>Yönetici</TableHead>
+                  <TableHead>Bitiş Tarihi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,6 +144,27 @@ export function ManagerView() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Takım Performansı Section */}
+      <Card className="shadow-sm">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg font-semibold">Takım Performansı</CardTitle>
+            <Link href="/reports" className="text-primary text-sm hover:underline">
+              Tüm Raporları Gör →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TeamPerformanceTable
+            data={performanceData?.members ?? []}
+            isLoading={perfLoading}
+            isError={perfError}
+            limit={5}
+            emptyMessage="Bu proje için henüz performans verisi yok."
+          />
         </CardContent>
       </Card>
     </div>

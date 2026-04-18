@@ -21,6 +21,7 @@ interface ProjectResponse {
   created_at: string;
   columns?: BoardColumn[];
   custom_fields?: Record<string, any>;
+  process_config?: Record<string, any>;
 }
 
 // Frontend'den Backend'e giden veri tipi
@@ -33,6 +34,7 @@ export interface CreateProjectDTO {
   end_date?: string;
   columns?: string[];
   custom_fields?: Record<string, any>;
+  process_config?: Record<string, any>;
 }
 
 // Mapper Function: Backend verisini Frontend'in beklediği yapıya çevirir
@@ -58,6 +60,7 @@ const mapProjectResponseToProject = (data: ProjectResponse): Project => {
     endDate: data.end_date || "",
     progress: 0, // Backend'den gelmediği için default
     columns: data.columns || [],
+    process_config: data.process_config,
   };
 };
 
@@ -80,6 +83,14 @@ export const projectService = {
   updateProject: async (
     id: string,
     data: Partial<Pick<CreateProjectDTO, 'name' | 'description' | 'start_date' | 'end_date'>>
+  ): Promise<Project> => {
+    const response = await apiClient.patch<ProjectResponse>(`/projects/${id}`, data);
+    return mapProjectResponseToProject(response.data);
+  },
+
+  update: async (
+    id: string | number,
+    data: Partial<CreateProjectDTO>
   ): Promise<Project> => {
     const response = await apiClient.patch<ProjectResponse>(`/projects/${id}`, data);
     return mapProjectResponseToProject(response.data);

@@ -41,6 +41,7 @@ CREATE TABLE projects (
     manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     custom_fields JSON,
+    task_seq INTEGER NOT NULL DEFAULT 0,
     version INTEGER NOT NULL DEFAULT 1,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -106,7 +107,9 @@ CREATE TABLE tasks (
     deleted_at TIMESTAMP WITH TIME ZONE,
     recurrence_interval VARCHAR(20),
     recurrence_end_date DATE,
-    recurrence_count INTEGER
+    recurrence_count INTEGER,
+    task_key VARCHAR(20),
+    series_id VARCHAR(36)
 );
 CREATE INDEX ix_tasks_project_id ON tasks(project_id);
 CREATE INDEX ix_tasks_assignee_id ON tasks(assignee_id);
@@ -135,6 +138,7 @@ CREATE TABLE notifications (
     type notification_type NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     related_entity_id INTEGER,
+    related_entity_type VARCHAR(20),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -162,6 +166,7 @@ CREATE TABLE files (
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    file_size INTEGER,
     version INTEGER NOT NULL DEFAULT 1,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -216,6 +221,37 @@ CREATE TABLE IF NOT EXISTS team_projects (
     project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (team_id, project_id)
+);
+
+-- notification_preferences — kullanıcı bildirim tercihleri
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    preferences JSON NOT NULL DEFAULT '{}',
+    email_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    deadline_days INTEGER NOT NULL DEFAULT 1,
+    version INTEGER NOT NULL DEFAULT 1,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- task_dependencies — görev bağımlılıkları
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    depends_on_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    dependency_type VARCHAR(20) NOT NULL DEFAULT 'blocks',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_task_dependency UNIQUE (task_id, depends_on_id)
+);
+
+-- task_watchers — görev takipçileri
+CREATE TABLE IF NOT EXISTS task_watchers (
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (task_id, user_id)
 );
 
 -- password_reset_tokens — tek kullanımlık şifre sıfırlama tokenleri

@@ -10,11 +10,13 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/context/auth-context"
+import { useSystemConfig } from "@/context/system-config-context"
 
 interface SidebarProps {
   collapsed: boolean
@@ -33,8 +35,21 @@ const navItems = [
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const { config } = useSystemConfig()
 
   if (!user) return null // Or a skeleton loader if preferred, but Sidebar usually renders when auth is ready or layout handles it.
+
+  const isAdmin = user?.role?.name?.toLowerCase() === "admin"
+  const reportingEnabled = config.reporting_module_enabled !== "false"
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (item.href === "/reports" && !reportingEnabled) return false
+    return true
+  })
+
+  const allNavItems = isAdmin
+    ? [...filteredNavItems, { href: "/admin", label: "Yonetim", icon: Shield }]
+    : filteredNavItems
 
   return (
     <aside
@@ -58,7 +73,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => {
+        {allNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
 
           return (

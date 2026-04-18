@@ -55,7 +55,7 @@ export const processTemplates: ProcessTemplate[] = [
     name: "Scrum",
     shortDescription:
       "Sprint bazlı ilerleme. Değişken gereksinimler ve iteratif teslim için uygun.",
-    columns: ["Backlog", "Selected", "In Progress", "Review", "Done"],
+    columns: ["Is Birikimi", "Yapilacaklar", "Devam Eden", "Inceleme", "Tamamlandi"],
     taskFields: [
       {
         id: "storyPoints",
@@ -94,7 +94,7 @@ export const processTemplates: ProcessTemplate[] = [
     name: "Kanban",
     shortDescription:
       "Akış odaklı ilerleme. Sık değişen öncelikler ve kesintili işler için iyi.",
-    columns: ["To Do", "In Progress", "Blocked", "Done"],
+    columns: ["Yapilacaklar", "Devam Eden", "Test", "Tamamlandi"],
     taskFields: [
       { id: "assignee", label: "Assignee", defaultEnabled: true },
       { id: "priority", label: "Priority", defaultEnabled: true },
@@ -120,7 +120,7 @@ export const processTemplates: ProcessTemplate[] = [
     name: "Waterfall",
     shortDescription:
       "Aşama aşama ilerleme. Gereksinimler sabitse ve dokümantasyon önemliyse uygun.",
-    columns: ["Requirements", "Design", "Implementation", "Testing", "Release"],
+    columns: ["Gereksinimler", "Tasarim", "Gelistirme", "Test", "Dagitim"],
     taskFields: [
       { id: "assignee", label: "Assignee", defaultEnabled: true },
       { id: "dueDate", label: "Due Date", defaultEnabled: true },
@@ -143,6 +143,32 @@ export const processTemplates: ProcessTemplate[] = [
       { id: "sdd", title: "SDD (Design)" },
       { id: "std", title: "STD (Test)" },
       { id: "release-notes", title: "Release Notes" },
+    ],
+  },
+
+  {
+    id: "iterative",
+    name: "Iteratif",
+    shortDescription: "Planlama, analiz, gelistirme ve degerlendirme donguleriyle surekli iyilestirme",
+    columns: ["Planlama", "Analiz", "Gelistirme", "Degerlendirme"],
+    taskFields: [
+      { id: "assignee", label: "Assignee", defaultEnabled: true },
+      { id: "priority", label: "Priority", defaultEnabled: true },
+      { id: "dueDate", label: "Due Date", defaultEnabled: true },
+      { id: "labels", label: "Labels", defaultEnabled: true },
+      { id: "estimateHours", label: "Estimate (hours)", defaultEnabled: true },
+      { id: "storyPoints", label: "Story Point", defaultEnabled: false },
+      { id: "severity", label: "Severity", defaultEnabled: false },
+      { id: "risk", label: "Risk", defaultEnabled: false },
+      { id: "attachments", label: "Attachments", defaultEnabled: false },
+    ],
+    dashboardWidgets: [
+      { id: "activity", title: "Activity Feed", defaultEnabled: true },
+      { id: "velocity", title: "Velocity", defaultEnabled: false },
+    ],
+    artifacts: [
+      { id: "iteration-plan", title: "Iterasyon Plani" },
+      { id: "review-report", title: "Degerlendirme Raporu" },
     ],
   },
 ];
