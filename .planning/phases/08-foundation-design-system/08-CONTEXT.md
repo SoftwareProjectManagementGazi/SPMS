@@ -8,7 +8,14 @@
 
 Set up the base infrastructure for all subsequent frontend work: theme token system (6 presets + custom brand derivation), full primitive component library (16 components), i18n (TR/EN), and App Shell conversion from HTML prototype to Next.js — with zero visual change from the prototype design.
 
-**Source of truth:** `New_Frontend/` directory contains the HTML prototype. All conversion work references this prototype. The old `Frontend/` codebase serves only as the existing Next.js project to build into — its design/styling is being replaced by the prototype's design.
+**Source of truth:** `New_Frontend/` directory contains the HTML prototype. All conversion work references this prototype.
+
+**CRITICAL CONSTRAINT — Parallel Folder Strategy:**
+- The existing `Frontend/` folder MUST NOT be modified during this phase or any v2.0 rebuild phase
+- A new `Frontend2/` folder will be created as a fresh Next.js project, built from scratch using the `New_Frontend/` prototype as the design reference
+- When all frontend rebuild phases are complete, `Frontend2/` will be renamed to `Frontend` and the legacy folder deleted
+- All file paths in this phase target `Frontend2/`, NOT `Frontend/`
+- Reusable shadcn/ui overlay components (Dialog, Popover, Sheet, Select, etc.) should be copied from `Frontend/components/ui/` into `Frontend2/` — not imported across folders
 
 </domain>
 
@@ -28,7 +35,7 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 - **D-06:** Default language is Turkish (tr). Language switching will be available through Settings. The `t()` function falls back to Turkish if a key's English translation is missing.
 
 ### App Shell Conversion
-- **D-07:** App Shell will be rewritten from the prototype (`shell.jsx`) to TSX, replacing the current `app-shell.tsx`. This includes Sidebar (collapsible, nav items with keyboard shortcuts, admin section, user area), Header (breadcrumb, search, notifications, theme toggle, create button, user menu), and the AppContext provider.
+- **D-07:** App Shell will be created in `Frontend2/` from the prototype (`shell.jsx`) as new TSX files. This includes Sidebar (collapsible, nav items with keyboard shortcuts, admin section, user area), Header (breadcrumb, search, notifications, theme toggle, create button, user menu), and the AppContext provider. The existing `Frontend/components/app-shell.tsx` is NOT modified.
 - **D-08:** Full theme system implemented in this phase — 6 color presets (Default/Terracotta, Ocean, Forest, Monochrome, Midnight, Graphite), light/dark mode toggle, and custom brand color derivation via `deriveFromBrand()`. All integrated into the App Shell header.
 - **D-09:** Next.js App Router used for routing — prototype's client-side RouterContext is removed. File-based routing (`/dashboard`, `/projects`, `/settings`, etc.) replaces the SPA-style page switching. Navigation components updated to use `next/link` and `useRouter` from `next/navigation`.
 
@@ -56,10 +63,13 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 - `New_Frontend/src/data.jsx` — Mock data structure (shows expected data shapes)
 - `New_Frontend/src/tweaks.jsx` — Theme tweaks panel (reference for Settings theme UI)
 
-### Existing Frontend (build target)
-- `Frontend/app/globals.css` — Current CSS tokens (will be replaced/updated)
-- `Frontend/components/app-shell.tsx` — Current App Shell (will be rewritten)
-- `Frontend/components/ui/` — Existing shadcn/ui components (kept for overlays)
+### Legacy Frontend (reference only — DO NOT modify)
+- `Frontend/components/ui/` — Shadcn/ui overlay components to be COPIED into Frontend2/ (Dialog, Popover, Sheet, Select, DropdownMenu, Command, etc.)
+- `Frontend/lib/api-client.ts` — Axios instance with auth interceptors — reference for recreating in Frontend2/
+- `Frontend/context/auth-context.tsx` — Auth state management — reference for recreating in Frontend2/
+
+### Build Target (new folder)
+- `Frontend2/` — New Next.js project created from scratch in this phase. All output goes here.
 
 ### Project Context
 - `.planning/REQUIREMENTS.md` — FOUND-01 through FOUND-05 requirements for this phase
@@ -70,24 +80,27 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 <code_context>
 ## Existing Code Insights
 
-### Reusable Assets
-- `Frontend/components/ui/` — 59 shadcn/ui components. Dialog, Popover, Sheet, Select, DropdownMenu, Command, etc. will be reused for complex overlays.
-- `Frontend/components/ui/collapsible.tsx` — Shadcn Collapsible exists but prototype has its own styled Collapsible — prototype version takes precedence.
-- `Frontend/components/ui/progress.tsx` — Basic shadcn Progress exists — prototype's ProgressBar (with color, bg, height props) replaces it.
-- `Frontend/lib/api-client.ts` — Axios instance with auth interceptors — unchanged, used by Shell for API calls.
-- `Frontend/context/auth-context.tsx` — Auth state management — Shell's AuthGuard integrates with this.
+### Assets to Copy from Legacy Frontend/
+- `Frontend/components/ui/` — 59 shadcn/ui overlay components (Dialog, Popover, Sheet, Select, DropdownMenu, Command, etc.) to be copied into `Frontend2/components/ui/`
+- `Frontend/lib/api-client.ts` — Axios instance with auth interceptors — copy and adapt for Frontend2/
+- `Frontend/context/auth-context.tsx` — Auth state management — copy and adapt for Frontend2/
+- `Frontend/components/providers/query-provider.tsx` — QueryProvider — copy into Frontend2/
 
-### Established Patterns
+### Established Patterns (carry forward to Frontend2/)
 - All client components use `"use client"` directive
 - Named exports for components (`export function ComponentName`)
 - `@/` path alias for all imports
 - TanStack Query for server state
 - `React.useState` (namespace access, not destructured)
 
-### Integration Points
-- `Frontend/app/layout.tsx` — Root layout where AppContext provider and theme setup goes
-- `Frontend/app/*/page.tsx` — Existing pages that will use the new Shell and primitives
-- `Frontend/components/providers/query-provider.tsx` — QueryProvider wraps the app
+### Frontend2/ Structure (new project)
+- `Frontend2/app/layout.tsx` — Root layout where AppContext provider and theme setup goes
+- `Frontend2/app/globals.css` — New CSS tokens from prototype
+- `Frontend2/components/primitives/` — New primitive components from prototype
+- `Frontend2/components/ui/` — Copied shadcn/ui overlay components
+- `Frontend2/context/app-context.tsx` — New AppContext provider
+- `Frontend2/lib/theme.ts` — Theme system from prototype
+- `Frontend2/lib/i18n.ts` — i18n system from prototype
 
 </code_context>
 
