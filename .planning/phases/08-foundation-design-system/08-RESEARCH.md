@@ -804,22 +804,22 @@ import {
 | A3 | Monolithic strings.ts is adequate for ~85 keys | Architecture Patterns > Recommended Structure | Low -- can split later if needed |
 | A4 | Avatar color values (--av-1 through --av-8) are adequate choices | Code Examples > globals.css | Medium -- actual colors are invented since prototype doesn't define them; may need visual tuning |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Avatar color tokens (--av-1 to --av-8)**
    - What we know: Prototype Avatar component references `var(--av-${user.avColor})` but these tokens are never defined in the prototype HTML or CSS
    - What's unclear: What exact oklch values should be used
-   - Recommendation: Define 8 distinct hues with similar lightness (~0.60-0.65) and chroma (~0.12-0.18), test with both light and dark modes. The values in the Code Examples section are reasonable starting points but may need visual adjustment.
+   - RESOLVED: Define 8 distinct hues with similar lightness (~0.60-0.65) and chroma (~0.12-0.18), test with both light and dark modes. The values in the Code Examples section are reasonable starting points but may need visual adjustment.
 
 2. **next-themes package disposition**
    - What we know: `next-themes` v0.4.6 is installed in package.json but the new theme system uses custom AppContext with `data-mode` attribute
    - What's unclear: Whether next-themes should be removed, kept as unused, or integrated as a low-level helper
-   - Recommendation: Keep it installed but do not use it actively. The custom AppContext handles all theme switching. Removing it would require verifying no existing page references it.
+   - RESOLVED: Keep it installed but do not use it actively. The custom AppContext handles all theme switching. Removing it would require verifying no existing page references it.
 
 3. **SystemConfigContext brand color integration**
    - What we know: `SystemConfigContext` currently sets `--primary` directly on `document.documentElement` from backend API (`config.primary_brand_color`)
    - What's unclear: How to integrate this with the new multi-preset theme system
-   - Recommendation: If `primary_brand_color` is set in backend config, use it as the brand color input to `deriveFromBrand()` within AppContext. If not set, fall back to the selected preset.
+   - RESOLVED: If `primary_brand_color` is set in backend config, use it as the brand color input to `deriveFromBrand()` within AppContext. If not set, fall back to the selected preset.
 
 ## Environment Availability
 
