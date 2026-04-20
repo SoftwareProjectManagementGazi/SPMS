@@ -41,13 +41,13 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Page-level vertical breaks |
 | 3xl | 64px | Not used in this phase |
 
-Exceptions:
+Exceptions (all are intentional prototype fidelity values per locked decision D-04):
 - Sidebar width: 232px expanded, 56px collapsed (prototype-defined, not on 8-point grid)
 - Header height: 52px (prototype-defined, matches sidebar logo area)
 - Nav item height: 30px (prototype-defined)
-- Density row heights: 28px (compact), 34px (cozy), 40px (comfortable) -- via `--density-row` CSS variable
-- AvatarStack negative margin overlap: -6px between stacked avatars
-- Badge heights: 18px (xs), 20px (sm) -- content-driven
+- Density row heights: 28px (compact), 34px (cozy), 40px (comfortable) -- via `--density-row` CSS variable. The 34px cozy value is an intentional prototype fidelity exception (D-04).
+- AvatarStack negative margin overlap: -6px between stacked avatars. This negative spacing is an intentional prototype fidelity exception (D-04) for the overlapping avatar visual effect.
+- Badge heights: 18px (xs), 20px (sm) -- content-driven sizing. The 18px value is an intentional prototype fidelity exception (D-04).
 
 **Source:** Spacing values extracted from `New_Frontend/src/shell.jsx` (sidebar: width 232/56, header: height 52, nav: height 30, padding 8/10/14/16) and `New_Frontend/src/primitives.jsx` (button sizes, badge padding, section padding). All spacings match prototype exactly per D-04.
 
@@ -55,17 +55,37 @@ Exceptions:
 
 ## Typography
 
+### Canonical Type Scale (4 sizes, 2 weights)
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 14px | 400 (regular) | 1.45 | Default text, prototype base font-size |
-| Small / Label | 12px - 13px | 500 (medium) | 1.4 | Nav items (13px), breadcrumbs (13px), input text (13px), section subtitles (12px), priority chips (12px), sidebar menu items (12.5px) |
-| Caption / Meta | 10.5px - 11.5px | 600 (semibold) | 1.3 | Badge text (10.5-11.5px), sidebar section labels (10.5px), Kbd hints (10.5px), notification count (9px) |
-| Heading | 13px | 600 (semibold) | 1.3 | Section titles, sidebar user name (12.5px), sidebar logo name (13px) |
+| Body | 14px | 400 (regular) | 1.45 | Default text, input text, non-active nav items, breadcrumb segments |
+| Label | 13px | 600 (semibold) | 1.4 | Active nav items, sidebar menu items, section titles, sidebar logo name, button text |
+| Caption | 11px | 400 (regular) | 1.3 | Badge text, sidebar section labels, Kbd hints, subtitle/meta text |
+| Small | 9px | 600 (semibold) | 1.0 | Notification count badge (component-internal only, see note below) |
 
-**Font weights used (2 primary + 1 supporting):**
-- 400 (regular): Body text, non-active nav items implicit
-- 500 (medium): Nav labels, breadcrumb segments, status dots labels, input text
-- 600 (semibold): Active nav items, section titles, button text, badge text, sidebar labels, user name
+### Font Weights (2 only)
+
+| Weight | Name | Usage |
+|--------|------|-------|
+| 400 | Regular | Body text, captions, non-active nav items, breadcrumb segments, input text, subtitle/meta text |
+| 600 | Semibold | Active nav items, section titles, button text, sidebar labels, user name, badge emphasis, label text |
+
+**Weight 500 (medium) is eliminated.** All elements previously specified as weight 500 are reassigned to 400 (regular). Rationale: at sizes 13-14px, the visual difference between 400 and 500 is minimal; consolidating to 400 reduces the type contract without perceptible visual regression. The two chosen weights (400 and 600) provide clear visual hierarchy between normal content and emphasized/interactive elements.
+
+### Component-Level Size Deviations
+
+The prototype uses sub-pixel and intermediate sizes at the component level. These are NOT canonical type scale entries but are documented as implementation details for prototype fidelity per D-04:
+
+| Component | Prototype Size | Maps To | Implementation Note |
+|-----------|---------------|---------|---------------------|
+| Sidebar menu items | 12.5px | Label (13px) | Use 13px; 0.5px difference is imperceptible |
+| Section subtitles | 12px | Label (13px) | Use 13px for consistency; or 11px Caption if de-emphasis is needed |
+| Priority chips | 12px | Label (13px) | Use 13px; chip size provides sufficient visual containment |
+| Sidebar section labels | 10.5px | Caption (11px) | Use 11px; 0.5px rounding is imperceptible |
+| Badge text (small variant) | 10.5px | Caption (11px) | Use 11px; badge padding provides visual sizing |
+| Badge text (large variant) | 11.5px | Caption (11px) | Use 11px; 0.5px rounding is imperceptible |
+| Notification count | 9px | Small (9px) | Retained at 9px -- this is a component-internal anomaly for the notification bell counter only. The extremely small size is necessary to fit a 2-digit count within the 16px notification badge circle. |
 
 **Note:** This prototype uses a compact typographic scale. There is no display/hero size because Phase 8 is the shell and primitives layer -- no page content headings are rendered in this phase. Larger heading sizes (16px, 20px, 24px) will be declared in subsequent phase UI-SPECs when page content is converted.
 
@@ -185,6 +205,19 @@ Phase 8 is a foundation/infrastructure phase. It establishes the App Shell, them
 | User menu: Help | Yardim | Help |
 | User menu: Logout | Cikis Yap | Log Out |
 
+**Note on "Create / Olustur" button:** This is an intentional global action picker pattern. The button opens a dropdown menu (via shadcn DropdownMenu) that lists contextual creation options (e.g., "New Project", "New Task", "New Team"). The single-word label without a noun is deliberate -- the button serves as a universal creation entry point and the noun is supplied by the dropdown menu items. This follows the same pattern as tools like Linear ("Create") and Jira ("+"). The icon is `Plus` (lucide-react) displayed to the left of the label.
+
+### Accessibility Labels for Icon-Only Header Buttons
+
+Icon-only buttons in the Header region must include `aria-label` attributes for screen reader accessibility:
+
+| Button | Icon | aria-label (TR) | aria-label (EN) |
+|--------|------|-----------------|-----------------|
+| Theme toggle (dark) | Moon | Karanlik moda gec | Switch to dark mode |
+| Theme toggle (light) | Sun | Aydinlik moda gec | Switch to light mode |
+| Notifications | Bell | Bildirimler | Notifications |
+| Search (collapsed) | Search | Ara | Search |
+
 ### Empty State (for primitive components)
 
 | Component | Empty State |
@@ -245,6 +278,10 @@ No destructive actions exist in Phase 8 scope. The Shell's user menu "Cikis Yap 
 | Header | Full width of content area, 52px height (matches sidebar logo row), sticky top: 0 |
 | Main content | Fills remaining width, scrollable, receives page content via App Router outlet |
 | Overall layout | Horizontal flex: `[Sidebar] [Header + Main vertical stack]` |
+
+### Visual Focal Point
+
+The App Shell main screen focal point is the **main content area** (the region to the right of the sidebar and below the header). On initial load with no page content, this region displays the Dashboard page (first nav item, selected by default). The sidebar provides persistent navigation context (left rail), and the header provides contextual tools (breadcrumb, search, actions). The visual weight flows: sidebar active item (accent-colored icon) draws the eye to the navigation context, then the main content area provides the workspace. The sidebar logo mark (top-left, 26x26px accent background) serves as the brand anchor.
 
 ### Keyboard Shortcuts (Shell)
 
