@@ -4,12 +4,12 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: planning
 stopped_at: Phase 8 context gathered
-last_updated: "2026-04-20T18:32:35.889Z"
+last_updated: "2026-04-20T19:50:41.690Z"
 last_activity: 2026-04-20 -- Roadmap created for v2.0 (6 phases, 63 requirements mapped)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -64,8 +64,11 @@ Key constraints for v2.0:
 
 - [v2.0]: Tasarim freeze -- donusum sirasinda gorsel degisiklik yok
 - [v2.0]: UI-Tasarim-Backend.md aynen kodlanmayacak -- kapsamli tasarim review sonrasi
-- [v2.0]: Yeni frontend paralel insa, eski frontend uzerine yazilmayacak
-- [v2.0]: 16 UI eksiklik mevcut design system'a seamless entegre edilecek
+- [v2.0]: Frontend/ DOKUNULMAZ -- hicbir sey kopyalanmaz, degistirilmez, referans alinmaz
+- [v2.0]: Frontend2/ sifirdan insa edilir -- New_Frontend/ prototipi baz alinir
+- [v2.0]: shadcn/ui KULLANILMAZ -- tum UI %100 prototipe birebir sadik kalir
+- [v2.0]: Tum frontend fazlari bitince Frontend2/ -> Frontend olarak yeniden adlandirilir, eski silinir
+- [v2.0]: 16 UI eksiklik prototype design system'a sadik kalarak entegre edilecek
 
 ### Pending Todos
 
@@ -89,3 +92,5 @@ Carried from v1.0:
 Last session: --stopped-at
 Stopped at: Phase 8 context gathered
 Resume file: --resume-file
+
+**Planned Phase:** 08 (Foundation & Design System) — 4 plans — 2026-04-20T19:50:41.684Z

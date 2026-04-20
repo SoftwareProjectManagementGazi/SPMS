@@ -15,7 +15,9 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 - A new `Frontend2/` folder will be created as a fresh Next.js project, built from scratch using the `New_Frontend/` prototype as the design reference
 - When all frontend rebuild phases are complete, `Frontend2/` will be renamed to `Frontend` and the legacy folder deleted
 - All file paths in this phase target `Frontend2/`, NOT `Frontend/`
-- Reusable shadcn/ui overlay components (Dialog, Popover, Sheet, Select, etc.) should be copied from `Frontend/components/ui/` into `Frontend2/` — not imported across folders
+- NOTHING is copied from `Frontend/` — no shadcn/ui, no components, no context, no utils
+- ALL UI comes 100% from the `New_Frontend/` prototype — birebir aynı görünecek
+- shadcn/ui is NOT used at all — not even for overlays. All components are built from prototype
 
 </domain>
 
@@ -23,8 +25,8 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 ## Implementation Decisions
 
 ### Theme Token Migration
-- **D-01:** Prototype components (`New_Frontend/src/primitives.jsx`) will be converted to TypeScript React components. Shadcn/ui components are retained only for complex overlays (Dialog, Popover, Sheet, Select, etc.) — all visual primitives come from the prototype.
-- **D-02:** Token names will be mapped to shadcn/ui naming conventions (`--bg` → `--background`, `--surface` → `--card`, `--fg` → `--foreground`, etc.). Prototype-specific extra tokens (`--bg-2`, `--surface-2`, `--fg-subtle`, `--border-strong`, `--primary-hover`, `--primary-fg`, `--inset-*`, `--status-*`, `--priority-*`, `--shadow-*`) will be added as-is alongside shadcn tokens. Theme presets and `deriveFromBrand()` function will be updated to use the mapped names.
+- **D-01:** ALL components come from the prototype (`New_Frontend/src/primitives.jsx`) and will be converted to TypeScript React components. shadcn/ui is NOT used at all — not even for overlays. Every UI element must be 100% faithful to the prototype design.
+- **D-02:** Token names from the prototype will be used directly as-is (`--bg`, `--bg-2`, `--surface`, `--surface-2`, `--fg`, `--fg-subtle`, `--border`, `--border-strong`, `--primary`, `--primary-hover`, `--primary-fg`, `--inset-*`, `--status-*`, `--priority-*`, `--shadow-*`). No mapping to shadcn naming conventions — the prototype's token system IS the design system. Theme presets and `deriveFromBrand()` function ported directly from `theme.jsx`.
 
 ### Primitive Component Design
 - **D-03:** All 16 primitive components from `primitives.jsx` will be converted in this phase: Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section, PriorityChip, StatusDot, Input, ProgressBar, SegmentedControl, Collapsible, AlertBanner, Toggle. This gives subsequent phases a complete, ready-to-use component library.
@@ -44,7 +46,7 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 - Whether to split `strings.ts` into multiple files by feature area or keep it monolithic
 - Specific Tailwind class choices for prototype fidelity (exact spacing, sizing)
 - Whether `AppContext` stays in a single provider or splits into `ThemeContext` + `LanguageContext`
-- `data-mode="dark"` (prototype) vs `.dark` class (shadcn) for dark mode — whichever approach lets both prototype and shadcn components work
+- `data-mode="dark"` attribute from prototype for dark mode switching
 
 </decisions>
 
@@ -63,13 +65,9 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 - `New_Frontend/src/data.jsx` — Mock data structure (shows expected data shapes)
 - `New_Frontend/src/tweaks.jsx` — Theme tweaks panel (reference for Settings theme UI)
 
-### Legacy Frontend (reference only — DO NOT modify)
-- `Frontend/components/ui/` — Shadcn/ui overlay components to be COPIED into Frontend2/ (Dialog, Popover, Sheet, Select, DropdownMenu, Command, etc.)
-- `Frontend/lib/api-client.ts` — Axios instance with auth interceptors — reference for recreating in Frontend2/
-- `Frontend/context/auth-context.tsx` — Auth state management — reference for recreating in Frontend2/
-
-### Build Target (new folder)
+### Build Target (new folder — built from scratch)
 - `Frontend2/` — New Next.js project created from scratch in this phase. All output goes here.
+- `Frontend/` is IGNORED — nothing is read from or copied from the legacy frontend.
 
 ### Project Context
 - `.planning/REQUIREMENTS.md` — FOUND-01 through FOUND-05 requirements for this phase
@@ -78,27 +76,20 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 </canonical_refs>
 
 <code_context>
-## Existing Code Insights
+## Code Insights
 
-### Assets to Copy from Legacy Frontend/
-- `Frontend/components/ui/` — 59 shadcn/ui overlay components (Dialog, Popover, Sheet, Select, DropdownMenu, Command, etc.) to be copied into `Frontend2/components/ui/`
-- `Frontend/lib/api-client.ts` — Axios instance with auth interceptors — copy and adapt for Frontend2/
-- `Frontend/context/auth-context.tsx` — Auth state management — copy and adapt for Frontend2/
-- `Frontend/components/providers/query-provider.tsx` — QueryProvider — copy into Frontend2/
-
-### Established Patterns (carry forward to Frontend2/)
+### Patterns for Frontend2/ (fresh project)
 - All client components use `"use client"` directive
 - Named exports for components (`export function ComponentName`)
 - `@/` path alias for all imports
 - TanStack Query for server state
 - `React.useState` (namespace access, not destructured)
 
-### Frontend2/ Structure (new project)
+### Frontend2/ Structure (100% from prototype)
 - `Frontend2/app/layout.tsx` — Root layout where AppContext provider and theme setup goes
-- `Frontend2/app/globals.css` — New CSS tokens from prototype
-- `Frontend2/components/primitives/` — New primitive components from prototype
-- `Frontend2/components/ui/` — Copied shadcn/ui overlay components
-- `Frontend2/context/app-context.tsx` — New AppContext provider
+- `Frontend2/app/globals.css` — CSS tokens directly from prototype
+- `Frontend2/components/primitives/` — All primitive components from prototype
+- `Frontend2/context/app-context.tsx` — AppContext provider from prototype
 - `Frontend2/lib/theme.ts` — Theme system from prototype
 - `Frontend2/lib/i18n.ts` — i18n system from prototype
 
@@ -107,7 +98,7 @@ Set up the base infrastructure for all subsequent frontend work: theme token sys
 <specifics>
 ## Specific Ideas
 
-- Prototype uses `data-mode="dark"` attribute for dark mode switching — this needs to coexist with or replace the shadcn `.dark` class approach
+- Prototype uses `data-mode="dark"` attribute for dark mode switching — use this approach directly
 - Prototype's `--inset-*` shadow tokens create a distinctive "raised button" look with top/bottom edge highlights — must be preserved in Tailwind conversion
 - `deriveFromBrand()` allows users to pick any brand color and get a full derived palette — this is a key feature of the theme system
 - Prototype's `color-mix(in oklch, ...)` is used extensively in Badge and AlertBanner tones — ensure browser support is adequate

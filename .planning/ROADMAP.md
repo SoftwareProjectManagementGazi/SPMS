@@ -26,6 +26,12 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 **Milestone Goal:** Mevcut HTML prototype'i Next.js'e component-based olarak donusturmek (tasarima dokunmadan), tum UI eksikliklerini mevcut design system'a kusursuz sekilde entegre etmek, ve backend'i kapsamli tasarim review'i ile genisletmek.
 
+**CRITICAL BUILD RULES (all frontend phases):**
+- `Frontend/` DOKUNULMAZ — eski frontend uzerine yazilmaz, kopyalanmaz, degistirilmez
+- `Frontend2/` sifirdan insa edilir — `New_Frontend/` prototipi baz alinir
+- shadcn/ui KULLANILMAZ — tum UI %100 prototipe birebir sadik kalir
+- Tum frontend fazlari tamamlaninca `Frontend2/` → `Frontend` olarak yeniden adlandirilir, eski silinir
+
 **Phase Numbering:**
 - Integer phases (8, 9, ...): Planned milestone work
 - Decimal phases (8.1, 8.2): Urgent insertions (marked with INSERTED)
@@ -45,7 +51,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 **Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05
 **Success Criteria** (what must be TRUE):
   1. App Shell (Sidebar, Header, Layout) renders in Next.js identical to the HTML prototype -- no visual difference
-  2. Theme tokens from prototype (oklch variables) are active in globals.css without conflicting with existing tokens
+  2. Theme tokens from prototype (oklch variables) are active in Frontend2/app/globals.css — prototype token system used directly
   3. ProgressBar, SegmentedControl, Collapsible, and AlertBanner components render correctly with TypeScript props
   4. T() function returns Turkish or English strings based on useApp().language setting
   5. status-todo and status-blocked color tokens are available in theme presets
