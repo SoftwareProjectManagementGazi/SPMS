@@ -10,6 +10,23 @@ SPMS, yazilim gelistirme ekiplerinin proje sureclerini yonetmek icin tasarlanmis
 
 Ekiplerin farkli proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
 
+## Current Milestone: v2.0 Frontend Overhaul & Backend Expansion
+
+**Goal:** Mevcut HTML prototype'i Next.js'e component-based olarak donusturmek (tasarima dokunmadan), tum 16 UI eksikligini mevcut design system'a kusursuz sekilde entegre etmek, ve backend'i kapsamli tasarim review'i ile genisletmek.
+
+**Target features:**
+- Yeni Frontend (Next.js): Prototype'den component-based build, tasarima mudahale yok
+- 16 UI Eksiklik Tamamlama: Backlog Paneli, Faz Tamamlanma Kriterleri, Gorev-Faz Atamasi, Arsivlenmis Proje Banner + 12 kismi eksik
+- Backend Genislemeler: Project status, Task phase_id, Milestone/Artifact/PhaseReport entity'leri, Phase Gate API, Aktivite API, Profil API, Workflow veri yapisi genislemeleri
+- Workflow Editor: Edge tipleri, swimlane, sequential-flexible mod, yeni preset template'ler
+- Proje Olustur Wizard + Gorev Olustur Modali
+- Raporlama: CFD, Lead/Cycle Time, Iterasyon Karsilastirma
+
+**Key constraints:**
+- Tasarim freeze — donusum sirasinda gorsel degisiklik yok
+- Kalite esigi — yeni eklemeler mevcut kaliteyle ayni seviyede
+- Backend tasarim — UI-Tasarim-Backend.md aynen kodlanmayacak, Clean Architecture'a uygun kapsamli review sonrasi
+
 ## Current State
 
 **Shipped:** v1.0 MVP (2026-04-20)
@@ -55,7 +72,9 @@ v1.0 delivers: authentication & team management, full task/project module with d
 
 ### Active
 
-(Fresh for next milestone — define via `/gsd-new-milestone`)
+- [ ] Yeni Next.js frontend (prototype'den component-based donusum, tasarima dokunmadan)
+- [ ] 16 UI eksiklik tamamlama (EKSIK-KONTROL.md — mevcut design system'a seamless entegre)
+- [ ] Backend genislemeleri (kapsamli tasarim review sonrasi, Clean Architecture uyumlu)
 
 ### Out of Scope
 
@@ -106,5 +125,22 @@ v1.0 delivers: authentication & team management, full task/project module with d
 | SystemConfigProvider wraps AuthProvider | Global config available to all pages | Good |
 | fpdf2 replaces WeasyPrint | Pure Python, no system lib dependencies | Good |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-04-20 after v1.0 milestone*
+*Last updated: 2026-04-20 after v2.0 milestone started*
