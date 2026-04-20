@@ -2,14 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: Ready to plan
-stopped_at: Roadmap created, Phase 8 ready to plan
-last_updated: "2026-04-20T19:00:00.000Z"
+status: planning
+stopped_at: Phase 8 context gathered
+last_updated: "2026-04-20T18:32:35.889Z"
+last_activity: 2026-04-20 -- Roadmap created for v2.0 (6 phases, 63 requirements mapped)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -33,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v2.0) / 43 (v1.0 lifetime)
 - Average duration: -- (no v2.0 data yet)
 - Total execution time: 0 hours
@@ -44,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -- (v2.0 not started)
 - Trend: --
 
@@ -57,6 +61,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 v1.0 decisions carried forward -- see PROJECT.md for full history.
 
 Key constraints for v2.0:
+
 - [v2.0]: Tasarim freeze -- donusum sirasinda gorsel degisiklik yok
 - [v2.0]: UI-Tasarim-Backend.md aynen kodlanmayacak -- kapsamli tasarim review sonrasi
 - [v2.0]: Yeni frontend paralel insa, eski frontend uzerine yazilmayacak
@@ -81,6 +86,6 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-20
-Stopped at: Roadmap created for v2.0 milestone -- Phase 8 ready to plan
-Resume file: None
+Last session: --stopped-at
+Stopped at: Phase 8 context gathered
+Resume file: --resume-file
