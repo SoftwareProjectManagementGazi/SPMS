@@ -1,25 +1,25 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: Completed 07-05-PLAN (frontend process models, integrations, WIP visuals, reports 403)
-last_updated: "2026-04-11T10:01:45.156Z"
+milestone_name: MVP
+status: Milestone complete — v1.0 shipped
+stopped_at: Milestone v1.0 archived on 2026-04-20
+last_updated: "2026-04-20T16:45:00.000Z"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 43
-  completed_plans: 42
+  completed_plans: 43
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-11)
+See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve görevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 07 — process-models-adaptation-integrations
+**Current focus:** v1.0 shipped — planning next milestone
 
 ## Current Position
 
@@ -203,8 +203,20 @@ None.
 - RESOLVED: Integration tests status_id field — fixed in Plan 01-01
 - Note: tests/integration/conftest.py uses main spms_db directly (not a test DB) — DB must be running before integration tests
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-20:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gaps | Phase 06: 06-HUMAN-UAT.md | passed (0 pending) |
+| verification | Phase 04: 04-VERIFICATION.md | human_needed |
+| verification | Phase 06: 06-VERIFICATION.md | human_needed |
+
+Note: UI overhaul planned for next milestone — Phase 04/06 human verification deferred intentionally.
+
 ## Session Continuity
 
-Last session: 2026-04-11T10:01:45.150Z
-Stopped at: Completed 07-05-PLAN (frontend process models, integrations, WIP visuals, reports 403)
+Last session: 2026-04-20T16:45:00.000Z
+Stopped at: Milestone v1.0 archived — all 7 phases, 43 plans complete
 Resume file: None
