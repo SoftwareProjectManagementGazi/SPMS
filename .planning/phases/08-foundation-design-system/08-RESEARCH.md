@@ -8,7 +8,7 @@
 
 Phase 8 converts an HTML/JSX prototype into a production Next.js + TypeScript + Tailwind CSS v4 application shell. The prototype provides complete source code for all deliverables: 6 theme presets with oklch tokens, 16 primitive UI components, TR/EN i18n strings, and a full App Shell (Sidebar, Header, Layout). The work is a controlled port -- not creative design work -- which makes the task well-defined and low-risk.
 
-The primary technical challenge is reconciling the prototype's CSS custom property system (`--bg`, `--surface`, `--fg`, etc.) with the existing shadcn/ui token naming convention (`--background`, `--card`, `--foreground`, etc.) in Tailwind CSS v4's `@theme inline` directive. The existing `globals.css` already uses oklch values and the `@theme inline` pattern, so the migration path is clear: replace existing token values, add new prototype-specific tokens, and update the `@custom-variant dark` directive to support `data-mode="dark"`.
+The primary technical approach is using the prototype's CSS custom property names directly (`--bg`, `--surface`, `--fg`, etc.) in the new Frontend2/ project's globals.css via Tailwind CSS v4's `@custom-variant` directive. No mapping or renaming is needed -- the prototype's token system IS the design system (per D-02). The `@custom-variant dark` directive will be updated to support `data-mode="dark"`.
 
 **Primary recommendation:** Port prototype code file-by-file (theme.jsx -> lib/theme.ts, primitives.jsx -> components/primitives/*.tsx, i18n.jsx -> lib/i18n.ts, shell.jsx -> components/app-shell.tsx), converting inline styles to Tailwind classes and adding TypeScript interfaces for all component props.
 
@@ -16,13 +16,13 @@ The primary technical challenge is reconciling the prototype's CSS custom proper
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
-- **D-01:** Prototype components (`New_Frontend/src/primitives.jsx`) will be converted to TypeScript React components. Shadcn/ui components are retained only for complex overlays (Dialog, Popover, Sheet, Select, etc.) -- all visual primitives come from the prototype.
-- **D-02:** Token names will be mapped to shadcn/ui naming conventions (`--bg` -> `--background`, `--surface` -> `--card`, `--surface-2` -> new, `--fg` -> `--foreground`, etc.). Prototype-specific extra tokens (`--bg-2`, `--surface-2`, `--fg-subtle`, `--border-strong`, `--primary-hover`, `--primary-fg`, `--inset-*`, `--status-*`, `--priority-*`, `--shadow-*`) will be added as-is alongside shadcn tokens. Theme presets and `deriveFromBrand()` function will be updated to use the mapped names.
+- **D-01:** ALL components come from the prototype (`New_Frontend/src/primitives.jsx`) and will be converted to TypeScript React components. shadcn/ui is NOT used at all -- not even for overlays. Every UI element must be 100% faithful to the prototype design.
+- **D-02:** Token names from the prototype will be used directly as-is (`--bg`, `--bg-2`, `--surface`, `--surface-2`, `--fg`, `--fg-subtle`, `--border`, `--border-strong`, `--primary`, `--primary-hover`, `--primary-fg`, `--inset-*`, `--status-*`, `--priority-*`, `--shadow-*`). No mapping to shadcn naming conventions -- the prototype's token system IS the design system. Theme presets and `deriveFromBrand()` function ported directly from `theme.jsx`.
 - **D-03:** All 16 primitive components from `primitives.jsx` will be converted in this phase: Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section, PriorityChip, StatusDot, Input, ProgressBar, SegmentedControl, Collapsible, AlertBanner, Toggle.
 - **D-04:** Inline styles from the prototype will be converted to Tailwind CSS utility classes -- matching the existing project convention. CSS custom properties (token references) will be used via Tailwind's `var()` syntax where needed.
 - **D-05:** Simple i18n approach -- `useApp().language` React context provides the current language, `t()` function resolves dot-notation keys (e.g., `t('nav.dashboard')`), all strings stored in a single `strings.ts` file. No external i18n library.
 - **D-06:** Default language is Turkish (tr). Language switching through Settings. `t()` falls back to Turkish if English translation is missing.
-- **D-07:** App Shell will be rewritten from prototype (`shell.jsx`) to TSX, replacing current `app-shell.tsx`. Includes Sidebar (collapsible, nav items with keyboard shortcuts, admin section, user area), Header (breadcrumb, search, notifications, theme toggle, create button, user menu), and AppContext provider.
+- **D-07:** App Shell will be created in Frontend2/ from the prototype (`shell.jsx`) as new TSX files. Includes Sidebar (collapsible, nav items with keyboard shortcuts, admin section, user area), Header (breadcrumb, search, notifications, theme toggle, create button, user menu), and AppContext provider. The existing Frontend/ is NOT modified.
 - **D-08:** Full theme system -- 6 color presets, light/dark mode, custom brand color derivation via `deriveFromBrand()`.
 - **D-09:** Next.js App Router for routing -- prototype's client-side RouterContext removed. File-based routing replaces SPA-style page switching.
 
@@ -31,7 +31,7 @@ The primary technical challenge is reconciling the prototype's CSS custom proper
 - Whether to split `strings.ts` into multiple files by feature area or keep it monolithic
 - Specific Tailwind class choices for prototype fidelity (exact spacing, sizing)
 - Whether `AppContext` stays in a single provider or splits into `ThemeContext` + `LanguageContext`
-- `data-mode="dark"` (prototype) vs `.dark` class (shadcn) for dark mode -- whichever approach lets both prototype and shadcn components work
+- `data-mode="dark"` attribute from prototype for dark mode switching
 
 ### Deferred Ideas (OUT OF SCOPE)
 None -- discussion stayed within phase scope
@@ -42,7 +42,7 @@ None -- discussion stayed within phase scope
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| FOUND-01 | Theme token sistemi kurulur -- prototype'in oklch CSS variable'lari globals.css'e tasinir, eski token'larla namespace catismasi onlenir | Token mapping table (Section: Architecture Patterns > Token Migration), Tailwind v4 @theme inline docs, dark mode @custom-variant research |
+| FOUND-01 | Theme token sistemi kurulur -- prototype'in oklch CSS variable'lari globals.css'e tasinir, eski token'larla namespace catismasi onlenir | Token inventory (Section: Architecture Patterns > Token Migration), Tailwind v4 @theme inline docs, dark mode @custom-variant research |
 | FOUND-02 | Primitives kutuphanesi olusturulur -- ProgressBar, SegmentedControl, Collapsible, AlertBanner component'leri TypeScript ile yazilir | Full component inventory with props API (Section: Architecture Patterns > Component Conversion), code examples for each |
 | FOUND-03 | I18n altyapisi kurulur -- useApp().language ile TR/EN destegi, tum yeni component'lerde T() fonksiyonu kullanilir | i18n pattern with t() function (Section: Architecture Patterns > I18n), prototype STRINGS structure analysis |
 | FOUND-04 | Theme preset'lerine status-todo ve status-blocked tokenlari eklenir | Token inventory showing both existing and new status tokens (Section: Architecture Patterns > Token Migration), color values from prototype |
@@ -72,13 +72,13 @@ None -- discussion stayed within phase scope
 | tailwindcss | 4.1.17 | 4.2.2 | Utility-first CSS with `@theme inline` | Project convention [VERIFIED: node_modules] |
 | lucide-react | 0.454.0 | 1.8.0 | Icon library (used by existing components) | Already installed, used throughout [VERIFIED: package.json] |
 | next-themes | 0.4.6 | 0.4.6 | Theme persistence (dark/light mode) | Already installed [VERIFIED: package.json + npm view] |
-| class-variance-authority | 0.7.1 | -- | Component variant management | Already installed for shadcn [VERIFIED: package.json] |
+| class-variance-authority | 0.7.1 | -- | Component variant management | Already installed [VERIFIED: package.json] |
 | clsx + tailwind-merge | 2.1.1 / 2.5.5 | -- | Conditional class names via `cn()` | Existing `lib/utils.ts` pattern [VERIFIED: codebase] |
 
 ### Supporting (Already Installed)
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
-| @radix-ui/react-collapsible | 1.1.2 | Accessible collapsible primitive | Only for complex overlay interactions; prototype Collapsible is custom |
+| @radix-ui/react-collapsible | 1.1.2 | Accessible collapsible primitive | Only if complex accessibility requirements arise; prototype Collapsible is custom |
 | sonner | 1.7.4 | Toast notifications | Error/success feedback in theme operations |
 | tw-animate-css | 1.3.3 | CSS animation utilities | Subtle transitions in Shell components |
 
@@ -101,7 +101,7 @@ None -- discussion stayed within phase scope
        v
 +------------------+     +-----------------+
 | Root Layout      |     | globals.css     |
-| (Server)         |---->| @theme inline   |
+| (Server)         |---->| Prototype tokens|
 | Providers:       |     | :root tokens    |
 |  QueryProvider   |     | [data-mode]     |
 |  AuthProvider    |     +-----------------+
@@ -137,16 +137,20 @@ None -- discussion stayed within phase scope
 ### Recommended Project Structure
 
 ```
-Frontend/
+Frontend2/
   app/
-    globals.css          # Token definitions (updated)
+    globals.css          # Token definitions (prototype tokens directly)
     layout.tsx           # Root layout (add AppProvider)
-    page.tsx             # Dashboard (unchanged this phase)
-    ...
+    page.tsx             # Redirect to /dashboard
+    (shell)/
+      layout.tsx         # AppShell wrapper
+      dashboard/page.tsx
+      projects/page.tsx
+      ...
   components/
-    app-shell.tsx        # REWRITE: Full Shell from prototype
-    sidebar.tsx          # REWRITE: Prototype Sidebar
-    header.tsx           # REWRITE: Prototype Header
+    app-shell.tsx        # NEW: Full Shell from prototype
+    sidebar.tsx          # NEW: Prototype Sidebar
+    header.tsx           # NEW: Prototype Header
     breadcrumb.tsx       # NEW: Extracted from Header
     primitives/          # NEW: 16 prototype components
       avatar.tsx
@@ -166,87 +170,68 @@ Frontend/
       alert-banner.tsx
       toggle.tsx
       index.ts           # Barrel export
-    ui/                  # KEEP: Existing shadcn/ui (59 components)
-      ...
   context/
     app-context.tsx      # NEW: Theme + Language + UI state
-    auth-context.tsx     # KEEP: Existing auth
-    system-config-context.tsx  # UPDATE: Remove brand color injection (moved to app-context)
   lib/
     theme.ts             # NEW: PRESETS, deriveFromBrand, applyTokens, applyMode
     i18n.ts              # NEW: STRINGS object + t() function
-    utils.ts             # KEEP: cn() helper
+    utils.ts             # NEW: cn() helper
 ```
 
 **Recommendation for Claude's Discretion -- Component organization:**
-Use `components/primitives/` as a separate directory from `components/ui/`. Rationale: (1) Keeps prototype-origin components visually separate from shadcn/ui components, (2) Makes it clear which components are "ours" vs third-party, (3) Barrel export via `index.ts` keeps imports clean: `import { Badge, Button } from "@/components/primitives"` [ASSUMED]
+Use `components/primitives/` as a dedicated directory. Rationale: (1) Keeps all prototype-origin components organized together, (2) Barrel export via `index.ts` keeps imports clean: `import { Badge, Button } from "@/components/primitives"` [ASSUMED]
 
 **Recommendation for Claude's Discretion -- AppContext structure:**
 Keep a single `AppContext` provider (not split into ThemeContext + LanguageContext). Rationale: (1) The prototype uses a single `useApp()` hook that all Shell components depend on, (2) Theme and language are coupled (preset names are bilingual, mode affects language-aware labels), (3) Splitting adds complexity with no benefit at this scale. [ASSUMED]
 
 **Recommendation for Claude's Discretion -- Dark mode approach:**
-Use `data-mode="dark"` via Tailwind's `@custom-variant dark` directive. Change the existing line in globals.css from:
-```css
-@custom-variant dark (&:is(.dark *));
-```
-to:
+Use `data-mode="dark"` via Tailwind's `@custom-variant dark` directive. Set the custom variant in globals.css:
 ```css
 @custom-variant dark (&:is([data-mode="dark"], [data-mode="dark"] *));
 ```
-This ensures: (1) Prototype components work natively (they use `[data-mode="dark"]`), (2) Existing shadcn/ui components that use `dark:` prefix continue to work (they compile to the same selector), (3) The `.dark` CSS block in globals.css is replaced by `[data-mode="dark"]` block. [VERIFIED: Tailwind CSS v4 docs, https://tailwindcss.com/docs/dark-mode]
+This ensures: (1) Prototype components work natively (they use `[data-mode="dark"]`), (2) Any `dark:` Tailwind utilities compile to the same selector, (3) The dark mode block in globals.css uses `[data-mode="dark"]`. [VERIFIED: Tailwind CSS v4 docs, https://tailwindcss.com/docs/dark-mode]
 
 **Recommendation for Claude's Discretion -- strings.ts structure:**
 Keep a single monolithic `strings.ts` file. Rationale: The prototype's `i18n.jsx` STRINGS object has ~85 keys organized into 7 sections (nav, common, priority, dashboard, project, workflow). This is small enough for a single file. Future phases will add more strings, but splitting can happen then if needed. [ASSUMED]
 
 ### Pattern 1: Token Migration Strategy
 
-**What:** Map prototype tokens to shadcn-compatible names while preserving prototype extras
-**When to use:** Updating globals.css
+**What:** Port prototype tokens directly into Frontend2/app/globals.css using prototype names as-is
+**When to use:** Creating globals.css in Frontend2/
 
-The token mapping follows D-02. Here is the complete mapping table:
+Per D-02, prototype token names are used directly. No mapping or renaming is needed. The complete token inventory:
 
-| Prototype Token | Shadcn Equivalent | Action |
-|----------------|-------------------|--------|
-| `--bg` | `--background` | Map (replace shadcn value with prototype value) |
-| `--bg-2` | -- (new) | Add alongside shadcn tokens |
-| `--surface` | `--card` | Map |
-| `--surface-2` | -- (new) | Add alongside shadcn tokens |
-| `--fg` | `--foreground` | Map |
-| `--fg-muted` | `--muted-foreground` | Map |
-| `--fg-subtle` | -- (new) | Add alongside shadcn tokens |
-| `--border` | `--border` | Direct match (same name) |
-| `--border-strong` | -- (new) | Add alongside shadcn tokens |
-| `--primary` | `--primary` | Direct match |
-| `--primary-fg` | `--primary-foreground` | Map |
-| `--primary-hover` | -- (new) | Add alongside shadcn tokens |
-| `--accent` | `--accent` | Direct match |
-| `--accent-fg` | `--accent-foreground` | Map |
-| `--ring` | `--ring` | Direct match |
-| `--status-todo` | `--status-todo` | Already exists in current globals.css (update value) |
-| `--status-progress` | `--status-progress` | Already exists (update value) |
-| `--status-review` | -- (new) | Add (missing from current globals.css) |
-| `--status-done` | `--status-done` | Already exists (update value) |
-| `--status-blocked` | -- (new) | Add (FOUND-04 requirement) |
-| `--priority-critical` | `--priority-critical` | Already exists (update value) |
-| `--priority-high` | `--priority-high` | Already exists (update value) |
-| `--priority-med` | -- (new, rename) | Prototype uses `--priority-med`; current uses `--priority-medium` |
-| `--priority-low` | `--priority-low` | Already exists (update value) |
-| `--shadow-*` (5 levels) | -- (new) | Add all: sm, default, md, lg, xl |
-| `--inset-*` (6 tokens) | -- (new) | Add all: top, bottom, card, primary-top, primary-bottom |
-| `--density-row` | -- (new) | Add via `[data-density]` attribute selectors |
+| Prototype Token | Category | Action |
+|----------------|----------|--------|
+| `--bg` | Core surface | Use directly from prototype |
+| `--bg-2` | Core surface | Use directly from prototype |
+| `--surface` | Core surface | Use directly from prototype |
+| `--surface-2` | Core surface | Use directly from prototype |
+| `--fg` | Foreground | Use directly from prototype |
+| `--fg-muted` | Foreground | Use directly from prototype |
+| `--fg-subtle` | Foreground | Use directly from prototype |
+| `--border` | Border | Use directly from prototype |
+| `--border-strong` | Border | Use directly from prototype |
+| `--primary` | Primary | Use directly from prototype |
+| `--primary-fg` | Primary | Use directly from prototype |
+| `--primary-hover` | Primary | Use directly from prototype |
+| `--accent` | Accent | Use directly from prototype |
+| `--accent-fg` | Accent | Use directly from prototype |
+| `--ring` | Ring | Use directly from prototype |
+| `--status-todo` | Status (FOUND-04) | Use directly from prototype |
+| `--status-progress` | Status | Use directly from prototype |
+| `--status-review` | Status | Use directly from prototype |
+| `--status-done` | Status | Use directly from prototype |
+| `--status-blocked` | Status (FOUND-04) | Use directly from prototype |
+| `--priority-critical` | Priority | Use directly from prototype |
+| `--priority-high` | Priority | Use directly from prototype |
+| `--priority-med` | Priority | Use directly from prototype |
+| `--priority-low` | Priority | Use directly from prototype |
+| `--shadow-*` (5 levels) | Shadow | Use directly from prototype: sm, default, md, lg, xl |
+| `--inset-*` (5 tokens) | Inset depth | Use directly from prototype: top, bottom, card, primary-top, primary-bottom |
+| `--density-row` | Density | Use via `[data-density]` attribute selectors |
 
 **Also needed:** `--av-1` through `--av-8` avatar color tokens. The prototype Avatar component references `var(--av-${user.avColor})` but these are not defined in the prototype CSS. These need to be created as fixed oklch colors for user avatar backgrounds. [VERIFIED: grep found no --av-* definitions in prototype]
-
-**Critical: Retain tokens for shadcn overlay components.** The existing shadcn tokens that are NOT in the prototype must be kept for Dialog, Popover, Select, etc:
-- `--popover` / `--popover-foreground`
-- `--secondary` / `--secondary-foreground`
-- `--muted` / `--muted-foreground` (separate from `--fg-muted`)
-- `--destructive` / `--destructive-foreground`
-- `--input`
-- `--chart-1` through `--chart-5`
-- `--sidebar-*` tokens (6 tokens)
-
-These shadcn tokens should be derived from the prototype's token values where possible (e.g., `--popover` = same as `--card`/`--surface`, `--destructive` = same as `--priority-critical`).
 
 ### Pattern 2: Component Conversion Pattern
 
@@ -471,35 +456,12 @@ export function deriveFromBrand(params: {
   // Port from theme.jsx line 140-156
 }
 
-// TOKEN_MAP: prototype name -> CSS variable name used in globals.css
-const TOKEN_MAP: Record<string, string> = {
-  bg: "background",
-  surface: "card",
-  fg: "foreground",
-  "fg-muted": "muted-foreground",
-  "primary-fg": "primary-foreground",
-  "accent-fg": "accent-foreground",
-  // Tokens that pass through unchanged:
-  // "bg-2", "surface-2", "fg-subtle", "border", "border-strong",
-  // "primary", "primary-hover", "accent", "ring"
-}
-
 export function applyTokens(tokens: ThemeTokens): void {
   const root = document.documentElement
+  // Per D-02: Use prototype token names directly -- no mapping
   Object.entries(tokens).forEach(([key, value]) => {
-    // Apply with mapped name (for shadcn compatibility)
-    const mapped = TOKEN_MAP[key]
-    if (mapped) {
-      root.style.setProperty(`--${mapped}`, value)
-    }
-    // Always apply with original name too (for prototype components)
     root.style.setProperty(`--${key}`, value)
   })
-  // Derive shadcn-specific tokens from prototype values
-  root.style.setProperty("--popover", tokens.surface)
-  root.style.setProperty("--popover-foreground", tokens.fg)
-  root.style.setProperty("--card-foreground", tokens.fg)
-  root.style.setProperty("--input", tokens.border)
 }
 
 export function applyMode(mode: "light" | "dark"): void {
@@ -508,10 +470,11 @@ export function applyMode(mode: "light" | "dark"): void {
 ```
 
 ### Anti-Patterns to Avoid
-- **Dual token systems without mapping:** Do NOT maintain separate prototype and shadcn token sets that can drift apart. Use `applyTokens()` to set both mapped and original names from a single source of truth.
-- **Importing shadcn/ui Button in new components:** Prototype Button has different variants (primary/secondary/ghost/subtle/danger) than shadcn Button. Import from `@/components/primitives/button`, not `@/components/ui/button`, in all new code.
+- **Importing from Frontend/ directory:** Frontend2/ is built from scratch. Nothing is copied or referenced from the legacy Frontend/ directory.
+- **Using shadcn/ui components:** Per D-01, ALL components come from the prototype. Do NOT install or use any shadcn/ui components. Import from `@/components/primitives/`, not from any `@/components/ui/` directory.
 - **Using next-themes ThemeProvider for mode switching:** The prototype's mode switching is tightly coupled to the preset system (switching to dark auto-selects midnight preset). Use custom AppContext for this logic, not next-themes' automatic handling.
 - **Converting all inline styles to Tailwind:** Some prototype styles are dynamic (depend on props or computed values). Keep `style={}` for those. Only convert static, constant styles to Tailwind classes.
+- **Renaming prototype token names:** Per D-02, use `--bg`, `--surface`, `--fg`, etc. directly. Do NOT rename to `--background`, `--card`, `--foreground` or any other naming convention.
 
 ## Don't Hand-Roll
 
@@ -519,26 +482,25 @@ export function applyMode(mode: "light" | "dark"): void {
 |---------|-------------|-------------|-----|
 | CSS class merging | Custom string concatenation | `cn()` from `lib/utils.ts` (clsx + tailwind-merge) | Handles Tailwind class conflicts correctly |
 | Icon components | Copy prototype SVG icons | `lucide-react` icons | Already installed with 1000+ icons; prototype icons are Lucide-style SVGs |
-| Accessible dialogs/popovers | Custom overlay components | Existing shadcn/ui Dialog, Popover, Sheet, Select | Radix UI accessibility is battle-tested |
-| Focus management | Custom focus trap logic | Radix primitives (via shadcn/ui) | Handles edge cases (nested traps, portal focus) |
+| Accessible overlays | Custom overlay components from scratch | Build from prototype patterns with proper a11y attributes | Prototype components are the source; add aria-* attributes as needed |
 | Route matching | Manual pathname comparison | `usePathname()` from `next/navigation` | Handles dynamic segments, parallel routes |
 | Color contrast checking | Custom WCAG calculator | Prototype's `estimateContrast()` (oklch lightness diff) | Already implemented in theme.jsx, adequate for UI use |
 
-**Key insight:** This phase is a porting exercise. Every component, function, and style already exists in the prototype. The value-add is TypeScript types, Tailwind classes, Next.js integration, and the token mapping -- not reimagining the design.
+**Key insight:** This phase is a porting exercise. Every component, function, and style already exists in the prototype. The value-add is TypeScript types, Tailwind classes, and Next.js integration -- not reimagining the design.
 
 ## Common Pitfalls
 
 ### Pitfall 1: Token Namespace Collision
-**What goes wrong:** Existing shadcn/ui components break because their expected tokens (e.g., `--card`) now have different values from the prototype's `--surface` mapping.
-**Why it happens:** The prototype's color palette (terracotta hue ~40) is fundamentally different from the current shadcn default (blue hue ~264).
-**How to avoid:** When mapping tokens, test shadcn overlay components (Dialog, Select, Popover) with the new color values. Ensure `--popover`, `--card`, `--secondary`, `--muted` are all derived from the prototype's equivalent tokens.
-**Warning signs:** Shadcn dialogs appear with wrong background colors or unreadable text.
+**What goes wrong:** Existing globals.css tokens in Frontend/ have different names from the prototype tokens used in Frontend2/.
+**Why it happens:** Frontend2/ is a fresh project with its own globals.css. The prototype uses `--bg`, `--surface`, `--fg` while the legacy Frontend/ uses `--background`, `--card`, `--foreground`.
+**How to avoid:** Since Frontend2/ is built from scratch, this is not actually a risk -- just use prototype token names directly per D-02. No collision possible because the two projects are separate.
+**Warning signs:** N/A -- Frontend2/ is isolated.
 
 ### Pitfall 2: Dark Mode Selector Mismatch
-**What goes wrong:** `dark:` Tailwind utilities don't apply because the prototype uses `data-mode="dark"` but the Tailwind config expects `.dark` class.
-**Why it happens:** The existing globals.css has `.dark { }` block and `@custom-variant dark (&:is(.dark *))`. The prototype uses `[data-mode="dark"]` attribute.
-**How to avoid:** Change `@custom-variant dark` to use `[data-mode="dark"]` selector. Replace `.dark { }` block with `[data-mode="dark"] { }`. Update any JS that adds/removes `.dark` class to instead set `data-mode` attribute.
-**Warning signs:** Dark mode toggle works for prototype components but not for shadcn components, or vice versa.
+**What goes wrong:** `dark:` Tailwind utilities don't apply because the prototype uses `data-mode="dark"` but the default Tailwind config expects `.dark` class.
+**Why it happens:** Tailwind CSS v4 default dark mode uses `.dark` class. The prototype uses `[data-mode="dark"]` attribute.
+**How to avoid:** Set `@custom-variant dark (&:is([data-mode="dark"], [data-mode="dark"] *))` in globals.css. Use `[data-mode="dark"] { }` block for dark overrides.
+**Warning signs:** Dark mode toggle works for some components but not others.
 
 ### Pitfall 3: color-mix() in Tailwind Arbitrary Values
 **What goes wrong:** Prototype Badge and AlertBanner use `color-mix(in oklch, ...)` extensively. Tailwind's arbitrary value syntax `bg-[...]` may not handle complex color-mix expressions well.
@@ -549,7 +511,7 @@ export function applyMode(mode: "light" | "dark"): void {
 ### Pitfall 4: Inset Shadow Tokens Missing in Dark Mode
 **What goes wrong:** Buttons and cards look flat in dark mode because the `--inset-*` shadow tokens have different values for light and dark modes.
 **Why it happens:** The prototype defines separate `--inset-*` values in `:root` (light) and `[data-mode="dark"]` (dark). If only the light values are ported, dark mode loses the distinctive raised-button look.
-**How to avoid:** Port BOTH the `:root` and `[data-mode="dark"]` blocks for all `--inset-*` and `--shadow-*` tokens. There are 6 inset tokens and 5 shadow tokens, each with separate light/dark values = 22 total token values.
+**How to avoid:** Port BOTH the `:root` and `[data-mode="dark"]` blocks for all `--inset-*` and `--shadow-*` tokens. There are 5 inset tokens and 5 shadow tokens, each with separate light/dark values = 20 total token values.
 **Warning signs:** Buttons appear flat without the top-highlight/bottom-shadow edge effect.
 
 ### Pitfall 5: Prototype Icon Name Mismatches
@@ -580,43 +542,39 @@ export function applyMode(mode: "light" | "dark"): void {
 
 ## Code Examples
 
-### globals.css Token Structure (after migration)
+### globals.css Token Structure (Frontend2/)
 
 ```css
-/* Source: New_Frontend/SPMS Prototype.html + token mapping from D-02 */
+/* Source: New_Frontend/SPMS Prototype.html -- prototype token names used directly per D-02 */
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @custom-variant dark (&:is([data-mode="dark"], [data-mode="dark"] *));
 
 :root {
-  /* Mapped tokens (prototype name -> shadcn name) */
-  --background: oklch(0.985 0.006 75);
-  --foreground: oklch(0.20 0.025 50);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.025 50);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.025 50);
-  --primary: oklch(0.60 0.17 40);
-  --primary-foreground: oklch(0.985 0.005 75);
-  --muted: oklch(0.975 0.006 70);
-  --muted-foreground: oklch(0.48 0.018 55);
-  --accent: oklch(0.93 0.03 50);
-  --accent-foreground: oklch(0.25 0.04 50);
-  --destructive: oklch(0.58 0.22 25);
-  --destructive-foreground: oklch(1 0 0);
-  --secondary: oklch(0.975 0.006 70);
-  --secondary-foreground: oklch(0.20 0.025 50);
-  --border: oklch(0.90 0.01 65);
-  --input: oklch(0.90 0.01 65);
-  --ring: oklch(0.60 0.17 40 / 0.4);
-
-  /* Prototype-specific extra tokens (kept as-is per D-02) */
+  /* Core surface tokens (prototype names per D-02) */
+  --bg: oklch(0.985 0.006 75);
   --bg-2: oklch(0.97 0.008 70);
+  --surface: oklch(1 0 0);
   --surface-2: oklch(0.975 0.006 70);
+
+  /* Foreground tokens */
+  --fg: oklch(0.20 0.025 50);
+  --fg-muted: oklch(0.48 0.018 55);
   --fg-subtle: oklch(0.62 0.012 60);
+
+  /* Border tokens */
+  --border: oklch(0.90 0.01 65);
   --border-strong: oklch(0.82 0.015 60);
+
+  /* Primary tokens */
+  --primary: oklch(0.60 0.17 40);
+  --primary-fg: oklch(0.985 0.005 75);
   --primary-hover: oklch(0.55 0.18 40);
+
+  /* Accent tokens */
+  --accent: oklch(0.93 0.03 50);
+  --accent-fg: oklch(0.25 0.04 50);
+  --ring: oklch(0.60 0.17 40 / 0.4);
 
   /* Status tokens (FOUND-04) */
   --status-todo: oklch(0.62 0.012 60);
@@ -659,21 +617,6 @@ export function applyMode(mode: "light" | "dark"): void {
   --radius: 8px;
   --radius-sm: 6px;
   --radius-lg: 12px;
-
-  /* Keep shadcn chart and sidebar tokens */
-  --chart-1: oklch(0.60 0.17 40);
-  --chart-2: oklch(0.58 0.14 150);
-  --chart-3: oklch(0.65 0.15 65);
-  --chart-4: oklch(0.55 0.15 230);
-  --chart-5: oklch(0.58 0.22 25);
-  --sidebar: oklch(0.97 0.008 70);
-  --sidebar-foreground: oklch(0.20 0.025 50);
-  --sidebar-primary: oklch(0.60 0.17 40);
-  --sidebar-primary-foreground: oklch(0.985 0.005 75);
-  --sidebar-accent: oklch(0.93 0.03 50);
-  --sidebar-accent-foreground: oklch(0.25 0.04 50);
-  --sidebar-border: oklch(0.90 0.01 65);
-  --sidebar-ring: oklch(0.60 0.17 40 / 0.4);
 }
 
 [data-mode="dark"] {
@@ -839,27 +782,27 @@ Step 2.6: No new external dependencies required. All tools are already installed
 ### Test Framework
 | Property | Value |
 |----------|-------|
-| Framework | None detected in Frontend/ |
-| Config file | None -- see Wave 0 |
-| Quick run command | `cd Frontend && npx next build` (type-check + build) |
-| Full suite command | `cd Frontend && npx next build` (no test suite) |
+| Framework | None configured in Frontend2/ -- using `next build` as type-check proxy |
+| Config file | None -- Wave 0 uses build as verification |
+| Quick run command | `cd Frontend2 && npx next build` (type-check + build) |
+| Full suite command | `cd Frontend2 && npx next build` (no test suite) |
 
 ### Phase Requirements -> Test Map
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| FOUND-01 | Token migration -- all oklch variables resolve | manual / build | `cd Frontend && npx next build` (CSS parse errors = fail) | -- Wave 0 |
-| FOUND-02 | 4 primitives render with TypeScript props | manual / build | `cd Frontend && npx next build` (type errors = fail) | -- Wave 0 |
+| FOUND-01 | Token migration -- all oklch variables resolve | manual / build | `cd Frontend2 && npx next build` (CSS parse errors = fail) | -- Wave 0 |
+| FOUND-02 | 4 primitives render with TypeScript props | manual / build | `cd Frontend2 && npx next build` (type errors = fail) | -- Wave 0 |
 | FOUND-03 | t() returns correct TR/EN strings | unit | Manual verification or future unit test | -- Wave 0 |
 | FOUND-04 | status-todo and status-blocked tokens present | manual / build | grep globals.css for tokens | -- Wave 0 |
-| FOUND-05 | App Shell renders -- Sidebar, Header, Layout | manual + build | `cd Frontend && npx next build` + visual check | -- Wave 0 |
+| FOUND-05 | App Shell renders -- Sidebar, Header, Layout | manual + build | `cd Frontend2 && npx next build` + visual check | -- Wave 0 |
 
 ### Sampling Rate
-- **Per task commit:** `cd Frontend && npx next build` (catches type errors, CSS parse errors)
+- **Per task commit:** `cd Frontend2 && npx next build` (catches type errors, CSS parse errors)
 - **Per wave merge:** Same + manual visual comparison with prototype
 - **Phase gate:** Full build green + visual parity with prototype confirmed
 
 ### Wave 0 Gaps
-- [ ] No test framework configured in Frontend/ -- using `next build` as type-check proxy
+- [ ] No test framework configured in Frontend2/ -- using `next build` as type-check proxy
 - [ ] No visual regression testing tool (not required for this phase; manual comparison against HTML prototype is the verification method)
 
 ## Security Domain
@@ -885,7 +828,7 @@ None specific to this phase. The theme system uses `localStorage` for persistenc
 
 ### Primary (HIGH confidence)
 - **Prototype source files** (New_Frontend/src/) -- Direct inspection of theme.jsx, primitives.jsx, i18n.jsx, shell.jsx, icons.jsx, app.jsx, data.jsx, tweaks.jsx
-- **Existing codebase** (Frontend/) -- Direct inspection of globals.css, app-shell.tsx, sidebar.tsx, header.tsx, layout.tsx, auth-context.tsx, system-config-context.tsx, package.json, tsconfig.json
+- **Existing codebase** (Frontend/) -- Direct inspection of globals.css, app-shell.tsx, sidebar.tsx, header.tsx, layout.tsx, auth-context.tsx, system-config-context.tsx, package.json, tsconfig.json (reference only -- nothing copied to Frontend2/)
 - **HTML prototype** (New_Frontend/SPMS Prototype.html) -- CSS token definitions, dark mode structure, density system
 - **Tailwind CSS v4 docs** (tailwindcss.com/docs/dark-mode, /docs/theme, /docs/customizing-colors) -- @custom-variant dark, @theme inline, CSS variable usage [VERIFIED: WebFetch]
 - **npm registry** -- Package versions verified via `npm view` for next (16.2.4), react (19.2.5), tailwindcss (4.2.2), next-themes (0.4.6), lucide-react (1.8.0)
