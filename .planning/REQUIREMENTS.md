@@ -1,7 +1,7 @@
 # Requirements: SPMS v2.0
 
 **Defined:** 2026-04-20
-**Core Value:** Ekiplerin farklı proje yönetim metodolojilerine uygun şekilde projelerini ve görevlerini tek platformda takip edebilmesi.
+**Core Value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
 
 ## v2.0 Requirements
 
@@ -52,7 +52,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [ ] **TASK-01**: Gorev Olustur Modali yapilir — overlay modal, proje/tur/baslik/aciklama/oncelik/atanan/puan/tarih/cycle/faz/etiket/tekrar alanlari
 - [ ] **TASK-02**: Backlog Paneli yapilir — proje detayda sol kenarda dikey toggle, 300px panel, arama/filtre/siralama, gorev listesi, drag-drop, toplu islem [E1]
 - [ ] **TASK-03**: Gorev-Faz atamasi eklenir — enable_phase_assignment toggle acikken gorev formuna faz dropdown'i, board kart faz badge'i [E3][E5]
-- [ ] **TASK-04**: Ana gorev sidebar'inda alt gorev faz dagılımı mini stepper gosterilir [E3]
+- [ ] **TASK-04**: Ana gorev sidebar'inda alt gorev faz dagilimi mini stepper gosterilir [E3]
 - [ ] **TASK-05**: Board toolbar'a "Faza Gore Filtrele" dropdown'i, List Tab'a "Faz" sutunu eklenir [E5]
 - [ ] **TASK-06**: Cycle label'i metodolojiye gore dinamik gosterilir (Sprint/Dongu/Iterasyon/Artim) [E14]
 
@@ -60,7 +60,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 - [ ] **LIFE-01**: Faz tamamlanma kriterleri formu yapilir — Settings > Lifecycle'da her faz icin otomatik kriter toggle + manuel kriter listesi [E2]
 - [ ] **LIFE-02**: Phase Gate inline expand yapilir — "Faza Gecis Yap" butonu, tamamlanma durumu, kriter kontrolleri, acik gorev aksiyonlari, not alani [E7]
-- [ ] **LIFE-03**: 0 gorevli faz secildiginde metriklerde "—", Phase Gate kriterlerinde "Uygulanamaz" ve bilgi mesaji gosterilir [E6]
+- [ ] **LIFE-03**: 0 gorevli faz secildiginde metriklerde "---", Phase Gate kriterlerinde "Uygulanamaz" ve bilgi mesaji gosterilir [E6]
 - [ ] **LIFE-04**: Lifecycle > Gecmis kartlarinda Collapsible "Gorev Detaylari" bolumu MTTaskRow compact ile implemente edilir [E8]
 - [ ] **LIFE-05**: Milestone alt sekmesi yapilir — milestone listesi, ekleme formu, durum badge'leri, ProgressBar, timeline entegrasyonu
 - [ ] **LIFE-06**: Artefakt alt sekmesi yapilir — metodolojiye gore varsayilan artefaktlar, durum takibi, sorumlu atama, dosya baglama
@@ -70,11 +70,11 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 - [ ] **EDIT-01**: Edge tipleri eklenir — flow/verification/feedback, farkli stroke dash/renk, edge secim panelinde SegmentedControl
 - [ ] **EDIT-02**: Node gruplama (Swimlane) eklenir — grup cercevesi, toolbar'da "Grup" butonu, sag panelde grup duzenleme
-- [ ] **EDIT-03**: sequential-flexible akis modu eklenir — siralı ilerleme + tanimli geri donuslere izin veren 4. mod
+- [ ] **EDIT-03**: sequential-flexible akis modu eklenir — sirali ilerleme + tanimli geri donuslere izin veren 4. mod
 - [ ] **EDIT-04**: Aktif faz hesaplama graph traversal (BFS) ile yapilir — hardcoded index yerine node.state (active/past/future/unreachable) [E9]
 - [ ] **EDIT-05**: Paralel aktif fazlar desteklenir — birden fazla node ayni anda "active" ring alabilir [E10]
 - [ ] **EDIT-06**: Node uzerinde dongu sayaci badge'i (xN) gosterilir — ayni faz birden fazla kez kapatilmissa [E11]
-- [ ] **EDIT-07**: Eksik preset template'ler eklenir — Artirimlı (Incremental), Evrimsel (Evolutionary), RAD [E12]
+- [ ] **EDIT-07**: Eksik preset template'ler eklenir — Artirimli (Incremental), Evrimsel (Evolutionary), RAD [E12]
 
 ### Reporting & Charts
 
@@ -98,7 +98,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [ ] **PAGE-04**: MyTasks sayfasi donusturulur — gorev listesi, filtreler
 - [ ] **PAGE-05**: Settings sayfasi donusturulur — tum alt sekmeler (Lifecycle dahil)
 - [ ] **PAGE-06**: Login/Register sayfalari donusturulur
-- [ ] **PAGE-07**: WIP ihlali detaylari Board Tab'a eklenir — kolon background renk degisimi, AlertBanner, drop engelleme [EKSIK §8]
+- [ ] **PAGE-07**: WIP ihlali detaylari Board Tab'a eklenir — kolon background renk degisimi, AlertBanner, drop engelleme [EKSIK S8]
 
 ## v3.0 Requirements
 
@@ -121,7 +121,7 @@ Explicitly excluded. Documented to prevent scope creep.
 |---------|--------|
 | Mobil native uygulama (iOS/Android) | Web-first; responsive yeterli |
 | Real-time WebSocket chat | Bildirim sistemi yeterli |
-| Coklu dil (i18n — 3+ dil) | Turkce/Ingilizce yeterli |
+| Coklu dil (i18n --- 3+ dil) | Turkce/Ingilizce yeterli |
 | Video/ses konferans | Kapsam disi |
 | Misafir (guest) modu | Gelecek surum |
 | Mobil push notification (FCM/APNs) | Web bildirim yeterli |
@@ -134,13 +134,75 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated by roadmapper) | | |
+| FOUND-01 | Phase 8 | Pending |
+| FOUND-02 | Phase 8 | Pending |
+| FOUND-03 | Phase 8 | Pending |
+| FOUND-04 | Phase 8 | Pending |
+| FOUND-05 | Phase 8 | Pending |
+| BACK-01 | Phase 9 | Pending |
+| BACK-02 | Phase 9 | Pending |
+| BACK-03 | Phase 9 | Pending |
+| BACK-04 | Phase 9 | Pending |
+| BACK-05 | Phase 9 | Pending |
+| BACK-06 | Phase 9 | Pending |
+| BACK-07 | Phase 9 | Pending |
+| BACK-08 | Phase 9 | Pending |
+| API-01 | Phase 9 | Pending |
+| API-02 | Phase 9 | Pending |
+| API-03 | Phase 9 | Pending |
+| API-04 | Phase 9 | Pending |
+| API-05 | Phase 9 | Pending |
+| API-06 | Phase 9 | Pending |
+| API-07 | Phase 9 | Pending |
+| API-08 | Phase 9 | Pending |
+| API-09 | Phase 9 | Pending |
+| API-10 | Phase 9 | Pending |
+| PAGE-01 | Phase 10 | Pending |
+| PAGE-02 | Phase 10 | Pending |
+| PAGE-05 | Phase 10 | Pending |
+| PAGE-06 | Phase 10 | Pending |
+| PROJ-01 | Phase 10 | Pending |
+| PROJ-02 | Phase 10 | Pending |
+| PROJ-03 | Phase 10 | Pending |
+| PROJ-04 | Phase 10 | Pending |
+| PROJ-05 | Phase 10 | Pending |
+| PAGE-03 | Phase 11 | Pending |
+| PAGE-04 | Phase 11 | Pending |
+| PAGE-07 | Phase 11 | Pending |
+| TASK-01 | Phase 11 | Pending |
+| TASK-02 | Phase 11 | Pending |
+| TASK-03 | Phase 11 | Pending |
+| TASK-04 | Phase 11 | Pending |
+| TASK-05 | Phase 11 | Pending |
+| TASK-06 | Phase 11 | Pending |
+| LIFE-01 | Phase 12 | Pending |
+| LIFE-02 | Phase 12 | Pending |
+| LIFE-03 | Phase 12 | Pending |
+| LIFE-04 | Phase 12 | Pending |
+| LIFE-05 | Phase 12 | Pending |
+| LIFE-06 | Phase 12 | Pending |
+| LIFE-07 | Phase 12 | Pending |
+| EDIT-01 | Phase 12 | Pending |
+| EDIT-02 | Phase 12 | Pending |
+| EDIT-03 | Phase 12 | Pending |
+| EDIT-04 | Phase 12 | Pending |
+| EDIT-05 | Phase 12 | Pending |
+| EDIT-06 | Phase 12 | Pending |
+| EDIT-07 | Phase 12 | Pending |
+| REPT-01 | Phase 13 | Pending |
+| REPT-02 | Phase 13 | Pending |
+| REPT-03 | Phase 13 | Pending |
+| REPT-04 | Phase 13 | Pending |
+| PROF-01 | Phase 13 | Pending |
+| PROF-02 | Phase 13 | Pending |
+| PROF-03 | Phase 13 | Pending |
+| PROF-04 | Phase 13 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 53 total
-- Mapped to phases: 0
-- Unmapped: 53
+- v2.0 requirements: 63 total
+- Mapped to phases: 63
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 after initial definition*
+*Last updated: 2026-04-20 after roadmap creation*

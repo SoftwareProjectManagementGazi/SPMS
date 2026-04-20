@@ -2,26 +2,124 @@
 
 ## Milestones
 
-- SHIPPED **v1.0 MVP** — Phases 1-7 (shipped 2026-04-20)
+- SHIPPED **v1.0 MVP** -- Phases 1-7 (shipped 2026-04-20)
+- IN PROGRESS **v2.0 Frontend Overhaul & Backend Expansion** -- Phases 8-13
 
 ## Phases
 
 <details>
-<summary>v1.0 MVP (Phases 1-7) — SHIPPED 2026-04-20</summary>
+<summary>v1.0 MVP (Phases 1-7) -- SHIPPED 2026-04-20</summary>
 
-- [x] Phase 1: Foundation & Security Hardening (6/6 plans) — completed 2026-03-11
-- [x] Phase 2: Authentication & Team Management (8/8 plans) — completed 2026-03-12
-- [x] Phase 3: Project & Task Completion (8/8 plans) — completed 2026-03-14
-- [x] Phase 4: Views & UI (5/5 plans) — completed 2026-03-15
-- [x] Phase 5: Notifications (7/7 plans) — completed 2026-03-16
-- [x] Phase 6: Reporting & Analytics (4/4 plans) — completed 2026-04-09
-- [x] Phase 7: Process Models, Adaptation & Integrations (5/5 plans) — completed 2026-04-11
+- [x] Phase 1: Foundation & Security Hardening (6/6 plans) -- completed 2026-03-11
+- [x] Phase 2: Authentication & Team Management (8/8 plans) -- completed 2026-03-12
+- [x] Phase 3: Project & Task Completion (8/8 plans) -- completed 2026-03-14
+- [x] Phase 4: Views & UI (5/5 plans) -- completed 2026-03-15
+- [x] Phase 5: Notifications (7/7 plans) -- completed 2026-03-16
+- [x] Phase 6: Reporting & Analytics (4/4 plans) -- completed 2026-04-09
+- [x] Phase 7: Process Models, Adaptation & Integrations (5/5 plans) -- completed 2026-04-11
 
 Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 </details>
 
+### v2.0 Frontend Overhaul & Backend Expansion
+
+**Milestone Goal:** Mevcut HTML prototype'i Next.js'e component-based olarak donusturmek (tasarima dokunmadan), tum UI eksikliklerini mevcut design system'a kusursuz sekilde entegre etmek, ve backend'i kapsamli tasarim review'i ile genisletmek.
+
+**Phase Numbering:**
+- Integer phases (8, 9, ...): Planned milestone work
+- Decimal phases (8.1, 8.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
+- [ ] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints
+- [ ] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard
+- [ ] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions
+- [ ] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements
+- [ ] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page
+
+## Phase Details
+
+### Phase 8: Foundation & Design System
+**Goal**: Developers have a working Next.js shell with design tokens, primitive components, and i18n -- enabling all subsequent frontend work
+**Depends on**: Nothing (first v2.0 phase)
+**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05
+**Success Criteria** (what must be TRUE):
+  1. App Shell (Sidebar, Header, Layout) renders in Next.js identical to the HTML prototype -- no visual difference
+  2. Theme tokens from prototype (oklch variables) are active in globals.css without conflicting with existing tokens
+  3. ProgressBar, SegmentedControl, Collapsible, and AlertBanner components render correctly with TypeScript props
+  4. T() function returns Turkish or English strings based on useApp().language setting
+  5. status-todo and status-blocked color tokens are available in theme presets
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 9: Backend Schema, Entities & APIs
+**Goal**: Backend has all new entities, schema changes, and API endpoints ready for frontend consumption
+**Depends on**: Phase 8 (foundation must exist for integration testing context, but backend work itself is independent)
+**Requirements**: BACK-01, BACK-02, BACK-03, BACK-04, BACK-05, BACK-06, BACK-07, BACK-08, API-01, API-02, API-03, API-04, API-05, API-06, API-07, API-08, API-09, API-10
+**Success Criteria** (what must be TRUE):
+  1. GET /projects?status=ACTIVE returns only active projects; project status transitions (ACTIVE/COMPLETED/ON_HOLD/ARCHIVED) persist correctly
+  2. Milestone, Artifact, and PhaseReport CRUD endpoints return proper responses and new records appear in database
+  3. Phase Gate endpoint evaluates completion criteria and prevents concurrent transitions via advisory lock
+  4. GET /projects/{id}/activity returns paginated, filterable activity feed; GET /users/{id}/summary returns user stats
+  5. Workflow data structure accepts edge types, groups, and sequential-flexible mode; process_config reads/writes with schema_version normalization
+**Plans**: TBD
+
+### Phase 10: Shell Pages & Project Features
+**Goal**: Users can navigate all core pages in the new Next.js frontend and manage project lifecycle (create, status, archive)
+**Depends on**: Phase 8 (App Shell), Phase 9 (project status API, project APIs)
+**Requirements**: PAGE-01, PAGE-02, PAGE-05, PAGE-06, PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05
+**Success Criteria** (what must be TRUE):
+  1. Dashboard, Projects list, Settings, and Login/Register pages render in Next.js visually identical to prototype
+  2. User can create a new project through the 4-step wizard (Temel Bilgiler, Metodoloji, Yasam Dongusu, Yapilandirma)
+  3. User can change project status via dropdown actions (Complete/Hold/Archive) and sees dynamic status badge in header
+  4. Archived projects show AlertBanner with "Aktif Et" button and content editing is blocked
+  5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 11: Task Features & Board Enhancements
+**Goal**: Users can create tasks via modal, manage backlog, assign tasks to phases, and view project detail with all tabs
+**Depends on**: Phase 10 (project pages exist to host task features)
+**Requirements**: PAGE-03, PAGE-04, PAGE-07, TASK-01, TASK-02, TASK-03, TASK-04, TASK-05, TASK-06
+**Success Criteria** (what must be TRUE):
+  1. User can create a task via overlay modal with all fields (project, type, title, description, priority, assignee, points, dates, cycle, phase, labels, recurrence)
+  2. Backlog panel toggles open on project detail left side (300px), supports search/filter/sort, drag-drop to board, and bulk operations
+  3. When enable_phase_assignment is on, task form shows phase dropdown and board cards display phase badge; board toolbar has "Filter by Phase" and list tab has "Phase" column
+  4. ProjectDetail page renders with 8 tabs (Board/List/Timeline/Calendar/Activity/Lifecycle/Members/Settings) and MyTasks page shows filtered task list
+  5. WIP violation triggers column background color change, AlertBanner, and prevents dropping more tasks into the column
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 12: Lifecycle, Phase Gate & Workflow Editor
+**Goal**: Users can manage project lifecycle phases with gate criteria, milestones, artifacts, and reports; workflow editor supports advanced graph features
+**Depends on**: Phase 9 (Phase Gate API, Milestone/Artifact/PhaseReport APIs), Phase 11 (ProjectDetail Lifecycle tab exists)
+**Requirements**: LIFE-01, LIFE-02, LIFE-03, LIFE-04, LIFE-05, LIFE-06, LIFE-07, EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07
+**Success Criteria** (what must be TRUE):
+  1. User can define auto and manual completion criteria per phase in Settings > Lifecycle and trigger phase transitions via Phase Gate with criteria checks
+  2. Zero-task phases show dash metrics and "Not Applicable" gate criteria; past phase cards expand to show task details via Collapsible
+  3. Milestone sub-tab lists milestones with status badges and ProgressBar; Artifact sub-tab shows methodology-default artifacts with status tracking and file attachment
+  4. Evaluation Report expands inline on past phase cards with metrics, issues, lessons, recommendations, and PDF download
+  5. Workflow editor supports edge types (flow/verification/feedback), swimlane grouping, sequential-flexible mode, BFS-based active phase calculation, parallel active phases, cycle counter badges, and Incremental/Evolutionary/RAD preset templates
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 13: Reporting, Activity & User Profile
+**Goal**: Users can view advanced analytics charts, browse project activity feeds, and access personal profile pages
+**Depends on**: Phase 9 (activity API, profile API, PhaseReport API), Phase 10 (pages framework)
+**Requirements**: REPT-01, REPT-02, REPT-03, REPT-04, PROF-01, PROF-02, PROF-03, PROF-04
+**Success Criteria** (what must be TRUE):
+  1. Kanban projects display CFD (stacked area) instead of burndown with 7/30/90-day filter; all projects show Lead/Cycle Time histogram with P50/P85/P95 markers
+  2. Scrum/Iterative projects display Iteration Comparison grouped bar chart (planned/completed/carried) and Reports page has "Phase Reports" section with project+phase selector
+  3. Project detail Activity tab shows vertical timeline with event icons, date grouping, type/user filters, and pagination
+  4. User Profile page displays header, 3 StatCards, and Tasks/Projects/Activity tabs using MTTaskRow component for task lists
+  5. Header avatar dropdown shows Profilim/Ayarlar/Cikis Yap menu linking to correct pages
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -32,3 +130,9 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 | 5. Notifications | v1.0 | 7/7 | Complete | 2026-03-16 |
 | 6. Reporting & Analytics | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
+| 8. Foundation & Design System | v2.0 | 0/0 | Not started | - |
+| 9. Backend Schema, Entities & APIs | v2.0 | 0/0 | Not started | - |
+| 10. Shell Pages & Project Features | v2.0 | 0/0 | Not started | - |
+| 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
+| 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
+| 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
