@@ -36,7 +36,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - Integer phases (8, 9, ...): Planned milestone work
 - Decimal phases (8.1, 8.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
+- [x] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
 - [ ] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints
 - [ ] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard
 - [ ] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions
