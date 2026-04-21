@@ -37,7 +37,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - Decimal phases (8.1, 8.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
-- [ ] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints
+- [x] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints -- completed 2026-04-21
 - [ ] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard
 - [ ] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions
 - [ ] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements
@@ -98,16 +98,16 @@ Plans:
   5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
 **Plans**: 10 plans
 Plans:
-- [x] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [x] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [x] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
-- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
-- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
-- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
-- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
-- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
-- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
-- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
+- [ ] 10-01-PLAN.md (not yet planned)
+- [ ] 10-02-PLAN.md (not yet planned)
+- [ ] 10-03-PLAN.md (not yet planned)
+- [ ] 10-04-PLAN.md (not yet planned)
+- [ ] 10-05-PLAN.md (not yet planned)
+- [ ] 10-06-PLAN.md (not yet planned)
+- [ ] 10-07-PLAN.md (not yet planned)
+- [ ] 10-08-PLAN.md (not yet planned)
+- [ ] 10-09-PLAN.md (not yet planned)
+- [ ] 10-10-PLAN.md (not yet planned)
 **UI hint**: yes
 
 ### Phase 11: Task Features & Board Enhancements
@@ -122,16 +122,16 @@ Plans:
   5. WIP violation triggers column background color change, AlertBanner, and prevents dropping more tasks into the column
 **Plans**: 10 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
-- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
-- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
-- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
-- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
-- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
-- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
-- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
+- [ ] 11-01-PLAN.md (not yet planned)
+- [ ] 11-02-PLAN.md (not yet planned)
+- [ ] 11-03-PLAN.md (not yet planned)
+- [ ] 11-04-PLAN.md (not yet planned)
+- [ ] 11-05-PLAN.md (not yet planned)
+- [ ] 11-06-PLAN.md (not yet planned)
+- [ ] 11-07-PLAN.md (not yet planned)
+- [ ] 11-08-PLAN.md (not yet planned)
+- [ ] 11-09-PLAN.md (not yet planned)
+- [ ] 11-10-PLAN.md (not yet planned)
 **UI hint**: yes
 
 ### Phase 12: Lifecycle, Phase Gate & Workflow Editor
@@ -146,16 +146,16 @@ Plans:
   5. Workflow editor supports edge types (flow/verification/feedback), swimlane grouping, sequential-flexible mode, BFS-based active phase calculation, parallel active phases, cycle counter badges, and Incremental/Evolutionary/RAD preset templates
 **Plans**: 10 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
-- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
-- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
-- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
-- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
-- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
-- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
-- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
+- [ ] 12-01-PLAN.md (not yet planned)
+- [ ] 12-02-PLAN.md (not yet planned)
+- [ ] 12-03-PLAN.md (not yet planned)
+- [ ] 12-04-PLAN.md (not yet planned)
+- [ ] 12-05-PLAN.md (not yet planned)
+- [ ] 12-06-PLAN.md (not yet planned)
+- [ ] 12-07-PLAN.md (not yet planned)
+- [ ] 12-08-PLAN.md (not yet planned)
+- [ ] 12-09-PLAN.md (not yet planned)
+- [ ] 12-10-PLAN.md (not yet planned)
 **UI hint**: yes
 
 ### Phase 13: Reporting, Activity & User Profile
@@ -170,16 +170,16 @@ Plans:
   5. Header avatar dropdown shows Profilim/Ayarlar/Cikis Yap menu linking to correct pages
 **Plans**: 10 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
-- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
-- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
-- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
-- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
-- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
-- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
-- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
+- [ ] 13-01-PLAN.md (not yet planned)
+- [ ] 13-02-PLAN.md (not yet planned)
+- [ ] 13-03-PLAN.md (not yet planned)
+- [ ] 13-04-PLAN.md (not yet planned)
+- [ ] 13-05-PLAN.md (not yet planned)
+- [ ] 13-06-PLAN.md (not yet planned)
+- [ ] 13-07-PLAN.md (not yet planned)
+- [ ] 13-08-PLAN.md (not yet planned)
+- [ ] 13-09-PLAN.md (not yet planned)
+- [ ] 13-10-PLAN.md (not yet planned)
 **UI hint**: yes
 
 ## Progress
@@ -197,7 +197,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 6. Reporting & Analytics | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
-| 9. Backend Schema, Entities & APIs | v2.0 | 0/0 | Not started | - |
+| 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
 | 10. Shell Pages & Project Features | v2.0 | 0/0 | Not started | - |
 | 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
