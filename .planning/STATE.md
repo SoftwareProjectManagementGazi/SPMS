@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 10-06-PLAN.md
-last_updated: "2026-04-21T19:35:54.121Z"
+stopped_at: Completed 10-07-PLAN.md
+last_updated: "2026-04-21T19:40:12.931Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_plans: 21
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 10 (shell-pages-project-features) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [████████░░] 83%
 | Phase 10-shell-pages-project-features P04 | 166 | 2 tasks | 5 files |
 | Phase 10-shell-pages-project-features P05 | 171 | 2 tasks | 6 files |
 | Phase 10-shell-pages-project-features P06 | 169 | 2 tasks | 1 files |
+| Phase 10 P07 | 112 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -163,6 +164,9 @@ Key constraints for v2.0:
 - Inline SVG icons for settings tab sidebar — avoids unestablished icons/ module import path in Frontend2
 - LabeledField uses controlled inputs (value+onChange) not uncontrolled (defaultValue) — required for profile pre-population from useAuth().user
 - Güvenlik tab omits 2FA and sessions — D-32 scope limit strictly respected
+- Project key client enforcement: uppercase alphanumeric max 8 chars in wizard (T-10-07-01)
+- Step 3 lifecycle preview: read-only chip arrows — no WorkflowCanvas until Phase 12
+- methodology enum mapped from template name (scrum→SCRUM, etc.) for POST /projects until migration 006 drops the field
 
 ### Pending Todos
 
@@ -183,8 +187,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T19:35:54.114Z
-Stopped at: Completed 10-06-PLAN.md
+Last session: 2026-04-21T19:40:12.923Z
+Stopped at: Completed 10-07-PLAN.md
 Resume file: None
 
 **Next Phase:** 10 (Shell Pages & Project Features) — ready to plan
