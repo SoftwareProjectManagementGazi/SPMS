@@ -39,28 +39,33 @@ export default function DashboardPage() {
     day: "numeric",
   })
 
-  // Normalize activity feed items from backend shape
+  // Normalize activity feed items from backend shape.
+  // FL-04 fix (Phase 10 review): the previous `as string` / `as string | number`
+  // casts were type-system-only lies — TypeScript would not catch a backend
+  // that shipped `{ action: { type: "task_created", ... } }` instead of a plain
+  // string, and the UI would render `[object Object]` in the activity feed.
+  // Use runtime typeof guards so non-string/number values fall through to the
+  // fallback instead of being coerced via String() stringification.
   const activityItems: ActivityItem[] = React.useMemo(() => {
     const raw = activityData?.items ?? activityData ?? []
     if (!Array.isArray(raw)) return []
-    return raw.map(
-      (item: Record<string, unknown>, idx: number) => ({
-        id: (item.id as string | number) ?? idx,
-        action: (item.action as string) ?? (item.description as string) ?? "",
-        user_name:
-          (item.user_name as string) ??
-          (item.actor_name as string) ??
-          (item.user as string) ??
-          "Unknown",
-        user_avatar: (item.user_avatar as string) ?? null,
-        timestamp:
-          (item.timestamp as string) ??
-          (item.created_at as string) ??
-          (item.occurred_at as string) ??
-          "",
-        entity_type: (item.entity_type as string) ?? "",
-      })
-    )
+
+    const asString = (v: unknown): string =>
+      typeof v === "string" ? v : ""
+    const asStringOrNumber = (v: unknown, fallback: string | number): string | number =>
+      typeof v === "string" || typeof v === "number" ? v : fallback
+
+    return raw.map((item: Record<string, unknown>, idx: number) => ({
+      id: asStringOrNumber(item.id, idx),
+      action: asString(item.action) || asString(item.description),
+      user_name:
+        asString(item.user_name) ||
+        asString(item.actor_name) ||
+        "Unknown",
+      user_avatar: typeof item.user_avatar === "string" ? item.user_avatar : null,
+      timestamp: asString(item.timestamp) || asString(item.created_at),
+      entity_type: asString(item.entity_type),
+    }))
   }, [activityData])
 
   const completedCount = allProjects.filter((p) => p.status === "COMPLETED").length
