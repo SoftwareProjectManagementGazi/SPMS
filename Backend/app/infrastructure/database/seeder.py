@@ -114,25 +114,41 @@ def get_random_date(start_days_ago=60, end_days_ago=0):
 
 async def seed_data(session: AsyncSession):
     try:
-        # Check if data already exists to prevent duplication
-        result = await session.execute(select(UserModel).limit(1))
+        # Idempotency guard: bail only when projects exist. Checking users is too
+        # coarse — a previous partial run can leave the DB with users but no
+        # projects (the whole reason that scenario exists is that users get
+        # flushed before projects get committed, or an older build exited after
+        # seeding users alone). Gating on projects lets subsequent runs complete
+        # the rest of the seed without re-creating users (per-user checks in
+        # seed_users still skip existing emails).
+        result = await session.execute(select(ProjectModel).limit(1))
         if result.scalars().first():
-            logger.info("SEEDER: Veritabanı zaten dolu, işlem atlanıyor.")
+            logger.info("SEEDER: Projeler zaten mevcut, işlem atlanıyor.")
             return
 
         logger.info("SEEDER: Veritabanı dolumu başlatılıyor...")
-        
+
         roles_map = await seed_roles(session)
         users_map = await seed_users(session, roles_map)
         projects_map, created_projects = await seed_projects(session, users_map)
 
-        await seed_scrum_details(session, projects_map["SPMS"], users_map)
-        await seed_kanban_details(session, projects_map["MOB"], users_map)
-        await seed_waterfall_details(session, projects_map["DATA"], users_map)
-        await seed_scrum_details(session, projects_map["AI"], users_map)
+        # Detail seeds only run for projects newly created this pass, so a
+        # re-run on a partially-populated DB doesn't duplicate columns, sprints,
+        # tasks, teams, milestones, or artifacts.
+        created_keys = {p.key for p in created_projects}
+        detail_dispatch = {
+            "SPMS": seed_scrum_details,
+            "MOB": seed_kanban_details,
+            "DATA": seed_waterfall_details,
+            "AI": seed_scrum_details,
+        }
+        for key, seeder in detail_dispatch.items():
+            if key in created_keys and key in projects_map:
+                await seeder(session, projects_map[key], users_map)
 
-        await seed_teams(session, projects_map, users_map)
-        await seed_milestones_and_artifacts(session, created_projects)
+        if created_projects:
+            await seed_teams(session, {p.key: p for p in created_projects}, users_map)
+            await seed_milestones_and_artifacts(session, created_projects)
 
         await session.commit()
         logger.info("SEEDER: İşlem başarıyla tamamlandı.")
