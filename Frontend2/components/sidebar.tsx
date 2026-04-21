@@ -332,7 +332,9 @@ export function Sidebar() {
   ]
 
   const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/")
+    pathname === href ||
+    pathname.startsWith(href + "/") ||
+    (href === "/dashboard" && pathname === "/")
 
   return (
     <aside
