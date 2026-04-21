@@ -24,3 +24,11 @@ class IAuditRepository(ABC):
         new_value, user_id, action, timestamp.
         """
         pass
+
+    @abstractmethod
+    async def count_phase_transitions(self, project_id: int, source_phase_id: str) -> int:
+        """D-25: count audit_log rows where action='phase_transition' AND entity_id=project_id
+        AND extra_metadata->>'source_phase_id'=source_phase_id.
+        Used for cycle_number auto-calculation on PhaseReport create.
+        """
+        pass

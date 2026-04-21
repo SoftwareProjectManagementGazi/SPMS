@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func as sqlfunc
 
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.infrastructure.database.models.audit_log import AuditLogModel
@@ -56,3 +56,16 @@ class SqlAlchemyAuditRepository(IAuditRepository):
             }
             for row in rows
         ]
+
+    async def count_phase_transitions(self, project_id: int, source_phase_id: str) -> int:
+        """D-25: count phase transitions for a project+source_phase, used for cycle_number auto-calc."""
+        stmt = (
+            select(sqlfunc.count(AuditLogModel.id))
+            .where(AuditLogModel.entity_type == "project")
+            .where(AuditLogModel.entity_id == project_id)
+            .where(AuditLogModel.action == "phase_transition")
+            # D-08: extra_metadata JSONB carries the source_phase_id
+            .where(AuditLogModel.extra_metadata["source_phase_id"].astext == source_phase_id)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar() or 0
