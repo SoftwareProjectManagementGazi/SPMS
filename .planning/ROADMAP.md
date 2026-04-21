@@ -38,7 +38,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 - [x] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
 - [x] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints -- completed 2026-04-21
-- [ ] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard
+- [x] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard (completed 2026-04-21)
 - [ ] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions
 - [ ] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements
 - [ ] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page
@@ -98,16 +98,16 @@ Plans:
   5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
 **Plans**: 10 plans
 Plans:
-- [ ] 10-01-PLAN.md -- npm install + API infrastructure (constants, axios api-client, auth-service, AuthContext, root layout wiring)
-- [ ] 10-02-PLAN.md -- Backend: GET /api/v1/activity global endpoint (D-28) + seeder update with D-36 fields (varied statuses, process_template_id, process_config, leader_id)
-- [ ] 10-03-PLAN.md -- Next.js middleware auth guard + (auth) route group (login/session-expired/forgot-password) + LogoMark + (shell) layout QueryClientProvider + project-service + use-projects hooks
-- [ ] 10-04-PLAN.md -- Dashboard page: StatCards, PortfolioTable, ActivityFeed, MethodologyCard, Manager/Member view toggle wired to live API (PAGE-01)
-- [ ] 10-05-PLAN.md -- Projects list page: 3-column grid, SegmentedControl status filter, ProjectCard with status strip/badge/overflow menu, ConfirmDialog, ToastProvider (PAGE-02, PROJ-02, PROJ-04, PROJ-05)
-- [ ] 10-06-PLAN.md -- Settings page: all 5 tabs (Profil, Tercihler, Görünüm, Bildirimler, Güvenlik) — language+density wired, password change form, avatar upload (PAGE-05)
-- [ ] 10-07-PLAN.md -- Create Project wizard: 4-step URL-param tracking, sessionStorage draft, process template fetch, lifecycle preview, board columns, POST /projects + redirect (PROJ-01)
-- [ ] 10-08-PLAN.md -- ArchiveBanner component + projects/[id] stub page showing banner for ARCHIVED projects, Aktif Et reactivation (PROJ-03)
+- [x] 10-01-PLAN.md -- npm install + API infrastructure (constants, axios api-client, auth-service, AuthContext, root layout wiring)
+- [x] 10-02-PLAN.md -- Backend: GET /api/v1/activity global endpoint (D-28) + seeder update with D-36 fields (varied statuses, process_template_id, process_config, leader_id)
+- [x] 10-03-PLAN.md -- Next.js middleware auth guard + (auth) route group (login/session-expired/forgot-password) + LogoMark + (shell) layout QueryClientProvider + project-service + use-projects hooks
+- [x] 10-04-PLAN.md -- Dashboard page: StatCards, PortfolioTable, ActivityFeed, MethodologyCard, Manager/Member view toggle wired to live API (PAGE-01)
+- [x] 10-05-PLAN.md -- Projects list page: 3-column grid, SegmentedControl status filter, ProjectCard with status strip/badge/overflow menu, ConfirmDialog, ToastProvider (PAGE-02, PROJ-02, PROJ-04, PROJ-05)
+- [x] 10-06-PLAN.md -- Settings page: all 5 tabs (Profil, Tercihler, Görünüm, Bildirimler, Güvenlik) — language+density wired, password change form, avatar upload (PAGE-05)
+- [x] 10-07-PLAN.md -- Create Project wizard: 4-step URL-param tracking, sessionStorage draft, process template fetch, lifecycle preview, board columns, POST /projects + redirect (PROJ-01)
+- [x] 10-08-PLAN.md -- ArchiveBanner component + projects/[id] stub page showing banner for ARCHIVED projects, Aktif Et reactivation (PROJ-03)
 - [x] 10-09-PLAN.md -- Wire Header Create button to /projects/new + human-verify checkpoint for all Phase 10 deliverables (completed 2026-04-21)
-- [ ] 10-10-PLAN.md -- Backend integration tests (GET /activity) + apply checkpoint fixes + final build verification (all 9 requirements)
+- [x] 10-10-PLAN.md -- Backend integration tests (GET /activity) + apply checkpoint fixes + final build verification (all 9 requirements) (completed 2026-04-21)
 **UI hint**: yes
 
 ### Phase 11: Task Features & Board Enhancements
