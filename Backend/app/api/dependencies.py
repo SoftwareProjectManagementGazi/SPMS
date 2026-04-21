@@ -1,220 +1,37 @@
-# Dependency Injection Container
-# This file will map interfaces to implementations
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
-from jose import jwt, JWTError
-from app.infrastructure.database.database import get_db_session
-from app.infrastructure.config import settings
-from app.domain.entities.user import User
-from app.domain.repositories.user_repository import IUserRepository
-from app.infrastructure.database.repositories.user_repo import SqlAlchemyUserRepository
-from app.domain.repositories.project_repository import IProjectRepository
-from app.infrastructure.database.repositories.project_repo import SqlAlchemyProjectRepository
-from app.domain.repositories.task_repository import ITaskRepository
-from app.infrastructure.database.repositories.task_repo import SqlAlchemyTaskRepository
-from app.domain.repositories.audit_repository import IAuditRepository
-from app.infrastructure.database.repositories.audit_repo import SqlAlchemyAuditRepository
-from app.application.ports.security_port import ISecurityService
-from app.infrastructure.adapters.security_adapter import SecurityAdapter
-from app.domain.repositories.team_repository import ITeamRepository
-from app.infrastructure.database.repositories.team_repo import SqlAlchemyTeamRepository
-from app.domain.repositories.password_reset_repository import IPasswordResetRepository
-from app.infrastructure.database.repositories.password_reset_repo import SqlAlchemyPasswordResetRepository
-from app.domain.repositories.sprint_repository import ISprintRepository
-from app.infrastructure.database.repositories.sprint_repo import SqlAlchemySprintRepository
-from app.domain.repositories.comment_repository import ICommentRepository
-from app.infrastructure.database.repositories.comment_repo import SqlAlchemyCommentRepository
-from app.domain.repositories.attachment_repository import IAttachmentRepository
-from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyAttachmentRepository
-from app.infrastructure.database.repositories.task_dependency_repo import SqlAlchemyTaskDependencyRepository
-from app.domain.repositories.board_column_repository import IBoardColumnRepository
-from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
-from app.domain.repositories.notification_repository import INotificationRepository
-from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
-from app.domain.repositories.report_repository import IReportRepository
+"""LEGACY import path for DI container. All symbols now live under `app.api.deps.*`.
 
-# Re-export the database dependency
-get_db = get_db_session
+This file preserves backward compatibility for code that imports from
+`app.api.dependencies`. New code should import from `app.api.deps.<entity>` directly.
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+Split per D-31 / BACK-07 (Phase 9).
+"""
+from app.api.deps import *  # noqa: F401, F403
 
-def get_user_repo(session: AsyncSession = Depends(get_db)) -> IUserRepository:
-    return SqlAlchemyUserRepository(session)
-
-def get_project_repo(session: AsyncSession = Depends(get_db)) -> IProjectRepository:
-    return SqlAlchemyProjectRepository(session)
-
-def get_task_repo(session: AsyncSession = Depends(get_db)) -> ITaskRepository:
-    return SqlAlchemyTaskRepository(session)
-
-def get_audit_repo(session: AsyncSession = Depends(get_db)) -> IAuditRepository:
-    return SqlAlchemyAuditRepository(session)
-
-def get_team_repo(session: AsyncSession = Depends(get_db)) -> ITeamRepository:
-    return SqlAlchemyTeamRepository(session)
-
-def get_password_reset_repo(session: AsyncSession = Depends(get_db)) -> IPasswordResetRepository:
-    return SqlAlchemyPasswordResetRepository(session)
-
-def get_security_service() -> ISecurityService:
-    return SecurityAdapter()
-
-def get_sprint_repo(session: AsyncSession = Depends(get_db)) -> ISprintRepository:
-    return SqlAlchemySprintRepository(session)
-
-def get_comment_repo(session: AsyncSession = Depends(get_db)) -> ICommentRepository:
-    return SqlAlchemyCommentRepository(session)
-
-def get_attachment_repo(session: AsyncSession = Depends(get_db)) -> IAttachmentRepository:
-    return SqlAlchemyAttachmentRepository(session)
-
-def get_dependency_repo(session: AsyncSession = Depends(get_db)) -> SqlAlchemyTaskDependencyRepository:
-    return SqlAlchemyTaskDependencyRepository(session)
-
-def get_board_column_repo(session: AsyncSession = Depends(get_db)) -> IBoardColumnRepository:
-    return SqlAlchemyBoardColumnRepository(session)
-
-
-def get_notification_repo(session: AsyncSession = Depends(get_db)) -> INotificationRepository:
-    from app.infrastructure.database.repositories.notification_repo import SqlAlchemyNotificationRepository
-    return SqlAlchemyNotificationRepository(session)
-
-
-def get_notification_preference_repo(session: AsyncSession = Depends(get_db)) -> INotificationPreferenceRepository:
-    from app.infrastructure.database.repositories.notification_preference_repo import SqlAlchemyNotificationPreferenceRepository
-    return SqlAlchemyNotificationPreferenceRepository(session)
-
-
-def get_notification_service(
-    notification_repo: INotificationRepository = Depends(get_notification_repo),
-    pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
-):
-    from app.application.services.notification_service import PollingNotificationService
-    return PollingNotificationService(notification_repo, pref_repo)
-
-
-def get_report_repo(session: AsyncSession = Depends(get_db)) -> IReportRepository:
-    from app.infrastructure.database.repositories.report_repo import SqlAlchemyReportRepository
-    return SqlAlchemyReportRepository(session)
-
-
-def get_process_template_repo(session: AsyncSession = Depends(get_db)):
-    from app.infrastructure.database.repositories.process_template_repo import SqlAlchemyProcessTemplateRepository
-    return SqlAlchemyProcessTemplateRepository(session)
-
-
-def get_system_config_repo(session: AsyncSession = Depends(get_db)):
-    from app.infrastructure.database.repositories.system_config_repo import SqlAlchemySystemConfigRepository
-    return SqlAlchemySystemConfigRepository(session)
-
-
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    user_repo: IUserRepository = Depends(get_user_repo)
-) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = await user_repo.get_by_email(email)
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-def _is_admin(user: User) -> bool:
-    """Return True when the user holds the admin role."""
-    return (
-        user.role is not None
-        and user.role.name.lower() == "admin"
-    )
-
-
-async def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Raises HTTP 403 if the current user is not an admin."""
-    if not _is_admin(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-
-async def get_project_member(
-    project_id: int,
-    current_user: User = Depends(get_current_user),
-    project_repo: IProjectRepository = Depends(get_project_repo),
-) -> User:
-    """
-    Verify that the current user is a member of the given project.
-    Admin users bypass the membership check.
-    Raises HTTP 403 for non-members.
-    """
-    if _is_admin(current_user):
-        return current_user
-    project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this project",
-        )
-    return current_user
-
-
-async def get_sprint_project_member(
-    project_id: int,  # query param from /sprints?project_id=X
-    current_user: User = Depends(get_current_user),
-    project_repo: IProjectRepository = Depends(get_project_repo),
-) -> User:
-    """
-    Verify project membership for sprint endpoints that use ?project_id=X query param.
-    Admin users bypass the membership check.
-    Raises HTTP 403 for non-members.
-    """
-    if _is_admin(current_user):
-        return current_user
-    project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this project",
-        )
-    return current_user
-
-
-async def get_task_project_member(
-    task_id: int,
-    current_user: User = Depends(get_current_user),
-    task_repo: ITaskRepository = Depends(get_task_repo),
-    project_repo: IProjectRepository = Depends(get_project_repo),
-) -> User:
-    """
-    Fetch the task, extract its project_id, then verify membership.
-    Admin users bypass the membership check.
-    Raises HTTP 404 if the task does not exist, HTTP 403 for non-members.
-    """
-    task = await task_repo.get_by_id(task_id)
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Task {task_id} not found",
-        )
-    if _is_admin(current_user):
-        return current_user
-    project = await project_repo.get_by_id_and_user(task.project_id, current_user.id)
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this project",
-        )
-    return current_user
+# Also re-export names that users of this module historically relied on even
+# if they are not in `__all__` of sub-modules (belt-and-suspenders):
+from app.api.deps.auth import (  # noqa: F401
+    oauth2_scheme,
+    get_db,
+    get_current_user,
+    _is_admin,
+    require_admin,
+)
+from app.api.deps.project import get_project_repo, get_project_member  # noqa: F401
+from app.api.deps.task import get_task_repo, get_task_project_member, get_dependency_repo  # noqa: F401
+from app.api.deps.team import get_team_repo  # noqa: F401
+from app.api.deps.audit import get_audit_repo  # noqa: F401
+from app.api.deps.sprint import get_sprint_repo, get_sprint_project_member  # noqa: F401
+from app.api.deps.comment import get_comment_repo  # noqa: F401
+from app.api.deps.attachment import get_attachment_repo  # noqa: F401
+from app.api.deps.board_column import get_board_column_repo  # noqa: F401
+from app.api.deps.notification import (  # noqa: F401
+    get_notification_repo,
+    get_notification_preference_repo,
+    get_notification_service,
+)
+from app.api.deps.password_reset import get_password_reset_repo  # noqa: F401
+from app.api.deps.process_template import get_process_template_repo  # noqa: F401
+from app.api.deps.system_config import get_system_config_repo  # noqa: F401
+from app.api.deps.report import get_report_repo  # noqa: F401
+from app.api.deps.user import get_user_repo  # noqa: F401
+from app.api.deps.security import get_security_service  # noqa: F401
