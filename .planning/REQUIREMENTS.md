@@ -62,10 +62,13 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 - [x] **PROJ-01
 **: Proje Olustur Wizard sayfasi yapilir — 4 adim (Temel Bilgiler, Metodoloji, Yasam Dongusu, Yapilandirma)
-- [ ] **PROJ-02**: Proje durum yonetimi eklenir — header'da dinamik badge, MoreH dropdown'da "Tamamla/Askiya Al/Arsivle" aksiyonlari [E4]
+- [x] **PROJ-02
+**: Proje durum yonetimi eklenir — header'da dinamik badge, MoreH dropdown'da "Tamamla/Askiya Al/Arsivle" aksiyonlari [E4]
 - [ ] **PROJ-03**: Arsivlenmis proje AlertBanner'i gosterilir — uyari mesaji + "Aktif Et" butonu, icerik duzenlemesi engellenir [E4]
-- [ ] **PROJ-04**: Proje kartlarina durum badge'i eklenir — active/completed/on_hold/archived renkleri, arsivlenmis opacity 0.6 [E13]
-- [ ] **PROJ-05**: Proje listesine durum filtresi eklenir — SegmentedControl (Tumu/Aktif/Bitti/Arsiv)
+- [x] **PROJ-04
+**: Proje kartlarina durum badge'i eklenir — active/completed/on_hold/archived renkleri, arsivlenmis opacity 0.6 [E13]
+- [x] **PROJ-05
+**: Proje listesine durum filtresi eklenir — SegmentedControl (Tumu/Aktif/Bitti/Arsiv)
 
 ### Task Features
 
@@ -114,7 +117,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 - [x] **PAGE-01
 **: Dashboard sayfasi donusturulur — mevcut tasarima sadik kalarak Next.js component'lerine ayrilir
-- [ ] **PAGE-02**: Projects sayfasi donusturulur — kart grid, durum filtresi, yeni proje butonu
+- [x] **PAGE-02
+**: Projects sayfasi donusturulur — kart grid, durum filtresi, yeni proje butonu
 - [ ] **PAGE-03**: ProjectDetail sayfasi donusturulur — 8 sekmeli yapi (Board/List/Timeline/Calendar/Activity/Lifecycle/Members/Settings)
 - [ ] **PAGE-04**: MyTasks sayfasi donusturulur — gorev listesi, filtreler
 - [ ] **PAGE-05**: Settings sayfasi donusturulur — tum alt sekmeler (Lifecycle dahil)

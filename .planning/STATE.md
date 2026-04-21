@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 10-04-PLAN.md
-last_updated: "2026-04-21T19:24:45.147Z"
+stopped_at: Completed 10-05-PLAN.md
+last_updated: "2026-04-21T19:30:38.135Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 24
-  completed_plans: 18
-  percent: 75
+  completed_plans: 19
+  percent: 79
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 10 (shell-pages-project-features) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [████████░░] 75%
 | Phase 10-shell-pages-project-features P02 | 4min | 2 tasks | 6 files |
 | Phase 10-shell-pages-project-features P03 | 262 | 2 tasks | 10 files |
 | Phase 10-shell-pages-project-features P04 | 166 | 2 tasks | 5 files |
+| Phase 10-shell-pages-project-features P05 | 171 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,8 @@ Key constraints for v2.0:
 - StatCard TONE_BG uses transparent not var(--surface) — matches prototype color-mix with transparent exactly
 - PortfolioTable team column renders empty AvatarStack — Project shape lacks member list; Phase 11 project detail will populate it
 - ActivityFeed normalizes both {items:[]} and [] backend response shapes via useMemo in dashboard page
+- SegmentedControl options use id not value — SegmentedOption interface uses {id,label}; STATUS_SEGMENTS adapted with id field as filter value
+- ToastProvider placed inside QueryClientProvider outside AppShell — toast available to all shell pages including modal/overlay layers
 
 ### Pending Todos
 
@@ -175,8 +178,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T19:24:45.141Z
-Stopped at: Completed 10-04-PLAN.md
+Last session: 2026-04-21T19:30:30.152Z
+Stopped at: Completed 10-05-PLAN.md
 Resume file: None
 
 **Next Phase:** 10 (Shell Pages & Project Features) — ready to plan
