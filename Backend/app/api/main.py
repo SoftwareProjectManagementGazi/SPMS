@@ -155,6 +155,9 @@ app.include_router(process_templates_router_module.router, prefix="/api/v1/proce
 app.include_router(admin_settings_router_module.router, prefix="/api/v1/admin/settings", tags=["Admin Settings"])
 app.include_router(integrations_router_module.router, prefix="/api/v1/integrations", tags=["Integrations"])
 
+from app.api.v1 import phase_transitions
+app.include_router(phase_transitions.router, prefix="/api/v1", tags=["phase_transitions"])
+
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"
 _static_dir.mkdir(parents=True, exist_ok=True)
