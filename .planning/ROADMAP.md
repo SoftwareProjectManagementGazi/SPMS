@@ -73,7 +73,18 @@ Plans:
   3. Phase Gate endpoint evaluates completion criteria and prevents concurrent transitions via advisory lock
   4. GET /projects/{id}/activity returns paginated, filterable activity feed; GET /users/{id}/summary returns user stats
   5. Workflow data structure accepts edge types, groups, and sequential-flexible mode; process_config reads/writes with schema_version normalization
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 
 ### Phase 10: Shell Pages & Project Features
 **Goal**: Users can navigate all core pages in the new Next.js frontend and manage project lifecycle (create, status, archive)
@@ -85,7 +96,18 @@ Plans:
   3. User can change project status via dropdown actions (Complete/Hold/Archive) and sees dynamic status badge in header
   4. Archived projects show AlertBanner with "Aktif Et" button and content editing is blocked
   5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 **UI hint**: yes
 
 ### Phase 11: Task Features & Board Enhancements
@@ -98,7 +120,18 @@ Plans:
   3. When enable_phase_assignment is on, task form shows phase dropdown and board cards display phase badge; board toolbar has "Filter by Phase" and list tab has "Phase" column
   4. ProjectDetail page renders with 8 tabs (Board/List/Timeline/Calendar/Activity/Lifecycle/Members/Settings) and MyTasks page shows filtered task list
   5. WIP violation triggers column background color change, AlertBanner, and prevents dropping more tasks into the column
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 **UI hint**: yes
 
 ### Phase 12: Lifecycle, Phase Gate & Workflow Editor
@@ -111,7 +144,18 @@ Plans:
   3. Milestone sub-tab lists milestones with status badges and ProgressBar; Artifact sub-tab shows methodology-default artifacts with status tracking and file attachment
   4. Evaluation Report expands inline on past phase cards with metrics, issues, lessons, recommendations, and PDF download
   5. Workflow editor supports edge types (flow/verification/feedback), swimlane grouping, sequential-flexible mode, BFS-based active phase calculation, parallel active phases, cycle counter badges, and Incremental/Evolutionary/RAD preset templates
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 **UI hint**: yes
 
 ### Phase 13: Reporting, Activity & User Profile
@@ -124,7 +168,18 @@ Plans:
   3. Project detail Activity tab shows vertical timeline with event icons, date grouping, type/user filters, and pagination
   4. User Profile page displays header, 3 StatCards, and Tasks/Projects/Activity tabs using MTTaskRow component for task lists
   5. Header avatar dropdown shows Profilim/Ayarlar/Cikis Yap menu linking to correct pages
-**Plans**: TBD
+**Plans**: 10 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 **UI hint**: yes
 
 ## Progress
