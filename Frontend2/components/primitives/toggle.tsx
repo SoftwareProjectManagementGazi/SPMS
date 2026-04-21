@@ -39,7 +39,10 @@ export function Toggle({
   const { w, h, d } = DIMS[size]
   const offset = (h - d) / 2
   return (
-    <div
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
       className={className}
       onClick={() => onChange && onChange(!on)}
       style={{
@@ -69,6 +72,6 @@ export function Toggle({
           boxShadow: "0 1px 3px oklch(0 0 0 / 0.15)",
         }}
       />
-    </div>
+    </button>
   )
 }
