@@ -28,23 +28,37 @@ apiClient.interceptors.request.use(
 );
 
 // RESPONSE interceptor — 401 → session-expired (D-03: clear both storages)
+// FL-05 fix (Phase 10 review): extend the auth-free exemption list so a
+// background 401 (stale cache refetch, for example) fired while the user
+// sits on /forgot-password does not bounce them to /session-expired. Also
+// tighten URL matching — substring match on '/auth/login' would match any
+// path containing that sequence. Use endsWith() for stability and explicit
+// allow-listing for auth entry-point URLs.
+const AUTH_FREE_PATHS = ['/login', '/session-expired', '/forgot-password'];
+const AUTH_FREE_URL_SUFFIXES = ['/auth/login', '/auth/password-reset'];
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      error.response?.status === 401 &&
-      typeof window !== 'undefined' &&
-      !window.location.pathname.includes('/login') &&
-      !window.location.pathname.includes('/session-expired') &&
-      !error.config?.url?.includes('/auth/login')
-    ) {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      // FL-02 fix (Phase 10 review): use exported constant so a future rename
-      // of SESSION_EXPIRED_KEY cannot silently diverge between writer and reader.
-      localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
-      // D-03: also clear the presence cookie that Next.js middleware reads
-      document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      window.location.href = '/session-expired';
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const onAuthFreePath = AUTH_FREE_PATHS.some(
+        (p) => pathname === p || pathname.startsWith(p + '/')
+      );
+      const requestUrl = error.config?.url ?? '';
+      const isAuthFreeUrl = AUTH_FREE_URL_SUFFIXES.some((u) =>
+        requestUrl.endsWith(u)
+      );
+
+      if (!onAuthFreePath && !isAuthFreeUrl) {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        // FL-02 fix (Phase 10 review): use exported constant so a future rename
+        // of SESSION_EXPIRED_KEY cannot silently diverge between writer and reader.
+        localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
+        // D-03: also clear the presence cookie that Next.js middleware reads
+        document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        window.location.href = '/session-expired';
+      }
     }
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
