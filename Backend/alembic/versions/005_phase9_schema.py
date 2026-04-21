@@ -103,6 +103,57 @@ def _index_exists(index_name: str) -> bool:
 
 def upgrade() -> None:
     # -------------------------------------------------------------------------
+    # Catch-up columns: added to ORM models via create_all() in v1.0 development
+    # but never tracked in Alembic migrations 001–004. Added here idempotently
+    # so fresh v2.0 DBs match the ORM schema before phase-specific columns land.
+    # -------------------------------------------------------------------------
+    if not _column_exists("projects", "process_config"):
+        op.add_column(
+            "projects",
+            sa.Column("process_config", sa.JSON(), nullable=True),
+        )
+    if not _column_exists("projects", "custom_fields"):
+        op.add_column(
+            "projects",
+            sa.Column("custom_fields", sa.JSON(), nullable=True),
+        )
+    if not _column_exists("projects", "task_seq"):
+        op.add_column(
+            "projects",
+            sa.Column(
+                "task_seq",
+                sa.Integer(),
+                nullable=False,
+                server_default="0",
+            ),
+        )
+    if not _column_exists("projects", "version"):
+        op.add_column(
+            "projects",
+            sa.Column(
+                "version",
+                sa.Integer(),
+                nullable=False,
+                server_default="1",
+            ),
+        )
+    if not _column_exists("projects", "is_deleted"):
+        op.add_column(
+            "projects",
+            sa.Column(
+                "is_deleted",
+                sa.Boolean(),
+                nullable=False,
+                server_default="false",
+            ),
+        )
+    if not _column_exists("projects", "deleted_at"):
+        op.add_column(
+            "projects",
+            sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
+        )
+
+    # -------------------------------------------------------------------------
     # BACK-01: projects.status (ACTIVE / COMPLETED / ON_HOLD / ARCHIVED)
     # VARCHAR(20) NOT NULL with server_default so no table rewrite is required
     # on Postgres 11+ (metadata-only ALTER when default is set at column level).
