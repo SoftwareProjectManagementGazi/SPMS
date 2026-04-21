@@ -1,23 +1,29 @@
 "use client"
 
 // Header: app-wide top bar with sidebar toggle, breadcrumb, search input, theme
-// mode toggle (Moon/Sun), and language toggle. Ported from New_Frontend/src/shell.jsx
-// (lines 157-197). Create/Notifications/Help buttons from the prototype are intentionally
-// omitted in Phase 8 -- they will be added back in later phases when their handlers
-// (project-create wizard, notification feed, help panel) exist. Keeping only controls
-// whose behavior is wired today. Per D-01: no shadcn/ui. Per D-02: prototype token
-// names used directly.
+// mode toggle (Moon/Sun), language toggle, and Create project button.
+// Ported from New_Frontend/src/shell.jsx (lines 157-197).
+// Plan 09: Added Create button (router.push('/projects/new') — deferred from Phase 8 per D-08-04)
+// and statusBadge slot for PROJ-02 dynamic project status badge.
+// Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
 
 import * as React from "react"
-import { PanelLeft, Search, Moon, Sun } from "lucide-react"
+import { PanelLeft, Search, Moon, Sun, Plus } from "lucide-react"
 
-import { Input } from "@/components/primitives"
+import { Input, Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { t } from "@/lib/i18n"
 
 import { Breadcrumb } from "./breadcrumb"
 
-export function Header() {
+interface HeaderProps {
+  /** Rendered next to breadcrumb — PROJ-02 dynamic status badge from AppShell */
+  statusBadge?: React.ReactNode
+  /** Called when user clicks "Yeni proje" / "New project" Create button */
+  onCreateProject?: () => void
+}
+
+export function Header({ statusBadge, onCreateProject }: HeaderProps) {
   const app = useApp()
   const lang = app.language
 
@@ -54,7 +60,11 @@ export function Header() {
         <PanelLeft size={16} />
       </button>
 
-      <Breadcrumb />
+      {/* Breadcrumb + PROJ-02 status badge (badge is null except on /projects/{id}) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+        <Breadcrumb />
+        {statusBadge}
+      </div>
 
       <div style={{ flex: 1 }} />
 
@@ -65,6 +75,16 @@ export function Header() {
         size="sm"
         style={{ width: 260 }}
       />
+
+      {/* Create project button — wired to /projects/new (deferred from Phase 8, D-08-04) */}
+      <Button
+        variant="primary"
+        size="sm"
+        icon={<Plus size={14} />}
+        onClick={onCreateProject}
+      >
+        {lang === "tr" ? "Yeni proje" : "New project"}
+      </Button>
 
       <button
         onClick={() => app.setMode(app.mode === "light" ? "dark" : "light")}
