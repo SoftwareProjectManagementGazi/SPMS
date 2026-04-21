@@ -222,7 +222,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
                 ProjectModel.is_deleted == False,  # noqa: E712
                 ProjectModel.status.in_(statuses),
             )
-            .distinct()
+            .distinct(ProjectModel.id)
         )
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
