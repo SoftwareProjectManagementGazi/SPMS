@@ -98,16 +98,16 @@ Plans:
   5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
 **Plans**: 10 plans
 Plans:
-- [ ] 10-01-PLAN.md (not yet planned)
-- [ ] 10-02-PLAN.md (not yet planned)
-- [ ] 10-03-PLAN.md (not yet planned)
-- [ ] 10-04-PLAN.md (not yet planned)
-- [ ] 10-05-PLAN.md (not yet planned)
-- [ ] 10-06-PLAN.md (not yet planned)
-- [ ] 10-07-PLAN.md (not yet planned)
-- [ ] 10-08-PLAN.md (not yet planned)
-- [ ] 10-09-PLAN.md (not yet planned)
-- [ ] 10-10-PLAN.md (not yet planned)
+- [ ] 10-01-PLAN.md -- npm install + API infrastructure (constants, axios api-client, auth-service, AuthContext, root layout wiring)
+- [ ] 10-02-PLAN.md -- Backend: GET /api/v1/activity global endpoint (D-28) + seeder update with D-36 fields (varied statuses, process_template_id, process_config, leader_id)
+- [ ] 10-03-PLAN.md -- Next.js middleware auth guard + (auth) route group (login/session-expired/forgot-password) + LogoMark + (shell) layout QueryClientProvider + project-service + use-projects hooks
+- [ ] 10-04-PLAN.md -- Dashboard page: StatCards, PortfolioTable, ActivityFeed, MethodologyCard, Manager/Member view toggle wired to live API (PAGE-01)
+- [ ] 10-05-PLAN.md -- Projects list page: 3-column grid, SegmentedControl status filter, ProjectCard with status strip/badge/overflow menu, ConfirmDialog, ToastProvider (PAGE-02, PROJ-02, PROJ-04, PROJ-05)
+- [ ] 10-06-PLAN.md -- Settings page: all 5 tabs (Profil, Tercihler, Görünüm, Bildirimler, Güvenlik) — language+density wired, password change form, avatar upload (PAGE-05)
+- [ ] 10-07-PLAN.md -- Create Project wizard: 4-step URL-param tracking, sessionStorage draft, process template fetch, lifecycle preview, board columns, POST /projects + redirect (PROJ-01)
+- [ ] 10-08-PLAN.md -- ArchiveBanner component + projects/[id] stub page showing banner for ARCHIVED projects, Aktif Et reactivation (PROJ-03)
+- [ ] 10-09-PLAN.md -- Wire Header Create button to /projects/new + human-verify checkpoint for all Phase 10 deliverables
+- [ ] 10-10-PLAN.md -- Backend integration tests (GET /activity) + apply checkpoint fixes + final build verification (all 9 requirements)
 **UI hint**: yes
 
 ### Phase 11: Task Features & Board Enhancements
@@ -198,7 +198,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
-| 10. Shell Pages & Project Features | v2.0 | 0/0 | Not started | - |
+| 10. Shell Pages & Project Features | v2.0 | 0/10 | Ready to execute | - |
 | 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
