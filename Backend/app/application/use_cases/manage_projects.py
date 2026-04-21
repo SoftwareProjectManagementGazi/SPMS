@@ -77,7 +77,12 @@ class CreateProjectUseCase:
         # Seed recurring tasks from template (PROC-02)
         if template and template.recurring_tasks and self.task_repo:
             from app.domain.entities.task import Task
-            from datetime import datetime
+            # FL-07 fix (Phase 10 review): datetime.utcnow() returns a naive
+            # datetime and is deprecated on Python 3.12+. Use a timezone-aware
+            # UTC timestamp so recurring-task created_at matches the rest of
+            # the codebase (most SQLAlchemy columns use server_default=func.now(),
+            # which is tz-aware) and so the deprecation warning goes away.
+            from datetime import datetime, timezone
             for task_seed in template.recurring_tasks:
                 # Use first column id as initial status/column
                 first_column_id = created_project.columns[0].id if created_project.columns else None
@@ -87,7 +92,7 @@ class CreateProjectUseCase:
                     column_id=first_column_id,
                     is_recurring=True,
                     recurrence_interval=task_seed.get("recurrence_type", "weekly"),
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 await self.task_repo.create(recurring_task)
 
