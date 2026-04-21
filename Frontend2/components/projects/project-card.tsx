@@ -92,13 +92,29 @@ export function ProjectCard({ project }: ProjectCardProps) {
             variant: 'success',
           })
         },
-        onError: () => {
-          showToast({
-            message: language === 'tr'
+        onError: (err: unknown) => {
+          // Distinguish permission (403), missing-row (404), and generic errors
+          // so the user knows whether to retry, refresh, or contact an admin.
+          const axiosErr = err as { response?: { status?: number; data?: { detail?: string } } }
+          const status = axiosErr?.response?.status
+          const detail = axiosErr?.response?.data?.detail
+          let message: string
+          if (status === 403) {
+            message = language === 'tr'
+              ? 'Bu projeyi değiştirme yetkiniz yok. Yalnızca proje yöneticisi veya admin yapabilir.'
+              : 'You do not have permission to modify this project. Only the project manager or an admin can.'
+          } else if (status === 404) {
+            message = language === 'tr'
+              ? 'Proje bulunamadı — liste yenilendi, lütfen tekrar deneyin.'
+              : 'Project not found — the list was refreshed, please try again.'
+          } else if (typeof detail === 'string' && detail.length > 0) {
+            message = detail
+          } else {
+            message = language === 'tr'
               ? 'Bir şeyler ters gitti. Lütfen tekrar deneyin.'
-              : 'Something went wrong. Please try again.',
-            variant: 'error',
-          })
+              : 'Something went wrong. Please try again.'
+          }
+          showToast({ message, variant: 'error' })
         },
       }
     )

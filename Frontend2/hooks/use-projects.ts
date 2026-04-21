@@ -23,7 +23,10 @@ export function useUpdateProjectStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: string }) =>
       projectService.updateStatus(id, status),
-    onSuccess: () => {
+    onSettled: () => {
+      // Refetch on success AND error — if the mutation failed because the
+      // project no longer exists or permission changed, the stale list needs
+      // to go away so the user can see current state.
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     // D-07: onError toast is wired at the call site (components import showToast)

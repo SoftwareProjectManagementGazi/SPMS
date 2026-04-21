@@ -42,7 +42,7 @@ from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.sprint_repository import ISprintRepository
 from app.domain.entities.user import User
 from app.domain.entities.project import Project
-from app.domain.exceptions import ProjectNotFoundError, UserNotFoundError
+from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError, UserNotFoundError
 
 router = APIRouter()
 
@@ -188,6 +188,8 @@ async def update_project(
         project = await use_case.execute(project_id, dto, current_user.id, is_admin=_is_admin(current_user))  # type: ignore
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ProjectAccessDeniedError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
     # Notify all admins about project update (excluding the actor)
     admins = await user_repo.get_all_by_role("admin")

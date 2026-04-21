@@ -15,6 +15,20 @@ class ProjectNotFoundError(DomainError):
     def __init__(self, project_id: int):
         super().__init__(f"Project with id {project_id} not found")
 
+
+class ProjectAccessDeniedError(DomainError):
+    """Raised when a user tries to mutate a project they do not own and are not admin for.
+
+    Router maps to HTTP 403 so the client can distinguish genuine missing rows
+    from permission denials (previously both surfaced as 404).
+    """
+    def __init__(self, project_id: int):
+        self.project_id = project_id
+        super().__init__(
+            f"You do not have permission to modify project {project_id}. "
+            "Only the project manager or an admin can perform this action."
+        )
+
 class TaskNotFoundError(DomainError):
     def __init__(self, task_id: int):
         super().__init__(f"Task with id {task_id} not found")

@@ -4,7 +4,7 @@ from app.domain.repositories.artifact_repository import IArtifactRepository
 from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
 from app.domain.entities.project import Project, Methodology
 from app.domain.entities.board_column import BoardColumn
-from app.domain.exceptions import ProjectNotFoundError
+from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError
 from app.application.services.artifact_seeder import ArtifactSeeder
 
 
@@ -121,8 +121,10 @@ class UpdateProjectUseCase:
 
     async def execute(self, project_id: int, dto: ProjectUpdateDTO, manager_id: int, is_admin: bool = False) -> ProjectResponseDTO:
         project = await self.project_repo.get_by_id(project_id)
-        if not project or (not is_admin and project.manager_id != manager_id):
+        if not project:
             raise ProjectNotFoundError(project_id)
+        if not is_admin and project.manager_id != manager_id:
+            raise ProjectAccessDeniedError(project_id)
 
         old_methodology = project.methodology
         update_data = dto.model_dump(exclude_unset=True)
