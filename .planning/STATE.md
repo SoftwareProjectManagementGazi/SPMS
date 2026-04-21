@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-04-21T19:04:14.741Z"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-04-21T19:11:39.292Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 24
-  completed_plans: 15
-  percent: 63
+  completed_plans: 16
+  percent: 67
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 10 (shell-pages-project-features) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [██████░░░░] 63%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████░░░░] 63%
 | Phase 09 P09 | 8min | 2 tasks | 21 files |
 | Phase 09 P10 | 6min | 2 tasks | 14 files |
 | Phase 10-shell-pages-project-features P01 | 5 | 3 tasks | 8 files |
+| Phase 10-shell-pages-project-features P02 | 4min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Key constraints for v2.0:
 - AUTH_TOKEN_KEY='auth_token' matches legacy Frontend/lib/constants.ts exactly (D-02)
 - AuthProvider placed INSIDE AppProvider in root layout — auth context available to all app contexts
 - test_activity.py stub at integration root level (not api/ subdirectory) — Nyquist file existence check satisfied
+- [10-02] GET /activity placed before /projects/{project_id}/activity in router — global route registered first, no ambiguity since project route uses /projects/ prefix
+- [10-02] seed_teams() adds one team per project; leader_id = manager user (deterministic) — ensures require_project_transition_authority checks work in Phase 10 UI
+- [10-02] MilestoneModel uses name + target_date fields (not title/due_date as plan suggested) — adapted to actual BACK-04 model schema
 
 ### Pending Todos
 
@@ -162,8 +166,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T19:04:14.734Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-04-21T19:11:39.285Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
 
 **Next Phase:** 10 (Shell Pages & Project Features) — ready to plan
