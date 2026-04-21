@@ -1,14 +1,23 @@
-import * as React from "react"
-
+"use client"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { AppShell } from "@/components/app-shell"
+import React from "react"
 
-// Route group layout for the authenticated workspace. The (shell) parentheses
-// make this a Next.js route group -- it wraps its descendants in the AppShell
-// (Sidebar + Header + scrollable main) without adding a path segment.
-export default function ShellLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return <AppShell>{children}</AppShell>
+// Module-scope QueryClient — NEVER inside component (prevents cache loss on re-render — Pitfall 2)
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 60 * 1000, retry: 1 },
+  },
+})
+
+export default function ShellLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppShell>{children}</AppShell>
+      {process.env.NODE_ENV === "development" && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
+    </QueryClientProvider>
+  )
 }

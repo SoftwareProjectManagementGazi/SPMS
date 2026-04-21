@@ -20,6 +20,11 @@ export interface InputProps {
   type?: string
   className?: string
   style?: React.CSSProperties
+  required?: boolean
+  disabled?: boolean
+  name?: string
+  id?: string
+  autoComplete?: string
 }
 
 const HEIGHTS: Record<InputSize, number> = {
@@ -38,6 +43,11 @@ export function Input({
   type = "text",
   className,
   style,
+  required,
+  disabled,
+  name,
+  id,
+  autoComplete,
 }: InputProps) {
   return (
     <div
@@ -70,6 +80,11 @@ export function Input({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        required={required}
+        disabled={disabled}
+        name={name}
+        id={id}
+        autoComplete={autoComplete}
         style={{
           flex: 1,
           minWidth: 0,
