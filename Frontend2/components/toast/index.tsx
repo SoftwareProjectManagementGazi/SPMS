@@ -20,16 +20,19 @@ export function useToast() {
   return ctx
 }
 
+// Error toasts are intentionally theme-independent: fixed alert red on white
+// text so permission-denial and failure messages read the same in light and
+// dark themes. Other variants stay theme-aware by design.
 const TOAST_BG: Record<Toast['variant'], string> = {
   success: "color-mix(in oklch, var(--status-done) 10%, var(--surface))",
-  error: "color-mix(in oklch, var(--priority-critical) 10%, var(--surface))",
+  error: "#dc2626",
   warning: "color-mix(in oklch, var(--status-review) 10%, var(--surface))",
   info: "color-mix(in oklch, var(--status-progress) 10%, var(--surface))",
 }
 
 const TOAST_COLOR: Record<Toast['variant'], string> = {
   success: "var(--status-done)",
-  error: "var(--priority-critical)",
+  error: "#ffffff",
   warning: "var(--status-review)",
   info: "var(--status-progress)",
 }
@@ -48,7 +51,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999,
+      {/* Anchored below the 52px Header (Header uses sticky, zIndex 30). Clears
+          the search bar so toasts never cover interactive Header controls. */}
+      <div style={{ position: "fixed", top: 72, right: 20, zIndex: 9999,
         display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 }}>
         {toasts.map(t => (
           <div key={t.id}
