@@ -82,9 +82,16 @@ async def list_project_tasks(
     project_id: int,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    phase_id: str = Query(default=None, description="API-05: filter tasks by phase_id (nd_xxx)"),
     task_repo: ITaskRepository = Depends(get_task_repo),
     current_user: User = Depends(get_project_member),
 ):
+    # API-05: if phase_id provided, use the phase-aware query
+    if phase_id is not None:
+        items = await task_repo.list_by_project_and_phase(project_id, phase_id)
+        from app.application.dtos.task_dtos import TaskResponseDTO
+        task_dtos = [TaskResponseDTO.model_validate(t) for t in items]
+        return PaginatedResponse(items=task_dtos, total=len(task_dtos), page=page, page_size=page_size)
     use_case = ListProjectTasksPaginatedUseCase(task_repo)
     return await use_case.execute(project_id, page, page_size)
 

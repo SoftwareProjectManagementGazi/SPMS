@@ -1,6 +1,6 @@
 import asyncio
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from app.api.dependencies import (
     get_project_repo,
@@ -14,6 +14,7 @@ from app.api.dependencies import (
     get_notification_service,
     _is_admin,
 )
+from app.api.deps.auth import require_project_transition_authority
 from app.application.services.notification_service import PollingNotificationService
 from app.domain.entities.notification import NotificationType
 from app.application.dtos.project_dtos import (
@@ -135,9 +136,14 @@ async def create_project(
 
 @router.get("/", response_model=List[ProjectResponseDTO])
 async def list_projects(
+    status: Optional[str] = Query(default=None, description="API-04: filter by project status (ACTIVE, COMPLETED, ON_HOLD, ARCHIVED)"),
     project_repo: IProjectRepository = Depends(get_project_repo),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
+    # API-04: if status param provided, delegate to list_by_status
+    if status is not None:
+        results = await project_repo.list_by_status([status])
+        return [_sanitize_process_config(r) for r in results]
     use_case = ListProjectsUseCase(project_repo)
     results = await use_case.execute(current_user.id)  # type: ignore
     return [_sanitize_process_config(r) for r in results]
@@ -304,3 +310,79 @@ async def remove_project_member(
         await use_case.execute(project_id, user_id, current_user)
     except (ProjectNotFoundError, UserNotFoundError) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# API-06 / D-06 Phase completion criteria CRUD
+# ---------------------------------------------------------------------------
+
+class PhaseCriteriaPatchDTO(BaseModel):
+    """API-06 / D-06: upsert phase_completion_criteria[phase_id] in process_config."""
+    phase_id: str
+    auto: Dict[str, bool] = {}
+    manual: List[str] = []
+
+
+@router.patch("/{project_id}/phase-criteria")
+async def patch_phase_criteria(
+    project_id: int,
+    dto: PhaseCriteriaPatchDTO,
+    _user=Depends(require_project_transition_authority),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+):
+    """API-06 / D-06: upsert phase_completion_criteria[phase_id].
+
+    WARNING-3 fix (D-19 strict validation):
+    Validates dto.phase_id against project.process_config.workflow.nodes.
+    Rejects unknown or archived phase_ids with 400 + error_code=INVALID_PHASE_ID.
+    """
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Project {project_id} not found")
+
+    pc = project.process_config or {}
+
+    # WARNING-3 / D-19: strict phase_id validation against non-archived workflow nodes
+    workflow = pc.get("workflow", {}) or {}
+    nodes = workflow.get("nodes", []) or []
+    valid_node_ids = {
+        n["id"] for n in nodes
+        if isinstance(n, dict) and not n.get("is_archived", False)
+    }
+
+    bad_phase_ids = sorted(pid for pid in {dto.phase_id} if pid not in valid_node_ids)
+    if bad_phase_ids:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "INVALID_PHASE_ID",
+                "bad_phase_ids": bad_phase_ids,
+                "reason": "phase_id not present in project.process_config.workflow.nodes (or node is archived)",
+            },
+        )
+
+    criteria = pc.setdefault("phase_completion_criteria", {})
+    criteria[dto.phase_id] = {"auto": dto.auto, "manual": dto.manual}
+    project.process_config = pc
+    await project_repo.update(project)
+    return {"project_id": project_id, "phase_id": dto.phase_id, "criteria": criteria[dto.phase_id]}
+
+
+@router.delete("/{project_id}/phase-criteria")
+async def delete_phase_criteria(
+    project_id: int,
+    phase_id: str = Query(...),
+    _user=Depends(require_project_transition_authority),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+):
+    """API-06: remove a phase from phase_completion_criteria dict."""
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Project {project_id} not found")
+    pc = project.process_config or {}
+    criteria = pc.get("phase_completion_criteria", {})
+    criteria.pop(phase_id, None)
+    pc["phase_completion_criteria"] = criteria
+    project.process_config = pc
+    await project_repo.update(project)
+    return {"project_id": project_id, "phase_id": phase_id, "deleted": True}

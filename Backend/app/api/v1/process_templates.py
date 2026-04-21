@@ -1,8 +1,12 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_process_template_repo, require_admin
+from app.api.deps.project import get_project_repo
+from app.infrastructure.database.database import get_db_session
 from app.application.dtos.process_template_dtos import (
     ProcessTemplateCreateDTO,
     ProcessTemplateResponseDTO,
@@ -14,9 +18,17 @@ from app.application.use_cases.manage_process_templates import (
     ListProcessTemplatesUseCase,
     UpdateProcessTemplateUseCase,
 )
+from app.application.use_cases.apply_process_template import ApplyProcessTemplateUseCase
 from app.domain.entities.user import User
+from app.domain.exceptions import DomainError
 
 router = APIRouter()
+
+
+class ApplyTemplateDTO(BaseModel):
+    """D-44: apply template to list of project IDs."""
+    project_ids: List[int]
+    require_pm_approval: bool = False
 
 
 @router.get("/", response_model=List[ProcessTemplateResponseDTO])
@@ -70,4 +82,25 @@ async def delete_template(
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/{template_id}/apply")
+async def apply_template(
+    template_id: int,
+    dto: ApplyTemplateDTO,
+    _admin: User = Depends(require_admin),
+    template_repo=Depends(get_process_template_repo),
+    project_repo=Depends(get_project_repo),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """D-44: Apply process template to a list of projects with per-project advisory lock.
+
+    Returns {"applied": [...project_ids], "failed": [{project_id, error}]}.
+    Partial success is intentional (D-44) — 200 OK even if some projects failed.
+    """
+    uc = ApplyProcessTemplateUseCase(project_repo, template_repo, session)
+    try:
+        return await uc.execute(template_id, dto.project_ids, dto.require_pm_approval)
+    except DomainError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
