@@ -28,7 +28,14 @@ async def db_engine():
     async with engine.begin() as conn:
         # Create tables if they don't exist
         await conn.run_sync(Base.metadata.create_all)
-        
+
+    # Seed roles so authenticated_client fixture can find them (idempotent)
+    from app.infrastructure.database.seeder import seed_roles
+    seed_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async with seed_factory() as seed_session:
+        await seed_roles(seed_session)
+        await seed_session.commit()
+
     yield engine
     
     await engine.dispose()
