@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_process_template_repo, require_admin
+from app.api.dependencies import get_current_user, get_process_template_repo, require_admin
 from app.api.deps.project import get_project_repo
 from app.infrastructure.database.database import get_db_session
 from app.application.dtos.process_template_dtos import (
@@ -33,9 +33,13 @@ class ApplyTemplateDTO(BaseModel):
 
 @router.get("/", response_model=List[ProcessTemplateResponseDTO])
 async def list_templates(
-    admin: User = Depends(require_admin),
+    _user: User = Depends(get_current_user),
     repo=Depends(get_process_template_repo),
 ):
+    """List templates. Any authenticated user may read — templates are reference
+    data needed by the Create Project wizard to pick a methodology. Mutations
+    (POST/PATCH/DELETE) remain admin-only.
+    """
     uc = ListProcessTemplatesUseCase(repo)
     return await uc.execute()
 
