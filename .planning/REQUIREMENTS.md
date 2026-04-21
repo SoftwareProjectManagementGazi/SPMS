@@ -64,7 +64,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Proje Olustur Wizard sayfasi yapilir — 4 adim (Temel Bilgiler, Metodoloji, Yasam Dongusu, Yapilandirma)
 - [x] **PROJ-02
 **: Proje durum yonetimi eklenir — header'da dinamik badge, MoreH dropdown'da "Tamamla/Askiya Al/Arsivle" aksiyonlari [E4]
-- [ ] **PROJ-03**: Arsivlenmis proje AlertBanner'i gosterilir — uyari mesaji + "Aktif Et" butonu, icerik duzenlemesi engellenir [E4]
+- [x] **PROJ-03
+**: Arsivlenmis proje AlertBanner'i gosterilir — uyari mesaji + "Aktif Et" butonu, icerik duzenlemesi engellenir [E4]
 - [x] **PROJ-04
 **: Proje kartlarina durum badge'i eklenir — active/completed/on_hold/archived renkleri, arsivlenmis opacity 0.6 [E13]
 - [x] **PROJ-05
