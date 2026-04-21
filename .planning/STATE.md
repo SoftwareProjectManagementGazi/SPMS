@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-04-21T05:37:35Z"
-last_activity: 2026-04-21 -- Completed 08-01 (Foundation Scaffold & Theme Infrastructure)
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-04-21T05:47:35.337Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 08 (Foundation & Design System) — EXECUTING
-Plan: 2 of 4
-Status: Plan 08-01 complete -- ready for 08-02
-Last activity: 2026-04-21 -- Completed 08-01 (Foundation Scaffold & Theme Infrastructure)
+Plan: 3 of 4
+Status: Ready to execute
+Last activity: 2026-04-21
 
-Progress: [██░░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [██░░░░░░░░] 25%
 - Trend: initial baseline
 
 *Updated after each plan completion*
+| Phase 08 P02 | 2min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ Key constraints for v2.0:
 - [08-01]: next/font Inter + Geist_Mono exposed as --font-sans / --font-mono CSS variables via body className
 - [08-01]: Theme runtime module (lib/theme.ts) guards applyTokens/applyMode/applyRadius with `typeof document` for SSR import safety
 - [08-01]: Local git identity supplied via `git -c user.*` per commit (GSD rule prohibits `git config --global`)
+- [08-02]: AvatarStackUser extends AvatarUser with an explicit id field so TS consumers get a precise error on missing keys (prototype used u.id implicitly)
+- [08-02]: cn() applied only to Kbd where .mono utility merges with caller className; other primitives are style-driven and accept className directly without tailwind-merge overhead
+- [08-02]: Tone/size maps hoisted to module scope as Record<Union,...> constants so they allocate once per module load rather than per render
+- [08-02]: Badge color-mix(in oklch,...) and Button inset-shadow tokens retained as inline style -- not lowered to Tailwind arbitrary values per CONVERSION RULE 8
 
 ### Pending Todos
 
@@ -95,8 +100,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T05:37:35Z
-Stopped at: Completed 08-01-PLAN.md
-Resume file: .planning/phases/08-foundation-design-system/08-02-PLAN.md
+Last session: 2026-04-21T05:47:35.332Z
+Stopped at: Completed 08-02-PLAN.md
+Resume file: None
 
 **Planned Phase:** 08 (Foundation & Design System) — 4 plans — 2026-04-20T20:39:59.057Z

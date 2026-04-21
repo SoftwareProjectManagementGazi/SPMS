@@ -58,7 +58,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 **Plans**: 4 plans
 Plans:
 - [x] 08-01-PLAN.md -- Theme tokens, theme system, i18n foundation, AppContext provider (completed 2026-04-21, 6 min)
-- [ ] 08-02-PLAN.md -- Primitive components batch 1 (Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section)
+- [x] 08-02-PLAN.md -- Primitive components batch 1 (Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section) (completed 2026-04-21, 2 min)
 - [ ] 08-03-PLAN.md -- Primitive components batch 2 (PriorityChip, StatusDot, Input, ProgressBar, SegmentedControl, Collapsible, AlertBanner, Toggle) + barrel export
 - [ ] 08-04-PLAN.md -- App Shell conversion (Sidebar, Header, Layout rewrite) + visual verification
 **UI hint**: yes
