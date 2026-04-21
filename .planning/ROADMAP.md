@@ -106,7 +106,7 @@ Plans:
 - [ ] 10-06-PLAN.md -- Settings page: all 5 tabs (Profil, Tercihler, Görünüm, Bildirimler, Güvenlik) — language+density wired, password change form, avatar upload (PAGE-05)
 - [ ] 10-07-PLAN.md -- Create Project wizard: 4-step URL-param tracking, sessionStorage draft, process template fetch, lifecycle preview, board columns, POST /projects + redirect (PROJ-01)
 - [ ] 10-08-PLAN.md -- ArchiveBanner component + projects/[id] stub page showing banner for ARCHIVED projects, Aktif Et reactivation (PROJ-03)
-- [ ] 10-09-PLAN.md -- Wire Header Create button to /projects/new + human-verify checkpoint for all Phase 10 deliverables
+- [x] 10-09-PLAN.md -- Wire Header Create button to /projects/new + human-verify checkpoint for all Phase 10 deliverables (completed 2026-04-21)
 - [ ] 10-10-PLAN.md -- Backend integration tests (GET /activity) + apply checkpoint fixes + final build verification (all 9 requirements)
 **UI hint**: yes
 
@@ -198,7 +198,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
-| 10. Shell Pages & Project Features | v2.0 | 0/10 | Ready to execute | - |
+| 10. Shell Pages & Project Features | v2.0 | 9/10 | Executing (1 plan remaining) | - |
 | 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
