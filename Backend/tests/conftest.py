@@ -63,7 +63,15 @@ async def db_engine():
     # 5. Create Tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
+    # 6. Seed roles so authenticated_client fixture can find them
+    from app.infrastructure.database.seeder import seed_roles
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+    seed_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    async with seed_factory() as seed_session:
+        await seed_roles(seed_session)
+        await seed_session.commit()
+
     yield engine
     
     # Cleanup (Optional: Drop DB after tests? Keeping it is better for debugging failures)
