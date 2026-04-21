@@ -14,7 +14,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Primitives kutuphanesi olusturulur — ProgressBar, SegmentedControl, Collapsible, AlertBanner component'leri TypeScript ile yazilir
 - [x] **FOUND-03**: I18n altyapisi kurulur — useApp().language ile TR/EN destegi, tum yeni component'lerde T() fonksiyonu kullanilir
 - [x] **FOUND-04**: Theme preset'lerine status-todo ve status-blocked tokenlari eklenir [E16]
-- [ ] **FOUND-05**: App Shell donusturulur — Sidebar, Header, Layout component'leri Next.js'e tasarim degisikligi olmadan aktarilir
+- [x] **FOUND-05**: App Shell donusturulur — Sidebar, Header, Layout component'leri Next.js'e tasarim degisikligi olmadan aktarilir
 
 ### Backend Schema & Entity Expansion
 
@@ -139,7 +139,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-02 | Phase 8 | Complete (08-02) |
 | FOUND-03 | Phase 8 | Complete (08-01) |
 | FOUND-04 | Phase 8 | Complete (08-01) |
-| FOUND-05 | Phase 8 | Pending |
+| FOUND-05 | Phase 8 | Complete (08-04) |
 | BACK-01 | Phase 9 | Pending |
 | BACK-02 | Phase 9 | Pending |
 | BACK-03 | Phase 9 | Pending |

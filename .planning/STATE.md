@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-04-21T05:55:25.690Z"
+stopped_at: Completed 08-04-PLAN.md
+last_updated: "2026-04-21T06:21:51Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -25,35 +25,36 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 08 (Foundation & Design System) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
+Phase: 08 (Foundation & Design System) — COMPLETED (4/4 plans)
+Plan: 4 of 4 complete
+Status: Phase-level verification pending (orchestrator)
 Last activity: 2026-04-21
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1 (v2.0) / 43 (v1.0 lifetime)
-- Average duration: 6 min (v2.0)
-- Total execution time: 0.1 hours
+- Total plans completed: 4 (v2.0) / 43 (v1.0 lifetime)
+- Average duration: 7 min (v2.0)
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 08    | 1     | 6 min | 6 min    |
+| Phase | Plans | Total   | Avg/Plan |
+|-------|-------|---------|----------|
+| 08    | 4     | 28 min  | 7 min    |
 
 **Recent Trend:**
 
-- Last 5 plans: 08-01 (6 min, 2 tasks, 9 files)
-- Trend: initial baseline
+- Last 5 plans: 08-01 (6 min, 2 tasks, 9 files), 08-02 (2 min, 2 tasks, 8 files), 08-03 (3 min, 2 tasks, 9 files), 08-04 (17 min, 3 tasks incl. blocking checkpoint, 12 files)
+- Trend: Phase 8 complete; 08-04 took longer than the rest because Task 3 is a blocking human-verify checkpoint with a post-checkpoint fix round
 
 *Updated after each plan completion*
-| Phase 08 P02 | 2min | 2 tasks | 8 files |
-| Phase 08 P03 | 3min | 2 tasks | 9 files |
+| Phase 08 P02 | 2min  | 2 tasks | 8 files  |
+| Phase 08 P03 | 3min  | 2 tasks | 9 files  |
+| Phase 08 P04 | 17min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,12 @@ Key constraints for v2.0:
 - [08-03]: AlertBanner TONE_VARS hoisted to module-level Record<AlertTone,string> for once-per-module allocation; defensive fallback retained for runtime JS callers outside the union
 - [08-03]: Barrel index.ts uses explicit export { X } from ./x and export type { ... } for every primitive so consumers import components and their type unions symmetrically from @/components/primitives
 - [08-03]: Collapsible guards optional badge with badge != null (not truthy) so numeric 0 still renders -- matches prototype semantics where 0 is a legal count
+- [08-04]: Next.js route group (shell) in app/(shell)/layout.tsx wraps every authenticated page with AppShell without adding /shell/ to URLs; placeholder pages under the group are server components (no use client, no hooks) so they tree-shake cleanly
+- [08-04]: Single source of collapse control -- only the Header renders a sidebar-toggle button; Sidebar reads sidebarCollapsed from useApp() but never writes to it. Removed the prototype's duplicate footer collapse button per user checkpoint feedback
+- [08-04]: Phase-8 header shows only wired controls (sidebar toggle, search Input, Moon/Sun theme, TR/EN language). Create/Notifications/Help buttons from the prototype are deferred to the phases that introduce their handlers (Create -> Phase 10 project-create wizard, Notifications -> later phase, Help -> later phase) -- avoids rendering inert buttons that look interactive in Next.js
+- [08-04]: Breadcrumb parts derived from usePathname() via a small switch over known routes instead of a route-metadata convention; unknown routes fall back to capitalizing the first segment. Non-last parts render as next/link so clicking navigates without full reload
+- [08-04]: SidebarUserMenu click-outside dismiss uses a document 'mousedown' listener attached inside a React.useEffect with open as dep (exact prototype pattern from shell.jsx lines 104-107)
+- [08-04]: Root app/page.tsx uses next/navigation redirect() to send / -> /dashboard so the bare domain always lands on the canonical authenticated landing page
 
 ### Pending Todos
 
@@ -106,8 +113,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T05:55:11.875Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-04-21T06:21:51Z
+Stopped at: Completed 08-04-PLAN.md (Phase 08 fully planned plans executed; phase-level verification pending)
 Resume file: None
 
 **Planned Phase:** 08 (Foundation & Design System) — 4 plans — 2026-04-20T20:39:59.057Z

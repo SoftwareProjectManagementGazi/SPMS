@@ -60,7 +60,7 @@ Plans:
 - [x] 08-01-PLAN.md -- Theme tokens, theme system, i18n foundation, AppContext provider (completed 2026-04-21, 6 min)
 - [x] 08-02-PLAN.md -- Primitive components batch 1 (Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section) (completed 2026-04-21, 2 min)
 - [x] 08-03-PLAN.md -- Primitive components batch 2 (PriorityChip, StatusDot, Input, ProgressBar, SegmentedControl, Collapsible, AlertBanner, Toggle) + barrel export (completed 2026-04-21, 3 min)
-- [ ] 08-04-PLAN.md -- App Shell conversion (Sidebar, Header, Layout rewrite) + visual verification
+- [x] 08-04-PLAN.md -- App Shell conversion (Sidebar, Header, Breadcrumb, AppShell + (shell) route group + placeholder pages) with post-checkpoint cleanup of redundant sidebar footer toggle and non-functional header buttons (completed 2026-04-21, 17 min)
 **UI hint**: yes
 
 ### Phase 9: Backend Schema, Entities & APIs
@@ -141,7 +141,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 5. Notifications | v1.0 | 7/7 | Complete | 2026-03-16 |
 | 6. Reporting & Analytics | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
-| 8. Foundation & Design System | v2.0 | 3/4 | In progress | - |
+| 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 0/0 | Not started | - |
 | 10. Shell Pages & Project Features | v2.0 | 0/0 | Not started | - |
 | 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
