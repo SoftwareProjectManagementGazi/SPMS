@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status as http_status
 from typing import List
 from app.domain.entities.user import User
 from app.domain.repositories.team_repository import ITeamRepository
@@ -8,10 +8,12 @@ from app.application.use_cases.manage_teams import (
     AddTeamMemberUseCase,
     RemoveTeamMemberUseCase,
     ListTeamsUseCase,
+    SetTeamLeaderUseCase,
 )
-from app.application.dtos.team_dtos import TeamCreateDTO, TeamResponseDTO, TeamMemberDTO
+from app.application.dtos.team_dtos import TeamCreateDTO, TeamResponseDTO, TeamMemberDTO, TeamLeaderUpdateDTO
 from app.application.dtos.auth_dtos import UserListDTO
 from app.api.dependencies import get_current_user, get_user_repo, get_team_repo
+from app.api.deps.auth import require_admin
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -143,3 +145,26 @@ async def get_team(
         owner_id=team.owner_id,
         members=members,
     )
+
+
+@router.patch("/{team_id}/leader")
+async def set_team_leader(
+    team_id: int,
+    dto: TeamLeaderUpdateDTO,
+    _admin: User = Depends(require_admin),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """D-17: set or clear team leader_id. Admin-only (T-09-09-05 mitigation).
+
+    Body: ``{"leader_id": int | null}``
+    ``TeamLeaderUpdateDTO`` uses ``extra="forbid"`` to reject unknown keys (T-09-09-06).
+    Path: ``/teams/{team_id}/leader`` — dedicated sub-path to avoid conflict with any
+    future PATCH on the team resource itself.
+    """
+    from app.domain.exceptions import DomainError
+    uc = SetTeamLeaderUseCase(team_repo)
+    try:
+        team = await uc.execute(team_id, dto.leader_id)
+    except DomainError as exc:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return {"id": team.id, "name": team.name, "leader_id": team.leader_id}
