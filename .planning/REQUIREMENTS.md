@@ -24,7 +24,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Task entity'sine phase_id alani eklenir (nullable, lifecycle canvas node ID referansi)
 - [x] **BACK-03
 **: process_config JSON'a schema_version alani + on-read normalizer eklenir (geriye uyumlu)
-- [ ] **BACK-04**: Milestone entity olusturulur — Clean Architecture vertical slice (domain, repository, ORM, use cases, API router)
+- [x] **BACK-04
+**: Milestone entity olusturulur — Clean Architecture vertical slice (domain, repository, ORM, use cases, API router)
 - [ ] **BACK-05**: Artifact entity olusturulur — Clean Architecture vertical slice, proje olusturuldiginda metodolojiye gore otomatik seed
 - [ ] **BACK-06**: PhaseReport entity olusturulur — Clean Architecture vertical slice, PDF export destegi
 - [x] **BACK-07
