@@ -16,6 +16,6 @@ from app.infrastructure.database.models.notification_preference import Notificat
 from app.infrastructure.database.models.task_watcher import TaskWatcherModel
 
 # Phase 9 entity models — uncomment when implemented (plans 09-05, 09-06, 09-07):
-# from app.infrastructure.database.models.milestone import MilestoneModel  # noqa: F401
+from app.infrastructure.database.models.milestone import MilestoneModel  # noqa: F401
 # from app.infrastructure.database.models.artifact import ArtifactModel  # noqa: F401
 # from app.infrastructure.database.models.phase_report import PhaseReportModel  # noqa: F401
