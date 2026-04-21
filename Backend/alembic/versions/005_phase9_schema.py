@@ -121,6 +121,61 @@ def upgrade() -> None:
         op.create_index("ix_projects_status", "projects", ["status"])
 
     # -------------------------------------------------------------------------
+    # Pre-requisite: process_templates table
+    # In v1.0 this table was created via SQLAlchemy create_all(), not via a
+    # migration. In a fresh v2.0 DB (running only 001–005) we must create it
+    # here before adding the FK on projects.process_template_id (D-45).
+    # The _column_exists checks below handle the Phase 9 new columns idempotently
+    # whether the table was just created here or already existed.
+    # -------------------------------------------------------------------------
+    if not _table_exists("process_templates"):
+        op.create_table(
+            "process_templates",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("name", sa.String(100), nullable=False),
+            sa.Column(
+                "is_builtin",
+                sa.Boolean(),
+                nullable=False,
+                server_default="false",
+            ),
+            sa.Column(
+                "columns",
+                JSONB,
+                nullable=False,
+                server_default="[]",
+            ),
+            sa.Column(
+                "recurring_tasks",
+                JSONB,
+                nullable=False,
+                server_default="[]",
+            ),
+            sa.Column(
+                "behavioral_flags",
+                JSONB,
+                nullable=False,
+                server_default="{}",
+            ),
+            sa.Column("description", sa.Text(), nullable=True),
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=True,
+            ),
+            sa.Column(
+                "updated_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.text("now()"),
+                nullable=True,
+            ),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("name", name="uq_process_templates_name"),
+        )
+        op.create_index("ix_process_templates_id", "process_templates", ["id"])
+
+    # -------------------------------------------------------------------------
     # D-45: projects.process_template_id (nullable FK to process_templates.id)
     # Backfill: map existing methodology enum → process_templates row by UPPER(name).
     # Both columns coexist until migration 006 drops methodology (after Phase 10+).
