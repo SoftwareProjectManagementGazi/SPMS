@@ -163,6 +163,13 @@ from app.api.v1 import users as users_router
 app.include_router(activity_router.router, prefix="/api/v1", tags=["activity"])
 app.include_router(users_router.router, prefix="/api/v1", tags=["users"])
 
+from app.api.v1 import milestones as milestones_router
+from app.api.v1 import artifacts as artifacts_router
+from app.api.v1 import phase_reports as phase_reports_router
+app.include_router(milestones_router.router, prefix="/api/v1", tags=["milestones"])
+app.include_router(artifacts_router.router, prefix="/api/v1", tags=["artifacts"])
+app.include_router(phase_reports_router.router, prefix="/api/v1", tags=["phase_reports"])
+
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"
 _static_dir.mkdir(parents=True, exist_ok=True)
