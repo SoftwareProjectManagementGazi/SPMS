@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import { AppProvider } from "@/context/app-context"
+import { AuthProvider } from "@/context/auth-context"
 
 import "./globals.css"
 
@@ -28,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <body className={`${geist.variable} ${geistMono.variable}`}>
-        <AppProvider>{children}</AppProvider>
+        <AppProvider><AuthProvider>{children}</AuthProvider></AppProvider>
       </body>
     </html>
   )
