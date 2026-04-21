@@ -27,7 +27,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
 
     def _to_model(self, entity: Project) -> ProjectModel:
         # Exclude columns to handle them manually as relationship objects
-        data = entity.model_dump(exclude={"id", "created_at", "columns"})
+        data = entity.model_dump(exclude={"id", "created_at", "columns", "manager_name", "manager_avatar"})
         model = ProjectModel(**data)
 
         if entity.columns:

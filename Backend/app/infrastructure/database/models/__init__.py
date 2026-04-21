@@ -10,6 +10,7 @@ from .notification import NotificationModel
 from .file import FileModel
 from .label import LabelModel
 from .audit_log import AuditLogModel
+from app.infrastructure.database.models.process_template import ProcessTemplateModel  # noqa: F401
 from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
 from app.infrastructure.database.models.password_reset_token import PasswordResetTokenModel
 from app.infrastructure.database.models.notification_preference import NotificationPreferenceModel
