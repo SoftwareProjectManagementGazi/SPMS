@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: planning
-stopped_at: Phase 10 context gathered
-last_updated: "2026-04-21T17:33:02.174Z"
+status: executing
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-04-21T19:04:14.741Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 24
+  completed_plans: 15
+  percent: 63
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 10 — Shell Pages & Project Features
+**Current focus:** Phase 10 — shell-pages-project-features
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
-Status: Ready to plan
+Phase: 10 (shell-pages-project-features) — EXECUTING
+Plan: 2 of 10
+Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 63%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 09 P08 | 7 | 2 tasks | 13 files |
 | Phase 09 P09 | 8min | 2 tasks | 21 files |
 | Phase 09 P10 | 6min | 2 tasks | 14 files |
+| Phase 10-shell-pages-project-features P01 | 5 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,9 @@ Key constraints for v2.0:
 - Inline RPTA authorization: POST endpoints with body project_id use _authorize_transition inline helper (4-line) instead of require_project_transition_authority Depends() — avoids path-param DI mismatch. Refactor candidate Phase 10+
 - Artifact PATCH split URLs: /artifacts/{id}/mine (assignee) vs /artifacts/{id} (manager). URL encodes permission scope. Frontend selects based on user.id == artifact.assignee_id
 - PDF rate limit isolation: _pdf_last_request dict in phase_reports.py separate from idempotency_cache. 30s per-user window per D-51
+- AUTH_TOKEN_KEY='auth_token' matches legacy Frontend/lib/constants.ts exactly (D-02)
+- AuthProvider placed INSIDE AppProvider in root layout — auth context available to all app contexts
+- test_activity.py stub at integration root level (not api/ subdirectory) — Nyquist file existence check satisfied
 
 ### Pending Todos
 
@@ -158,8 +162,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 10 context gathered
-Resume file: --resume-file
+Last session: 2026-04-21T19:04:14.734Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
 
 **Next Phase:** 10 (Shell Pages & Project Features) — ready to plan
