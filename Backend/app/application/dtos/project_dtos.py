@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional , List, Dict, Any
 from datetime import datetime
-from app.domain.entities.project import Methodology
+from app.domain.entities.project import Methodology, ProjectStatus
 from app.domain.entities.board_column import BoardColumn
 
 
@@ -47,6 +47,8 @@ class ProjectResponseDTO(BaseModel):
     manager_avatar: Optional[str] = None
     created_at: datetime
 
+    status: ProjectStatus = ProjectStatus.ACTIVE
+    process_template_id: Optional[int] = None
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None
