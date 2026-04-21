@@ -78,6 +78,19 @@ Convert 4 core page stubs (Dashboard, Login, Projects, Settings) from Phase 8 pl
 - **D-33:** Archived project pages show `AlertBanner` (variant="warning") at top of content area: "Bu proje arşivlenmiştir. İçerik düzenleme devre dışı." with "Aktif Et" button that calls status change API to set back to ACTIVE.
 - **D-34:** While project is ARCHIVED, all edit actions (rename, task create, status drag) are **disabled** — buttons grayed, forms read-only.
 
+### Page Fidelity Requirement
+- **D-35:** All converted pages must be **fully functional** — not placeholder shells. Each page must be 100% visually identical to the corresponding prototype page AND wired to the real backend API. "Functional" means: data loads from API, user interactions work (create, filter, status change), error states display, loading states show. No page is considered done until it passes visual + functional verification against the prototype.
+
+### Seeder Update (Backend/app/infrastructure/database/seeder.py)
+- **D-36:** The seeder must be updated post-Phase-9 to populate all new schema fields so Phase 10 UI can be tested with realistic data. Required changes:
+  - **`project.process_template_id`** — look up templates by name after startup migration seeds them (SCRUM→id, KANBAN→id, WATERFALL→id). Link each project to the correct template. Keep `methodology` field for now (not dropped until Phase 10+ migration 006).
+  - **`project.status`** — Seed with varied statuses for filter testing: 2× ACTIVE, 1× COMPLETED, 1× ON_HOLD. So users can immediately test the SegmentedControl filter.
+  - **`project.process_config`** — Add `{"schema_version": 1, "workflow": {"mode": "flexible", "nodes": [], "edges": [], "groups": []}}` base structure to all seeded projects.
+  - **`team.leader_id`** — Assign a leader (e.g., the PM) to each team for testing `require_project_transition_authority` checks in Phase 10 UI.
+  - **`Milestone` seeding** — Add 2-3 milestones per project with varied statuses (pending/in_progress/completed) for any Phase 10 UI that surfaces milestones.
+  - **`Artifact` seeding** — Add 2-4 artifacts per project (from template defaults where available) with statuses not_created/in_progress/completed for visual testing.
+  - **`AuditLog` entries** — Ensure audit_log has `metadata` JSONB populated on existing entries (status changes, phase transitions) so the new global activity feed (`GET /activity?global=true`) returns real data.
+
 ### Claude's Discretion
 - Exact toast library/component (re-implement from prototype or build minimal custom)
 - Progress % calculation formula for project cards (may need task count aggregation or use existing `project.progress` field if backend returns it)
