@@ -1,7 +1,9 @@
 "use client"
 
 // Sidebar: collapsible navigation (232px expanded / 56px collapsed) with logo,
-// WORKSPACE + ADMIN sections, user menu with click-outside dismiss, and a collapse toggle.
+// WORKSPACE + ADMIN sections, and user menu with click-outside dismiss.
+// The collapse toggle lives in the Header (single source of control); this sidebar
+// reads `sidebarCollapsed` from useApp() but does not render its own toggle button.
 // Ported from New_Frontend/src/shell.jsx (lines 8-155). Prototype RouterContext is fully
 // replaced with next/link + usePathname() per D-09. All icons via lucide-react (size={16}).
 // Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
@@ -19,7 +21,6 @@ import {
   Shield,
   ChevronUp,
   LogOut,
-  PanelLeft,
 } from "lucide-react"
 
 import { Avatar, Badge, Kbd } from "@/components/primitives"
@@ -290,7 +291,7 @@ function SidebarUserMenu({
 // --- Sidebar main component ----------------------------------------------
 
 export function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, language } = useApp()
+  const { sidebarCollapsed, language } = useApp()
   const pathname = usePathname() || "/"
   const lang = language
 
@@ -410,35 +411,6 @@ export function Sidebar() {
           active={isActive("/admin")}
           collapsed={sidebarCollapsed}
         />
-      </div>
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: 8,
-          display: "flex",
-          justifyContent: sidebarCollapsed ? "center" : "flex-end",
-        }}
-      >
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          title={lang === "tr" ? "Kenar çubuğunu daralt/genişlet" : "Toggle sidebar"}
-          style={{
-            color: "var(--fg-muted)",
-            padding: 6,
-            borderRadius: 6,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "var(--surface-2)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
-        >
-          <PanelLeft size={16} />
-        </button>
       </div>
       <div
         style={{
