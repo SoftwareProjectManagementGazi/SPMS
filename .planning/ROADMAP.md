@@ -78,13 +78,13 @@ Plans:
 - [x] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
 - [x] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
 - [x] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
-- [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
-- [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
-- [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
-- [ ] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
-- [ ] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
-- [ ] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
-- [ ] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
+- [x] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
+- [x] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
+- [x] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
+- [x] 09-07-PLAN.md -- PhaseReport vertical slice + fpdf2 programmatic PDF service (BACK-06)
+- [x] 09-08-PLAN.md -- Phase Gate endpoint (advisory lock, idempotency, rate limit) + WorkflowConfig Pydantic validation (API-01, API-10)
+- [x] 09-09-PLAN.md -- Activity feed + User summary (asyncio.gather) + Team Leader endpoints (API-02, API-03)
+- [x] 09-10-PLAN.md -- Milestone/Artifact/PhaseReport CRUD routers + filters + criteria CRUD + apply template (API-04..09)
 
 ### Phase 10: Shell Pages & Project Features
 **Goal**: Users can navigate all core pages in the new Next.js frontend and manage project lifecycle (create, status, archive)
@@ -98,9 +98,9 @@ Plans:
   5. Project cards display status badges with correct colors; SegmentedControl filters projects by status
 **Plans**: 10 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [x] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [x] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [x] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
 - [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
 - [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
 - [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
