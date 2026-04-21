@@ -71,6 +71,17 @@ class IAuditRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_global_activity(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int]:
+        """D-28: paginated global activity feed across all entities (no project_id filter).
+        Returns (items, total) with user_name + user_avatar via LEFT JOIN on users.
+        """
+        pass
+
+    @abstractmethod
     async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
         """D-48: most recent audit_log rows for a user across all entities."""
         pass

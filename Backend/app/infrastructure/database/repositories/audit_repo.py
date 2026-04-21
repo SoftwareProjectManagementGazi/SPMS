@@ -180,6 +180,64 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         ]
         return items, total
 
+    async def get_global_activity(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int]:
+        """D-28: global activity feed across all projects/entities (no project_id filter).
+
+        Returns (items, total) with user_name + user_avatar via LEFT JOIN on users.
+        """
+        from app.infrastructure.database.models.user import UserModel
+
+        # No WHERE conditions — queries ALL audit_log rows across all entities
+        count_stmt = select(sqlfunc.count(AuditLogModel.id))
+        total = (await self.session.execute(count_stmt)).scalar() or 0
+
+        items_stmt = (
+            select(
+                AuditLogModel.id,
+                AuditLogModel.action,
+                AuditLogModel.entity_type,
+                AuditLogModel.entity_id,
+                AuditLogModel.field_name,
+                AuditLogModel.old_value,
+                AuditLogModel.new_value,
+                AuditLogModel.user_id,
+                UserModel.full_name.label("user_name"),
+                UserModel.avatar.label("user_avatar"),
+                AuditLogModel.timestamp,
+                AuditLogModel.extra_metadata,
+            )
+            .select_from(AuditLogModel)
+            .join(UserModel, UserModel.id == AuditLogModel.user_id, isouter=True)
+            .order_by(AuditLogModel.timestamp.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(items_stmt)
+        rows = result.mappings().all()
+        items = [
+            {
+                "id": row["id"],
+                "action": row["action"],
+                "entity_type": row["entity_type"],
+                "entity_id": row["entity_id"],
+                "entity_label": None,
+                "field_name": row["field_name"],
+                "old_value": row["old_value"],
+                "new_value": row["new_value"],
+                "user_id": row["user_id"],
+                "user_name": row["user_name"],
+                "user_avatar": row["user_avatar"],
+                "timestamp": row["timestamp"],
+                "metadata": row["extra_metadata"],
+            }
+            for row in rows
+        ]
+        return items, total
+
     async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
         """D-48: recent activity for a user (any entity)."""
         stmt = (
