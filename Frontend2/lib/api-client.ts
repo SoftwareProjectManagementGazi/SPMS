@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AUTH_TOKEN_KEY } from '@/lib/constants';
+import { AUTH_TOKEN_KEY, SESSION_EXPIRED_KEY } from '@/lib/constants';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -39,7 +39,9 @@ apiClient.interceptors.response.use(
       !error.config?.url?.includes('/auth/login')
     ) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
-      localStorage.setItem('session_expired', 'true');
+      // FL-02 fix (Phase 10 review): use exported constant so a future rename
+      // of SESSION_EXPIRED_KEY cannot silently diverge between writer and reader.
+      localStorage.setItem(SESSION_EXPIRED_KEY, 'true');
       // D-03: also clear the presence cookie that Next.js middleware reads
       document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       window.location.href = '/session-expired';
