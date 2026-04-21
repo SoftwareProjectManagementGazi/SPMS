@@ -1,16 +1,25 @@
 from typing import List, Optional
 from app.domain.repositories.project_repository import IProjectRepository
+from app.domain.repositories.artifact_repository import IArtifactRepository
 from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
 from app.domain.entities.project import Project, Methodology
 from app.domain.entities.board_column import BoardColumn
 from app.domain.exceptions import ProjectNotFoundError
+from app.application.services.artifact_seeder import ArtifactSeeder
 
 
 class CreateProjectUseCase:
-    def __init__(self, project_repo: IProjectRepository, template_repo=None, task_repo=None):
+    def __init__(
+        self,
+        project_repo: IProjectRepository,
+        template_repo=None,
+        task_repo=None,
+        artifact_repo: Optional[IArtifactRepository] = None,  # NEW D-28
+    ):
         self.project_repo = project_repo
         self.template_repo = template_repo
         self.task_repo = task_repo
+        self.artifact_repo = artifact_repo
 
     async def execute(self, dto: ProjectCreateDTO, manager_id: int) -> ProjectResponseDTO:
         # Look up process template if template_repo is available
@@ -56,6 +65,14 @@ class CreateProjectUseCase:
             process_config=process_config,
         )
         created_project = await self.project_repo.create(new_project)
+
+        # NEW D-28: Seed default artifacts from template in same transaction.
+        # If template lookup succeeded (above) and artifact_repo provided, seed.
+        # If template is None (e.g., custom workflow, D-30) OR artifact_repo missing, skip gracefully.
+        # D-29: methodology change (PATCH) is a no-op on existing artifacts — this only runs on CREATE.
+        if self.artifact_repo is not None and template is not None:
+            seeder = ArtifactSeeder(self.artifact_repo)
+            await seeder.seed(created_project.id, template)
 
         # Seed recurring tasks from template (PROC-02)
         if template and template.recurring_tasks and self.task_repo:
