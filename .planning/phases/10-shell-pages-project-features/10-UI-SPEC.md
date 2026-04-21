@@ -1,10 +1,12 @@
 ---
 phase: 10
 slug: shell-pages-project-features
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-21
+reviewed_at: 2026-04-21
+review_verdict: APPROVED (2 FLAGs — both justified by locked D-35 prototype-fidelity)
 ---
 
 # Phase 10 — UI Design Contract
