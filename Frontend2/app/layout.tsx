@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
-import { Inter, Geist_Mono } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 
 import { AppProvider } from "@/context/app-context"
 
 import "./globals.css"
 
-const inter = Inter({
+const geist = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
 })
@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${inter.variable} ${geistMono.variable}`}>
+      <body className={`${geist.variable} ${geistMono.variable}`}>
         <AppProvider>{children}</AppProvider>
       </body>
     </html>
