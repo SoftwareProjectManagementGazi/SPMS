@@ -811,22 +811,25 @@ Frontend portions (Next.js) are not under CLAUDE.md jurisdiction (CLAUDE.md gove
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Toast implementation detail**
    - What we know: D-07 specifies toast notifications for API errors. The prototype has no formal toast component in `primitives.jsx`.
    - What's unclear: Is there a toast in the prototype at all? If so, which file?
    - Recommendation: Planner marks toast as Claude's Discretion. A minimal custom toast (fixed position, auto-dismiss after 3s) built from prototype token system is the right approach. Do NOT import a toast library.
+   - **Resolution:** Custom minimal toast component in Plan 05 (Claude's Discretion per CONTEXT.md).
 
 2. **Progress % calculation for project cards**
    - What we know: The prototype shows `project.progress` as a 0–1 float. The backend `ProjectResponseDTO` may or may not compute this.
    - What's unclear: Does the backend return a `progress` field? If not, must the frontend derive it from task counts.
    - Recommendation: Check `Backend/app/application/dtos/project_dtos.py` — if `progress` exists and is populated, use it directly. If absent, use `completed_tasks / total_tasks` with a fallback of 0.
+   - **Resolution:** Use project.progress field returned by backend ProjectResponseDTO (verified present).
 
 3. **"Yeni proje" button in Header**
    - What we know: STATE.md 08-04 note says "Create button in header deferred to Phase 10."
    - What's unclear: Does Phase 10 wire this header button to navigate to `/projects/new`?
    - Recommendation: Yes — Phase 10 should wire the header Create button to `router.push('/projects/new')` since the wizard page now exists.
+   - **Resolution:** Plan 09 Task 1 wires header Create button to router.push('/projects/new').
 
 ---
 
