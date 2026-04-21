@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-04-21T19:19:00.846Z"
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-04-21T19:24:45.147Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 24
-  completed_plans: 17
-  percent: 71
+  completed_plans: 18
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 10 (shell-pages-project-features) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [███████░░░] 71%
 | Phase 10-shell-pages-project-features P01 | 5 | 3 tasks | 8 files |
 | Phase 10-shell-pages-project-features P02 | 4min | 2 tasks | 6 files |
 | Phase 10-shell-pages-project-features P03 | 262 | 2 tasks | 10 files |
+| Phase 10-shell-pages-project-features P04 | 166 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,9 @@ Key constraints for v2.0:
 - QueryClient at module scope in shell layout — prevents cache recreation on ShellLayout re-render (Pitfall 2)
 - getTaskStats derives open/in_progress/done counts client-side from GET /tasks — no dedicated stats endpoint needed for D-26
 - Input primitive extended with required/disabled/name/id/autoComplete props (Rule 2 fix — form validation correctness)
+- StatCard TONE_BG uses transparent not var(--surface) — matches prototype color-mix with transparent exactly
+- PortfolioTable team column renders empty AvatarStack — Project shape lacks member list; Phase 11 project detail will populate it
+- ActivityFeed normalizes both {items:[]} and [] backend response shapes via useMemo in dashboard page
 
 ### Pending Todos
 
@@ -171,8 +175,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T19:19:00.839Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-04-21T19:24:45.141Z
+Stopped at: Completed 10-04-PLAN.md
 Resume file: None
 
 **Next Phase:** 10 (Shell Pages & Project Features) — ready to plan
