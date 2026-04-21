@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 09-07-PLAN.md
-last_updated: "2026-04-21T15:20:51.129Z"
+stopped_at: Completed 09-08-PLAN.md
+last_updated: "2026-04-21T15:32:32.855Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 11
-  percent: 79
+  completed_plans: 12
+  percent: 86
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 09 — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [████████░░] 79%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [████████░░] 79%
 | Phase 09 P05 | 7min | 2 tasks | 11 files |
 | Phase 09 P06 | 6 | 2 tasks | 15 files |
 | Phase 09 P07 | 12 | 2 tasks | 16 files |
+| Phase 09 P08 | 7 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,10 @@ Key constraints for v2.0:
 - revision auto-increment: PATCH always does existing.revision += 1; UpdateDTO omits revision field (T-09-07-01 tamper mitigation)
 - PDF font fallback: macOS Arial Unicode -> Linux DejaVu -> Windows ArialUni -> Helvetica with _safe() Latin-1 encoding guard (no crash, degraded diacritics visual on Helvetica)
 - multi_cell uses pdf.epw not 0 — fpdf2 2.8.7 raises FPDFException with w=0 at small font sizes
+- Error code taxonomy: error_code key added alongside HTTP status in detail body (e.g. {error_code: PHASE_GATE_LOCKED}). Carry forward to Phase 10-13 for all domain exception translations.
+- Rate-limit + idempotency order: check_rate_limit -> lookup -> record_request -> use case -> store. Double-click returns cached response without consuming rate quota.
+- Advisory lock semantics: pg_try_advisory_xact_lock non-blocking; auto-releases on tx commit/rollback. D-10 single-atomic-session satisfied by FastAPI session lifecycle.
+- Integration test raw SQL uses bindparams (CAST(:pc AS jsonb)) not f-string JSON embedding to avoid text() colon-parse error with JSONB literals.
 
 ### Pending Todos
 
@@ -143,8 +148,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T15:20:51.124Z
-Stopped at: Completed 09-07-PLAN.md
+Last session: 2026-04-21T15:32:32.850Z
+Stopped at: Completed 09-08-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z
