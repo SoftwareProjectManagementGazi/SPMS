@@ -52,7 +52,10 @@ export function useGlobalActivity(limit = 20) {
   });
 }
 
-// Process templates for wizard step 2
+// Process templates for wizard step 2.
+// Callers can read both `data` and `isLoading` to distinguish the loading
+// state from the legitimate empty-result state (an admin deleted every
+// template). Defaulting `data = []` here conflates those two scenarios.
 export function useProcessTemplates() {
   return useQuery({
     queryKey: ['process-templates'],

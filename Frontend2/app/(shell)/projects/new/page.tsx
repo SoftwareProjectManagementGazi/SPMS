@@ -113,7 +113,7 @@ function WizardContent() {
   const { language } = useApp()
   const { showToast } = useToast()
   const { mutate: createProject, isPending } = useCreateProject()
-  const { data: templates = [] } = useProcessTemplates()
+  const { data: templates = [], isLoading: templatesLoading, isError: templatesError } = useProcessTemplates()
 
   const step = Math.min(4, Math.max(1, Number(searchParams.get('step') ?? '1')))
 
@@ -355,10 +355,25 @@ function WizardContent() {
               : 'Choose a lifecycle template for your project. You can change it later.'}
           </div>
 
-          {/* D-19: Dynamic templates from GET /process-templates, 3-per-row grid */}
-          {(templates as any[]).length === 0 ? (
+          {/* D-19: Dynamic templates from GET /process-templates, 3-per-row grid.
+              Three non-data states: genuinely loading, request errored, or the
+              admin deleted every template. Previously any empty array looped
+              the loading message forever. */}
+          {templatesLoading ? (
             <div style={{ textAlign: "center", padding: 40, color: "var(--fg-muted)", fontSize: 13 }}>
               {language === 'tr' ? 'Şablonlar yükleniyor...' : 'Loading templates...'}
+            </div>
+          ) : templatesError ? (
+            <div style={{ textAlign: "center", padding: 40, color: "var(--priority-critical)", fontSize: 13 }}>
+              {language === 'tr'
+                ? 'Şablonlar yüklenemedi. Sayfayı yenilemeyi deneyin.'
+                : 'Failed to load templates. Try refreshing the page.'}
+            </div>
+          ) : (templates as any[]).length === 0 ? (
+            <div style={{ textAlign: "center", padding: 40, color: "var(--fg-muted)", fontSize: 13 }}>
+              {language === 'tr'
+                ? 'Kullanılabilir şablon yok. Lütfen bir yöneticiye başvurun.'
+                : 'No templates available. Please contact an administrator.'}
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>

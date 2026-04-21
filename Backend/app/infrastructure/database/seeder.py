@@ -114,22 +114,18 @@ def get_random_date(start_days_ago=60, end_days_ago=0):
 
 async def seed_data(session: AsyncSession):
     try:
-        # Idempotency guard: bail only when projects exist. Checking users is too
-        # coarse — a previous partial run can leave the DB with users but no
-        # projects (the whole reason that scenario exists is that users get
-        # flushed before projects get committed, or an older build exited after
-        # seeding users alone). Gating on projects lets subsequent runs complete
-        # the rest of the seed without re-creating users (per-user checks in
-        # seed_users still skip existing emails).
-        result = await session.execute(select(ProjectModel).limit(1))
-        if result.scalars().first():
-            logger.info("SEEDER: Projeler zaten mevcut, işlem atlanıyor.")
-            return
-
+        # No top-level idempotency guard — each entity seeder has its own
+        # per-row check (seed_roles by name, seed_users by email,
+        # seed_process_templates by name, seed_projects by key). Detail seeders
+        # only fire for projects newly created in this run, so re-running on a
+        # populated DB doesn't duplicate columns, sprints, tasks, or teams.
+        # This lets late-added entities (e.g., new built-in templates) land on
+        # subsequent startups without dropping the database.
         logger.info("SEEDER: Veritabanı dolumu başlatılıyor...")
 
         roles_map = await seed_roles(session)
         users_map = await seed_users(session, roles_map)
+        await seed_process_templates(session)
         projects_map, created_projects = await seed_projects(session, users_map)
 
         # Detail seeds only run for projects newly created this pass, so a
@@ -190,6 +186,118 @@ async def seed_users(session: AsyncSession, roles_map):
             users_map[u_data["email"]] = user
     await session.flush()
     return users_map
+
+async def seed_process_templates(session: AsyncSession):
+    """Seed the three built-in methodology templates (scrum, kanban, waterfall).
+
+    The alembic 005 migration creates the process_templates table and backfills
+    projects.process_template_id from methodology text, but neither the migration
+    nor the project seeder creates the template rows themselves. Without these
+    rows, the Create Project wizard step 2 has no templates to show.
+
+    Idempotent per-name: existing rows are left alone.
+    """
+    logger.info("... Süreç şablonları oluşturuluyor")
+    result = await session.execute(select(ProcessTemplateModel))
+    existing = {t.name.lower() for t in result.scalars().all()}
+
+    templates = [
+        {
+            "name": "Scrum",
+            "is_builtin": True,
+            "description": "Zaman-kutulu sprintler, ürün backlog'u, günlük stand-up ve retrospektif ile iteratif geliştirme.",
+            "columns": [
+                {"name": "Backlog", "order": 0},
+                {"name": "To Do", "order": 1},
+                {"name": "In Progress", "order": 2},
+                {"name": "Code Review", "order": 3},
+                {"name": "Done", "order": 4},
+            ],
+            "recurring_tasks": [],
+            "behavioral_flags": {"sprint_required": True, "wip_limits": False},
+            "cycle_label_tr": "Sprint",
+            "cycle_label_en": "Sprint",
+            "default_workflow": {
+                "mode": "flexible",
+                "nodes": [
+                    {"id": "plan", "label": "Sprint Planning", "order": 0},
+                    {"id": "develop", "label": "Development", "order": 1},
+                    {"id": "review", "label": "Sprint Review", "order": 2},
+                    {"id": "retro", "label": "Retrospective", "order": 3},
+                ],
+                "edges": [],
+                "groups": [],
+            },
+        },
+        {
+            "name": "Kanban",
+            "is_builtin": True,
+            "description": "Sürekli akış, WIP limitleri ve çekme tabanlı iş akışı ile akışkan teslimat.",
+            "columns": [
+                {"name": "To Do", "order": 0, "wip_limit": 0},
+                {"name": "Analiz", "order": 1, "wip_limit": 3},
+                {"name": "Geliştirme", "order": 2, "wip_limit": 4},
+                {"name": "Test", "order": 3, "wip_limit": 2},
+                {"name": "Done", "order": 4, "wip_limit": 0},
+            ],
+            "recurring_tasks": [],
+            "behavioral_flags": {"sprint_required": False, "wip_limits": True},
+            "cycle_label_tr": "Döngü",
+            "cycle_label_en": "Cycle",
+            "default_workflow": {
+                "mode": "continuous",
+                "nodes": [
+                    {"id": "todo", "label": "Yapılacak", "order": 0},
+                    {"id": "doing", "label": "Devam Ediyor", "order": 1},
+                    {"id": "done", "label": "Bitti", "order": 2},
+                ],
+                "edges": [],
+                "groups": [],
+            },
+        },
+        {
+            "name": "Waterfall",
+            "is_builtin": True,
+            "description": "Gereksinim, tasarım, uygulama, test, bakım fazlarıyla sıralı ve belgeleme ağırlıklı model.",
+            "columns": [
+                {"name": "Gereksinim", "order": 0},
+                {"name": "Analiz", "order": 1},
+                {"name": "Tasarım", "order": 2},
+                {"name": "Uygulama", "order": 3},
+                {"name": "Test", "order": 4},
+                {"name": "Bakım", "order": 5},
+            ],
+            "recurring_tasks": [],
+            "behavioral_flags": {"sprint_required": False, "strict_dependencies": True},
+            "cycle_label_tr": "Faz",
+            "cycle_label_en": "Phase",
+            "default_workflow": {
+                "mode": "sequential",
+                "nodes": [
+                    {"id": "req", "label": "Gereksinim", "order": 0},
+                    {"id": "design", "label": "Tasarım", "order": 1},
+                    {"id": "impl", "label": "Uygulama", "order": 2},
+                    {"id": "test", "label": "Test", "order": 3},
+                    {"id": "maint", "label": "Bakım", "order": 4},
+                ],
+                "edges": [
+                    {"from": "req", "to": "design"},
+                    {"from": "design", "to": "impl"},
+                    {"from": "impl", "to": "test"},
+                    {"from": "test", "to": "maint"},
+                ],
+                "groups": [],
+            },
+        },
+    ]
+
+    for tpl in templates:
+        if tpl["name"].lower() in existing:
+            continue
+        session.add(ProcessTemplateModel(**tpl))
+
+    await session.flush()
+
 
 async def seed_projects(session: AsyncSession, users_map):
     logger.info("... Projeler oluşturuluyor")
