@@ -76,6 +76,25 @@
 }
 
 [data-mode="dark"] {
+  /* Dark color tokens (midnight preset baseline — JS may override to graphite/custom
+     after hydration). These must be defined in CSS so the inline theme-init script
+     can flip data-mode before first paint without waiting for React to run. */
+  --bg: oklch(0.17 0.02 280);
+  --bg-2: oklch(0.20 0.025 280);
+  --surface: oklch(0.22 0.025 280);
+  --surface-2: oklch(0.25 0.028 280);
+  --fg: oklch(0.96 0.01 280);
+  --fg-muted: oklch(0.70 0.02 280);
+  --fg-subtle: oklch(0.55 0.02 280);
+  --border: oklch(0.32 0.025 280);
+  --border-strong: oklch(0.42 0.03 280);
+  --primary: oklch(0.72 0.17 290);
+  --primary-fg: oklch(0.15 0.02 280);
+  --primary-hover: oklch(0.77 0.18 290);
+  --accent: oklch(0.32 0.04 280);
+  --accent-fg: oklch(0.95 0.01 280);
+  --ring: oklch(0.72 0.17 290 / 0.5);
+
   /* Dark mode: subtle light top edge, deep bottom */
   --inset-top: inset 0 1px 0 oklch(0.30 0 0 / 0.50);
   --inset-bottom: inset 0 -1px 0 oklch(0.10 0 0 / 0.70);
