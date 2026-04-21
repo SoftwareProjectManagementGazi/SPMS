@@ -143,7 +143,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <Card
         interactive
         padding={0}
-        style={{ opacity: isArchived ? 0.6 : 1, position: "relative" }}
+        style={{
+          opacity: isArchived ? 0.6 : 1,
+          position: "relative",
+          // Fill the grid row (align-items: stretch is the default) and let
+          // the body flex so the progress + footer block can sink to the
+          // bottom regardless of description length.
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+        }}
         onClick={() => router.push(`/projects/${project.id}`)}
       >
         {/* Top status strip */}
@@ -186,8 +195,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
           )}
         </div>
 
-        {/* Card body */}
-        <div style={{ padding: 16 }}>
+        {/* Card body — flex column that fills the card so the footer can
+            anchor to the bottom of the card rather than the end of content. */}
+        <div style={{ padding: 16, flex: 1, display: "flex", flexDirection: "column" }}>
           {/* Top row: key + name | methodology badge + status badge.
               paddingRight leaves a clear zone for the absolutely-positioned
               3-dot overflow menu (top:8, right:8) so badges don't collide. */}
@@ -220,8 +230,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </div>
           )}
 
-          {/* Progress */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
+          {/* Progress — marginTop: auto pushes this block (and the footer
+              that follows) to the bottom of the flex-stretched body, so
+              1-line and 2-line description cards share the same footer Y. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "auto", paddingTop: 14 }}>
             <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
               {language === 'tr' ? 'İlerleme' : 'Progress'}
             </span>
