@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: executing
-stopped_at: Completed 09-09-PLAN.md
-last_updated: "2026-04-21T15:43:47.068Z"
+status: verifying
+stopped_at: Completed 09-10-PLAN.md
+last_updated: "2026-04-21T15:54:02.746Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 Phase: 09 — EXECUTING
 Plan: 10 of 10
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-21
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 93%
 | Phase 09 P07 | 12 | 2 tasks | 16 files |
 | Phase 09 P08 | 7 | 2 tasks | 13 files |
 | Phase 09 P09 | 8min | 2 tasks | 21 files |
+| Phase 09 P10 | 6min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,9 @@ Key constraints for v2.0:
 - asyncio.gather 3-query parallelism in GetUserSummaryUseCase; default return_exceptions=False accepted for v2.0 (D-48/T-09-09-08)
 - PATCH /teams/{id}/leader sub-path avoids conflict with future PATCH /teams/{id} general update
 - user_summary no own-profile gate in v2.0 (T-09-09-02 accepted); hardening deferred
+- Inline RPTA authorization: POST endpoints with body project_id use _authorize_transition inline helper (4-line) instead of require_project_transition_authority Depends() — avoids path-param DI mismatch. Refactor candidate Phase 10+
+- Artifact PATCH split URLs: /artifacts/{id}/mine (assignee) vs /artifacts/{id} (manager). URL encodes permission scope. Frontend selects based on user.id == artifact.assignee_id
+- PDF rate limit isolation: _pdf_last_request dict in phase_reports.py separate from idempotency_cache. 30s per-user window per D-51
 
 ### Pending Todos
 
@@ -153,8 +157,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T15:43:47.063Z
-Stopped at: Completed 09-09-PLAN.md
+Last session: 2026-04-21T15:53:54.896Z
+Stopped at: Completed 09-10-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z

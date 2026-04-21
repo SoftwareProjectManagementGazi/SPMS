@@ -43,12 +43,18 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Proje aktivite endpoint'i olusturulur — GET /projects/{id}/activity, tip/kullanici/sayfalama filtresi
 - [x] **API-03
 **: Kullanici profil ozet endpoint'i olusturulur — GET /users/{id}/summary (stats, projeler)
-- [ ] **API-04**: Project status filtresi eklenir — GET /projects?status=ACTIVE
-- [ ] **API-05**: Task phase_id filtresi eklenir — GET /tasks/project/{id}?phase_id=n3
-- [ ] **API-06**: Faz tamamlanma kriterleri CRUD'u eklenir — process_config icinde phase_completion_criteria yonetimi
-- [ ] **API-07**: Milestone CRUD endpoint'leri olusturulur — GET/POST/PATCH/DELETE
-- [ ] **API-08**: Artifact CRUD endpoint'leri olusturulur — GET/POST/PATCH/DELETE
-- [ ] **API-09**: PhaseReport CRUD + PDF export endpoint'leri olusturulur
+- [x] **API-04
+**: Project status filtresi eklenir — GET /projects?status=ACTIVE
+- [x] **API-05
+**: Task phase_id filtresi eklenir — GET /tasks/project/{id}?phase_id=n3
+- [x] **API-06
+**: Faz tamamlanma kriterleri CRUD'u eklenir — process_config icinde phase_completion_criteria yonetimi
+- [x] **API-07
+**: Milestone CRUD endpoint'leri olusturulur — GET/POST/PATCH/DELETE
+- [x] **API-08
+**: Artifact CRUD endpoint'leri olusturulur — GET/POST/PATCH/DELETE
+- [x] **API-09
+**: PhaseReport CRUD + PDF export endpoint'leri olusturulur
 - [x] **API-10
 **: Workflow veri yapisina edge type, groups, sequential-flexible mode destegi eklenir
 
