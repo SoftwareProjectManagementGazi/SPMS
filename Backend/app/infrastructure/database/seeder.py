@@ -15,6 +15,11 @@ from app.infrastructure.database.models.comment import CommentModel
 from app.infrastructure.database.models.notification import NotificationModel, NotificationType
 from app.infrastructure.database.models.label import LabelModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
+from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
+from app.infrastructure.database.models.milestone import MilestoneModel
+from app.infrastructure.database.models.artifact import ArtifactModel
+from app.infrastructure.database.models.process_template import ProcessTemplateModel
+from app.domain.entities.project import ProjectStatus
 
 from app.infrastructure.security import get_password_hash
 
@@ -45,6 +50,7 @@ PROJECTS_DATA = [
         "key": "SPMS",
         "description": "Yazılım Proje Yönetim Sistemi'nin backend ve frontend geliştirmeleri.",
         "methodology": Methodology.SCRUM,
+        "status": "ACTIVE",  # D-36: varied statuses for SegmentedControl filter testing
         "manager_email": "ayse.oz@gazi.edu.tr",
         "labels": ["Backend", "Frontend", "Database", "Bug", "Refactor"]
     },
@@ -53,6 +59,7 @@ PROJECTS_DATA = [
         "key": "MOB",
         "description": "Müşteriler için iOS ve Android tabanlı mobil alışveriş uygulaması.",
         "methodology": Methodology.KANBAN,
+        "status": "ACTIVE",  # D-36: 2× ACTIVE for filter testing
         "manager_email": "yusuf.bayrakci@gazi.edu.tr",
         "labels": ["UI/UX", "API", "iOS", "Android", "Critical"]
     },
@@ -61,6 +68,7 @@ PROJECTS_DATA = [
         "key": "DATA",
         "description": "Eski Oracle veritabanından PostgreSQL sistemine veri taşıma ve temizleme projesi.",
         "methodology": Methodology.WATERFALL,
+        "status": "COMPLETED",  # D-36: 1× COMPLETED for filter testing
         "manager_email": "ayse.oz@gazi.edu.tr",
         "labels": ["ETL", "Validation", "Script", "Schema"]
     },
@@ -69,6 +77,7 @@ PROJECTS_DATA = [
         "key": "AI",
         "description": "Proje tahminlemeleri için makine öğrenmesi modülünün entegrasyonu.",
         "methodology": Methodology.SCRUM,
+        "status": "ON_HOLD",  # D-36: 1× ON_HOLD for filter testing
         "manager_email": "yusuf.bayrakci@gazi.edu.tr",
         "labels": ["ML", "Python", "Training", "Integration"]
     }
@@ -115,13 +124,16 @@ async def seed_data(session: AsyncSession):
         
         roles_map = await seed_roles(session)
         users_map = await seed_users(session, roles_map)
-        projects_map = await seed_projects(session, users_map)
-        
+        projects_map, created_projects = await seed_projects(session, users_map)
+
         await seed_scrum_details(session, projects_map["SPMS"], users_map)
         await seed_kanban_details(session, projects_map["MOB"], users_map)
         await seed_waterfall_details(session, projects_map["DATA"], users_map)
         await seed_scrum_details(session, projects_map["AI"], users_map)
-        
+
+        await seed_teams(session, projects_map, users_map)
+        await seed_milestones_and_artifacts(session, created_projects)
+
         await session.commit()
         logger.info("SEEDER: İşlem başarıyla tamamlandı.")
     except Exception as e:
@@ -168,6 +180,7 @@ async def seed_projects(session: AsyncSession, users_map):
     result = await session.execute(select(ProjectModel))
     projects_map = {p.key: p for p in result.scalars().all()}
     all_users = list(users_map.values())
+    created_projects = []
 
     for p_data in PROJECTS_DATA:
         if p_data["key"] not in projects_map:
@@ -181,22 +194,45 @@ async def seed_projects(session: AsyncSession, users_map):
                 start_date=date.today() - timedelta(days=30),
                 end_date=date.today() + timedelta(days=90)
             )
+            # D-36: varied project statuses for SegmentedControl filter testing
+            project.status = ProjectStatus(p_data.get("status", "ACTIVE"))
+            # D-36: process_config base structure (schema_version 1)
+            project.process_config = {
+                "schema_version": 1,
+                "workflow": {"mode": "flexible", "nodes": [], "edges": [], "groups": []}
+            }
             # Rastgele 4-6 üye ata
             members = random.sample(all_users, k=min(len(all_users), random.randint(4, 6)))
             if manager and manager not in members: members.append(manager)
             project.members.extend(members)
-            
+
             session.add(project)
             projects_map[p_data["key"]] = project
+            created_projects.append(project)
             await session.flush()
 
             # Etiketler
             for lbl in p_data["labels"]:
                 color = f"#{random.randint(0, 0xFFFFFF):06x}"
                 session.add(LabelModel(project_id=project.id, name=lbl, color=color))
-    
+
     await session.flush()
-    return projects_map
+
+    # D-36: link process_template_id by methodology name
+    template_result = await session.execute(select(ProcessTemplateModel))
+    templates_by_name = {t.name.lower(): t for t in template_result.scalars().all()}
+    METHODOLOGY_TO_TEMPLATE = {
+        Methodology.SCRUM: "scrum",
+        Methodology.KANBAN: "kanban",
+        Methodology.WATERFALL: "waterfall",
+    }
+    for project in created_projects:
+        meth_key = METHODOLOGY_TO_TEMPLATE.get(project.methodology, "")
+        if meth_key and meth_key in templates_by_name:
+            project.process_template_id = templates_by_name[meth_key].id
+
+    await session.flush()
+    return projects_map, created_projects
 
 # --- Görev Üretim Mantığı (Hiyerarşik) ---
 
@@ -345,5 +381,85 @@ async def seed_waterfall_details(session: AsyncSession, project, users_map):
         session.add(c)
         col_map[name] = c
     await session.flush()
-    
+
     await generate_hierarchical_tasks(session, project, [], col_map)
+
+
+async def seed_teams(session: AsyncSession, projects_map: dict, users_map: dict):
+    """D-36: create one team per project, assign leader_id to the project manager."""
+    logger.info("... Ekipler oluşturuluyor (D-36)")
+    all_users = list(users_map.values())
+
+    for key, project in projects_map.items():
+        # Team owner = project manager (or first user as fallback)
+        owner = next(
+            (u for u in all_users if u.id == project.manager_id),
+            all_users[0]
+        )
+        team = TeamModel(
+            name=f"{project.name} Ekibi",
+            description=f"{project.name} projesi için ekip.",
+            owner_id=owner.id,
+        )
+        session.add(team)
+        await session.flush()  # get team.id
+
+        # D-36: assign team leader (project manager as leader)
+        team.leader_id = owner.id
+
+        # Add 3-5 members to the team
+        await session.refresh(project, attribute_names=["members"])
+        project_members = project.members or []
+        team_members = project_members[:5] if project_members else all_users[:3]
+        for user in team_members:
+            session.add(TeamMemberModel(team_id=team.id, user_id=user.id))
+
+        # Link team to project
+        session.add(TeamProjectModel(team_id=team.id, project_id=project.id))
+
+    await session.flush()
+
+
+async def seed_milestones_and_artifacts(session: AsyncSession, created_projects: list):
+    """D-36: seed 2-3 milestones and 3 artifacts per project with varied statuses."""
+    logger.info("... Kilometre taşları ve eserler oluşturuluyor (D-36)")
+
+    MILESTONE_TEMPLATES = [
+        {"name": "Faz 1 Tamamlandı", "status": "completed", "days_offset": -30},
+        {"name": "MVP Yayını", "status": "in_progress", "days_offset": 30},
+        {"name": "Final Teslimat", "status": "pending", "days_offset": 90},
+    ]
+
+    ARTIFACT_TEMPLATES = [
+        {"name": "Gereksinim Dokümanı", "status": "completed"},
+        {"name": "Tasarım Spesifikasyonu", "status": "in_progress"},
+        {"name": "Test Raporu", "status": "not_created"},
+    ]
+
+    today = date.today()
+
+    for project in created_projects:
+        # 3 milestones per project with varied statuses
+        for ms_data in MILESTONE_TEMPLATES:
+            target_dt = datetime.combine(
+                today + timedelta(days=ms_data["days_offset"]),
+                datetime.min.time()
+            )
+            milestone = MilestoneModel(
+                project_id=project.id,
+                name=ms_data["name"],
+                status=ms_data["status"],
+                target_date=target_dt,
+            )
+            session.add(milestone)
+
+        # 3 artifacts per project with varied statuses
+        for art_data in ARTIFACT_TEMPLATES:
+            artifact = ArtifactModel(
+                project_id=project.id,
+                name=art_data["name"],
+                status=art_data["status"],
+            )
+            session.add(artifact)
+
+    await session.flush()

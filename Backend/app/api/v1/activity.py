@@ -8,11 +8,33 @@ from datetime import datetime
 
 from app.api.deps.project import get_project_member
 from app.api.deps.audit import get_audit_repo
+from app.api.deps.auth import get_current_user
 from app.application.use_cases.get_project_activity import GetProjectActivityUseCase
+from app.application.use_cases.get_global_activity import GetGlobalActivityUseCase
 from app.application.dtos.activity_dtos import ActivityResponseDTO
 
 
 router = APIRouter()
+
+
+@router.get(
+    "/activity",
+    response_model=ActivityResponseDTO,
+    summary="Global activity feed (Dashboard widget)",
+)
+async def get_global_activity(
+    limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    _user=Depends(get_current_user),
+    audit_repo=Depends(get_audit_repo),
+) -> ActivityResponseDTO:
+    """D-28: global activity feed across all projects for Dashboard ActivityFeed widget.
+
+    Any authenticated user can call this — no project membership check.
+    Page size capped at 200 (T-10-02-04 DoS mitigation, default 20).
+    """
+    use_case = GetGlobalActivityUseCase(audit_repo)
+    return await use_case.execute(limit=limit, offset=offset)
 
 
 @router.get(
