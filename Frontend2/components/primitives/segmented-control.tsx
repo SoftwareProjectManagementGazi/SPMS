@@ -48,6 +48,7 @@ export function SegmentedControl({
         const isActive = value === opt.id
         return (
           <button
+            type="button"
             key={opt.id}
             onClick={() => onChange(opt.id)}
             style={{

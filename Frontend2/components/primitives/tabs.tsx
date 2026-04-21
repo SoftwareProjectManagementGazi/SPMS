@@ -59,6 +59,7 @@ export function Tabs({
         const isActive = active === tab.id
         return (
           <button
+            type="button"
             key={tab.id}
             onClick={() => onChange(tab.id)}
             style={{

@@ -37,6 +37,7 @@ export function Collapsible({
       }}
     >
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         style={{
           width: "100%",
