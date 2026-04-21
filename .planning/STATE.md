@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-04-21T05:47:35.337Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-04-21T05:55:25.690Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 08 (Foundation & Design System) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 08 P02 | 2min | 2 tasks | 8 files |
+| Phase 08 P03 | 3min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,11 @@ Key constraints for v2.0:
 - [08-02]: cn() applied only to Kbd where .mono utility merges with caller className; other primitives are style-driven and accept className directly without tailwind-merge overhead
 - [08-02]: Tone/size maps hoisted to module scope as Record<Union,...> constants so they allocate once per module load rather than per render
 - [08-02]: Badge color-mix(in oklch,...) and Button inset-shadow tokens retained as inline style -- not lowered to Tailwind arbitrary values per CONVERSION RULE 8
+- [08-03]: PriorityChip token bridge -- level='medium' maps to --priority-med at token level while public API keeps 'medium' string (prototype CSS uses shortened name)
+- [08-03]: StatusDot uses direct var(--status-${status}) substitution instead of prototype's nested ternary since every union value is a legal token suffix (simpler + adds new statuses with zero body changes)
+- [08-03]: AlertBanner TONE_VARS hoisted to module-level Record<AlertTone,string> for once-per-module allocation; defensive fallback retained for runtime JS callers outside the union
+- [08-03]: Barrel index.ts uses explicit export { X } from ./x and export type { ... } for every primitive so consumers import components and their type unions symmetrically from @/components/primitives
+- [08-03]: Collapsible guards optional badge with badge != null (not truthy) so numeric 0 still renders -- matches prototype semantics where 0 is a legal count
 
 ### Pending Todos
 
@@ -100,8 +106,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T05:47:35.332Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-04-21T05:55:11.875Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 08 (Foundation & Design System) — 4 plans — 2026-04-20T20:39:59.057Z
