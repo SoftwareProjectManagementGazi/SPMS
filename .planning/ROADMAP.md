@@ -75,9 +75,9 @@ Plans:
   5. Workflow data structure accepts edge types, groups, and sequential-flexible mode; process_config reads/writes with schema_version normalization
 **Plans**: 10 plans
 Plans:
-- [ ] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
-- [ ] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
-- [ ] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
+- [x] 09-01-PLAN.md -- Alembic migration 005 + audit_log.metadata ORM alias (BACK-08)
+- [x] 09-02-PLAN.md -- DI split into deps/ package + backward-compat shim (BACK-07)
+- [x] 09-03-PLAN.md -- Phase 9 domain exceptions + test factories + authenticated_client fixture
 - [ ] 09-04-PLAN.md -- Project/Task/Team entity extensions + schema_version normalizer + team leader permission helper (BACK-01, BACK-02, BACK-03)
 - [ ] 09-05-PLAN.md -- Milestone vertical slice with GIN-backed JSONB queries (BACK-04)
 - [ ] 09-06-PLAN.md -- Artifact vertical slice + ArtifactSeeder in CreateProjectUseCase + split-by-role use cases (BACK-05)
