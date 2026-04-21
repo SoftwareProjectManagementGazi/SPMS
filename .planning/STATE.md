@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 09-06-PLAN.md
-last_updated: "2026-04-21T15:10:19.804Z"
+stopped_at: Completed 09-07-PLAN.md
+last_updated: "2026-04-21T15:20:51.129Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
-  percent: 71
+  completed_plans: 11
+  percent: 79
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 09 — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [███████░░░] 71%
 | Phase 09 P04 | 7 | 2 tasks | 22 files |
 | Phase 09 P05 | 7min | 2 tasks | 11 files |
 | Phase 09 P06 | 6 | 2 tasks | 15 files |
+| Phase 09 P07 | 12 | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,10 @@ Key constraints for v2.0:
 - Split-by-role DTO strategy: ArtifactUpdateByAssigneeDTO excludes assignee_id at field level (first defense); use case PermissionError check is second defense (D-36 / T-09-06-01)
 - ArtifactSeeder integrated into CreateProjectUseCase with artifact_repo=None default for backward compat; seeder failure rolls back Project atomically (D-28)
 - D-29 methodology-change no-op on artifacts: seeder only runs on CREATE, not PATCH — documented to prevent Phase 10-12 cascade-on-template-change additions
+- cycle_number auto-calc rule: count(audit_log WHERE action='phase_transition' AND entity_id=project_id AND extra_metadata->>'source_phase_id'=phase_id) + 1, unless explicit override in DTO (D-25)
+- revision auto-increment: PATCH always does existing.revision += 1; UpdateDTO omits revision field (T-09-07-01 tamper mitigation)
+- PDF font fallback: macOS Arial Unicode -> Linux DejaVu -> Windows ArialUni -> Helvetica with _safe() Latin-1 encoding guard (no crash, degraded diacritics visual on Helvetica)
+- multi_cell uses pdf.epw not 0 — fpdf2 2.8.7 raises FPDFException with w=0 at small font sizes
 
 ### Pending Todos
 
@@ -138,8 +143,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T15:10:19.798Z
-Stopped at: Completed 09-06-PLAN.md
+Last session: 2026-04-21T15:20:51.124Z
+Stopped at: Completed 09-07-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z

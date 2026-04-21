@@ -28,7 +28,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Milestone entity olusturulur — Clean Architecture vertical slice (domain, repository, ORM, use cases, API router)
 - [x] **BACK-05
 **: Artifact entity olusturulur — Clean Architecture vertical slice, proje olusturuldiginda metodolojiye gore otomatik seed
-- [ ] **BACK-06**: PhaseReport entity olusturulur — Clean Architecture vertical slice, PDF export destegi
+- [x] **BACK-06
+**: PhaseReport entity olusturulur — Clean Architecture vertical slice, PDF export destegi
 - [x] **BACK-07
 **: dependencies.py alt modullere ayrilir (3 yeni entity oncesi DI restructure)
 - [x] **BACK-08
