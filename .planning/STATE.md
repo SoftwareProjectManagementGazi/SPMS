@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 09-05-PLAN.md
-last_updated: "2026-04-21T15:00:08.601Z"
+stopped_at: Completed 09-06-PLAN.md
+last_updated: "2026-04-21T15:10:19.804Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 9
-  percent: 64
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 09 — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [██████░░░░] 64%
 | Phase 09 P03 | 4 | 2 tasks | 11 files |
 | Phase 09 P04 | 7 | 2 tasks | 22 files |
 | Phase 09 P05 | 7min | 2 tasks | 11 files |
+| Phase 09 P06 | 6 | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Key constraints for v2.0:
 - linked_phase_ids dedupe uses list(dict.fromkeys(...)) — preserves insertion order, O(n) time
 - Validation split: format regex in DTO @field_validator, existence check in use case (requires project lookup)
 - Integration tests use db_session fixture (not async_session); skip when migration 005 not applied
+- Split-by-role DTO strategy: ArtifactUpdateByAssigneeDTO excludes assignee_id at field level (first defense); use case PermissionError check is second defense (D-36 / T-09-06-01)
+- ArtifactSeeder integrated into CreateProjectUseCase with artifact_repo=None default for backward compat; seeder failure rolls back Project atomically (D-28)
+- D-29 methodology-change no-op on artifacts: seeder only runs on CREATE, not PATCH — documented to prevent Phase 10-12 cascade-on-template-change additions
 
 ### Pending Todos
 
@@ -134,8 +138,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T15:00:08.595Z
-Stopped at: Completed 09-05-PLAN.md
+Last session: 2026-04-21T15:10:19.798Z
+Stopped at: Completed 09-06-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z
