@@ -64,6 +64,12 @@ async def db_session(db_engine):
     await connection.close()
 
 @pytest_asyncio.fixture(scope="function")
+async def async_session(db_session):
+    """Alias for db_session — some tests use async_session as the fixture name."""
+    yield db_session
+
+
+@pytest_asyncio.fixture(scope="function")
 async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
     """
     Creates a FastAPI test client with dependency overrides.
