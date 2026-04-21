@@ -2,6 +2,17 @@
 
 @custom-variant dark (&:is([data-mode="dark"], [data-mode="dark"] *));
 
+/* FOUC guard: hide body until the inline theme-init script in <head> sets
+   data-mode on <html>. Without this, some browsers paint a frame with the
+   default light tokens from :root before the script runs, causing a visible
+   flash when the user's stored mode is dark. The script sets data-mode
+   synchronously before body content renders, so this suppression window
+   is typically sub-frame. A <noscript> override in layout.tsx restores
+   visibility when JS is disabled. */
+html:not([data-mode]) body {
+  visibility: hidden;
+}
+
 :root {
   /* Fonts */
   --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;

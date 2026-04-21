@@ -38,6 +38,9 @@ export default function RootLayout({
     <html lang="tr" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <noscript>
+          <style>{`html:not([data-mode]) body { visibility: visible !important; }`}</style>
+        </noscript>
       </head>
       <body className={`${geist.variable} ${geistMono.variable}`}>
         <AppProvider><AuthProvider>{children}</AuthProvider></AppProvider>
