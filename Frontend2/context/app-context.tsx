@@ -164,12 +164,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [customColors, preset],
   )
 
-  const applyPreset = React.useCallback((id: string) => {
-    if (PRESETS[id] || id.startsWith("custom-")) {
-      setPreset(id)
-      setCustomColors(false)
-    }
-  }, [])
+  const applyPreset = React.useCallback(
+    (id: string) => {
+      if (PRESETS[id] || id.startsWith("custom-")) {
+        setPreset(id)
+        setCustomColors(false)
+        // Sync mode state to match the preset's declared mode
+        const targetMode = PRESETS[id]?.mode
+        if (targetMode) setModeRaw(targetMode)
+      }
+    },
+    // setModeRaw is stable (from useState setter), safe to omit from deps
+    [],
+  )
 
   const applyCustomBrand = React.useCallback((params: BrandColor) => {
     setBrandLight(params.L)
