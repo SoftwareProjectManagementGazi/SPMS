@@ -31,6 +31,10 @@ class ProjectModel(TimestampedMixin, Base):
     process_config = Column(JSON, nullable=True)
     # Phase 3: per-project task key counter (incremented at task creation)
     task_seq = Column(Integer, nullable=False, server_default="0")
+    # Phase 9 BACK-01, D-34: project status
+    status = Column(String(20), nullable=False, server_default="ACTIVE", index=True)
+    # Phase 9 D-45: link to process_templates table (nullable; backfilled from methodology in migration 005)
+    process_template_id = Column(Integer, ForeignKey("process_templates.id"), nullable=True, index=True)
 
     manager = relationship("UserModel", backref="managed_projects")
     sprints = relationship("SprintModel", back_populates="project", cascade="all, delete-orphan")

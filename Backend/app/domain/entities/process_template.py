@@ -13,5 +13,11 @@ class ProcessTemplate(BaseModel):
     description: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    # Phase 9 additions:
+    default_artifacts: Optional[List[Dict[str, Any]]] = None  # D-27
+    default_phase_criteria: Optional[Dict[str, Any]] = None  # D-27
+    default_workflow: Optional[Dict[str, Any]] = None  # D-27
+    cycle_label_tr: Optional[str] = None  # D-43
+    cycle_label_en: Optional[str] = None  # D-43
 
     model_config = ConfigDict(from_attributes=True)
