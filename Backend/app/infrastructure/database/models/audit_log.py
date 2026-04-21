@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.infrastructure.database.models.base import Base
@@ -23,5 +24,12 @@ class AuditLogModel(Base):
     # action: "created", "updated", "deleted"
     action = Column(String(50), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+    # D-08: Rich phase transition envelope + other structured metadata.
+    # Python attribute is `extra_metadata` to avoid clashing with SQLAlchemy's
+    # reserved Base.metadata class attribute (Pitfall 7 from 09-RESEARCH.md).
+    # DB column is literally "metadata" (per D-08 verbatim — audit_log.metadata).
+    # Added by migration 005_phase9_schema.
+    extra_metadata = Column("metadata", JSONB, nullable=True)
 
     user = relationship("UserModel", backref="audit_logs")
