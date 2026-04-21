@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.api.deps.project import get_project_member
 from app.api.deps.audit import get_audit_repo
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import require_admin
 from app.application.use_cases.get_project_activity import GetProjectActivityUseCase
 from app.application.use_cases.get_global_activity import GetGlobalActivityUseCase
 from app.application.dtos.activity_dtos import ActivityResponseDTO
@@ -20,17 +20,23 @@ router = APIRouter()
 @router.get(
     "/activity",
     response_model=ActivityResponseDTO,
-    summary="Global activity feed (Dashboard widget)",
+    summary="Global activity feed (Dashboard widget, admin only)",
 )
 async def get_global_activity(
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _user=Depends(get_current_user),
+    _user=Depends(require_admin),
     audit_repo=Depends(get_audit_repo),
 ) -> ActivityResponseDTO:
     """D-28: global activity feed across all projects for Dashboard ActivityFeed widget.
 
-    Any authenticated user can call this — no project membership check.
+    Restricted to admin callers (fix for BL-01, Phase 10 review): the endpoint
+    exposes audit_log rows across every project including textual diffs in
+    `old_value` / `new_value` / `metadata`. Allowing any authenticated member
+    to read these rows leaks data from projects they are not a member of.
+    Non-admin callers receive HTTP 403 — the frontend Dashboard handles that
+    gracefully (renders an empty activity feed).
+
     Page size capped at 200 (T-10-02-04 DoS mitigation, default 20).
     """
     use_case = GetGlobalActivityUseCase(audit_repo)

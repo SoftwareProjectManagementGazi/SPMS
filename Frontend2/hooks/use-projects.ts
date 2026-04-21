@@ -44,11 +44,31 @@ export function useCreateProject() {
   });
 }
 
-// Activity feed for dashboard
+// Activity feed for dashboard.
+// BL-01 fix: /api/v1/activity is admin-only. Non-admin callers receive HTTP 403 —
+// swallow that and return an empty feed so the Dashboard widget degrades gracefully
+// instead of surfacing a scary error toast. Other errors still propagate normally.
 export function useGlobalActivity(limit = 20) {
   return useQuery({
     queryKey: ['activity', { limit }],
-    queryFn: () => projectService.getActivity(limit, 0),
+    queryFn: async () => {
+      try {
+        return await projectService.getActivity(limit, 0);
+      } catch (err: unknown) {
+        // Axios error shape: err.response.status === 403 for non-admin users
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 403) {
+          return { items: [], total: 0 };
+        }
+        throw err;
+      }
+    },
+    // Don't retry on 403 — the user will never be upgraded to admin by a retry.
+    retry: (failureCount, err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) return false;
+      return failureCount < 3;
+    },
   });
 }
 
