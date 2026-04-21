@@ -33,6 +33,11 @@ class ProjectUpdateDTO(BaseModel):
     methodology: Optional[Methodology] = None
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None
+    # D-25: lifecycle transitions (ACTIVE ↔ COMPLETED / ON_HOLD / ARCHIVED) go
+    # through PATCH /projects/{id} with this field. Previously omitted, so
+    # Pydantic silently dropped the incoming `status` key and every archive
+    # request returned 200 while persisting nothing.
+    status: Optional[ProjectStatus] = None
 
 class ProjectResponseDTO(BaseModel):
     id: int

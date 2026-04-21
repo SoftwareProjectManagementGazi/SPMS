@@ -116,8 +116,11 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         if not model:
             return project  # Entity not found — return as-is (caller handles)
 
-        # ARCH-06: dynamic field mapping — iterate over all updatable fields
-        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config"]
+        # ARCH-06: dynamic field mapping — iterate over all updatable fields.
+        # `status` is required for D-25 lifecycle transitions (archive/complete/
+        # hold/reactivate). It was missing, so even after the DTO started
+        # accepting status the repo would silently drop it.
+        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config", "status"]
 
         audit_entries = []
         for field in updatable_fields:

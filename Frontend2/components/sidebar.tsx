@@ -25,7 +25,9 @@ import {
 
 import { Avatar, Badge, Kbd } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useAuth } from "@/context/auth-context"
 import { t, type LangCode } from "@/lib/i18n"
+import { useRouter } from "next/navigation"
 
 // --- SidebarLogo ---------------------------------------------------------
 
@@ -157,6 +159,17 @@ function SidebarUserMenu({
 }) {
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement | null>(null)
+  const { logout } = useAuth()
+  const router = useRouter()
+
+  // D-03: logout must clear both AuthContext state (which clears localStorage
+  // token + auth_session cookie) and send the user back to /login. Previously
+  // the button only closed the menu — session stayed open until the next 401.
+  const handleLogout = () => {
+    setOpen(false)
+    logout()
+    router.push("/login")
+  }
 
   // Click-outside dismiss (exact pattern from shell.jsx lines 104-107)
   React.useEffect(() => {
@@ -270,7 +283,7 @@ function SidebarUserMenu({
             }}
           />
           <button
-            onClick={() => setOpen(false)}
+            onClick={handleLogout}
             style={{ ...menuItemStyle, color: "var(--priority-critical)" }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.background = "var(--surface-2)")
