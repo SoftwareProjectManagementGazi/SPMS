@@ -138,8 +138,19 @@ class UpdateProjectUseCase:
                     if sprint.is_active:
                         await self.sprint_repo.update(sprint.id, {"is_active": False})
 
+        # FL-06 fix (Phase 10 review): pass the set of user-supplied keys to the
+        # repository so explicit {description: null} or {end_date: null} requests
+        # actually clear the column instead of being silently dropped by the
+        # "new_val is None → skip" guard. model_dump(exclude_unset=True) above
+        # already contains only the keys the client sent, so its keys() are the
+        # authoritative intent.
+        updated_keys = set(update_data.keys())
         updated_project = project.model_copy(update=update_data)
-        result = await self.project_repo.update(updated_project)
+        result = await self.project_repo.update(
+            updated_project,
+            user_id=manager_id,
+            updated_keys=updated_keys,
+        )
         return ProjectResponseDTO.model_validate(result)
 
 

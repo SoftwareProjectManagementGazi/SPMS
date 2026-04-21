@@ -22,7 +22,22 @@ class IProjectRepository(ABC):
         pass
 
     @abstractmethod
-    async def update(self, project: Project) -> Project:
+    async def update(
+        self,
+        project: Project,
+        user_id: Optional[int] = None,
+        updated_keys: Optional[set] = None,
+    ) -> Project:
+        """Persist updated fields on an existing project.
+
+        FL-06 fix (Phase 10 review): ``updated_keys`` lets the application
+        layer distinguish "field not present in the PATCH body" from "field
+        explicitly cleared to None". When ``updated_keys`` is ``None`` the
+        repository keeps legacy behavior (skip assignment when new value is
+        ``None``); when the set is provided, only keys in the set are
+        considered, but a ``None`` value IS written so clients can clear
+        nullable columns like ``description`` or ``end_date``.
+        """
         pass
 
     @abstractmethod

@@ -100,12 +100,25 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         models = result.unique().scalars().all()
         return [self._to_entity(m) for m in models]
 
-    async def update(self, project: Project, user_id: int = None) -> Project:
+    async def update(
+        self,
+        project: Project,
+        user_id: Optional[int] = None,
+        updated_keys: Optional[set] = None,
+    ) -> Project:
         """Update project fields dynamically and write audit diff rows per changed field.
 
         Uses dynamic field mapping (ARCH-06): iterates over the non-None
         updated fields from the Project entity rather than hardcoding attribute
         assignments.  Accepts an optional user_id to record in audit rows.
+
+        FL-06 fix (Phase 10 review): when ``updated_keys`` is provided, the
+        repository trusts it as the authoritative list of fields the client
+        intended to change. That lets callers distinguish "field was absent
+        from the PATCH body" from "field was explicitly set to None", so
+        clearing nullable columns (description, end_date) actually persists.
+        Legacy callers that pass ``updated_keys=None`` keep the old behavior:
+        skip the write when the incoming value is None.
         """
         stmt = select(ProjectModel).where(
             ProjectModel.id == project.id, ProjectModel.is_deleted == False
@@ -124,9 +137,22 @@ class SqlAlchemyProjectRepository(IProjectRepository):
 
         audit_entries = []
         for field in updatable_fields:
+            # FL-06 fix: if caller supplied an authoritative key set, skip fields
+            # the client didn't send. Otherwise fall back to legacy behavior
+            # (iterate every updatable field).
+            if updated_keys is not None and field not in updated_keys:
+                continue
+
             new_val = getattr(project, field, None)
             old_val = getattr(model, field, None)
-            if new_val != old_val and new_val is not None:
+
+            # Legacy callers (updated_keys is None): keep the old None-skip so
+            # partial/normalizer writes don't accidentally clear columns.
+            # Explicit callers (updated_keys provided): allow None → clear the column.
+            if updated_keys is None and new_val is None:
+                continue
+
+            if new_val != old_val:
                 if user_id is not None:
                     audit_entries.append(
                         AuditLogModel(
@@ -134,7 +160,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
                             entity_id=project.id,
                             field_name=field,
                             old_value=str(old_val) if old_val is not None else None,
-                            new_value=str(new_val),
+                            new_value=str(new_val) if new_val is not None else None,
                             user_id=user_id,
                             action="updated",
                         )
