@@ -55,6 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(AUTH_TOKEN_KEY)
     // D-03: clear presence cookie alongside localStorage
     document.cookie = `auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    // FL-01 fix (Phase 10 review): clear per-user transient state held in
+    // sessionStorage so that on a shared device, User B logging in on the
+    // same tab never inherits User A's in-flight wizard draft (name, key,
+    // description, template selection). sessionStorage survives logout but
+    // NOT tab close — so this must be wiped explicitly.
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("spms_wizard_draft")
+    }
     setUser(null)
     setToken(null)
   }, [])
