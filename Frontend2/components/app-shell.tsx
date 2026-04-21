@@ -10,10 +10,11 @@
 
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 
 import { Sidebar } from "./sidebar"
 import { Header } from "./header"
-import { useProjects } from "@/hooks/use-projects"
+import { projectService } from "@/services/project-service"
 import { Badge } from "@/components/primitives"
 
 // PROJ-02: status badge tone + label maps — same pattern as ProjectCard (Plan 05)
@@ -43,9 +44,17 @@ export function AppShell({ children }: AppShellProps) {
   const projectRouteMatch = pathname?.match(/^\/projects\/(\d+)/)
   const projectRouteId = projectRouteMatch ? Number(projectRouteMatch[1]) : null
 
-  // Use cached projects list (TanStack Query cache — no extra network request when navigating
-  // from /projects to /projects/{id}; fetches once on first visit if cache is empty).
-  const { data: allProjects = [] } = useProjects()
+  // FL-03 fix (Phase 10 review): only fetch the projects list when we are on a
+  // /projects/{id} route and actually need to render the header status badge.
+  // Previously this ran on every shell route (/settings, /my-tasks, /reports,
+  // /teams, /dashboard), firing an unnecessary GET /api/v1/projects per page.
+  // Keep the same cache key as useProjects(undefined) so when the user
+  // eventually navigates to /projects the list page reuses this cache.
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ["projects", { status: undefined }],
+    queryFn: () => projectService.getAll(),
+    enabled: projectRouteId !== null,
+  })
   const headerProject = projectRouteId
     ? allProjects.find((p) => p.id === projectRouteId) ?? null
     : null
