@@ -198,15 +198,17 @@ def upgrade() -> None:
         )
     # Backfill: match by UPPER(name) = methodology text value for existing rows.
     # Safe to re-run: WHERE clause excludes already-filled rows.
-    op.execute(
-        sa.text(
-            "UPDATE projects p "
-            "SET process_template_id = pt.id "
-            "FROM process_templates pt "
-            "WHERE UPPER(pt.name) = p.methodology::text "
-            "AND p.process_template_id IS NULL"
+    # Guard: methodology may not exist on DBs initialized without it.
+    if _column_exists("projects", "methodology"):
+        op.execute(
+            sa.text(
+                "UPDATE projects p "
+                "SET process_template_id = pt.id "
+                "FROM process_templates pt "
+                "WHERE UPPER(pt.name) = p.methodology::text "
+                "AND p.process_template_id IS NULL"
+            )
         )
-    )
 
     # -------------------------------------------------------------------------
     # BACK-02: tasks.phase_id (nullable VARCHAR(20) — node ID reference)
@@ -509,18 +511,20 @@ def upgrade() -> None:
     # jsonb_set with COALESCE handles both NULL process_config and
     # existing non-null objects that just lack the schema_version key.
     # Safe to re-run: WHERE clause skips rows already having schema_version.
+    # Guard: process_config may not exist on DBs initialized without it.
     # -------------------------------------------------------------------------
-    op.execute(
-        sa.text(
-            "UPDATE projects "
-            "SET process_config = jsonb_set("
-            "    COALESCE(process_config, '{}'::jsonb), "
-            "    '{schema_version}', "
-            "    '1'::jsonb"
-            ") "
-            "WHERE process_config IS NULL OR NOT (process_config ? 'schema_version')"
+    if _column_exists("projects", "process_config"):
+        op.execute(
+            sa.text(
+                "UPDATE projects "
+                "SET process_config = jsonb_set("
+                "    COALESCE(process_config, '{}'::jsonb), "
+                "    '{schema_version}', "
+                "    '1'::jsonb"
+                ") "
+                "WHERE process_config IS NULL OR NOT (process_config ? 'schema_version')"
+            )
         )
-    )
 
     # -------------------------------------------------------------------------
     # D-45 NOTE: projects.methodology column is intentionally NOT dropped here.
