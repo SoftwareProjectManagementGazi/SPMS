@@ -69,3 +69,32 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         )
         result = await self.session.execute(stmt)
         return result.scalar() or 0
+
+    async def create_with_metadata(
+        self,
+        entity_type: str,
+        entity_id: int,
+        action: str,
+        user_id: Optional[int],
+        metadata: dict,
+        field_name: str = "transition",
+        old_value: Optional[str] = None,
+        new_value: Optional[str] = None,
+    ):
+        """D-08: insert audit_log row with full JSON envelope in extra_metadata column.
+
+        Note: DB column is literally `metadata`; Python attr is `extra_metadata` (Pitfall 7).
+        """
+        log = AuditLogModel(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            action=action,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            extra_metadata=metadata,
+        )
+        self.session.add(log)
+        await self.session.flush()
+        return log

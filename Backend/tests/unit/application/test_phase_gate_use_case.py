@@ -84,10 +84,11 @@ async def test_continuous_mode_raises_400():
 
 @pytest.mark.asyncio
 async def test_archived_target_node_raises():
-    project = _mk_project(extra_nodes=[{"id": "nd_Archived001", "name": "A", "x": 0, "y": 0, "color": "#888", "is_archived": True}])
+    # nd_Arc0000001 = nd_ + 10 chars (Arc0000001) — valid format, is_archived=True in project workflow
+    project = _mk_project(extra_nodes=[{"id": "nd_Arc0000001", "name": "A", "x": 0, "y": 0, "color": "#888", "is_archived": True}])
     project_repo, task_repo, audit_repo, session = _mk_mocks(project)
     uc = ExecutePhaseTransitionUseCase(project_repo, task_repo, audit_repo, session)
-    dto = PhaseTransitionRequestDTO(source_phase_id="nd_Src123DXYZ", target_phase_id="nd_Archived001")
+    dto = PhaseTransitionRequestDTO(source_phase_id="nd_Src123DXYZ", target_phase_id="nd_Arc0000001")
     with pytest.raises(ArchivedNodeReferenceError):
         await uc.execute(1, dto, user_id=5)
 

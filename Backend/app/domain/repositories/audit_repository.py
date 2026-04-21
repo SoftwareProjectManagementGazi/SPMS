@@ -32,3 +32,21 @@ class IAuditRepository(ABC):
         Used for cycle_number auto-calculation on PhaseReport create.
         """
         pass
+
+    @abstractmethod
+    async def create_with_metadata(
+        self,
+        entity_type: str,
+        entity_id: int,
+        action: str,
+        user_id: Optional[int],
+        metadata: dict,
+        field_name: str = "transition",
+        old_value: Optional[str] = None,
+        new_value: Optional[str] = None,
+    ):
+        """D-08: insert audit_log row with full JSON envelope in extra_metadata column.
+
+        Note: DB column is literally `metadata`; Python attr is `extra_metadata` (Pitfall 7).
+        """
+        pass
