@@ -170,7 +170,7 @@ async def authenticated_client(db_session):
 
         # Override DB dependency so the app uses the same transactional session
         app.dependency_overrides[get_db_session] = lambda: db_session
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=True) as client:
             client.headers["Authorization"] = f"Bearer {token}"
             yield client
         app.dependency_overrides.clear()
