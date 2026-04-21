@@ -9,10 +9,10 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 ### Foundation & Design System
 
-- [ ] **FOUND-01**: Theme token sistemi kurulur — prototype'in oklch CSS variable'lari globals.css'e tasinir, eski token'larla namespace catismasi onlenir
+- [x] **FOUND-01**: Theme token sistemi kurulur — prototype'in oklch CSS variable'lari globals.css'e tasinir, eski token'larla namespace catismasi onlenir
 - [ ] **FOUND-02**: Primitives kutuphanesi olusturulur — ProgressBar, SegmentedControl, Collapsible, AlertBanner component'leri TypeScript ile yazilir
-- [ ] **FOUND-03**: I18n altyapisi kurulur — useApp().language ile TR/EN destegi, tum yeni component'lerde T() fonksiyonu kullanilir
-- [ ] **FOUND-04**: Theme preset'lerine status-todo ve status-blocked tokenlari eklenir [E16]
+- [x] **FOUND-03**: I18n altyapisi kurulur — useApp().language ile TR/EN destegi, tum yeni component'lerde T() fonksiyonu kullanilir
+- [x] **FOUND-04**: Theme preset'lerine status-todo ve status-blocked tokenlari eklenir [E16]
 - [ ] **FOUND-05**: App Shell donusturulur — Sidebar, Header, Layout component'leri Next.js'e tasarim degisikligi olmadan aktarilir
 
 ### Backend Schema & Entity Expansion
@@ -134,10 +134,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 8 | Pending |
+| FOUND-01 | Phase 8 | Complete (08-01) |
 | FOUND-02 | Phase 8 | Pending |
-| FOUND-03 | Phase 8 | Pending |
-| FOUND-04 | Phase 8 | Pending |
+| FOUND-03 | Phase 8 | Complete (08-01) |
+| FOUND-04 | Phase 8 | Complete (08-01) |
 | FOUND-05 | Phase 8 | Pending |
 | BACK-01 | Phase 9 | Pending |
 | BACK-02 | Phase 9 | Pending |

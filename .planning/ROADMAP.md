@@ -57,7 +57,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
   5. status-todo and status-blocked color tokens are available in theme presets
 **Plans**: 4 plans
 Plans:
-- [ ] 08-01-PLAN.md -- Theme tokens, theme system, i18n foundation, AppContext provider
+- [x] 08-01-PLAN.md -- Theme tokens, theme system, i18n foundation, AppContext provider (completed 2026-04-21, 6 min)
 - [ ] 08-02-PLAN.md -- Primitive components batch 1 (Avatar, AvatarStack, Badge, Button, Card, Kbd, Tabs, Section)
 - [ ] 08-03-PLAN.md -- Primitive components batch 2 (PriorityChip, StatusDot, Input, ProgressBar, SegmentedControl, Collapsible, AlertBanner, Toggle) + barrel export
 - [ ] 08-04-PLAN.md -- App Shell conversion (Sidebar, Header, Layout rewrite) + visual verification
@@ -141,7 +141,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 5. Notifications | v1.0 | 7/7 | Complete | 2026-03-16 |
 | 6. Reporting & Analytics | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 7. Process Models, Adaptation & Integrations | v1.0 | 5/5 | Complete | 2026-04-11 |
-| 8. Foundation & Design System | v2.0 | 0/4 | Planning complete | - |
+| 8. Foundation & Design System | v2.0 | 1/4 | In progress | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 0/0 | Not started | - |
 | 10. Shell Pages & Project Features | v2.0 | 0/0 | Not started | - |
 | 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |

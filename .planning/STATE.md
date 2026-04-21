@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: planning
-stopped_at: Phase 8 context gathered
-last_updated: "2026-04-20T20:39:59.062Z"
-last_activity: 2026-04-20 -- Roadmap created for v2.0 (6 phases, 63 requirements mapped)
+status: executing
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-04-21T05:37:35Z"
+last_activity: 2026-04-21 -- Completed 08-01 (Foundation Scaffold & Theme Infrastructure)
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -21,35 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 8 -- Foundation & Design System
+**Current focus:** Phase 08 — Foundation & Design System
 
 ## Current Position
 
-Phase: 8 of 13 (Foundation & Design System) -- first phase of v2.0
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-04-20 -- Roadmap created for v2.0 (6 phases, 63 requirements mapped)
+Phase: 08 (Foundation & Design System) — EXECUTING
+Plan: 2 of 4
+Status: Plan 08-01 complete -- ready for 08-02
+Last activity: 2026-04-21 -- Completed 08-01 (Foundation Scaffold & Theme Infrastructure)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (v2.0) / 43 (v1.0 lifetime)
-- Average duration: -- (no v2.0 data yet)
-- Total execution time: 0 hours
+- Total plans completed: 1 (v2.0) / 43 (v1.0 lifetime)
+- Average duration: 6 min (v2.0)
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 08    | 1     | 6 min | 6 min    |
 
 **Recent Trend:**
 
-- Last 5 plans: -- (v2.0 not started)
-- Trend: --
+- Last 5 plans: 08-01 (6 min, 2 tasks, 9 files)
+- Trend: initial baseline
 
 *Updated after each plan completion*
 
@@ -69,6 +69,12 @@ Key constraints for v2.0:
 - [v2.0]: shadcn/ui KULLANILMAZ -- tum UI %100 prototipe birebir sadik kalir
 - [v2.0]: Tum frontend fazlari bitince Frontend2/ -> Frontend olarak yeniden adlandirilir, eski silinir
 - [v2.0]: 16 UI eksiklik prototype design system'a sadik kalarak entegre edilecek
+- [08-01]: Prototype CSS token names used directly (no shadcn --background/--card/--foreground mapping) per D-02
+- [08-01]: create-next-app scaffolded with lowercase 'frontend2', then renamed to 'Frontend2' (npm name restriction); on-disk folder matches CONTEXT.md
+- [08-01]: Tailwind v4 @custom-variant dark used to target [data-mode="dark"] for dark mode
+- [08-01]: next/font Inter + Geist_Mono exposed as --font-sans / --font-mono CSS variables via body className
+- [08-01]: Theme runtime module (lib/theme.ts) guards applyTokens/applyMode/applyRadius with `typeof document` for SSR import safety
+- [08-01]: Local git identity supplied via `git -c user.*` per commit (GSD rule prohibits `git config --global`)
 
 ### Pending Todos
 
@@ -89,8 +95,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 8 context gathered
-Resume file: --resume-file
+Last session: 2026-04-21T05:37:35Z
+Stopped at: Completed 08-01-PLAN.md
+Resume file: .planning/phases/08-foundation-design-system/08-02-PLAN.md
 
 **Planned Phase:** 08 (Foundation & Design System) — 4 plans — 2026-04-20T20:39:59.057Z
