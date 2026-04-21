@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-04-21T14:39:58.456Z"
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-04-21T14:50:20.735Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 7
-  percent: 50
+  completed_plans: 8
+  percent: 57
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 09 — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████░░░░░] 50%
 | Phase 09 P01 | 5min  | 2 tasks | 4 files  |
 | Phase 09 P02 | 5 | 2 tasks | 23 files |
 | Phase 09 P03 | 4 | 2 tasks | 11 files |
+| Phase 09 P04 | 7 | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,10 @@ Key constraints for v2.0:
 - [09-02] auth.py cross-imports get_user_repo from deps.user (get_current_user needs it); milestone/artifact/phase_report are empty stubs for plans 09-05/06/07
 - EmailStr rejects .local TLD — use @testexample.com for test-generated emails in factories and fixtures
 - authenticated_client fixture uses module-level app import (not fixture param) consistent with existing client fixture pattern
+- ProjectStatus enum co-located in project.py (follows existing pattern: Methodology in project.py, TaskPriority in task.py)
+- Normalizer dual-input: @model_validator(mode='before') handles dict and SQLAlchemy ORM object via __table__ attribute check (Pitfall 5 resolved)
+- Team.leader_id is organizational (D-13), NOT project-level — project scope via TeamProjects JOIN in user_leads_any_team_on_project
+- require_project_transition_authority wired in deps/auth.py + re-exported from dependencies.py shim for backward compat
 
 ### Pending Todos
 
@@ -124,8 +129,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T14:39:58.449Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-04-21T14:50:20.725Z
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z
