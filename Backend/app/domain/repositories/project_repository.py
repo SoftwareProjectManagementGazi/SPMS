@@ -45,3 +45,13 @@ class IProjectRepository(ABC):
     async def list_by_status(self, statuses: list) -> List[Project]:
         """API-04: GET /projects?status=X filter."""
         pass
+
+    @abstractmethod
+    async def list_by_member_and_status(self, user_id: int, statuses: List[str]) -> List[Project]:
+        """D-49: projects where user is a team member, filtered by status."""
+        pass
+
+    @abstractmethod
+    async def count_by_member(self, user_id: int) -> int:
+        """Count distinct projects where user is a team member (any non-deleted status)."""
+        pass

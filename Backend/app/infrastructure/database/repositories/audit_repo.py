@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List, Tuple
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sqlfunc
 
@@ -98,3 +99,105 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         self.session.add(log)
         await self.session.flush()
         return log
+
+    async def get_project_activity(
+        self,
+        project_id: int,
+        types: Optional[List[str]] = None,
+        user_id: Optional[int] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        limit: int = 30,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int]:
+        """D-46 / D-47: return (items, total).
+
+        Each item is a denormalized dict with user_name + user_avatar from users table JOIN.
+        entity_label is derived from entity_type + related entity lookups (best-effort; None allowed).
+        """
+        from app.infrastructure.database.models.user import UserModel
+
+        conditions = [
+            AuditLogModel.entity_type == "project",
+            AuditLogModel.entity_id == project_id,
+        ]
+
+        if types:
+            conditions.append(AuditLogModel.action.in_(types))
+        if user_id is not None:
+            conditions.append(AuditLogModel.user_id == user_id)
+        if date_from is not None:
+            conditions.append(AuditLogModel.timestamp >= date_from)
+        if date_to is not None:
+            conditions.append(AuditLogModel.timestamp <= date_to)
+
+        # Total count
+        count_stmt = select(sqlfunc.count(AuditLogModel.id)).where(*conditions)
+        total = (await self.session.execute(count_stmt)).scalar() or 0
+
+        # Items with LEFT JOIN on users for denormalization (D-47)
+        items_stmt = (
+            select(
+                AuditLogModel.id,
+                AuditLogModel.action,
+                AuditLogModel.entity_type,
+                AuditLogModel.entity_id,
+                AuditLogModel.field_name,
+                AuditLogModel.old_value,
+                AuditLogModel.new_value,
+                AuditLogModel.user_id,
+                UserModel.full_name.label("user_name"),
+                UserModel.avatar.label("user_avatar"),
+                AuditLogModel.timestamp,
+                AuditLogModel.extra_metadata,
+            )
+            .select_from(AuditLogModel)
+            .join(UserModel, UserModel.id == AuditLogModel.user_id, isouter=True)
+            .where(*conditions)
+            .order_by(AuditLogModel.timestamp.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(items_stmt)
+        rows = result.mappings().all()
+        items = [
+            {
+                "id": row["id"],
+                "action": row["action"],
+                "entity_type": row["entity_type"],
+                "entity_id": row["entity_id"],
+                "entity_label": None,  # Future: resolve from entity_type (task title, milestone name, etc.)
+                "field_name": row["field_name"],
+                "old_value": row["old_value"],
+                "new_value": row["new_value"],
+                "user_id": row["user_id"],
+                "user_name": row["user_name"],
+                "user_avatar": row["user_avatar"],
+                "timestamp": row["timestamp"],
+                "metadata": row["extra_metadata"],
+            }
+            for row in rows
+        ]
+        return items, total
+
+    async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
+        """D-48: recent activity for a user (any entity)."""
+        stmt = (
+            select(AuditLogModel)
+            .where(AuditLogModel.user_id == user_id)
+            .order_by(AuditLogModel.timestamp.desc())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        rows = result.scalars().all()
+        return [
+            {
+                "id": r.id,
+                "action": r.action,
+                "entity_type": r.entity_type,
+                "entity_id": r.entity_id,
+                "timestamp": r.timestamp,
+                "metadata": r.extra_metadata,
+            }
+            for r in rows
+        ]

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
+from datetime import datetime
 from app.domain.entities.task import Task
 
 class ITaskRepository(ABC):
@@ -37,4 +38,14 @@ class ITaskRepository(ABC):
     @abstractmethod
     async def list_by_project_and_phase(self, project_id: int, phase_id) -> List[Task]:
         """API-05: GET /tasks/project/{id}?phase_id=X filter."""
+        pass
+
+    @abstractmethod
+    async def count_active_by_assignee(self, user_id: int) -> int:
+        """Count non-deleted tasks assigned to user (proxy for active tasks)."""
+        pass
+
+    @abstractmethod
+    async def count_completed_since(self, user_id: int, since: datetime) -> int:
+        """Count tasks assigned to user updated since the given datetime."""
         pass

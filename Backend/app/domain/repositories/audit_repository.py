@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List, Tuple
+from datetime import datetime
 
 
 class IAuditRepository(ABC):
@@ -49,4 +50,27 @@ class IAuditRepository(ABC):
 
         Note: DB column is literally `metadata`; Python attr is `extra_metadata` (Pitfall 7).
         """
+        pass
+
+    @abstractmethod
+    async def get_project_activity(
+        self,
+        project_id: int,
+        types: Optional[List[str]] = None,
+        user_id: Optional[int] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        limit: int = 30,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int]:
+        """D-46 / D-47: paginated, filtered activity feed for a project.
+
+        Returns (items, total) where each item is a denormalized dict with
+        user_name + user_avatar fields populated via JOIN.
+        """
+        pass
+
+    @abstractmethod
+    async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
+        """D-48: most recent audit_log rows for a user across all entities."""
         pass

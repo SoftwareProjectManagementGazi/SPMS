@@ -280,6 +280,25 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
 
+    async def count_active_by_assignee(self, user_id: int) -> int:
+        """Non-deleted tasks assigned to user (proxy for active tasks count)."""
+        stmt = (
+            select(func.count(TaskModel.id))
+            .where(TaskModel.assignee_id == user_id)
+            .where(TaskModel.is_deleted == False)  # noqa: E712
+        )
+        return (await self.session.execute(stmt)).scalar() or 0
+
+    async def count_completed_since(self, user_id: int, since: datetime) -> int:
+        """Tasks where assignee=user and updated_at >= since (proxy for completed in period)."""
+        stmt = (
+            select(func.count(TaskModel.id))
+            .where(TaskModel.assignee_id == user_id)
+            .where(TaskModel.is_deleted == False)  # noqa: E712
+            .where(TaskModel.updated_at >= since)
+        )
+        return (await self.session.execute(stmt)).scalar() or 0
+
     async def unassign_incomplete_tasks(self, project_id: int, user_id: int) -> None:
         """Set assignee_id=NULL for all incomplete tasks assigned to user in this project.
         Tasks in board columns whose name contains 'done' (case-insensitive) are preserved.

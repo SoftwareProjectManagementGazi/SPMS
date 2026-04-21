@@ -204,3 +204,43 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         )
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
+
+    async def list_by_member_and_status(
+        self, user_id: int, statuses: List[str]
+    ) -> List[Project]:
+        """D-49: user is member of project via Team -> TeamProjects, filtered by project status."""
+        from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
+        from sqlalchemy import distinct as sqldistinct
+        stmt = (
+            self._get_base_query()
+            .join(TeamProjectModel, TeamProjectModel.project_id == ProjectModel.id)
+            .join(TeamModel, TeamModel.id == TeamProjectModel.team_id)
+            .join(TeamMemberModel, TeamMemberModel.team_id == TeamModel.id)
+            .where(
+                TeamMemberModel.user_id == user_id,
+                TeamModel.is_deleted == False,  # noqa: E712
+                ProjectModel.is_deleted == False,  # noqa: E712
+                ProjectModel.status.in_(statuses),
+            )
+            .distinct()
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]
+
+    async def count_by_member(self, user_id: int) -> int:
+        """Distinct project count for user's memberships, any non-deleted status."""
+        from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
+        from sqlalchemy import func as sqlfunc, distinct as sqldistinct
+        stmt = (
+            select(sqlfunc.count(sqldistinct(ProjectModel.id)))
+            .select_from(ProjectModel)
+            .join(TeamProjectModel, TeamProjectModel.project_id == ProjectModel.id)
+            .join(TeamModel, TeamModel.id == TeamProjectModel.team_id)
+            .join(TeamMemberModel, TeamMemberModel.team_id == TeamModel.id)
+            .where(
+                TeamMemberModel.user_id == user_id,
+                TeamModel.is_deleted == False,  # noqa: E712
+                ProjectModel.is_deleted == False,  # noqa: E712
+            )
+        )
+        return (await self.session.execute(stmt)).scalar() or 0

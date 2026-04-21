@@ -122,3 +122,24 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         )
         result = await self.session.execute(stmt)
         return [Team.model_validate(m) for m in result.scalars().all()]
+
+    async def update(self, team) -> "Team":
+        """Minimal update: persist name, description, leader_id changes from a Team entity."""
+        from app.domain.entities.team import Team as TeamEntity
+        stmt = self._get_base_query().where(TeamModel.id == team.id)
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        if model is None:
+            from app.domain.exceptions import DomainError
+            raise DomainError(f"Team {team.id} not found")
+        model.name = team.name
+        if hasattr(team, "description"):
+            model.description = team.description
+        model.leader_id = team.leader_id
+        await self.session.flush()
+        await self.session.commit()
+        # Re-fetch
+        stmt2 = self._get_base_query().where(TeamModel.id == team.id)
+        result2 = await self.session.execute(stmt2)
+        refreshed = result2.scalar_one()
+        return self._to_entity(refreshed)
