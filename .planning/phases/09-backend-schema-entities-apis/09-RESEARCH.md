@@ -1700,7 +1700,7 @@ class Task(BaseModel):
 | A11 | `slowapi` `@limiter.limit("2/minute")` is acceptable for D-51 "30s per user" rate limit on PDF endpoint (slowapi uses per-IP by default; `key_func=user.id` injection needed) | Pattern 7 | Medium — slowapi's `Limiter(key_func=get_remote_address)` keys by IP; for per-user need custom key_func. Planner: implement custom decorator that keys by `current_user.id`. |
 | A12 | Currency of fpdf2 API in codebase (2.8.7) matches what `reports.py` already uses; new `phase_report_pdf.py` can use identical `new_x="LMARGIN", new_y="NEXT"` pattern | Pattern 7 | Low — verified by reading reports.py line 198-204. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What if `process_templates` lacks a template matching a legacy project's methodology?**
    - What we know: D-45 backfill assumes matching rows.
