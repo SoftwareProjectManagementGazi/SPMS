@@ -25,7 +25,7 @@ export function ProgressBar({
   className,
   style,
 }: ProgressBarProps) {
-  const percent = Math.min((value / max) * 100, 100)
+  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
     <div
       className={className}
