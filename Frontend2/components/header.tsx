@@ -27,6 +27,28 @@ export function Header({ statusBadge, onCreateProject }: HeaderProps) {
   const app = useApp()
   const lang = app.language
 
+  // Hydration guard: AppContext reads mode/language from localStorage, so SSR
+  // renders with defaults and CSR hydrates with the stored value — the theme
+  // toggle's icon, aria-label, and title can all disagree between the two.
+  // Defer mode-dependent rendering until after mount to keep SSR/CSR HTML
+  // identical. (10-09 hydration fix)
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const themeToggleLabel = !mounted
+    ? lang === "tr"
+      ? "Temayı değiştir"
+      : "Switch theme"
+    : app.mode === "light"
+      ? lang === "tr"
+        ? "Karanlık moda geç"
+        : "Switch to dark mode"
+      : lang === "tr"
+        ? "Aydınlık moda geç"
+        : "Switch to light mode"
+
   const iconButtonStyle: React.CSSProperties = {
     color: "var(--fg-muted)",
     padding: 6,
@@ -88,27 +110,15 @@ export function Header({ statusBadge, onCreateProject }: HeaderProps) {
 
       <button
         onClick={() => app.setMode(app.mode === "light" ? "dark" : "light")}
-        aria-label={
-          app.mode === "light"
-            ? lang === "tr"
-              ? "Karanlık moda geç"
-              : "Switch to dark mode"
-            : lang === "tr"
-              ? "Aydınlık moda geç"
-              : "Switch to light mode"
-        }
-        title={
-          app.mode === "light"
-            ? lang === "tr"
-              ? "Karanlık moda geç"
-              : "Switch to dark mode"
-            : lang === "tr"
-              ? "Aydınlık moda geç"
-              : "Switch to light mode"
-        }
+        aria-label={themeToggleLabel}
+        title={themeToggleLabel}
         style={iconButtonStyle}
       >
-        {app.mode === "light" ? <Moon size={16} /> : <Sun size={16} />}
+        {mounted
+          ? app.mode === "light"
+            ? <Moon size={16} />
+            : <Sun size={16} />
+          : <Moon size={16} />}
       </button>
 
       <button
