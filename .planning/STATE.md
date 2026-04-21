@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: verifying
-stopped_at: Phase 9 context gathered
-last_updated: "2026-04-21T12:41:55.514Z"
-last_activity: 2026-04-21
+status: executing
+stopped_at: "Completed 09-01-PLAN.md"
+last_updated: "2026-04-21T14:24:00Z"
+last_activity: "2026-04-21 — Phase 09 plan 01 complete"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 4
-  percent: 29
+  completed_plans: 5
+  percent: 36
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 08 — Foundation & Design System
+**Current focus:** Phase --phase — 09
 
 ## Current Position
 
-Phase: 08 (Foundation & Design System) — COMPLETED (4/4 plans)
-Plan: 4 of 4 complete
-Status: Phase-level verification pending (orchestrator)
-Last activity: 2026-04-21
+Phase: 09 — EXECUTING
+Plan: 2 of 10
+Status: Plan 01 complete — ready for plan 02
+Last activity: 2026-04-21 — Phase 09 plan 01 (migration 005 + AuditLogModel) complete
 
 Progress: [██████████] 100%
 
@@ -55,6 +55,7 @@ Progress: [██████████] 100%
 | Phase 08 P02 | 2min  | 2 tasks | 8 files  |
 | Phase 08 P03 | 3min  | 2 tasks | 9 files  |
 | Phase 08 P04 | 17min | 3 tasks | 12 files |
+| Phase 09 P01 | 5min  | 2 tasks | 4 files  |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ Key constraints for v2.0:
 - [08-04]: Breadcrumb parts derived from usePathname() via a small switch over known routes instead of a route-metadata convention; unknown routes fall back to capitalizing the first segment. Non-last parts render as next/link so clicking navigates without full reload
 - [08-04]: SidebarUserMenu click-outside dismiss uses a document 'mousedown' listener attached inside a React.useEffect with open as dep (exact prototype pattern from shell.jsx lines 104-107)
 - [08-04]: Root app/page.tsx uses next/navigation redirect() to send / -> /dashboard so the bare domain always lands on the canonical authenticated landing page
+- [09-01]: extra_metadata Python attribute maps to DB column 'metadata' via Column("metadata", JSONB) alias trick — avoids SQLAlchemy Base.metadata reserved name clash (Pitfall 7)
+- [09-01]: projects.methodology NOT dropped in migration 005 — deferred to 006 per D-45 for safe rollback window after Phase 10+ frontend switches to process_template_id
+- [09-01]: All migration 005 integration tests skip gracefully when DB not migrated via alembic upgrade head (conftest uses create_all not Alembic — Pitfall 1 documented)
+- [09-01]: _index_exists() added as new idempotent helper using pg_indexes WHERE schemaname='public' — consistent with existing _table_exists/_column_exists pattern
 
 ### Pending Todos
 
@@ -113,8 +118,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 9 context gathered
-Resume file: --resume-file
+Last session: 2026-04-21T14:24:00Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z
