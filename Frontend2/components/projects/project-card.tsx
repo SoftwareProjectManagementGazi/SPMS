@@ -188,9 +188,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         {/* Card body */}
         <div style={{ padding: 16 }}>
-          {/* Top row: key + name | methodology badge + status badge */}
+          {/* Top row: key + name | methodology badge + status badge.
+              paddingRight leaves a clear zone for the absolutely-positioned
+              3-dot overflow menu (top:8, right:8) so badges don't collide. */}
           <div style={{ display: "flex", alignItems: "flex-start",
-            justifyContent: "space-between", gap: 8 }}>
+            justifyContent: "space-between", gap: 8, paddingRight: 28 }}>
             <div style={{ minWidth: 0 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600,
                 color: "var(--fg-muted)", background: "var(--surface-2)",

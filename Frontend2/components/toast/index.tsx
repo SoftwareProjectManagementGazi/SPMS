@@ -48,8 +48,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999,
-        display: "flex", flexDirection: "column-reverse", gap: 8, maxWidth: 320 }}>
+      <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999,
+        display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 }}>
         {toasts.map(t => (
           <div key={t.id}
             style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)",
