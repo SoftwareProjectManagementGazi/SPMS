@@ -36,6 +36,8 @@ Ekiplerin farkli proje yonetim metodolojilerine uygun sekilde projelerini ve gor
 
 v1.0 delivers: authentication & team management, full task/project module with dependencies and recurrence, Kanban/Calendar/Gantt/List views, in-app + email notifications, reporting with PDF/Excel export, and Scrum/Kanban/Waterfall/Iterative process model support with external integrations.
 
+**v2.0 progress (2026-04-21):** Phase 8 complete (Next.js shell, design tokens, primitive components, App Shell). Phase 9 complete (Alembic migration 005, milestones/artifacts/phase reports, phase gate API, workflow validation, activity feed, team leader endpoints — 65 integration tests green).
+
 ## Requirements
 
 ### Validated
@@ -143,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v2.0 milestone started*
+*Last updated: 2026-04-21 after Phase 9 complete*
