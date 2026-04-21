@@ -106,13 +106,16 @@ export const projectService = {
   },
 
   // D-26: task statistics for Dashboard StatCard 4 (open/in-progress/done task counts)
+  // Uses /tasks/my-tasks — the only task-list endpoint with no path param. Backend has no
+  // global GET /tasks route (405 Method Not Allowed); project-scoped lists live at
+  // /tasks/project/{project_id}.
   getTaskStats: async (): Promise<{
     total: number;
     open: number;
     in_progress: number;
     done: number;
   }> => {
-    const response = await apiClient.get<Array<{ status: string }>>('/tasks');
+    const response = await apiClient.get<Array<{ status: string }>>('/tasks/my-tasks');
     const tasks = response.data;
     return {
       total: tasks.length,

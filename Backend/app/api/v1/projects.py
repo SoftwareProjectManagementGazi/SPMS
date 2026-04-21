@@ -140,6 +140,14 @@ async def list_projects(
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_current_user),
 ):
+    # Admin bypass: admins see every non-deleted project regardless of membership.
+    # Without this, GET /projects falls through to ListProjectsUseCase which filters
+    # by manager_id/member and returns an empty list for admins who manage nothing.
+    if _is_admin(current_user):
+        statuses = [status] if status is not None else ["ACTIVE", "COMPLETED", "ON_HOLD", "ARCHIVED"]
+        results = await project_repo.list_by_status(statuses)
+        return [_sanitize_process_config(r) for r in results]
+
     # API-04: if status param provided, delegate to list_by_status
     if status is not None:
         results = await project_repo.list_by_status([status])
