@@ -95,3 +95,30 @@ class SqlAlchemyTeamRepository(ITeamRepository):
             model.is_deleted = True
             model.deleted_at = datetime.utcnow()
             await self.session.commit()
+
+    async def user_leads_any_team_on_project(self, user_id: int, project_id: int) -> bool:
+        """D-16 / D-14: EXISTS(Teams t JOIN TeamProjects tp ON t.id=tp.team_id
+        WHERE t.leader_id = :user_id AND tp.project_id = :project_id AND t.is_deleted = FALSE)."""
+        from app.infrastructure.database.models.team import TeamProjectModel
+        stmt = (
+            select(TeamModel.id)
+            .join(TeamProjectModel, TeamProjectModel.team_id == TeamModel.id)
+            .where(
+                TeamModel.leader_id == user_id,
+                TeamProjectModel.project_id == project_id,
+                TeamModel.is_deleted == False,  # noqa: E712
+            )
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.first() is not None
+
+    async def get_teams_led_by(self, user_id: int) -> list:
+        """D-16 / D-17: all teams where leader_id = user_id."""
+        from app.domain.entities.team import Team
+        stmt = (
+            select(TeamModel)
+            .where(TeamModel.leader_id == user_id, TeamModel.is_deleted == False)  # noqa: E712
+        )
+        result = await self.session.execute(stmt)
+        return [Team.model_validate(m) for m in result.scalars().all()]

@@ -15,6 +15,7 @@ from app.api.deps.auth import (  # noqa: F401
     get_current_user,
     _is_admin,
     require_admin,
+    require_project_transition_authority,
 )
 from app.api.deps.project import get_project_repo, get_project_member  # noqa: F401
 from app.api.deps.task import get_task_repo, get_task_project_member, get_dependency_repo  # noqa: F401

@@ -41,6 +41,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             "project_id": model.project_id,
             "sprint_id": model.sprint_id,
             "column_id": model.column_id,
+            "phase_id": model.phase_id,
             "assignee_id": model.assignee_id,
             "reporter_id": model.reporter_id,
             "parent_task_id": model.parent_task_id,
@@ -267,6 +268,17 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             await self.session.commit()
             return True
         return False
+
+    async def list_by_project_and_phase(self, project_id: int, phase_id: Optional[str]) -> List[Task]:
+        """API-05: GET /tasks/project/{id}?phase_id=X filter. None phase_id returns all project tasks."""
+        stmt = self._get_base_query().where(
+            TaskModel.project_id == project_id,
+            TaskModel.is_deleted == False,  # noqa: E712
+        )
+        if phase_id is not None:
+            stmt = stmt.where(TaskModel.phase_id == phase_id)
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]
 
     async def unassign_incomplete_tasks(self, project_id: int, user_id: int) -> None:
         """Set assignee_id=NULL for all incomplete tasks assigned to user in this project.

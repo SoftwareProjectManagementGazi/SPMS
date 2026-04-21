@@ -195,3 +195,12 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
         return [User.model_validate(m) for m in models]
+
+    async def list_by_status(self, statuses: list) -> List[Project]:
+        """API-04: GET /projects?status=X filter. Accepts list for multi-status support."""
+        stmt = (
+            self._get_base_query()
+            .where(ProjectModel.status.in_(statuses), ProjectModel.is_deleted == False)  # noqa: E712
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]

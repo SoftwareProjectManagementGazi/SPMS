@@ -18,3 +18,13 @@ class ITeamRepository(ABC):
     async def get_members(self, team_id: int) -> List[int]: ...  # returns user_ids
     @abstractmethod
     async def soft_delete(self, team_id: int) -> None: ...
+
+    @abstractmethod
+    async def user_leads_any_team_on_project(self, user_id: int, project_id: int) -> bool:
+        """D-16: EXISTS(Teams JOIN TeamProjects WHERE leader_id=user_id AND project_id=project_id)."""
+        ...
+
+    @abstractmethod
+    async def get_teams_led_by(self, user_id: int) -> list:
+        """D-16: Teams where leader_id=user_id."""
+        ...

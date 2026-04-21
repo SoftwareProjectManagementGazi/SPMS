@@ -33,3 +33,8 @@ class ITaskRepository(ABC):
         Tasks in 'done' columns are preserved.
         """
         pass
+
+    @abstractmethod
+    async def list_by_project_and_phase(self, project_id: int, phase_id) -> List[Task]:
+        """API-05: GET /tasks/project/{id}?phase_id=X filter."""
+        pass

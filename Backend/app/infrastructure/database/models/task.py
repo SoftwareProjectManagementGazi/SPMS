@@ -12,6 +12,7 @@ class TaskModel(TimestampedMixin, Base):
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     sprint_id = Column(Integer, ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
     column_id = Column(Integer, ForeignKey("board_columns.id", ondelete="SET NULL"), nullable=True)
+    phase_id = Column(String(20), nullable=True, index=True)  # D-22 / BACK-02
     assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     reporter_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 

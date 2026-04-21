@@ -40,3 +40,8 @@ class IProjectRepository(ABC):
     @abstractmethod
     async def get_members(self, project_id: int) -> List[User]:
         pass
+
+    @abstractmethod
+    async def list_by_status(self, statuses: list) -> List[Project]:
+        """API-04: GET /projects?status=X filter."""
+        pass

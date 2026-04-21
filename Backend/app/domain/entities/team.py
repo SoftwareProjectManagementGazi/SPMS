@@ -8,6 +8,7 @@ class Team(BaseModel):
     name: str
     description: Optional[str] = None
     owner_id: int
+    leader_id: Optional[int] = None  # D-13 / D-34
     is_deleted: bool = False
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
