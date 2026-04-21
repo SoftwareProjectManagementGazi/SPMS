@@ -110,12 +110,12 @@ def upgrade() -> None:
     if not _column_exists("projects", "process_config"):
         op.add_column(
             "projects",
-            sa.Column("process_config", sa.JSON(), nullable=True),
+            sa.Column("process_config", JSONB, nullable=True),
         )
     if not _column_exists("projects", "custom_fields"):
         op.add_column(
             "projects",
-            sa.Column("custom_fields", sa.JSON(), nullable=True),
+            sa.Column("custom_fields", JSONB, nullable=True),
         )
     if not _column_exists("projects", "task_seq"):
         op.add_column(
@@ -569,11 +569,11 @@ def upgrade() -> None:
             sa.text(
                 "UPDATE projects "
                 "SET process_config = jsonb_set("
-                "    COALESCE(process_config, '{}'::jsonb), "
+                "    COALESCE(process_config::jsonb, '{}'::jsonb), "
                 "    '{schema_version}', "
                 "    '1'::jsonb"
                 ") "
-                "WHERE process_config IS NULL OR NOT (process_config ? 'schema_version')"
+                "WHERE process_config IS NULL OR NOT (process_config::jsonb ? 'schema_version')"
             )
         )
 

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SqlEnum, Date, Table, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.infrastructure.database.models.base import Base, TimestampedMixin
@@ -27,8 +28,8 @@ class ProjectModel(TimestampedMixin, Base):
     methodology = Column(SqlEnum(Methodology, name="methodology_type"), nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    custom_fields = Column(JSON, nullable=True)
-    process_config = Column(JSON, nullable=True)
+    custom_fields = Column(JSONB, nullable=True)
+    process_config = Column(JSONB, nullable=True)
     # Phase 3: per-project task key counter (incremented at task creation)
     task_seq = Column(Integer, nullable=False, server_default="0")
     # Phase 9 BACK-01, D-34: project status
