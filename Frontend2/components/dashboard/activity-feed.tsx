@@ -81,7 +81,13 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
           Henüz aktivite yok.
         </div>
       ) : (
-        <div>
+        <div
+          style={{
+            maxHeight: 360,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+          }}
+        >
           {items.map((item, i) => {
             const firstName = item.user_name?.split(" ")[0] ?? item.user_name
             const initials = getInitials(item.user_name ?? "?")
