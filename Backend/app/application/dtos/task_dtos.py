@@ -79,7 +79,7 @@ class TaskResponseDTO(BaseModel):
     title: str
     description: Optional[str] = None
     priority: TaskPriority
-    status: str  # Artık UseCase tarafından hesaplanıp buraya string olarak konacak
+    status: str = "todo"  # Computed by UseCase from column name; default avoids validation errors when model_validate is called directly on Task entities
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool
