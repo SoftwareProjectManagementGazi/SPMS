@@ -96,8 +96,75 @@ async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
     """
     # Override the get_db_session dependency to return our transactional session
     app.dependency_overrides[get_db_session] = lambda: db_session
-    
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
-    
+
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Phase 9 — reusable authenticated test client (plan 09-03)
+# ---------------------------------------------------------------------------
+from contextlib import asynccontextmanager
+from jose import jwt as _jose_jwt
+
+
+def _make_test_jwt(email: str) -> str:
+    """Generate a JWT for a test user email using the real app secret/algorithm.
+
+    Security note (T-09-03-01): Tests use settings.JWT_SECRET (from .env which is gitignored).
+    These tokens are ephemeral — db_session rolls back after each test (T-09-03-04).
+    """
+    payload = {"sub": email}
+    return _jose_jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+@pytest_asyncio.fixture
+async def authenticated_client(db_session):
+    """Factory fixture: returns a callable that builds an httpx client
+    with ``Authorization: Bearer <jwt>`` for a user of the requested role.
+
+    Uses the transactional ``db_session`` fixture — every user created here is
+    rolled back after the test, preventing data leakage (T-09-03-04).
+
+    Usage::
+
+        async def test_something(authenticated_client):
+            async with authenticated_client(role="admin") as client:
+                r = await client.get("/api/v1/projects")
+    """
+    from sqlalchemy import select
+    from app.infrastructure.database.models.role import RoleModel
+    from app.infrastructure.database.models.user import UserModel
+
+    @asynccontextmanager
+    async def _builder(role: str = "member"):
+        # Fetch (or create) the role row matching the requested role name
+        stmt = select(RoleModel).where(RoleModel.name.ilike(role))
+        result = await db_session.execute(stmt)
+        role_row = result.scalar_one_or_none()
+        if role_row is None:
+            # Fallback: pick any available role to avoid test failures from seed-data drift
+            stmt2 = select(RoleModel).limit(1)
+            role_row = (await db_session.execute(stmt2)).scalar_one()
+
+        user = UserModel(
+            email=f"authclient+{role}@testexample.com",
+            full_name=f"Test {role.capitalize()}",
+            password_hash="$2b$12$fakehashfakehashfakehashfakehashfakehashfakehashfakehashfa",
+            is_active=True,
+            role_id=role_row.id,
+        )
+        db_session.add(user)
+        await db_session.flush()
+        token = _make_test_jwt(user.email)
+
+        # Override DB dependency so the app uses the same transactional session
+        app.dependency_overrides[get_db_session] = lambda: db_session
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            client.headers["Authorization"] = f"Bearer {token}"
+            yield client
+        app.dependency_overrides.clear()
+
+    return _builder
