@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 status: executing
-stopped_at: "Completed 09-01-PLAN.md"
-last_updated: "2026-04-21T14:24:00Z"
-last_activity: "2026-04-21 — Phase 09 plan 01 complete"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-04-21T14:32:50.214Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 5
-  percent: 36
+  completed_plans: 6
+  percent: 43
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 09 — EXECUTING
-Plan: 2 of 10
-Status: Plan 01 complete — ready for plan 02
-Last activity: 2026-04-21 — Phase 09 plan 01 (migration 005 + AuditLogModel) complete
+Plan: 3 of 10
+Status: Ready to execute
+Last activity: 2026-04-21
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████████] 100%
 | Phase 08 P03 | 3min  | 2 tasks | 9 files  |
 | Phase 08 P04 | 17min | 3 tasks | 12 files |
 | Phase 09 P01 | 5min  | 2 tasks | 4 files  |
+| Phase 09 P02 | 5 | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Key constraints for v2.0:
 - [09-01]: projects.methodology NOT dropped in migration 005 — deferred to 006 per D-45 for safe rollback window after Phase 10+ frontend switches to process_template_id
 - [09-01]: All migration 005 integration tests skip gracefully when DB not migrated via alembic upgrade head (conftest uses create_all not Alembic — Pitfall 1 documented)
 - [09-01]: _index_exists() added as new idempotent helper using pg_indexes WHERE schemaname='public' — consistent with existing _table_exists/_column_exists pattern
+- [09-02] dependencies.py split by-entity into deps/ sub-modules; identity-preserving shim at old location preserves all legacy import paths (D-31 / BACK-07)
+- [09-02] auth.py cross-imports get_user_repo from deps.user (get_current_user needs it); milestone/artifact/phase_report are empty stubs for plans 09-05/06/07
 
 ### Pending Todos
 
@@ -118,8 +121,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-21T14:24:00Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-04-21T14:32:50.206Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
 
 **Planned Phase:** 9 (Backend Schema, Entities & APIs) — 10 plans — 2026-04-21T12:41:55.509Z
