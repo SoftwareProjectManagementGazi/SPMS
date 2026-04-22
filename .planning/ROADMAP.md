@@ -123,7 +123,7 @@ Plans:
 **Plans**: 10 plans
 Plans:
 - [x] 11-01-PLAN.md — Wave 0 infra: npm install (dnd-kit/TipTap/TanStack Table/Vitest/Playwright), TaskModalContext, methodology-matrix, task/label/comment/attachment services + hooks, process_config normalizer extension (completed 2026-04-22, 16 min, 3 tasks, 22 created + 4 modified = 26 files)
-- [ ] 11-02-PLAN.md — Task Create Modal (15 fields) + Header Create button rewire per D-07 + Yeni Proje permission gate per D-08
+- [x] 11-02-PLAN.md — Task Create Modal (15 fields) + Header Create button rewire per D-07 + Yeni Proje permission gate per D-08 (completed 2026-04-22, 9 min, 2 tasks, 4 created + 4 modified = 8 files)
 - [ ] 11-03-PLAN.md — Backend labels slice (Clean Architecture): Label entity + ILabelRepository + SqlAlchemy impl + use cases + router + DI wiring + integration tests
 - [ ] 11-04-PLAN.md — ProjectDetail 8-tab shell + Settings sub-tabs (General/Columns/Workflow/Lifecycle stub) + Members tab + Activity/Lifecycle stubs
 - [ ] 11-05-PLAN.md — Board tab with @dnd-kit + BoardCard/BoardColumn/BoardToolbar + WIP Warn+Allow (D-20) + density toggle + phase filter

@@ -2,16 +2,17 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
+current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-04-22T22:28:00.000Z"
-last_activity: 2026-04-22 -- Phase 11 Plan 01 complete (Wave 0 infrastructure)
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-04-22T19:44:53.474Z"
+last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 25
-  percent: 74
+  completed_plans: 26
+  percent: 76
 ---
 
 # Project State
@@ -26,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 2 of 10
-Status: Completed Plan 11-01 (Wave 0 infrastructure); next plan 11-02
-Last activity: 2026-04-22 -- Plan 11-01 complete (3 tasks, 22 files created, 4 modified)
+Plan: 3 of 10
+Status: Ready to execute
+Last activity: 2026-04-22
 
-Progress: [██████████] 74% (25/34 plans)
+Progress: [████████░░] 76%
 
 ## Performance Metrics
 
@@ -78,6 +79,7 @@ Progress: [██████████] 74% (25/34 plans)
 | Phase 10-shell-pages-project-features P09 | 60 | 2 tasks | 12 files |
 | Phase 10-shell-pages-project-features P10 | 8 | 1 task  | 1 file   |
 | Phase 11 P01 | 16min | 3 tasks | 26 files |
+| Phase Phase 11 P02 P9 | 2 | 8 tasks | - files |
 
 ## Accumulated Context
 
@@ -185,6 +187,12 @@ Key constraints for v2.0:
 - [11-01] vitest.config.ts sets environmentOptions.jsdom.url='http://localhost/' so origin is non-opaque (avoids SecurityError on localStorage access)
 - [11-01] useUpdateTask (properties sidebar inline edit) and useMoveTask (board DnD) both implement cancelQueries → setQueryData → rollback → invalidate pattern for optimistic UX (D-38)
 - [11-01] labelService.create catches 409 Conflict, re-fetches project labels, and returns the matching existing label (Pitfall 7 auto-create race mitigation)
+- [11-02] TaskCreateModal mounted inside TaskModalProvider as sibling of children; single overlay for all (shell) routes — no duplicate mounts (D-01)
+- [11-02] Role gate uses case-insensitive compare plus project_manager snake_case spelling to tolerate backend casing drift — T-11-02-01 defense-in-depth; backend still enforces
+- [11-02] Collapsible primitive exposes defaultOpen + internal state (plan's open/onToggle draft API does not exist); Recurring section uses defaultOpen={false} with inner Toggle to gate freq/end controls
+- [11-02] Assignee dropdown ships project manager + current user only (documented stub); real per-project member picker lands in Plan 11-04 per D-32
+- [11-02] Cycle select ships empty options for Scrum in Phase 11; /api/v1/sprints wiring deferred to Plan 11-05 per D-44 — Cycle field hidden for Kanban/Waterfall (D-45), disabled w/ helper for Iterative/Incremental/Evolutionary/RAD (D-44)
+- [11-02] Toast API: plan's showToast standalone import does not exist; codebase exports useToast() hook returning { showToast } — used the real hook
 
 ### Pending Todos
 
@@ -205,9 +213,9 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T22:28:00Z
-Stopped at: Completed 11-01-PLAN.md
-Resume file: .planning/phases/11-task-features-board-enhancements/11-02-PLAN.md
+Last session: 2026-04-22T19:44:53.469Z
+Stopped at: Completed 11-02-PLAN.md
+Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 
