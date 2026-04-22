@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-09-PLAN.md
-last_updated: "2026-04-22T21:26:07.367Z"
+stopped_at: Completed 11-07-PLAN.md
+last_updated: "2026-04-22T21:46:08.354Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 32
-  percent: 94
+  completed_plans: 33
+  percent: 97
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [█████████░] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Progress: [█████████░] 94%
 | Phase 11 P08 | 8min | 2 tasks | 11 files |
 | Phase 11 P06 | 5min | 1 tasks | 7 files |
 | Phase Phase 11 PP09 | 8 | 2 tasks | 8 files |
+| Phase 11 P07 | 15 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -227,6 +228,9 @@ Key constraints for v2.0:
 - [11-09] DependenciesSection offers 2 directions (blocks/blocked_by) not 3 — backend ListDependenciesUseCase groups by edge direction only; relates_to row would never round-trip through the list endpoint
 - [11-09] taskService.addDependency sends {type} but backend DTO expects {dependency_type} — Plan 01 service bug; works today only because we always pass the default value 'blocks'. Logged in deferred-items.md; fix required before any non-default dependency_type is sent
 - [11-09] Task Detail projectMembers sourced from project.managerId only — Phase 11 has no GET /projects/{id}/members; audit-formatter degrades to 'Bilinmeyen kullanıcı' for unresolved user_ids
+- Custom SVG Gantt chosen over wx-react-gantt (GPLv3) and all other candidates (stale React-18 peers) for license safety + React 19 native compatibility + 0 KB bundle add (Plan 11-07 D-27)
+- Calendar Ctrl+wheel scroll-zoom clamped [60, 160] px with 300 ms debounced localStorage persistence (spms.calendar.zoom.{projectId}) — Outlook pattern, Pitfall 5 mitigation (Plan 11-07 D-30)
+- List/Timeline/Calendar share the same useTasks(project.id) query as Board — single fetch dedupes across tabs via TanStack Query cache keys (Plan 11-07)
 
 ### Pending Todos
 
@@ -247,8 +251,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T21:25:49.188Z
-Stopped at: Completed 11-09-PLAN.md
+Last session: 2026-04-22T21:45:58.442Z
+Stopped at: Completed 11-07-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
