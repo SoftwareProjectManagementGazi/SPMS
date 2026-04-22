@@ -39,6 +39,9 @@ def _migrate_v0_to_v1(config: dict) -> dict:
     new.setdefault("enforce_sequential_dependencies", False)
     new.setdefault("enforce_wip_limits", False)
     new.setdefault("restrict_expired_sprints", False)
+    # Phase 11 D-17 / D-43 additions — additive, idempotent.
+    new.setdefault("backlog_definition", "cycle_null")
+    new.setdefault("cycle_label", None)
     new["schema_version"] = 1
     return new
 
