@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-08-PLAN.md
-last_updated: "2026-04-22T20:59:01.436Z"
+stopped_at: Completed 11-06-PLAN.md
+last_updated: "2026-04-22T21:11:55.054Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 30
-  percent: 88
+  completed_plans: 31
+  percent: 91
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Progress: [█████████░] 88%
 | Phase Phase 11 P04 P4 | 32min | 2 tasks tasks | 14 files files |
 | Phase Phase 11 PP05 | 6min | 2 tasks tasks | 11 files files |
 | Phase 11 P08 | 8min | 2 tasks | 11 files |
+| Phase 11 P06 | 5min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -216,6 +217,10 @@ Key constraints for v2.0:
 - [11-08] spms.description.mode hydration pattern: useState defaults to 'plain' + useEffect([]) upgrades to localStorage value — prevents hydration mismatch between SSR ('plain') and client hydration (stored value)
 - [11-08] WatcherToggle initial state placeholder: backend has no per-user is_watching flag on Task DTO in Phase 11; page seeds false and local onChange callback syncs after POST/DELETE succeeds — session-accurate, documented for 11-09 follow-up
 - [11-08] StarterKit v3 bundles underline + link + all 24 internal extensions (verified in installed package.json dependencies) — no separate @tiptap/extension-underline or extension-link npm install required
+- [11-06] ProjectDnDProvider lifted from BoardTab to ProjectDetailShell — Backlog + Board now share one DnD context; cross-container drop (backlog row → board column) works via BACKLOG_COLUMN_ID='__backlog__' sentinel in useDraggable data + shared onTaskDropped handler at shell level
+- [11-06] useBacklogOpenState exposes open (user intent, persisted) AND effectiveOpen (computed visibility, narrow=false) split — narrow viewport <1280px auto-closes via effectiveOpen but preserves open so growing the viewport re-opens without another click (D-54)
+- [11-06] Cross-container invalidation at shell level: useMoveTask.onSettled invalidates ['tasks','project',id] but backlog uses sibling key ['tasks','backlog',id,filter] that must be invalidated separately. Shell handleDropped issues qc.invalidateQueries({queryKey:['tasks','backlog',project.id]}) unconditionally on every drop (idempotent)
+- [11-06] D-15 bulk-ops regression guards via node:fs source read in vitest — backlog-panel.test.tsx reads backlog-panel.tsx + backlog-task-row.tsx via fs.readFileSync and asserts bulkSelect|bulk-action|selectAll|Toplu işlem markers absent. Future developer adding bulk UI trips the test locally before PR
 
 ### Pending Todos
 
@@ -236,8 +241,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T20:58:45.694Z
-Stopped at: Completed 11-08-PLAN.md
+Last session: 2026-04-22T21:11:55.046Z
+Stopped at: Completed 11-06-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
