@@ -5,6 +5,8 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-22
+revised: 2026-04-22
+revision_reason: Resolve UI-SPEC checker FLAG 1 (typography scale) and FLAG 2 (spacing off-grid values)
 ---
 
 # Phase 11 — UI Design Contract
@@ -165,33 +167,47 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 | 2xl | 48px | Not used in Phase 11 components |
 | 3xl | 64px | Not used in Phase 11 components |
 
-**Exceptions:**
-- Board card padding (compact): `8px 10px 8px 9px` (left 9px to account for 3px priority border + visual balance)
-- Board card padding (rich): `10px 12px 10px 11px`
-- Backlog panel width: **300px** fixed (matches requirement text exactly)
-- Task Detail sidebar: **300px** fixed right column
-- Properties sidebar MetaRow: label column `100px` fixed, padding `6px 16px`
-- Calendar cell minimum height: **60px** (zoom min), maximum: **160px** (zoom max)
-- Sub-task row columns: key 80px (mono), status dot 20px, title flex, due 90px, avatar 22px
-- Modal header padding: `16px 20px`, modal footer padding: `14px 20px`, modal body padding: `20px`
-- Backlog toggle button: **44px** touch target height (accessibility exception to 8-point scale)
+All spacing values (padding, margin, gap) must be multiples from the set: **4, 8, 12, 16, 20, 24, 32, 40, 48**.
+
+### Documented off-grid exceptions
+
+The following values are sanctioned exceptions to the 8-point scale. Every entry requires an explicit rationale. No other off-grid values are permitted.
+
+| Value | Location | Rationale |
+|-------|----------|-----------|
+| `9px / 11px` | Board card asymmetric left/right padding in compact and rich modes (`8px 10px 8px 9px` and `10px 12px 10px 11px`) | 3px priority border on left side leaves 9px content pad on that side; 11px on the clean right side for visual balance. Source: New_Frontend/src/pages/project-detail.jsx KanbanCard. |
+| `3px` | Priority border width on board cards and backlog task rows | Fixed design element: 3px colored left border is the priority visual indicator. Not a layout spacing value. |
+| `300px` | Backlog panel width | D-13 explicit requirement. |
+| `300px` | Properties sidebar right column width | D-34 explicit requirement. |
+| `60px–160px` | Calendar cell zoom height range | D-30 explicit: continuous zoom scale, not a grid spacing. |
+| `44px` | Backlog toggle button touch target height | WCAG 2.5.5 minimum touch target for interactive controls. |
+| `540px` | Task Create Modal width | Prototype-faithful modal width. Fixed breakpoint: below 600px viewport drops to `calc(100vw - 32px)`. |
+| `85vh` | Task Create Modal maxHeight | Viewport-relative constraint, not a layout spacing. |
+| `14px 20px` | Modal footer padding (top/bottom 14px) | Prototype-faithful visual weight for modal chrome. Vertically: 14px sits between scale steps 12px and 16px; the asymmetry with the 16px header top creates deliberate footer compression. Source: New_Frontend prototype modal. |
+| `2px 4px` | Inline mention token padding and calendar chip padding | Sub-4px inline decorative tokens. These are inline `<span>` chip elements, not layout spacers. The smallest layout unit (4px) would create overly tall inline chips. |
 
 ---
 
 ## Typography
 
-| Role | Size | Weight | Line Height | Font | Usage |
-|------|------|--------|-------------|------|-------|
-| Body default | 14px | 400 | 1.45 | Geist | Base body, board card title, modal inputs |
-| Label / meta | 13px | 400–500 | 1.4 | Geist | MetaRow values, sidebar labels, toolbar items |
-| Small / caption | 12–12.5px | 500–600 | 1.4 | Geist | Badge text, secondary metadata, date chips |
-| Micro | 10.5–11.5px | 500–600 | 1.3 | Geist | Column count badge, key badge (mono), header labels uppercase |
-| Mono key | 10.5–11px | 600 | 1.3 | Geist Mono | Task key (e.g. MOBIL-7), points display |
-| Modal title | 16px | 600 | 1.25 | Geist | Task Create Modal header "Görev Oluştur" |
-| Page heading | 22px | 600 | 1.3 | Geist | ProjectDetail project name, task title on detail page |
-| Hero display | 28px | 600 | 1.2 | Geist | MyTasks hero stat numbers, "Bugünün odak noktanız" |
-| Section title | 13px | 600 | 1.4 | Geist | Section component title, sidebar section header |
-| Field label | 11.5px | 600 | 1.3 | Geist | ModalField label, uppercase column header |
+### 4-Level Scale
+
+The prototype uses a range of exact pixel sizes extracted from New_Frontend/src/styles.css. These are grouped into four named scale levels for executor clarity. **The 4-level grouping does NOT grant permission to re-pick sizes within a range** — the executor must match the prototype exactly at each usage site. The exact px values per component are specified in the Component Contracts section.
+
+| Level | Range | Weight | Line Height | Font | Purpose | Used in |
+|-------|-------|--------|-------------|------|---------|---------|
+| `text-micro` | 10.5–12 px | 500–600 | 1.3 | Geist / Geist Mono | Tertiary meta: keys, kbd, uppercase labels, column counts | Task key mono, Kbd chip, calendar day number, header uppercase labels, column count badge, timestamps in comments, section header uppercase labels |
+| `text-body` | 12.5–14 px | 400–600 | 1.4–1.45 | Geist | Primary body + labels | Body default (14px/400), form labels, nav items, buttons, table cells, comment body (13px/400), MetaRow values (12px/400), badge text (12–12.5px/500–600), sidebar labels |
+| `text-lead` | 15–16 px | 500–600 | 1.25–1.4 | Geist | Emphasis body + card-level titles | Task titles on board cards (12.5px — see note), modal title (16px/600), input values, section headers (13px/600), nav month header (15px/600) |
+| `text-display` | 22–28 px | 600 | 1.2–1.3 | Geist | Page headings only | H1 page title / task detail title (22px/600), H2 MyTasks hero stat numbers (28px/600) |
+
+> **Note on board card title (12.5px):** This sits at the top of `text-body` range. It is classified under `text-lead` semantically (it is the primary title of a card) even though its pixel size falls in the body range. The prototype defines `12.5px weight:500` for board card titles and that value must be matched exactly.
+
+> **Prototype fidelity footnote:** Exact px values within each range are extracted from New_Frontend/src/styles.css and MUST match the prototype. The four named levels are a grouping tool for the executor — not a license to choose any value in the range.
+
+**Weights:** `400` (regular) and `500`/`600` (medium/semibold) only. No other weights.
+
+**Body line height:** 1.45 (Geist body). Heading line height: 1.2–1.3.
 
 **Letter spacing:**
 - Page/task headings: `-0.4` to `-0.5`
@@ -234,12 +250,6 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 
 ---
 
-## Spacing Scale
-
-*(See above — consolidated in the Spacing Scale section.)*
-
----
-
 ## Component Contracts
 
 ### 1. TaskCreateModal
@@ -251,12 +261,12 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 [Overlay — oklch(0 0 0 / 0.3), inset 0]
   [Card — width:540px, maxHeight:85vh, shadow-xl, overflow-y:auto]
     [Header — padding:16px 20px, borderBottom:border]
-      [Title — 16px weight:600] [Spacer] [X button — fg-muted]
-    [Body — padding:20px, gap:14px, flexDirection:column]
+      [Title — text-lead (16px weight:600)] [Spacer] [X button — fg-muted]
+    [Body — padding:20px, gap:12px, flexDirection:column]
       [ModalField: Proje — required*]
       [ModalField: Görev Türü — SegmentedControl 3 options]
       [ModalField: Ana Görev — conditional when type=subtask]
-      [ModalField: Başlık — required* — autofocus — 14px weight:500]
+      [ModalField: Başlık — required* — autofocus — text-body (14px weight:500)]
       [ModalField: Açıklama — textarea rows:3, resize:vertical]
       [2-col grid gap:12px]
         [ModalField: Öncelik — select]
@@ -272,10 +282,10 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
       [Button ghost "Vazgeç"] [Button primary "Oluştur" disabled when !title||!projectId] [Kbd ⌘↵]
 ```
 
-**ModalField label style:** `fontSize:11.5, fontWeight:600, color:var(--fg-muted)`. Required indicator: `color:var(--priority-critical), marginLeft:2`.
+**ModalField label style (`text-micro`):** `fontSize:11.5, fontWeight:600, color:var(--fg-muted)`. Required indicator: `color:var(--priority-critical), marginLeft:2`.
 
 **Input style (inputStyle):**
-- `height:34, padding:0 10px, fontSize:13`
+- `height:34, padding:0 12px, fontSize:13`
 - `background:var(--surface-2), borderRadius:var(--radius-sm)`
 - `boxShadow:inset 0 0 0 1px var(--border)`
 
@@ -312,19 +322,19 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 ```
 [Card — surface bg, radius-sm, shadow-sm]
   [Left border — 3px solid var(--priority-{priority})]
-  [Padding: 10px 12px 10px 11px]
-  [Row 1: type-icon? + task key (mono 10.5px fg-subtle) + spacer + PriorityChip]
+  [Padding: 10px 12px 10px 11px]  ← sanctioned off-grid exception (see Spacing exceptions)
+  [Row 1: type-icon? + task key (text-micro, Geist Mono, fg-subtle) + spacer + PriorityChip]
   [Phase badge — small pill above title, only when enable_phase_assignment=true]
     [Badge size="xs" tone derived from phase index via --status-* token]
-  [Title — 12.5px weight:500 lineHeight:1.4 color:fg]
+  [Title — text-body (12.5px weight:500 lineHeight:1.4) color:fg]
   [Row 3 (rich only): points badge (mono, surface-2 bg) + due date + spacer + Avatar(size:20)]
 ```
 
 **Anatomy (Compact mode):**
 ```
-[Padding: 8px 10px 8px 9px]
-[Row 1: type-icon? + task key + spacer]
-[Title]
+[Padding: 8px 10px 8px 9px]  ← sanctioned off-grid exception (see Spacing exceptions)
+[Row 1: type-icon? + task key (text-micro) + spacer]
+[Title (text-body 12.5px)]
 [Row 3: spacer + Avatar(size:18)]
 ```
 
@@ -348,8 +358,8 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 **Anatomy:**
 ```
 [Column wrapper — bg:var(--bg-2)|wip-tint, radius:var(--radius), boxShadow:inset 0 0 0 1px var(--border)]
-  [Header — padding:12px 14px, borderBottom:border]
-    [StatusDot] [column name 12.5px weight:600]
+  [Header — padding:12px 16px, borderBottom:border]
+    [StatusDot] [column name text-body (12.5px weight:600)]
     [Badge xs: count/wipLimit — tone:danger when over, warning when at, neutral otherwise]
     [Spacer]
     [Plus button — color:fg-subtle, size:14]
@@ -388,10 +398,10 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 **Panel anatomy:**
 ```
 [Panel — width:300px, borderRight:1px solid border, background:var(--surface), height:100%]
-  [Header — padding:12px 14px, borderBottom:border]
-    [Title "Backlog" 13px weight:600]
+  [Header — padding:12px 16px, borderBottom:border]
+    [Title "Backlog" text-body (13px weight:600)]
     [narrow-screen hint text — only when width<1280]
-      "Dar ekranda kısıtlı görünüm" — fg-subtle 11.5px
+      "Dar ekranda kısıtlı görünüm" — fg-subtle text-micro (11.5px)
     [Backlog definition pill — Badge xs tone="neutral" showing current definition]
     [X close button]
   [Toolbar — padding:8px, borderBottom:border]
@@ -402,7 +412,7 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
     [BacklogTaskRow × N — condensed: key + title + PriorityChip + Avatar]
     [Empty state when no backlog tasks]
   [Footer — borderTop:border, padding:8px 12px]
-    [Task count — mono 11.5px fg-muted]
+    [Task count — mono text-micro (11.5px) fg-muted]
 ```
 
 **Toggle button:** Vertical button at `left:0, top:50%, transform:translateY(-50%)`, `width:20px, height:56px, background:var(--surface-2), boxShadow:inset 0 0 0 1px var(--border), borderRadius:0 radius-sm radius-sm 0`. Contains chevron icon that rotates 180° when open. `transition:transform 0.15s ease`.
@@ -433,7 +443,7 @@ Implementation: `lib/label-color.ts` — pure function, no CSS at runtime.
 **Active tab:** `fontWeight:600, color:var(--fg), borderBottom:2px solid var(--primary), marginBottom:-1px`
 **Inactive tab:** `fontWeight:500, color:var(--fg-muted), borderBottom:2px solid transparent`
 **Tab with badge:** Badge `size="xs"`, active → `tone="primary"`, inactive → `tone="neutral"`
-**Tab icons:** 13px Lucide icons, gap:6px
+**Tab icons:** `text-body` (13px) Lucide icons, gap:8px
 
 **Coming-soon stub (Activity + Lifecycle in Phase 11):**
 ```
@@ -487,14 +497,14 @@ Genel / Kolonlar / İş Akışı (link-out) / Yaşam Döngüsü (stub)
    [Folder icon(13) + project name (fg-muted, clickable) + ChevronRight(11) + parent key (mono, fg-muted) + parent title (fg-muted, clickable)]
    → click project name: router.push(/projects/{id})
    → click parent key/title: router.push(/projects/{id}/tasks/{parentTaskId})
-   fontSize:12, gap:8, color:fg-muted, marginBottom:10
+   fontSize:12 (text-micro), gap:8, color:fg-muted, marginBottom:12
    Source: D-35 — new section ABOVE task title
 
 2. [Task title row]
    [Bug icon box (26×26, radius:6, bg:color-mix critical 15%, color:critical) — only if type=bug]
-   [Task title — 22px weight:600 letterSpacing:-0.4 lineHeight:1.3]
+   [Task title — text-display (22px weight:600 letterSpacing:-0.4 lineHeight:1.3)]
 
-3. [Action button row — marginTop:10, gap:6]
+3. [Action button row — marginTop:8, gap:8]
    [Button sm secondary icon=Eye "{Takip et|Takipte}" + watcher count Badge xs tone=neutral]
    [Button sm secondary icon=Link "Bağlantı"]
    [Spacer]
@@ -506,20 +516,20 @@ Genel / Kolonlar / İş Akışı (link-out) / Yaşam Döngüsü (stub)
    [Rich mode: TipTap editor — ssr:false dynamic import, startKit + link + image]
      [Toolbar: Bold|Italic|Underline|Strike|H1|H2|H3|BulletList|OrderedList|Blockquote|Code|CodeBlock|Link|Image|HR]
      [Toolbar buttons: Button ghost size="xs" — active state: background:var(--accent)]
-     [Editor area: Card padding:12px, min-height:120px, fontSize:13 lineHeight:1.6]
+     [Editor area: Card padding:12px, min-height:120px, text-body (13px) lineHeight:1.6]
    [Save: debounced 2s on blur, PATCH /api/v1/tasks/{id}]
 
 5. [Section: Alt Görevler — marginTop:20, action=Button xs ghost icon=Plus "Ekle"]
    [Card padding:0]
    [Sub-task row per sub-task:]
-     [grid: 80px 1fr 90px 22px — padding:10px 14px, borderBottom:border]
-     [key mono 11px fg-muted] [title 12.5px + StatusBadge xs] [due "Nis 5" 12px fg-muted] [Avatar size:20]
+     [grid: 80px 1fr 90px 22px — padding:8px 16px, borderBottom:border]
+     [key mono text-micro (11px) fg-muted] [title text-body (12.5px) + StatusBadge xs] [due "Nis 5" text-micro (12px) fg-muted] [Avatar size:20]
      [Click anywhere → navigate to sub-task detail]
    ["Ekle" → openTaskModal({ defaultType:"subtask", defaultParentId:task.id, defaultProjectId:task.projectId })]
 
 6. [Section: Aktivite — marginTop:20]
    [Card padding:0]
-   [Sub-tab bar: "Yorumlar" | "Geçmiş" — inner buttons, active:accent bg, fontSize:12, padding:4px 10px, borderRadius:4]
+   [Sub-tab bar: "Yorumlar" | "Geçmiş" — inner buttons, active:accent bg, text-micro (12px), padding:4px 8px, borderRadius:4]
    
    [Yorumlar tab:]
      [Comment input area: Avatar(26) + textarea bg=surface-2 border=inset border]
@@ -527,16 +537,16 @@ Genel / Kolonlar / İş Akışı (link-out) / Yaşam Döngüsü (stub)
        [@mention: on @ char → dropdown of project members, filtered by following chars]
        [Mention token: <span class="mention" data-user-id>@Name</span> — styled bg:accent, radius:3]
        [Action row: Button xs ghost "Vazgeç" + Button xs primary "Gönder"]
-     [Comment list: gap:12, marginTop:14]
-       [CommentItem: Avatar(26) + author 12.5px weight:600 + time 11px fg-subtle]
-       [Comment body: 13px lineHeight:1.5]
+     [Comment list: gap:12, marginTop:16]
+       [CommentItem: Avatar(26) + author text-body (12.5px weight:600) + time text-micro (11px) fg-subtle]
+       [Comment body: text-body (13px) lineHeight:1.5]
        [Edit/Delete — visible on hover, own comments only — no time limit]
        [Deleted: "Silindi" in fg-subtle italic, thread position preserved]
    
    [Geçmiş tab:]
      [Audit log rows — read-only]
      [{actor name} {verb} {field} {old}→{new} {time}]
-     [fontSize:12.5, lineHeight:1.5]
+     [text-body (12.5px), lineHeight:1.5]
 
 7. [Section: Ekler — marginTop:20]
    [Drag-drop zone: dashed border, center text "Dosya sürükleyin veya tıklayın"]
@@ -548,8 +558,8 @@ Genel / Kolonlar / İş Akışı (link-out) / Yaşam Döngüsü (stub)
 **Right column (Properties sidebar) anatomy:**
 ```
 [Card padding:0]
-  [Header: "ÖZELLİKLER" — 11px weight:600 fg-subtle letterSpacing:0.5 uppercase — padding:14px 16px borderBottom:border]
-  [MetaRow grid: 100px label + 1fr value — padding:6px 16px — fontSize:12]
+  [Header: "ÖZELLİKLER" — text-micro (11px weight:600) fg-subtle letterSpacing:0.5 uppercase — padding:12px 16px borderBottom:border]
+  [MetaRow grid: 100px label + 1fr value — padding:8px 16px — text-micro (12px)]
     Rows: Durum | Atanan | Bildiren | Öncelik | Puan | Bitiş | {Sprint/Döngü label} | Etiketler | Takipçiler
     
     [InlineEdit mechanic per row:]
@@ -576,7 +586,7 @@ Genel / Kolonlar / İş Akışı (link-out) / Yaşam Döngüsü (stub)
       [Arrow between chips: ChevronRight size:10 fg-subtle]
 
   [Dependencies section — padding:12px 16px borderTop:border]
-    ["BAĞIMLILIKLAR" — uppercase 11px weight:600 fg-subtle]
+    ["BAĞIMLILIKLAR" — uppercase text-micro (11px weight:600) fg-subtle]
     [Dependency rows: icon + type label + key (mono fg-muted) + title (fg) + X button]
       blocks: Lock icon color:priority-critical
       blocked_by: AlertCircle icon color:priority-high
@@ -624,8 +634,8 @@ See Task Detail section above. The sidebar is its own component at `Frontend2/co
 ```
 [display:flex, alignItems:center, gap:4, flexWrap:wrap, marginTop:8]
   [For each phase node in process_config.workflow.nodes:]
-    [Chip: display:inline-flex, alignItems:center, gap:4, padding:3px 8px, borderRadius:999]
-      [Phase name 11px weight:600]
+    [Chip: display:inline-flex, alignItems:center, gap:4, padding:4px 8px, borderRadius:999]
+      [Phase name text-micro (11px weight:600)]
       [Sub-task count Badge xs]
     [ChevronRight size:10 fg-subtle — except last]
 ```
@@ -646,14 +656,14 @@ See Task Detail section above. The sidebar is its own component at `Frontend2/co
 **Dropdown anatomy (absolute below input, minWidth:360px):**
 ```
 [Card shadow-xl, padding:4, borderRadius:radius-lg, zIndex:100, maxHeight:400px, overflowY:auto]
-  [Section header "Projeler" — 10.5px uppercase weight:600 fg-subtle padding:6px 8px]
+  [Section header "Projeler" — text-micro (10.5px) uppercase weight:600 fg-subtle padding:8px]
   [Up to 3 project results]
-    [Row: key Badge xs mono + name 13px — padding:7px 8px, radius:4, hover bg:surface-2]
+    [Row: key Badge xs mono + name text-body (13px) — padding:8px, radius:4, hover bg:surface-2]
   [Divider 1px border]
   [Section header "Görevler"]
   [Up to 7 task results]
-    [Row: key mono 10.5px fg-subtle + title 13px + project key Badge xs neutral — padding:7px 8px]
-  [Footer: "Tümünü gör →" button — primary color, 12px, padding:8px, borderTop:border]
+    [Row: key mono text-micro (10.5px) fg-subtle + title text-body (13px) + project key Badge xs neutral — padding:8px]
+  [Footer: "Tümünü gör →" button — primary color, text-micro (12px), padding:8px, borderTop:border]
   [No results state: "Sonuç bulunamadı" fg-subtle, padding:20px, textAlign:center]
 ```
 
@@ -673,10 +683,10 @@ Vertical pill button at the left edge of ProjectDetail. Width 20px, height 56px.
 ### 13. BoardTab Toolbar
 
 ```
-[Row: display:flex, alignItems:center, gap:10]
+[Row: display:flex, alignItems:center, gap:8]
   [Input icon=Search placeholder="Filtrele…" size="sm" width:200px]
   [SegmentedControl: "Sıkı" | "Detaylı" — saved to spms.board.density.{projectId}]
-  [Current cycle badge: gap:4 fg-muted 12px]
+  [Current cycle badge: gap:8 fg-muted text-body (12px)]
     ["Sprint:" text] [Badge xs tone="info" "{label} {number}"]
   [Phase filter dropdown — HIDDEN when enable_phase_assignment=false]
     [Button sm secondary icon=Filter "Faz" + ChevronDown]
@@ -697,9 +707,9 @@ Vertical pill button at the left edge of ProjectDetail. Width 20px, height 56px.
 gridTemplateColumns: "80px 2fr 110px 110px 120px 90px 60px [100px when phase enabled]"
 ```
 
-**Header row:** `padding:10px 14px, fontSize:11, textTransform:uppercase, letterSpacing:0.4, color:fg-subtle, fontWeight:600, borderBottom:border`
+**Header row:** `padding:8px 16px, text-micro (11px), textTransform:uppercase, letterSpacing:0.4, color:fg-subtle, fontWeight:600, borderBottom:border`
 
-**Data rows:** `padding:10px 14px, alignItems:center, fontSize:12.5, borderBottom:border, cursor:pointer`
+**Data rows:** `padding:8px 16px, alignItems:center, text-body (12.5px), borderBottom:border, cursor:pointer`
 **Row hover:** `background:var(--surface-2)`. Click → task detail navigation.
 
 **Sort indicator:** Clicked column header shows ↑ or ↓ icon (ChevronUp/ChevronDown size:11) inline after label. Active sort header `color:var(--fg)` (vs default `var(--fg-subtle)`).
@@ -719,29 +729,29 @@ gridTemplateColumns: "80px 2fr 110px 110px 120px 90px 60px [100px when phase ena
 **Anatomy:**
 ```
 [Card padding:16]
-  [Nav row: month+year 15px weight:600 + ChevronLeft + ChevronRight + "Bugün" Button xs secondary]
-  [7-col day header: ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"] — surface-2 bg, 11px uppercase weight:600 fg-muted]
+  [Nav row: month+year text-lead (15px weight:600) + ChevronLeft + ChevronRight + "Bugün" Button xs secondary]
+  [7-col day header: ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"] — surface-2 bg, text-micro (11px) uppercase weight:600 fg-muted]
   [6×7 = 42 day cells — display:grid gridTemplateColumns:repeat(7,1fr) gap:1 bg:border radius-sm overflow:hidden]
-    [Each cell: surface bg, minHeight:{zoomHeight}px, padding:6, flexDirection:column, gap:3]
-      [Day number circle: 22×22 inline-flex center radius:50% 11px weight:600]
+    [Each cell: surface bg, minHeight:{zoomHeight}px, padding:4px, flexDirection:column, gap:4]
+      [Day number circle: 22×22 inline-flex center radius:50% text-micro (11px weight:600)]
         Today: bg:primary, color:primary-fg
         Current month: color:fg
         Other month: color:fg-subtle
-      [Task chips (up to 3): 10.5px padding:2px 5px radius:3]
+      [Task chips (up to 3): text-micro (10.5px) padding:2px 4px radius:3]  ← 2px/4px sanctioned inline exception
         bg: color-mix(in oklch, var(--priority-{priority}) 18%, transparent)
         color: fg
         overflow:hidden textOverflow:ellipsis whiteSpace:nowrap
         Content: "{key} · {title}"
-      ["+N more" chip when >3 tasks: fg-muted 10.5px cursor:pointer]
+      ["+N more" chip when >3 tasks: fg-muted text-micro (10.5px) cursor:pointer]
         Click → day-detail popover
 ```
 
 **Day-detail popover (for "+N more"):**
 ```
 [Card shadow-lg padding:12 minWidth:240px zIndex:80 position:absolute]
-  [Day header: date string 13px weight:600]
+  [Day header: date string text-body (13px weight:600)]
   [Full task list for that day — scrollable, maxHeight:280px]
-    [Each: chip color + title 12.5px + priority indicator]
+    [Each: chip color + title text-body (12.5px) + priority indicator]
     [Click chip → task detail page]
   [X close button]
 ```
@@ -763,7 +773,7 @@ Phase 11 ships a working Gantt. The specific library is determined by the resear
 - Bar text: `#fff` or `var(--fg)` (auto-contrast)
 - Today line: `2px solid var(--primary)` dashed
 - Header row bg: `var(--surface-2)`
-- Header row text: `var(--fg-subtle)` 10.5px mono uppercase
+- Header row text: `var(--fg-subtle)` text-micro (10.5px) mono uppercase
 - Grid row bg alternating: `var(--surface)` / `var(--surface-2)`
 - Grid lines: `1px solid var(--border)`
 - Scrollbar: inherits global CSS scrollbar rules
@@ -772,7 +782,7 @@ Phase 11 ships a working Gantt. The specific library is determined by the resear
 
 **Toolbar:**
 ```
-[Row: "Zaman çizelgesi" 13px weight:600 + Badge xs "Haftalık görünüm"]
+[Row: "Zaman çizelgesi" text-body (13px weight:600) + Badge xs "Haftalık görünüm"]
 [Spacer]
 [Button xs ghost "Gün"] [Button xs secondary "Hafta" — default active] [Button xs ghost "Ay"]
 ```
@@ -788,18 +798,18 @@ All components ported verbatim from prototype `my-tasks.jsx` + `my-tasks-parts.j
 
 **MTHero (full-page only):**
 ```
-[display:grid gridTemplateColumns:1.3fr 1fr gap:16 padding:22 borderRadius:14]
+[display:grid gridTemplateColumns:1.3fr 1fr gap:16 padding:24 borderRadius:16]
 [bg: linear-gradient(135deg, color-mix(primary 10%, surface) 0%, surface 60%)]
 [boxShadow: var(--shadow-md)]
 [Decorative radial gradient blob: position:absolute top:-60 right:-60 width:280 height:280]
-[Left: greeting text 13px fg-muted + Display heading 28px weight:600 + subtitle 13.5px fg-muted]
-[Right: 4 MTHeroStat cards — grid 4 cols gap:10]
+[Left: greeting text text-body (13px) fg-muted + Display heading text-display (28px weight:600) + subtitle text-body (13.5px) fg-muted]
+[Right: 4 MTHeroStat cards — grid 4 cols gap:8]
 ```
 
-**MTHeroStat:** `padding:14, borderRadius:10, bg: tone-specific color-mix`. Icon box 22×22 radius:6 surface. Stat number 28px weight:600 letterSpacing:-1 tabular-nums. Label 11.5px fg-muted.
+**MTHeroStat:** `padding:16, borderRadius:8, bg: tone-specific color-mix`. Icon box 22×22 radius:8 surface. Stat number text-display (28px weight:600 letterSpacing:-1 tabular-nums). Label text-micro (11.5px) fg-muted.
 
 **MTToolbar — saved views tabbar (full-page only):**
-Row of 6 view buttons. Active: `bg:surface, boxShadow:inset 0 0 0 1px border, color:fg fontWeight:600`. Count pill: `bg:accent color:accent-fg` when active, `bg:surface-2 color:fg-subtle` when inactive. `padding:1px 6px radius:99`.
+Row of 6 view buttons. Active: `bg:surface, boxShadow:inset 0 0 0 1px border, color:fg fontWeight:600`. Count pill: `bg:accent color:accent-fg` when active, `bg:surface-2 color:fg-subtle` when inactive. `padding:2px 8px radius:99`.
 
 **MTToolbar — filter/group bar (both modes):**
 - Search Input (width:240 full, 200 compact)
@@ -813,10 +823,10 @@ Row of 6 view buttons. Active: `bg:surface, boxShadow:inset 0 0 0 1px border, co
 Grid columns (showProject=true): `18px 68px 1fr auto auto auto 28px 50px`
 Grid columns (showProject=false): `18px 68px 1fr auto auto 28px 50px`
 
-Padding by density: compact=`6px 12px`, cozy=`9px 12px`, comfortable=`13px 14px`
-Font by density: compact=12.5px, cozy=13px, comfortable=13.5px
+Padding by density: compact=`4px 12px`, cozy=`8px 12px`, comfortable=`12px 16px`
+Font by density: compact=text-body (12.5px), cozy=text-body (13px), comfortable=text-body (13.5px)
 
-Key: mono 10.8px fg-subtle letterSpacing:0.3
+Key: mono text-micro (10.8px) fg-subtle letterSpacing:0.3
 Status dot: `MTStatusDot size:16 (14 compact)` — clickable status picker
 Done task: title `textDecoration:line-through, color:fg-muted`
 Hover row: bg=surface-2
@@ -834,7 +844,7 @@ Action overlay (hover only): star button + more button fade in at right edge, po
 | all | "Aktif görev yok" | "No active tasks" |
 | done | "Henüz tamamlanan yok" | "Nothing completed yet" |
 
-Empty visual: `56px icon box, borderRadius:16, surface-2 bg, inset border, fg-subtle icon (CheckSquare 24px)`. Title 15px weight:500 fg, sub 12.5px fg-muted.
+Empty visual: `56px icon box, borderRadius:16, surface-2 bg, inset border, fg-subtle icon (CheckSquare 24px)`. Title text-lead (15px weight:500) fg, sub text-body (12.5px) fg-muted.
 
 **MTRightRail (full-page only):**
 - Week heatmap Card
@@ -845,43 +855,43 @@ Empty visual: `56px icon box, borderRadius:16, surface-2 bg, inset border, fg-su
 
 ### 18. CommentItem
 
-Avatar(26) + author name 12.5px weight:600 + time 11px fg-subtle (inline baseline).
-Body: 13px lineHeight:1.5 marginTop:4.
+Avatar(26) + author name text-body (12.5px weight:600) + time text-micro (11px) fg-subtle (inline baseline).
+Body: text-body (13px) lineHeight:1.5 marginTop:4.
 Hover → reveal Edit + Delete buttons (Button xs ghost `opacity:0→1 transition:0.15s`).
 Edit mode: body becomes textarea (inputStyle), with "Kaydet" / "Vazgeç" buttons.
-Deleted: "Silindi" — 12.5px fg-subtle italic, background:surface-2, padding:6px 10px radius:4. Thread position preserved.
-@mention token: `<span style={{ background:var(--accent), color:var(--accent-fg), borderRadius:3, padding:1px 5px, fontWeight:500 }}>@Name</span>`
+Deleted: "Silindi" — text-body (12.5px) fg-subtle italic, background:surface-2, padding:8px 12px radius:4. Thread position preserved.
+@mention token: `<span style={{ background:var(--accent), color:var(--accent-fg), borderRadius:3, padding:2px 4px, fontWeight:500 }}>@Name</span>`  ← 2px/4px sanctioned inline exception
 
 ---
 
 ### 19. AttachmentRow
 
-`display:flex alignItems:center gap:10 padding:10px 14px borderBottom:border fontSize:12.5`
+`display:flex alignItems:center gap:8 padding:8px 16px borderBottom:border text-body (12.5px)`
 
 - File icon (Paperclip) or Link icon — color:fg-muted, size:14
 - filename bold, color:fg
-- size — 11px fg-subtle mono ("2.3 MB")
-- Avatar(18) + uploader name 11.5px fg-muted
-- time — 11px fg-subtle
+- size — text-micro (11px) fg-subtle mono ("2.3 MB")
+- Avatar(18) + uploader name text-micro (11.5px) fg-muted
+- time — text-micro (11px) fg-subtle
 - Download icon button — ghost, color:fg-subtle
 - Delete icon button — ghost, color:fg-subtle, hover → priority-critical
 
 Link reference row: same layout, chain icon instead of file icon, URL in mono fg-subtle truncated.
 
-Drag-drop zone: `minHeight:80px, borderRadius:radius-sm, border:2px dashed var(--border), display:flex alignItems:center justifyContent:center`. Hover/drag-over: `border-color:var(--primary), bg:color-mix(primary 5%, surface)`. Label: "Dosya sürükleyin veya tıklayın" 13px fg-muted.
+Drag-drop zone: `minHeight:80px, borderRadius:radius-sm, border:2px dashed var(--border), display:flex alignItems:center justifyContent:center`. Hover/drag-over: `border-color:var(--primary), bg:color-mix(primary 5%, surface)`. Label: "Dosya sürükleyin veya tıklayın" text-body (13px) fg-muted.
 
 ---
 
 ### 20. DependencyRow
 
-`display:flex alignItems:center gap:8 padding:6px 8px bg:surface-2 borderRadius:4 fontSize:12`
+`display:flex alignItems:center gap:8 padding:8px bg:surface-2 borderRadius:4 text-body (12px)`
 
 Type icon (size:12):
 - blocks (engelliyor): Lock — color:priority-critical
 - blocked_by (engellemekte): AlertCircle — color:priority-high
 - relates_to (ilişkili): Link2 — color:fg-muted
 
-Type label: 11.5px fg-muted
+Type label: text-micro (11.5px) fg-muted
 Key: mono fg-muted (e.g. "MOBIL-8")
 Title: fg — flex:1, overflow ellipsis
 X button: on hover → color:priority-critical
@@ -1431,6 +1441,7 @@ No third-party component registry (shadcn registry format) is used in this phase
 
 *Phase: 11-task-features-board-enhancements*
 *UI-SPEC created: 2026-04-22*
+*UI-SPEC revised: 2026-04-22 — Typography FLAG (4-level scale) and Spacing FLAG (off-grid values) resolved*
 *Token source: New_Frontend/src/styles.css + Frontend2/app/globals.css (authoritative)*
 *Component source: New_Frontend/src/primitives.jsx + New_Frontend/src/pages/*.jsx (authoritative)*
 *Downstream consumers: gsd-ui-checker, gsd-planner, gsd-executor, gsd-ui-auditor*
