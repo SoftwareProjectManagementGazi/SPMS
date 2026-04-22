@@ -200,7 +200,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-03 | Phase 10 | Complete |
 | PROJ-04 | Phase 10 | Complete |
 | PROJ-05 | Phase 10 | Complete |
-| PAGE-03 | Phase 11 | Pending |
+| PAGE-03 | Phase 11 | Complete |
 | PAGE-04 | Phase 11 | Pending |
 | PAGE-07 | Phase 11 | Pending |
 | TASK-01 | Phase 11 | Pending |

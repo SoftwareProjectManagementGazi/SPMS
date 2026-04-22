@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-06-PLAN.md
-last_updated: "2026-04-22T21:11:55.054Z"
+stopped_at: Completed 11-09-PLAN.md
+last_updated: "2026-04-22T21:26:07.367Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 31
-  percent: 91
+  completed_plans: 32
+  percent: 94
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Progress: [█████████░] 91%
 | Phase Phase 11 PP05 | 6min | 2 tasks tasks | 11 files files |
 | Phase 11 P08 | 8min | 2 tasks | 11 files |
 | Phase 11 P06 | 5min | 1 tasks | 7 files |
+| Phase Phase 11 PP09 | 8 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -221,6 +222,11 @@ Key constraints for v2.0:
 - [11-06] useBacklogOpenState exposes open (user intent, persisted) AND effectiveOpen (computed visibility, narrow=false) split — narrow viewport <1280px auto-closes via effectiveOpen but preserves open so growing the viewport re-opens without another click (D-54)
 - [11-06] Cross-container invalidation at shell level: useMoveTask.onSettled invalidates ['tasks','project',id] but backlog uses sibling key ['tasks','backlog',id,filter] that must be invalidated separately. Shell handleDropped issues qc.invalidateQueries({queryKey:['tasks','backlog',project.id]}) unconditionally on every drop (idempotent)
 - [11-06] D-15 bulk-ops regression guards via node:fs source read in vitest — backlog-panel.test.tsx reads backlog-panel.tsx + backlog-task-row.tsx via fs.readFileSync and asserts bulkSelect|bulk-action|selectAll|Toplu işlem markers absent. Future developer adding bulk UI trips the test locally before PR
+- [11-09] audit-formatter is a pure (no-React) module in Frontend2/lib — unit-testable with 8 vitest cases; exports formatAuditEntry + relativeTime
+- [11-09] CommentsSection strips HTML on render via /<[^>]*>/g + whiteSpace:pre-wrap — T-11-09-01 XSS mitigation; DOMPurify is the documented future upgrade path
+- [11-09] DependenciesSection offers 2 directions (blocks/blocked_by) not 3 — backend ListDependenciesUseCase groups by edge direction only; relates_to row would never round-trip through the list endpoint
+- [11-09] taskService.addDependency sends {type} but backend DTO expects {dependency_type} — Plan 01 service bug; works today only because we always pass the default value 'blocks'. Logged in deferred-items.md; fix required before any non-default dependency_type is sent
+- [11-09] Task Detail projectMembers sourced from project.managerId only — Phase 11 has no GET /projects/{id}/members; audit-formatter degrades to 'Bilinmeyen kullanıcı' for unresolved user_ids
 
 ### Pending Todos
 
@@ -241,8 +247,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T21:11:55.046Z
-Stopped at: Completed 11-06-PLAN.md
+Last session: 2026-04-22T21:25:49.188Z
+Stopped at: Completed 11-09-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
