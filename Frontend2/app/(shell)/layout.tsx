@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { AppShell } from "@/components/app-shell"
 import { ToastProvider } from "@/components/toast"
+import { TaskModalProvider } from "@/components/task-modal/task-modal-provider"
 import React from "react"
 
 // Module-scope QueryClient — NEVER inside component (prevents cache loss on re-render — Pitfall 2)
@@ -16,7 +17,9 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <AppShell>{children}</AppShell>
+        <TaskModalProvider>
+          <AppShell>{children}</AppShell>
+        </TaskModalProvider>
       </ToastProvider>
       {process.env.NODE_ENV === "development" && (
         <ReactQueryDevtools initialIsOpen={false} />
