@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-05-PLAN.md
-last_updated: "2026-04-22T20:45:29.720Z"
+stopped_at: Completed 11-08-PLAN.md
+last_updated: "2026-04-22T20:59:01.436Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 29
-  percent: 85
+  completed_plans: 30
+  percent: 88
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Progress: [█████████░] 85%
 | Phase Phase 11 PP03 | 6 | 2 tasks tasks | 10 files files |
 | Phase Phase 11 P04 P4 | 32min | 2 tasks tasks | 14 files files |
 | Phase Phase 11 PP05 | 6min | 2 tasks tasks | 11 files files |
+| Phase 11 P08 | 8min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -210,6 +211,11 @@ Key constraints for v2.0:
 - [11-05] BoardCard priority token bridge: left-border uses same 'medium' → 'med' CSS var mapping that PriorityChip established (priorityTokenVar helper)
 - [11-05] Scrum-gated useQuery for /sprints — non-Scrum methodologies never fetch, keeping toolbar API cost zero
 - [11-05] Column grouping fallback: unmatched task.status lands in first column (not hidden) — protects against backend column-name drift mid-migration
+- [11-08] InlineEdit generic wrapper uses its own centralized useMutation (single-task cache key ['tasks', taskId]) rather than reusing useUpdateTask from 11-01 — keeps optimistic cache write / rollback / invalidation co-located with the component that does the rendering
+- [11-08] TipTap SSR pattern is belt-and-suspenders: next/dynamic({ssr:false}) at the call site AND immediatelyRender:false on useEditor — required per RESEARCH Pitfall 2, omitting either produces Next.js hydration errors
+- [11-08] spms.description.mode hydration pattern: useState defaults to 'plain' + useEffect([]) upgrades to localStorage value — prevents hydration mismatch between SSR ('plain') and client hydration (stored value)
+- [11-08] WatcherToggle initial state placeholder: backend has no per-user is_watching flag on Task DTO in Phase 11; page seeds false and local onChange callback syncs after POST/DELETE succeeds — session-accurate, documented for 11-09 follow-up
+- [11-08] StarterKit v3 bundles underline + link + all 24 internal extensions (verified in installed package.json dependencies) — no separate @tiptap/extension-underline or extension-link npm install required
 
 ### Pending Todos
 
@@ -230,8 +236,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T20:45:17.068Z
-Stopped at: Completed 11-05-PLAN.md
+Last session: 2026-04-22T20:58:45.694Z
+Stopped at: Completed 11-08-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete

@@ -129,7 +129,7 @@ Plans:
 - [x] 11-05-PLAN.md — Board tab with @dnd-kit + BoardCard/BoardColumn/BoardToolbar + WIP Warn+Allow (D-20) + density toggle + phase filter (completed 2026-04-22, 6 min, 2 tasks, 9 created + 2 modified = 11 files)
 - [ ] 11-06-PLAN.md — Backlog Panel fixed column + cross-container DnD (lifts DnDContext to shell) + methodology-matrix driven query + filters + responsive
 - [ ] 11-07-PLAN.md — List tab (TanStack Table) + Timeline tab (custom SVG Gantt, license-clean) + Calendar tab (6x7 grid with Ctrl+wheel zoom)
-- [ ] 11-08-PLAN.md — Task Detail page route + Parent link + InlineEdit wrapper + PropertiesSidebar + PhaseStepper (TASK-04) + Sub-tasks + TipTap description editor + Watcher toggle
+- [x] 11-08-PLAN.md — Task Detail page route + Parent link + InlineEdit wrapper + PropertiesSidebar + PhaseStepper (TASK-04) + Sub-tasks + TipTap description editor + Watcher toggle (completed 2026-04-22, 8 min, 2 tasks, 11 created + 0 modified = 11 files)
 - [ ] 11-09-PLAN.md — Task Detail remaining sections: Activity (Yorumlar + Geçmiş sub-tabs) + Attachments (drag-drop + links) + Dependencies CRUD + audit-formatter utility
 - [ ] 11-10-PLAN.md — MyTasks (full + Dashboard Member compact) + Header search autocomplete (Cmd/Ctrl+K) + responsive breakpoints + E2E smoke tests
 **UI hint**: yes

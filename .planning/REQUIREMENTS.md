@@ -77,7 +77,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Gorev Olustur Modali yapilir — overlay modal, proje/tur/baslik/aciklama/oncelik/atanan/puan/tarih/cycle/faz/etiket/tekrar alanlari
 - [ ] **TASK-02**: Backlog Paneli yapilir — proje detayda sol kenarda dikey toggle, 300px panel, arama/filtre/siralama, gorev listesi, drag-drop, toplu islem [E1]
 - [ ] **TASK-03**: Gorev-Faz atamasi eklenir — enable_phase_assignment toggle acikken gorev formuna faz dropdown'i, board kart faz badge'i [E3][E5]
-- [ ] **TASK-04**: Ana gorev sidebar'inda alt gorev faz dagilimi mini stepper gosterilir [E3]
+- [x] **TASK-04
+**: Ana gorev sidebar'inda alt gorev faz dagilimi mini stepper gosterilir [E3]
 - [x] **TASK-05
 **: Board toolbar'a "Faza Gore Filtrele" dropdown'i, List Tab'a "Faz" sutunu eklenir [E5]
 - [ ] **TASK-06**: Cycle label'i metodolojiye gore dinamik gosterilir (Sprint/Dongu/Iterasyon/Artim) [E14]
