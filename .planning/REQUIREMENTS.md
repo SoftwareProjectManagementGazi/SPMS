@@ -126,7 +126,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Projects sayfasi donusturulur — kart grid, durum filtresi, yeni proje butonu
 - [x] **PAGE-03
 **: ProjectDetail sayfasi donusturulur — 8 sekmeli yapi (Board/List/Timeline/Calendar/Activity/Lifecycle/Members/Settings)
-- [ ] **PAGE-04**: MyTasks sayfasi donusturulur — gorev listesi, filtreler
+- [x] **PAGE-04
+**: MyTasks sayfasi donusturulur — gorev listesi, filtreler
 - [x] **PAGE-05
 **: Settings sayfasi donusturulur — tum alt sekmeler (Lifecycle dahil)
 - [x] **PAGE-06
