@@ -5,15 +5,20 @@
 // React.useState (not URL param) matching the prototype + D-09 decision.
 //
 // Phase 11 scope (D-10, D-11):
-//   - board/list/timeline/calendar  — placeholder tabs (real content in plans 05/06/07)
+//   - board                         — BoardTab (Plan 11-05) + BacklogPanel cross-drop (Plan 11-06)
+//   - list/timeline/calendar        — placeholder tabs (Plan 11-07)
 //   - activity                      — Faz 13 stub (ActivityStubTab)
 //   - lifecycle                     — Faz 12 stub (LifecycleStubTab)
-//   - members                       — Manager card + helper text (this plan)
-//   - settings                      — 4 sub-tabs (this plan, Task 2)
+//   - members                       — Manager card (Plan 11-04)
+//   - settings                      — 4 sub-tabs (Plan 11-04)
 //
-// The shell also mounts <ProjectDetailProvider> so descendants (Board toolbar
-// in 11-05, List filter in 11-07) can read searchQuery / density / phaseFilter
-// from a single source (RESEARCH §640-670).
+// Plan 11-06 lifts <ProjectDnDProvider> from BoardTab UP to shell level so the
+// BacklogPanel can share the Board's drag space. Cross-container drops
+// (backlog row → board column) are resolved by handleBoardDragEnd with the
+// BACKLOG_COLUMN_ID sentinel as sourceColumnId — the result is always a
+// "different column" so `moved: true` and the shell fires useMoveTask. After
+// the PATCH settles, the shell also invalidates ['tasks', 'backlog',
+// projectId] so the row disappears from the panel.
 
 import * as React from "react"
 import {
@@ -26,16 +31,26 @@ import {
   Settings,
   Users,
 } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { Tabs } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useToast } from "@/components/toast"
+import { apiClient } from "@/lib/api-client"
+import { ProjectDnDProvider } from "@/lib/dnd/dnd-provider"
+import { handleBoardDragEnd, type BoardColumnInfo } from "@/lib/dnd/board-dnd"
+import { useMoveTask } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
+import type { Task } from "@/services/task-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
+import { BoardCardGhost } from "./board-card"
 import { LifecycleStubTab } from "./lifecycle-stub-tab"
 import { MembersTab } from "./members-tab"
 import { ProjectDetailProvider } from "./project-detail-context"
+import { BacklogPanel, useBacklogOpenState } from "./backlog-panel"
+import { BacklogToggle } from "./backlog-toggle"
 
 // Settings tab is lazy-loaded to keep the shell bundle lean — the 4 sub-tabs
 // import TanStack Query + methodology-matrix + confirm-dialog etc. which users
@@ -59,9 +74,55 @@ interface ProjectDetailShellProps {
   isArchived: boolean
 }
 
-export function ProjectDetailShell({ project, isArchived }: ProjectDetailShellProps) {
+// Column meta DTO from GET /projects/{id}/columns — same shape used by BoardTab.
+interface ColumnMetaDTO {
+  id: number
+  name: string
+  order_index: number
+  wip_limit: number
+  task_count: number
+}
+
+export function ProjectDetailShell({
+  project,
+  isArchived,
+}: ProjectDetailShellProps) {
   const { language: lang } = useApp()
+  const { showToast } = useToast()
+  const qc = useQueryClient()
   const [tab, setTab] = React.useState<TabId>("board")
+
+  const { effectiveOpen, narrow, open, setOpen } = useBacklogOpenState(
+    project.id
+  )
+
+  const moveTask = useMoveTask(project.id)
+
+  // Columns + project tasks fetched here (same keys BoardTab uses so the
+  // queries are de-duplicated by TanStack Query). Needed at shell level so the
+  // cross-container drop handler can look up WIP limit + current task count
+  // for the target column regardless of which tab is active.
+  const { data: columns = [] } = useQuery({
+    queryKey: ["columns", project.id],
+    queryFn: async () => {
+      const resp = await apiClient.get<ColumnMetaDTO[]>(
+        `/projects/${project.id}/columns`
+      )
+      return resp.data
+    },
+    staleTime: 60_000,
+  })
+
+  const { data: currentTasks = [] } = useQuery<Task[]>({
+    // Must match the useTasks([]) default filter key shape exactly so the
+    // cache is shared (useTasks in hooks/use-tasks.ts: ["tasks", "project",
+    // projectId, filters={}]).
+    queryKey: ["tasks", "project", project.id, {}],
+    queryFn: async () => {
+      const resp = await apiClient.get<Task[]>(`/tasks/project/${project.id}`)
+      return resp.data
+    },
+  })
 
   const tabs = [
     { id: "board", label: lang === "tr" ? "Pano" : "Board", icon: <Grid3x3 size={13} /> },
@@ -74,69 +135,185 @@ export function ProjectDetailShell({ project, isArchived }: ProjectDetailShellPr
     { id: "settings", label: lang === "tr" ? "Ayarlar" : "Settings", icon: <Settings size={13} /> },
   ]
 
+  // Cross-container + same-container drop handler — lifted from BoardTab so
+  // Backlog→Board works. handleBoardDragEnd treats BACKLOG_COLUMN_ID as "just
+  // another different column id": source !== target so `moved: true`.
+  const handleDropped = React.useCallback(
+    (taskId: number, sourceColumnId: string, targetColumnId: string) => {
+      // Target column name lookup is case-insensitive — status strings in the
+      // task DTO may diverge slightly from column.name casing (matches the
+      // BoardTab fallback behaviour).
+      const targetCol = columns.find(
+        (c) => c.name.toLowerCase() === targetColumnId.toLowerCase()
+      )
+      const currentCount = currentTasks.filter(
+        (t) => (t.status ?? "").toLowerCase() === targetColumnId.toLowerCase()
+      ).length
+      const targetInfo: BoardColumnInfo = {
+        id: targetColumnId,
+        wipLimit: targetCol?.wip_limit ?? 0,
+        taskCount: currentCount,
+      }
+
+      const result = handleBoardDragEnd({
+        taskId,
+        sourceColumnId,
+        targetColumnId,
+        targetColumn: targetInfo,
+      })
+      if (!result.moved) return
+
+      if (result.wipExceeded) {
+        showToast({
+          variant: "warning",
+          message:
+            lang === "tr"
+              ? "WIP limiti aşıldı — kolonda uyarı gösteriliyor"
+              : "WIP limit exceeded — warning shown",
+        })
+      }
+
+      moveTask.mutate({ id: taskId, status: targetColumnId.toLowerCase() })
+
+      // Cross-container invalidation (Plan 11-06): when the drop source was
+      // the backlog, the move changes status which may no longer match the
+      // backlog filter (e.g. Kanban leftmost_column status). useMoveTask's
+      // onSettled invalidates ['tasks', 'project', projectId]; the backlog
+      // uses a sibling key ['tasks', 'backlog', projectId, filter] so we must
+      // invalidate it explicitly here to refetch the backlog list.
+      qc.invalidateQueries({ queryKey: ["tasks", "backlog", project.id] })
+    },
+    [columns, currentTasks, moveTask, showToast, lang, qc, project.id]
+  )
+
+  const renderGhost = React.useCallback(
+    (taskId: number | null) => {
+      if (taskId == null) return null
+      const t = currentTasks.find((x) => x.id === taskId)
+      return t ? <BoardCardGhost task={t} /> : null
+    },
+    [currentTasks]
+  )
+
   return (
     <ProjectDetailProvider projectId={project.id}>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          minHeight: 0,
-          flex: 1,
-        }}
+      <ProjectDnDProvider
+        projectId={project.id}
+        onTaskDropped={handleDropped}
+        renderGhost={renderGhost}
       >
-        <Tabs
-          tabs={tabs}
-          active={tab}
-          onChange={(id: string) => setTab(id as TabId)}
-          size="md"
-        />
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 0,
+            flex: 1,
+            minHeight: 0,
+            height: "100%",
+          }}
+        >
+          {/* Left edge toggle pill (UI-SPEC §12) */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              paddingRight: 4,
+              flexShrink: 0,
+            }}
+          >
+            <BacklogToggle
+              open={effectiveOpen}
+              onToggle={() => setOpen(!open)}
+            />
+          </div>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
-          {tab === "board" && <BoardTab project={project} />}
-          {tab === "list" && (
-            <TabPlaceholder
-              label={
-                lang === "tr" ? "Liste sekmesi — Plan 11-07" : "List — Plan 11-07"
-              }
+          {/* Backlog panel (D-13 fixed column that pushes content). The panel
+              returns null when !open, so there is no hidden DOM weight while
+              closed. */}
+          <BacklogPanel
+            project={project}
+            open={effectiveOpen}
+            narrow={narrow}
+            onClose={() => setOpen(false)}
+          />
+
+          {/* Tab content — when the backlog is open, shift right 12px for
+              breathing room (the panel has its own borderRight). */}
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              marginLeft: effectiveOpen ? 12 : 0,
+              transition: "margin-left 180ms ease",
+              minHeight: 0,
+            }}
+          >
+            <Tabs
+              tabs={tabs}
+              active={tab}
+              onChange={(id: string) => setTab(id as TabId)}
+              size="md"
             />
-          )}
-          {tab === "timeline" && (
-            <TabPlaceholder
-              label={
-                lang === "tr"
-                  ? "Zaman Çizelgesi — Plan 11-07"
-                  : "Timeline — Plan 11-07"
-              }
-            />
-          )}
-          {tab === "calendar" && (
-            <TabPlaceholder
-              label={lang === "tr" ? "Takvim — Plan 11-07" : "Calendar — Plan 11-07"}
-            />
-          )}
-          {tab === "activity" && <ActivityStubTab />}
-          {tab === "lifecycle" && <LifecycleStubTab />}
-          {tab === "members" && <MembersTab project={project} />}
-          {tab === "settings" && (
-            <React.Suspense
-              fallback={
-                <div
-                  style={{
-                    padding: 20,
-                    color: "var(--fg-muted)",
-                    fontSize: 12,
-                  }}
+
+            <div style={{ flex: 1, minHeight: 0 }}>
+              {tab === "board" && <BoardTab project={project} />}
+              {tab === "list" && (
+                <TabPlaceholder
+                  label={
+                    lang === "tr"
+                      ? "Liste sekmesi — Plan 11-07"
+                      : "List — Plan 11-07"
+                  }
+                />
+              )}
+              {tab === "timeline" && (
+                <TabPlaceholder
+                  label={
+                    lang === "tr"
+                      ? "Zaman Çizelgesi — Plan 11-07"
+                      : "Timeline — Plan 11-07"
+                  }
+                />
+              )}
+              {tab === "calendar" && (
+                <TabPlaceholder
+                  label={
+                    lang === "tr"
+                      ? "Takvim — Plan 11-07"
+                      : "Calendar — Plan 11-07"
+                  }
+                />
+              )}
+              {tab === "activity" && <ActivityStubTab />}
+              {tab === "lifecycle" && <LifecycleStubTab />}
+              {tab === "members" && <MembersTab project={project} />}
+              {tab === "settings" && (
+                <React.Suspense
+                  fallback={
+                    <div
+                      style={{
+                        padding: 20,
+                        color: "var(--fg-muted)",
+                        fontSize: 12,
+                      }}
+                    >
+                      {lang === "tr" ? "Yükleniyor..." : "Loading..."}
+                    </div>
+                  }
                 >
-                  {lang === "tr" ? "Yükleniyor..." : "Loading..."}
-                </div>
-              }
-            >
-              <SettingsTabLazy project={project} isArchived={isArchived} />
-            </React.Suspense>
-          )}
+                  <SettingsTabLazy
+                    project={project}
+                    isArchived={isArchived}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      </ProjectDnDProvider>
     </ProjectDetailProvider>
   )
 }

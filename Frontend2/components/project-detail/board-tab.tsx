@@ -1,11 +1,13 @@
 "use client"
 
-// BoardTab — Phase 11 Plan 05 main export.
+// BoardTab — Phase 11 Plan 05 main export (DnD wrapper lifted to the shell in
+// Plan 11-06).
 //
-// Renders the 4-column kanban inside a ProjectDnDProvider (Plan 11-01). The
-// provider's onTaskDropped callback funnels every completed drag through our
-// pure handleBoardDragEnd decision (lib/dnd/board-dnd.ts) and — when the move
-// is legal — fires a PATCH /tasks/{id} via useMoveTask (optimistic + rollback).
+// Renders the 4-column kanban. Plan 11-06 moved <ProjectDnDProvider> UP to
+// ProjectDetailShell so the Backlog panel can share the Board's drag space
+// (cross-container drop: backlog row → board column). The shell owns the
+// DnD context + the onTaskDropped / renderGhost callbacks now; BoardTab here
+// only renders the toolbar + the column grid.
 //
 // Columns are derived from GET /projects/{id}/columns (wipLimit + name) when
 // available, otherwise we fall back to project.columns which is the status
@@ -16,15 +18,10 @@ import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { apiClient } from "@/lib/api-client"
-import { ProjectDnDProvider } from "@/lib/dnd/dnd-provider"
-import { handleBoardDragEnd } from "@/lib/dnd/board-dnd"
-import { useTasks, useMoveTask } from "@/hooks/use-tasks"
-import { useApp } from "@/context/app-context"
-import { useToast } from "@/components/toast"
+import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
 import type { Task } from "@/services/task-service"
 
-import { BoardCardGhost } from "./board-card"
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
 import { useProjectDetail } from "./project-detail-context"
@@ -51,13 +48,10 @@ function useColumns(projectId: number) {
 }
 
 export function BoardTab({ project }: { project: Project }) {
-  const { language } = useApp()
-  const { showToast } = useToast()
   const pd = useProjectDetail()
 
   const { data: tasks = [] } = useTasks(project.id)
   const { data: columnsMeta = [] } = useColumns(project.id)
-  const moveTask = useMoveTask(project.id)
 
   const cfg = (project.processConfig ?? {}) as {
     enable_phase_assignment?: boolean
@@ -113,45 +107,6 @@ export function BoardTab({ project }: { project: Project }) {
     return g
   }, [columnNames, filteredTasks])
 
-  const handleDropped = React.useCallback(
-    (taskId: number, sourceColumnId: string, targetColumnId: string) => {
-      const targetInfo = {
-        id: targetColumnId,
-        wipLimit: wipLimits.get(targetColumnId.toLowerCase()) ?? 0,
-        taskCount: (grouped[targetColumnId] ?? []).length,
-      }
-      const result = handleBoardDragEnd({
-        taskId,
-        sourceColumnId,
-        targetColumnId,
-        targetColumn: targetInfo,
-      })
-      if (!result.moved) return
-      if (result.wipExceeded) {
-        showToast({
-          variant: "warning",
-          message:
-            language === "tr"
-              ? "WIP limiti aşıldı — kolonda uyarı gösteriliyor"
-              : "WIP limit exceeded — warning shown",
-        })
-      }
-      // Backend status is the column name lowercased (established by seed in
-      // project-service). Keeping the same transformation prevents drift.
-      moveTask.mutate({ id: taskId, status: targetColumnId.toLowerCase() })
-    },
-    [grouped, wipLimits, moveTask, showToast, language]
-  )
-
-  const renderGhost = React.useCallback(
-    (taskId: number | null) => {
-      if (taskId == null) return null
-      const t = tasks.find((x) => x.id === taskId)
-      return t ? <BoardCardGhost task={t} /> : null
-    },
-    [tasks]
-  )
-
   return (
     <div
       style={{
@@ -163,36 +118,30 @@ export function BoardTab({ project }: { project: Project }) {
       }}
     >
       <BoardToolbar project={project} />
-      <ProjectDnDProvider
-        projectId={project.id}
-        onTaskDropped={handleDropped}
-        renderGhost={renderGhost}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${Math.max(columnNames.length, 1)}, minmax(260px, 1fr))`,
+          gap: 12,
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+        }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${Math.max(columnNames.length, 1)}, minmax(260px, 1fr))`,
-            gap: 12,
-            flex: 1,
-            minHeight: 0,
-            overflow: "auto",
-          }}
-        >
-          {columnNames.map((cn) => (
-            <BoardColumn
-              key={cn}
-              columnId={cn}
-              columnName={cn}
-              wipLimit={wipLimits.get(cn.toLowerCase()) ?? 0}
-              tasks={grouped[cn] ?? []}
-              projectId={project.id}
-              densityMode={pd.densityMode}
-              phaseNodes={phaseNodes}
-              enablePhaseBadge={enablePhaseBadge}
-            />
-          ))}
-        </div>
-      </ProjectDnDProvider>
+        {columnNames.map((cn) => (
+          <BoardColumn
+            key={cn}
+            columnId={cn}
+            columnName={cn}
+            wipLimit={wipLimits.get(cn.toLowerCase()) ?? 0}
+            tasks={grouped[cn] ?? []}
+            projectId={project.id}
+            densityMode={pd.densityMode}
+            phaseNodes={phaseNodes}
+            enablePhaseBadge={enablePhaseBadge}
+          />
+        ))}
+      </div>
     </div>
   )
 }
