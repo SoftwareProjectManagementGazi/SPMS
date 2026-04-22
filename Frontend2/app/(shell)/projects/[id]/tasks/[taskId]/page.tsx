@@ -19,11 +19,15 @@ import { useProject } from "@/hooks/use-projects"
 import { useTaskDetail } from "@/hooks/use-task-detail"
 import { useTasks, useUpdateTask } from "@/hooks/use-tasks"
 
+import { ActivitySection } from "@/components/task-detail/activity-section"
+import { AttachmentsSection } from "@/components/task-detail/attachments-section"
+import { DependenciesSection } from "@/components/task-detail/dependencies-section"
 import { DescriptionEditor } from "@/components/task-detail/description-editor"
 import { ParentTaskLink } from "@/components/task-detail/parent-task-link"
 import { PropertiesSidebar } from "@/components/task-detail/properties-sidebar"
 import { SubTasksList } from "@/components/task-detail/sub-tasks-list"
 import { WatcherToggle } from "@/components/task-detail/watcher-toggle"
+import type { UserLite } from "@/lib/audit-formatter"
 
 export default function TaskDetailPage() {
   const params = useParams()
@@ -54,6 +58,23 @@ export default function TaskDetailPage() {
     () => allTasks.filter((t) => t.parentTaskId === taskId),
     [allTasks, taskId],
   )
+
+  // Phase 11 has no GET /projects/{id}/members endpoint, so the member pool
+  // available here is the project manager (from the project DTO). The full
+  // member roster lands in a later phase; for now Activity + History resolve
+  // names for the manager only, and unknown user_ids fall through to the
+  // "Bilinmeyen kullanıcı" placeholder in formatAuditEntry.
+  const projectMembers = React.useMemo<UserLite[]>(() => {
+    if (project?.managerId != null) {
+      return [
+        {
+          id: project.managerId,
+          name: project.managerName ?? `#${project.managerId}`,
+        },
+      ]
+    }
+    return []
+  }, [project])
 
   if (Number.isNaN(projectId) || Number.isNaN(taskId)) {
     return (
@@ -196,22 +217,21 @@ export default function TaskDetailPage() {
         {/* Sub-tasks (D-37) */}
         <SubTasksList parent={task} subtasks={subtasks} />
 
-        {/* Plan 11-09 stub: comments / history / attachments / dependencies */}
-        <div
-          style={{
-            marginTop: 24,
-            padding: 20,
-            border: "1px dashed var(--border)",
-            borderRadius: "var(--radius-sm)",
-            textAlign: "center",
-            color: "var(--fg-subtle)",
-            fontSize: 12,
-          }}
-        >
-          {lang === "tr"
-            ? "Yorumlar, Geçmiş, Ekler ve Bağımlılıklar Plan 11-09'da aktive edilecek."
-            : "Comments, History, Attachments, and Dependencies activate in Plan 11-09."}
-        </div>
+        {/* Activity (D-47) — Yorumlar + Geçmiş sub-tabs.
+            Members placeholder: Phase 11 does not add GET /projects/{id}/members;
+            the project manager is the only member available from the existing
+            project DTO. Extending the member pool belongs to a later plan. */}
+        <ActivitySection
+          taskId={task.id}
+          project={project}
+          projectMembers={projectMembers}
+        />
+
+        {/* Attachments (D-48) — drag-drop + file list + link references */}
+        <AttachmentsSection taskId={task.id} />
+
+        {/* Dependencies (D-49) — type select + task picker + list + navigate */}
+        <DependenciesSection taskId={task.id} projectId={project.id} />
       </div>
 
       {/* Right column — Properties sidebar (D-38 + TASK-04) */}
