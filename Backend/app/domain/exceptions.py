@@ -54,6 +54,19 @@ class DependencyAlreadyExistsError(DomainError):
         super().__init__(f"Dependency between task {task_id} and task {depends_on_id} already exists")
 
 
+class LabelNameAlreadyExistsError(DomainError):
+    """Phase 11 D-51 — auto-create conflict.
+
+    Raised by CreateLabelUseCase when (project_id, name) already exists.
+    Router maps to HTTP 409 Conflict so the frontend can fall back to using
+    the existing label id (Pitfall 7 auto-create race in RESEARCH.md).
+    """
+    def __init__(self, project_id: int, name: str):
+        self.project_id = project_id
+        self.name = name
+        super().__init__(f"Label '{name}' already exists in project {project_id}")
+
+
 # ---------------------------------------------------------------------------
 # Phase 9 domain exceptions (BACK-04..06, API-01, API-10)
 # ---------------------------------------------------------------------------

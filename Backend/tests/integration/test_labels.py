@@ -148,16 +148,29 @@ async def test_list_project_labels_use_case_returns_response_dtos():
 
 
 def test_manage_labels_has_no_sqlalchemy_import():
-    """CLAUDE.md §4.2 DIP rule — application layer must NOT import sqlalchemy or infrastructure."""
+    """CLAUDE.md §4.2 DIP rule — application layer must NOT import sqlalchemy or infrastructure.
+
+    Parses the module AST instead of grepping source so docstrings mentioning
+    'SQLAlchemy' or 'app.infrastructure' don't trigger false positives.
+    """
+    import ast
     import inspect
     from app.application.use_cases import manage_labels
 
-    src = inspect.getsource(manage_labels)
-    assert "import sqlalchemy" not in src, "DIP violation: manage_labels imports sqlalchemy"
-    assert "from sqlalchemy" not in src, "DIP violation: manage_labels imports from sqlalchemy"
-    assert "from app.infrastructure" not in src, (
-        "DIP violation: manage_labels imports from app.infrastructure"
-    )
+    tree = ast.parse(inspect.getsource(manage_labels))
+    forbidden_prefixes = ("sqlalchemy", "app.infrastructure")
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert not any(
+                    alias.name == p or alias.name.startswith(p + ".")
+                    for p in forbidden_prefixes
+                ), f"DIP violation: manage_labels imports '{alias.name}'"
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            assert not any(
+                module == p or module.startswith(p + ".") for p in forbidden_prefixes
+            ), f"DIP violation: manage_labels does 'from {module} import ...'"
 
 
 # ---------------------------------------------------------------------------
