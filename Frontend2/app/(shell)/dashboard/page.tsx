@@ -1,6 +1,5 @@
 "use client"
 import * as React from "react"
-import Link from "next/link"
 import { useProjects, useGlobalActivity, useTaskStats } from "@/hooks/use-projects"
 import { useAuth } from "@/context/auth-context"
 import { useApp } from "@/context/app-context"
@@ -8,8 +7,9 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { PortfolioTable } from "@/components/dashboard/portfolio-table"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { MethodologyCard } from "@/components/dashboard/methodology-card"
-import { Card, Button } from "@/components/primitives"
+import { Card } from "@/components/primitives"
 import type { ActivityItem } from "@/components/dashboard/activity-feed"
+import { MyTasksExperience } from "@/components/my-tasks/my-tasks-experience"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -207,30 +207,16 @@ export default function DashboardPage() {
           </div>
         </>
       ) : (
-        /* MemberView placeholder — full MyTasks is Phase 11 (D-27) */
-        <Card padding={40}>
-          <div style={{
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>
-              {language === "tr" ? "Görevlerim" : "My Tasks"}
-            </div>
-            <div style={{ fontSize: 12.5, color: "var(--fg-muted)" }}>
-              {language === "tr"
-                ? "Görevlerim yakında bu panelde görüntülenecek."
-                : "My tasks will appear here soon."}
-            </div>
-            <Link href="/my-tasks">
-              <Button variant="primary" size="sm">
-                {language === "tr" ? "Görevlerime Git" : "View My Tasks"}
-              </Button>
-            </Link>
-          </div>
-        </Card>
+        /* MemberView — D-52: compact MyTasksExperience inside the dashboard.
+           hideHeader drops the hero (dashboard already has its greeting row).
+           defaultView="today" greets the user with their day's work first. */
+        <MyTasksExperience
+          compact
+          defaultView="today"
+          hideHeader
+          hideRightRail
+          hideQuickAdd
+        />
       )}
     </div>
   )

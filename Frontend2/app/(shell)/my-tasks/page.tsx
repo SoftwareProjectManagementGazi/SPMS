@@ -1,12 +1,10 @@
+"use client"
+
+// /my-tasks — PAGE-04 (D-33). Mounts the full-featured MyTasksExperience.
+// Dashboard Member view mounts the same component with `compact` props.
+
+import { MyTasksExperience } from "@/components/my-tasks/my-tasks-experience"
+
 export default function MyTasksPage() {
-  return (
-    <div>
-      <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--fg)" }}>
-        My Tasks
-      </h1>
-      <p style={{ fontSize: 13, color: "var(--fg-muted)", marginTop: 8 }}>
-        My Tasks page will be implemented in Phase 11.
-      </p>
-    </div>
-  )
+  return <MyTasksExperience />
 }
