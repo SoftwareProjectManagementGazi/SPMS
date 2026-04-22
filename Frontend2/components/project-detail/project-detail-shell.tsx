@@ -47,8 +47,10 @@ import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
 import { BoardCardGhost } from "./board-card"
 import { LifecycleStubTab } from "./lifecycle-stub-tab"
+import { ListTab } from "./list-tab"
 import { MembersTab } from "./members-tab"
 import { ProjectDetailProvider } from "./project-detail-context"
+import { TimelineTab } from "./timeline-tab"
 import { BacklogPanel, useBacklogOpenState } from "./backlog-panel"
 import { BacklogToggle } from "./backlog-toggle"
 
@@ -260,24 +262,8 @@ export function ProjectDetailShell({
 
             <div style={{ flex: 1, minHeight: 0 }}>
               {tab === "board" && <BoardTab project={project} />}
-              {tab === "list" && (
-                <TabPlaceholder
-                  label={
-                    lang === "tr"
-                      ? "Liste sekmesi — Plan 11-07"
-                      : "List — Plan 11-07"
-                  }
-                />
-              )}
-              {tab === "timeline" && (
-                <TabPlaceholder
-                  label={
-                    lang === "tr"
-                      ? "Zaman Çizelgesi — Plan 11-07"
-                      : "Timeline — Plan 11-07"
-                  }
-                />
-              )}
+              {tab === "list" && <ListTab project={project} />}
+              {tab === "timeline" && <TimelineTab project={project} />}
               {tab === "calendar" && (
                 <TabPlaceholder
                   label={
