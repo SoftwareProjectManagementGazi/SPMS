@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-04-22T19:44:53.474Z"
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-04-22T19:55:39.207Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 26
-  percent: 76
+  completed_plans: 27
+  percent: 79
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Progress: [████████░░] 76%
 | Phase 10-shell-pages-project-features P10 | 8 | 1 task  | 1 file   |
 | Phase 11 P01 | 16min | 3 tasks | 26 files |
 | Phase Phase 11 P02 P9 | 2 | 8 tasks | - files |
+| Phase Phase 11 PP03 | 6 | 2 tasks tasks | 10 files files |
 
 ## Accumulated Context
 
@@ -193,6 +194,10 @@ Key constraints for v2.0:
 - [11-02] Assignee dropdown ships project manager + current user only (documented stub); real per-project member picker lands in Plan 11-04 per D-32
 - [11-02] Cycle select ships empty options for Scrum in Phase 11; /api/v1/sprints wiring deferred to Plan 11-05 per D-44 — Cycle field hidden for Kanban/Waterfall (D-45), disabled w/ helper for Iterative/Incremental/Evolutionary/RAD (D-44)
 - [11-02] Toast API: plan's showToast standalone import does not exist; codebase exports useToast() hook returning { showToast } — used the real hook
+- [11-03] Inline membership check for POST /labels (not Depends(get_project_member)) — body-scoped project_id uses IProjectRepository.get_by_id_and_user + _is_admin bypass (T-11-03-01 IDOR mitigation, board_columns pattern)
+- [11-03] labels router prefix=/api/v1 (not /api/v1/labels) — single APIRouter mounts /projects/{id}/labels AND /labels; narrower prefix would double-prefix one route
+- [11-03] AST-based DIP test (ast.walk for Import/ImportFrom) replaces source-grep approach — docstrings mentioning 'SQLAlchemy' no longer trigger false-positive CLAUDE.md §4.2 violations; canonical for future app-layer modules
+- [11-03] usage_count denormalized via task_labels LEFT JOIN + COUNT subquery in list_by_project only; get_by_name_in_project returns usage_count=0 (uniqueness check callers don't need stats)
 
 ### Pending Todos
 
@@ -213,8 +218,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T19:44:53.469Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-04-22T19:55:39.201Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete

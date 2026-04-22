@@ -124,7 +124,7 @@ Plans:
 Plans:
 - [x] 11-01-PLAN.md — Wave 0 infra: npm install (dnd-kit/TipTap/TanStack Table/Vitest/Playwright), TaskModalContext, methodology-matrix, task/label/comment/attachment services + hooks, process_config normalizer extension (completed 2026-04-22, 16 min, 3 tasks, 22 created + 4 modified = 26 files)
 - [x] 11-02-PLAN.md — Task Create Modal (15 fields) + Header Create button rewire per D-07 + Yeni Proje permission gate per D-08 (completed 2026-04-22, 9 min, 2 tasks, 4 created + 4 modified = 8 files)
-- [ ] 11-03-PLAN.md — Backend labels slice (Clean Architecture): Label entity + ILabelRepository + SqlAlchemy impl + use cases + router + DI wiring + integration tests
+- [x] 11-03-PLAN.md — Backend labels slice (Clean Architecture): Label entity + ILabelRepository + SqlAlchemy impl + use cases + router + DI wiring + integration tests (completed 2026-04-22, 6 min, 2 tasks, 7 created + 4 modified = 11 files)
 - [ ] 11-04-PLAN.md — ProjectDetail 8-tab shell + Settings sub-tabs (General/Columns/Workflow/Lifecycle stub) + Members tab + Activity/Lifecycle stubs
 - [ ] 11-05-PLAN.md — Board tab with @dnd-kit + BoardCard/BoardColumn/BoardToolbar + WIP Warn+Allow (D-20) + density toggle + phase filter
 - [ ] 11-06-PLAN.md — Backlog Panel fixed column + cross-container DnD (lifts DnDContext to shell) + methodology-matrix driven query + filters + responsive
@@ -199,7 +199,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
-| 11. Task Features & Board Enhancements | v2.0 | 0/10 | Planned | - |
+| 11. Task Features & Board Enhancements | v2.0 | 3/10 | In Progress | - |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
 </content>
