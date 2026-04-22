@@ -5,11 +5,14 @@
 // New_Frontend/src/app.jsx App component layout (lines 162-169).
 // Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
 //
-// Plan 09: Wires the deferred Header Create button to /projects/new (D-08-04)
-// and adds a dynamic project status Badge in the header for /projects/{id} routes (PROJ-02).
+// Plan 09: Added a dynamic project status Badge in the header for /projects/{id}
+// routes (PROJ-02) and wired the header Create button to /projects/new.
+// Plan 11 D-07: Header Create button now opens the Task Create Modal via
+// useTaskModal() inside the CreateButton subcomponent — AppShell no longer needs
+// the old create-project callback or useRouter import.
 
 import * as React from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 
 import { Sidebar } from "./sidebar"
@@ -37,7 +40,6 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const router = useRouter()
   const pathname = usePathname()
 
   // PROJ-02: detect /projects/{id} route to show status badge in header
@@ -79,10 +81,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="flex min-h-screen" style={{ background: "var(--bg)" }}>
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col">
-        <Header
-          statusBadge={headerStatusBadge}
-          onCreateProject={() => router.push("/projects/new")}
-        />
+        <Header statusBadge={headerStatusBadge} />
         <main className="flex-1 overflow-auto" style={{ padding: 24 }}>
           {children}
         </main>

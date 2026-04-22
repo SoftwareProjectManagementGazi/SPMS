@@ -5,6 +5,7 @@ import { SegmentedControl, Input, Button } from "@/components/primitives"
 import { ProjectCard } from "@/components/projects/project-card"
 import { useProjects } from "@/hooks/use-projects"
 import { useApp } from "@/context/app-context"
+import { useAuth } from "@/context/auth-context"
 
 // SegmentedControl uses { id, label } options — id is the filter value sent to API
 const STATUS_SEGMENTS = [
@@ -23,8 +24,21 @@ const STATUS_SEGMENTS_EN = [
 
 export default function ProjectsPage() {
   const { language } = useApp()
+  const { user } = useAuth()
   const [statusFilter, setStatusFilter] = React.useState("")
   const [searchQuery, setSearchQuery] = React.useState("")
+
+  // D-08: Yeni Proje button visible only to Admin + Project Manager.
+  // Uses case-insensitive compare with the backend-returned role name
+  // (see Frontend2/services/auth-service.ts — role.name is a free-form string
+  // populated from the role table's `name` column). Defense-in-depth only —
+  // the backend POST /api/v1/projects still enforces the same role check
+  // (T-11-02-01 disposition: frontend gate is UX, not authz).
+  const roleName = (user?.role?.name ?? "").toLowerCase()
+  const canCreateProject =
+    roleName === "admin" ||
+    roleName === "project manager" ||
+    roleName === "project_manager"
 
   // PROJ-05: fetch filtered list from API — "Tümü" omits status param (D-24)
   const { data: projects = [], isLoading } = useProjects(statusFilter || undefined)
@@ -63,11 +77,13 @@ export default function ProjectsPage() {
             onChange={e => setSearchQuery(e.target.value)}
             style={{ width: 220 }}
           />
-          <Link href="/projects/new">
-            <Button variant="primary">
-              {language === 'tr' ? 'Yeni proje' : 'New project'}
-            </Button>
-          </Link>
+          {canCreateProject && (
+            <Link href="/projects/new">
+              <Button variant="primary">
+                {language === 'tr' ? 'Yeni proje' : 'New project'}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -89,11 +105,13 @@ export default function ProjectsPage() {
                 ? (language === 'tr' ? 'Bu filtreyle eşleşen proje yok.' : 'No projects match this filter.')
                 : (language === 'tr' ? 'Henüz proje yok.' : 'No projects yet.')}
             </div>
-            <Link href="/projects/new">
-              <Button variant="primary" size="sm">
-                {language === 'tr' ? 'Yeni proje' : 'New project'}
-              </Button>
-            </Link>
+            {canCreateProject && (
+              <Link href="/projects/new">
+                <Button variant="primary" size="sm">
+                  {language === 'tr' ? 'Yeni proje' : 'New project'}
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       ) : (
