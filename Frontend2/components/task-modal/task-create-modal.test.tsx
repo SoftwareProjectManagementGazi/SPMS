@@ -127,12 +127,18 @@ describe("TaskCreateModal", () => {
   })
 
   it("enables submit once title and project are filled", async () => {
-    const { findByText, findByLabelText, getByRole, getAllByRole } = renderWithProviders(
+    const { findByText, getByRole, getAllByRole, findByPlaceholderText } = renderWithProviders(
       <ModalDomProvider>
         <TriggerOpen />
       </ModalDomProvider>
     )
     await findByText(/Görev Oluştur|Create Task/)
+
+    // Wait for the project list to actually populate (async useProjects resolves)
+    await waitFor(() => {
+      const opts = document.querySelectorAll('select[aria-label="Proje"] option')
+      expect(opts.length).toBeGreaterThan(1)
+    })
 
     // The first combobox is the Project select
     const selects = getAllByRole("combobox") as HTMLSelectElement[]
@@ -140,15 +146,14 @@ describe("TaskCreateModal", () => {
     await act(async () => {
       fireEvent.change(projectSelect, { target: { value: "1" } })
     })
+    expect(projectSelect.value).toBe("1")
 
-    // Title input -- autofocused
-    const titleInput = (await findByLabelText(/Başlık|Title/)) as HTMLInputElement
-    // findByLabelText returned the textarea for Description if they share label base; force pick by role
-    const titleByPlaceholder = document.querySelector('input[placeholder="Kısa, net başlık"],input[placeholder="Short, clear title"]') as HTMLInputElement | null
-    const target = titleByPlaceholder ?? titleInput
+    // Title input identified by placeholder
+    const titleInput = (await findByPlaceholderText(/Kısa, net başlık|Short, clear title/)) as HTMLInputElement
     await act(async () => {
-      fireEvent.change(target, { target: { value: "Hello task" } })
+      fireEvent.change(titleInput, { target: { value: "Hello task" } })
     })
+    expect(titleInput.value).toBe("Hello task")
 
     await waitFor(() => {
       const submit = getByRole("button", { name: /^(Oluştur|Create)$/ }) as HTMLButtonElement
