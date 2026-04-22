@@ -78,7 +78,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [ ] **TASK-02**: Backlog Paneli yapilir — proje detayda sol kenarda dikey toggle, 300px panel, arama/filtre/siralama, gorev listesi, drag-drop, toplu islem [E1]
 - [ ] **TASK-03**: Gorev-Faz atamasi eklenir — enable_phase_assignment toggle acikken gorev formuna faz dropdown'i, board kart faz badge'i [E3][E5]
 - [ ] **TASK-04**: Ana gorev sidebar'inda alt gorev faz dagilimi mini stepper gosterilir [E3]
-- [ ] **TASK-05**: Board toolbar'a "Faza Gore Filtrele" dropdown'i, List Tab'a "Faz" sutunu eklenir [E5]
+- [x] **TASK-05
+**: Board toolbar'a "Faza Gore Filtrele" dropdown'i, List Tab'a "Faz" sutunu eklenir [E5]
 - [ ] **TASK-06**: Cycle label'i metodolojiye gore dinamik gosterilir (Sprint/Dongu/Iterasyon/Artim) [E14]
 
 ### Lifecycle & Phase Gate
@@ -128,7 +129,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Settings sayfasi donusturulur — tum alt sekmeler (Lifecycle dahil)
 - [x] **PAGE-06
 **: Login/Register sayfalari donusturulur
-- [ ] **PAGE-07**: WIP ihlali detaylari Board Tab'a eklenir — kolon background renk degisimi, AlertBanner, drop engelleme [EKSIK S8]
+- [x] **PAGE-07
+**: WIP ihlali detaylari Board Tab'a eklenir — kolon background renk degisimi, AlertBanner, drop engelleme [EKSIK S8]
 
 ## v3.0 Requirements
 

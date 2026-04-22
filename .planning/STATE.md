@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-04-PLAN.md
-last_updated: "2026-04-22T20:34:28.481Z"
+stopped_at: Completed 11-05-PLAN.md
+last_updated: "2026-04-22T20:45:29.720Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 28
-  percent: 82
+  completed_plans: 29
+  percent: 85
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [████████░░] 82%
 | Phase Phase 11 P02 P9 | 2 | 8 tasks | - files |
 | Phase Phase 11 PP03 | 6 | 2 tasks tasks | 10 files files |
 | Phase Phase 11 P04 P4 | 32min | 2 tasks tasks | 14 files files |
+| Phase Phase 11 PP05 | 6min | 2 tasks tasks | 11 files files |
 
 ## Accumulated Context
 
@@ -205,6 +206,10 @@ Key constraints for v2.0:
 - [11-04] Rule 2 fix — Backend UpdateColumnDTO + UpdateColumnUseCase extended with optional wip_limit so Kolonlar sub-tab WIP edits actually persist (was silently dropped by Pydantic default extra=ignore before this plan)
 - [11-04] Native input/textarea + onBlur replaced a failed setTimeout-debounce approach — the debounce leaked timers across multiple vitest renders and OOM'd the worker. Rule 3 scope boundary: Input primitive not forked in this plan, extended to forward onBlur in a follow-up
 - [11-04] Stable-string dep pattern for useEffect sync off useQuery arrays: serialize the data shape (id:name:value | ...) and dep on the string, not the array reference — avoids OOM from fresh-reference loops
+- [11-05] D-20 Warn+Allow authoritative: handleBoardDragEnd returns moved:true + wipExceeded:true when over limit — drop ALWAYS commits, UI shows banner+toast; roadmap criterion 5 'prevents dropping' superseded
+- [11-05] BoardCard priority token bridge: left-border uses same 'medium' → 'med' CSS var mapping that PriorityChip established (priorityTokenVar helper)
+- [11-05] Scrum-gated useQuery for /sprints — non-Scrum methodologies never fetch, keeping toolbar API cost zero
+- [11-05] Column grouping fallback: unmatched task.status lands in first column (not hidden) — protects against backend column-name drift mid-migration
 
 ### Pending Todos
 
@@ -225,8 +230,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T20:34:05.168Z
-Stopped at: Completed 11-04-PLAN.md
+Last session: 2026-04-22T20:45:17.068Z
+Stopped at: Completed 11-05-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
