@@ -116,22 +116,22 @@ Plans:
 **Requirements**: PAGE-03, PAGE-04, PAGE-07, TASK-01, TASK-02, TASK-03, TASK-04, TASK-05, TASK-06
 **Success Criteria** (what must be TRUE):
   1. User can create a task via overlay modal with all fields (project, type, title, description, priority, assignee, points, dates, cycle, phase, labels, recurrence)
-  2. Backlog panel toggles open on project detail left side (300px), supports search/filter/sort, drag-drop to board, and bulk operations
+  2. Backlog panel toggles open on project detail left side (300px), supports search/filter/sort, drag-drop to board (bulk operations explicitly deferred per D-15)
   3. When enable_phase_assignment is on, task form shows phase dropdown and board cards display phase badge; board toolbar has "Filter by Phase" and list tab has "Phase" column
   4. ProjectDetail page renders with 8 tabs (Board/List/Timeline/Calendar/Activity/Lifecycle/Members/Settings) and MyTasks page shows filtered task list
-  5. WIP violation triggers column background color change, AlertBanner, and prevents dropping more tasks into the column
+  5. WIP violation triggers column background color change + AlertBanner; drop still succeeds per D-20 Warn+Allow (authoritative over original roadmap wording)
 **Plans**: 10 plans
 Plans:
-- [ ] 11-01-PLAN.md (not yet planned)
-- [ ] 11-02-PLAN.md (not yet planned)
-- [ ] 11-03-PLAN.md (not yet planned)
-- [ ] 11-04-PLAN.md (not yet planned)
-- [ ] 11-05-PLAN.md (not yet planned)
-- [ ] 11-06-PLAN.md (not yet planned)
-- [ ] 11-07-PLAN.md (not yet planned)
-- [ ] 11-08-PLAN.md (not yet planned)
-- [ ] 11-09-PLAN.md (not yet planned)
-- [ ] 11-10-PLAN.md (not yet planned)
+- [ ] 11-01-PLAN.md — Wave 0 infra: npm install (dnd-kit/TipTap/TanStack Table/Vitest/Playwright), TaskModalContext, methodology-matrix, task/label/comment/attachment services + hooks, process_config normalizer extension
+- [ ] 11-02-PLAN.md — Task Create Modal (15 fields) + Header Create button rewire per D-07 + Yeni Proje permission gate per D-08
+- [ ] 11-03-PLAN.md — Backend labels slice (Clean Architecture): Label entity + ILabelRepository + SqlAlchemy impl + use cases + router + DI wiring + integration tests
+- [ ] 11-04-PLAN.md — ProjectDetail 8-tab shell + Settings sub-tabs (General/Columns/Workflow/Lifecycle stub) + Members tab + Activity/Lifecycle stubs
+- [ ] 11-05-PLAN.md — Board tab with @dnd-kit + BoardCard/BoardColumn/BoardToolbar + WIP Warn+Allow (D-20) + density toggle + phase filter
+- [ ] 11-06-PLAN.md — Backlog Panel fixed column + cross-container DnD (lifts DnDContext to shell) + methodology-matrix driven query + filters + responsive
+- [ ] 11-07-PLAN.md — List tab (TanStack Table) + Timeline tab (custom SVG Gantt, license-clean) + Calendar tab (6x7 grid with Ctrl+wheel zoom)
+- [ ] 11-08-PLAN.md — Task Detail page route + Parent link + InlineEdit wrapper + PropertiesSidebar + PhaseStepper (TASK-04) + Sub-tasks + TipTap description editor + Watcher toggle
+- [ ] 11-09-PLAN.md — Task Detail remaining sections: Activity (Yorumlar + Geçmiş sub-tabs) + Attachments (drag-drop + links) + Dependencies CRUD + audit-formatter utility
+- [ ] 11-10-PLAN.md — MyTasks (full + Dashboard Member compact) + Header search autocomplete (Cmd/Ctrl+K) + responsive breakpoints + E2E smoke tests
 **UI hint**: yes
 
 ### Phase 12: Lifecycle, Phase Gate & Workflow Editor
@@ -199,6 +199,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
-| 11. Task Features & Board Enhancements | v2.0 | 0/0 | Not started | - |
+| 11. Task Features & Board Enhancements | v2.0 | 0/10 | Planned | - |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
+</content>
