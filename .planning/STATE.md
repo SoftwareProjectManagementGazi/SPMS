@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-status: planning
-stopped_at: Phase 11 context gathered
-last_updated: "2026-04-22T17:10:04.469Z"
-last_activity: 2026-04-21
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-04-22T22:28:00.000Z"
+last_activity: 2026-04-22 -- Phase 11 Plan 01 complete (Wave 0 infrastructure)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  total_plans: 34
+  completed_plans: 25
+  percent: 74
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 10 — shell-pages-project-features
+**Current focus:** Phase --phase — 11
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-21
+Phase: 11 (task-features-board-enhancements) — EXECUTING
+Plan: 2 of 10
+Status: Completed Plan 11-01 (Wave 0 infrastructure); next plan 11-02
+Last activity: 2026-04-22 -- Plan 11-01 complete (3 tasks, 22 files created, 4 modified)
 
-Progress: [██████████] 100%
+Progress: [██████████] 74% (25/34 plans)
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [██████████] 100%
 | Phase 10-shell-pages-project-features P08 | 2 | 1 tasks | 2 files |
 | Phase 10-shell-pages-project-features P09 | 60 | 2 tasks | 12 files |
 | Phase 10-shell-pages-project-features P10 | 8 | 1 task  | 1 file   |
+| Phase 11 P01 | 16min | 3 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,16 @@ Key constraints for v2.0:
 - ArchiveBanner owns its own ConfirmDialog state — keeps reactivation flow self-contained; page only passes projectId + projectName
 - isArchived boolean derived live from project.status (not local state) — TanStack Query invalidation auto-re-enables buttons after reactivation
 - NaN guard for [id] route: Number(params.id) returns NaN for non-numeric params; enabled: !!projectId in useProject prevents API call (T-10-08-02)
+- [11-01] TaskModalProvider lives in shell layout (not root) — needs QueryClient/Toast/Auth contexts and must NOT mount on auth-free routes (RESEARCH Provider Tree Ordering)
+- [11-01] lib/methodology-matrix.ts is the single source of truth for BACKLOG_DEFINITION_BY_METHODOLOGY, CYCLE_LABEL_BY_METHODOLOGY, and CYCLE_FIELD_ENABLED_IN_PHASE_11 — downstream plans must NOT duplicate these tables
+- [11-01] resolveBacklogFilter returns the Axios params object directly (cycle_id:null, status:leftmost, phase_id:null, in_backlog:true) so callers spread it into apiClient.get params
+- [11-01] resolveCycleLabel returns null to signal the entire cycle row is hidden (Kanban); empty/whitespace overrides fall back to methodology default
+- [11-01] Backend _migrate_v0_to_v1 adds backlog_definition and cycle_label via setdefault — idempotent, preserves attacker- or user-set values (T-11-01-01 Tampering mitigation)
+- [11-01] @testing-library/react bumped 16.0.0→16.3.2 for React 19 peer; @playwright/test bumped 1.45.0→1.51.1 for next@16.2.4 peerOptional (Rule 3 blocking-issue auto-fixes)
+- [11-01] vitest 1.6 + jsdom 24 on Windows/Node 25 returns an empty window.localStorage object (no methods); test/setup.ts shim now checks method presence, not just object identity, and installs a full LocalStorage + sessionStorage replacement with getItem/setItem/removeItem/clear/key/length
+- [11-01] vitest.config.ts sets environmentOptions.jsdom.url='http://localhost/' so origin is non-opaque (avoids SecurityError on localStorage access)
+- [11-01] useUpdateTask (properties sidebar inline edit) and useMoveTask (board DnD) both implement cancelQueries → setQueryData → rollback → invalidate pattern for optimistic UX (D-38)
+- [11-01] labelService.create catches 409 Conflict, re-fetches project labels, and returns the matching existing label (Pitfall 7 auto-create race mitigation)
 
 ### Pending Todos
 
@@ -194,8 +205,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 11 context gathered
-Resume file: --resume-file
+Last session: 2026-04-22T22:28:00Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: .planning/phases/11-task-features-board-enhancements/11-02-PLAN.md
 
-**Next Phase:** Phase 11 (TaskFeatures) — all Phase 10 requirements verified and build-clean
+**Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
+
+**Next Plan:** 11-02 — Task Create Modal (TASK-01)
+
+**Planned Phase:** 11 (task-features-board-enhancements) — 10 plans — 2026-04-22T19:01:20.006Z
