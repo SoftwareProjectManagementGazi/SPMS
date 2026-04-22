@@ -12,14 +12,13 @@
 // Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
 
 import * as React from "react"
-import { PanelLeft, Search, Moon, Sun } from "lucide-react"
+import { PanelLeft, Moon, Sun } from "lucide-react"
 
-import { Input } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
-import { t } from "@/lib/i18n"
 
 import { Breadcrumb } from "./breadcrumb"
 import { CreateButton } from "./header/create-button"
+import { SearchAutocomplete } from "./header/search-autocomplete"
 
 interface HeaderProps {
   /** Rendered next to breadcrumb — PROJ-02 dynamic status badge from AppShell */
@@ -93,13 +92,9 @@ export function Header({ statusBadge }: HeaderProps) {
 
       <div style={{ flex: 1 }} />
 
-      <Input
-        icon={<Search size={14} />}
-        placeholder={t("common.search", lang)}
-        kbdHint="⌘K"
-        size="sm"
-        style={{ width: 260 }}
-      />
+      {/* Search autocomplete — Cmd/Ctrl+K + debounced parallel search
+          (D-50 / UI-SPEC §11). Replaces the plain Input primitive. */}
+      <SearchAutocomplete />
 
       {/* Primary Create action — Plan 11 D-07 opens Task Create Modal. */}
       <CreateButton />

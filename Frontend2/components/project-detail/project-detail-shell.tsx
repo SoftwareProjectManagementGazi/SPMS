@@ -256,12 +256,16 @@ export function ProjectDetailShell({
               minHeight: 0,
             }}
           >
-            <Tabs
-              tabs={tabs}
-              active={tab}
-              onChange={(id: string) => setTab(id as TabId)}
-              size="md"
-            />
+            {/* D-54 responsive: at ≤1024px the 8-tab bar becomes horizontally
+                scrollable instead of wrapping onto a second line. */}
+            <div className="pd-tabs-wrap">
+              <Tabs
+                tabs={tabs}
+                active={tab}
+                onChange={(id: string) => setTab(id as TabId)}
+                size="md"
+              />
+            </div>
 
             <div style={{ flex: 1, minHeight: 0 }}>
               {tab === "board" && <BoardTab project={project} />}

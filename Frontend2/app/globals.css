@@ -164,3 +164,26 @@ svg { display: block; }
 @media (min-width: 1280px) {
   .projects-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* Phase 11 D-54: Task Detail responsive — at ≤1024px the 300px properties
+   sidebar stacks below the main content column. Base grid applies above. */
+.task-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  min-height: 0;
+}
+@media (max-width: 1024px) {
+  .task-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Phase 11 D-54: Project Detail 8-tab bar becomes horizontally scrollable
+   at ≤1024px instead of wrapping. Scrollbar is hidden to keep the visual
+   density of the prototype. */
+@media (max-width: 1024px) {
+  .pd-tabs-wrap {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pd-tabs-wrap::-webkit-scrollbar { display: none; }
+}

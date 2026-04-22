@@ -4,7 +4,7 @@
 // Route: /projects/[id]/tasks/[taskId]
 //
 // Layout (D-34): 2-column grid (main 1fr + sidebar 300px, 24px gap).
-// Stack collapses via CSS at ≤1024px — out of scope for this plan (D-54).
+// Stack collapses via CSS (.task-detail-grid) at ≤1024px per D-54.
 //
 // Next.js 16: client page uses useParams() (plain object) — RESEARCH Pitfall 1.
 // No need to await props.params here because "use client" reads the live URL.
@@ -118,14 +118,7 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 300px",
-        gap: 24,
-        minHeight: 0,
-      }}
-    >
+    <div className="task-detail-grid">
       {/* Main column */}
       <div>
         {/* Parent breadcrumb (D-35) — only when subtask */}
