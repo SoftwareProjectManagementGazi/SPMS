@@ -23,6 +23,7 @@ from app.api.v1 import admin_settings as admin_settings_router_module
 from app.api.v1 import integrations as integrations_router_module
 from app.api.v1.teams import router as teams_router
 from app.api.v1.board_columns import router as board_columns_router
+from app.api.v1.labels import router as labels_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.notification_preferences import router as notification_preferences_router
 from app.infrastructure.database.database import AsyncSessionLocal, engine
@@ -143,6 +144,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(board_columns_router, prefix="/api/v1/projects", tags=["Board Columns"])
+app.include_router(labels_router, prefix="/api/v1", tags=["Labels"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Tasks"])
 app.include_router(teams_router, prefix="/api/v1")
 app.include_router(sprints.router, prefix="/api/v1/sprints", tags=["Sprints"])

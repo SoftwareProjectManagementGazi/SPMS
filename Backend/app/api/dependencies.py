@@ -25,6 +25,7 @@ from app.api.deps.sprint import get_sprint_repo, get_sprint_project_member  # no
 from app.api.deps.comment import get_comment_repo  # noqa: F401
 from app.api.deps.attachment import get_attachment_repo  # noqa: F401
 from app.api.deps.board_column import get_board_column_repo  # noqa: F401
+from app.api.deps.label import get_label_repo  # noqa: F401
 from app.api.deps.notification import (  # noqa: F401
     get_notification_repo,
     get_notification_preference_repo,
