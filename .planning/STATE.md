@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
 status: executing
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-04-22T19:55:39.207Z"
+stopped_at: Completed 11-04-PLAN.md
+last_updated: "2026-04-22T20:34:28.481Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 34
-  completed_plans: 27
-  percent: 79
+  completed_plans: 28
+  percent: 82
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-04-22
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [████████░░] 79%
 | Phase 11 P01 | 16min | 3 tasks | 26 files |
 | Phase Phase 11 P02 P9 | 2 | 8 tasks | - files |
 | Phase Phase 11 PP03 | 6 | 2 tasks tasks | 10 files files |
+| Phase Phase 11 P04 P4 | 32min | 2 tasks tasks | 14 files files |
 
 ## Accumulated Context
 
@@ -198,6 +199,12 @@ Key constraints for v2.0:
 - [11-03] labels router prefix=/api/v1 (not /api/v1/labels) — single APIRouter mounts /projects/{id}/labels AND /labels; narrower prefix would double-prefix one route
 - [11-03] AST-based DIP test (ast.walk for Import/ImportFrom) replaces source-grep approach — docstrings mentioning 'SQLAlchemy' no longer trigger false-positive CLAUDE.md §4.2 violations; canonical for future app-layer modules
 - [11-03] usage_count denormalized via task_labels LEFT JOIN + COUNT subquery in list_by_project only; get_by_name_in_project returns usage_count=0 (uniqueness check callers don't need stats)
+- [11-04] ProjectDetailContext exposes searchQuery/densityMode/phaseFilter for downstream Board toolbar + List filter consumers (RESEARCH §640-670) — throws outside ProjectDetailProvider matching useApp/useAuth/useTaskModal pattern
+- [11-04] Density mode persists per-project in spms.board.density.{projectId} localStorage per D-21 — ProjectDetailProvider owns the read/write in its React.useCallback setter
+- [11-04] SettingsTab lazy-imports via React.lazy + Suspense — users who never click Ayarlar skip the 4-sub-tab bundle cost
+- [11-04] Rule 2 fix — Backend UpdateColumnDTO + UpdateColumnUseCase extended with optional wip_limit so Kolonlar sub-tab WIP edits actually persist (was silently dropped by Pydantic default extra=ignore before this plan)
+- [11-04] Native input/textarea + onBlur replaced a failed setTimeout-debounce approach — the debounce leaked timers across multiple vitest renders and OOM'd the worker. Rule 3 scope boundary: Input primitive not forked in this plan, extended to forward onBlur in a follow-up
+- [11-04] Stable-string dep pattern for useEffect sync off useQuery arrays: serialize the data shape (id:name:value | ...) and dep on the string, not the array reference — avoids OOM from fresh-reference loops
 
 ### Pending Todos
 
@@ -218,8 +225,8 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-22T19:55:39.201Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-04-22T20:34:05.168Z
+Stopped at: Completed 11-04-PLAN.md
 Resume file: None
 
 **Current Phase:** Phase 11 (task-features-board-enhancements) — executing; Plan 11-01 complete
