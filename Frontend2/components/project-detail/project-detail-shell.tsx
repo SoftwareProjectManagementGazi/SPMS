@@ -6,7 +6,9 @@
 //
 // Phase 11 scope (D-10, D-11):
 //   - board                         — BoardTab (Plan 11-05) + BacklogPanel cross-drop (Plan 11-06)
-//   - list/timeline/calendar        — placeholder tabs (Plan 11-07)
+//   - list                          — ListTab (Plan 11-07) — TanStack Table
+//   - timeline                      — TimelineTab (Plan 11-07) — custom SVG Gantt
+//   - calendar                      — CalendarTab (Plan 11-07) — 6×7 grid + scroll-zoom
 //   - activity                      — Faz 13 stub (ActivityStubTab)
 //   - lifecycle                     — Faz 12 stub (LifecycleStubTab)
 //   - members                       — Manager card (Plan 11-04)
@@ -46,6 +48,7 @@ import type { Task } from "@/services/task-service"
 import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
 import { BoardCardGhost } from "./board-card"
+import { CalendarTab } from "./calendar-view"
 import { LifecycleStubTab } from "./lifecycle-stub-tab"
 import { ListTab } from "./list-tab"
 import { MembersTab } from "./members-tab"
@@ -264,15 +267,7 @@ export function ProjectDetailShell({
               {tab === "board" && <BoardTab project={project} />}
               {tab === "list" && <ListTab project={project} />}
               {tab === "timeline" && <TimelineTab project={project} />}
-              {tab === "calendar" && (
-                <TabPlaceholder
-                  label={
-                    lang === "tr"
-                      ? "Takvim — Plan 11-07"
-                      : "Calendar — Plan 11-07"
-                  }
-                />
-              )}
+              {tab === "calendar" && <CalendarTab project={project} />}
               {tab === "activity" && <ActivityStubTab />}
               {tab === "lifecycle" && <LifecycleStubTab />}
               {tab === "members" && <MembersTab project={project} />}
@@ -301,22 +296,5 @@ export function ProjectDetailShell({
         </div>
       </ProjectDnDProvider>
     </ProjectDetailProvider>
-  )
-}
-
-function TabPlaceholder({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        padding: 40,
-        textAlign: "center",
-        color: "var(--fg-subtle)",
-        fontSize: 12.5,
-        border: "1px dashed var(--border)",
-        borderRadius: "var(--radius-sm)",
-      }}
-    >
-      {label}
-    </div>
   )
 }
