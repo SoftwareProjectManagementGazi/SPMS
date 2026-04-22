@@ -32,6 +32,7 @@ import { useApp } from "@/context/app-context"
 import type { Project } from "@/services/project-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
+import { BoardTab } from "./board-tab"
 import { LifecycleStubTab } from "./lifecycle-stub-tab"
 import { MembersTab } from "./members-tab"
 import { ProjectDetailProvider } from "./project-detail-context"
@@ -92,13 +93,7 @@ export function ProjectDetailShell({ project, isArchived }: ProjectDetailShellPr
         />
 
         <div style={{ flex: 1, minHeight: 0 }}>
-          {tab === "board" && (
-            <TabPlaceholder
-              label={
-                lang === "tr" ? "Pano sekmesi — Plan 11-05" : "Board — Plan 11-05"
-              }
-            />
-          )}
+          {tab === "board" && <BoardTab project={project} />}
           {tab === "list" && (
             <TabPlaceholder
               label={

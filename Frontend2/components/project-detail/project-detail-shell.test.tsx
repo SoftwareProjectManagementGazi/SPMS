@@ -16,6 +16,18 @@ vi.mock("./settings-tab", () => ({
   SettingsTab: () => <div>Settings stub</div>,
 }))
 
+// Stub the HTTP client — Plan 11-05 BoardTab fires GET /tasks/project/{id}
+// and /projects/{id}/columns on mount. Return empty arrays so the BoardTab
+// can render columns with zero cards (no toolbar errors, no net requests).
+vi.mock("@/lib/api-client", () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue({ data: [] }),
+    patch: vi.fn().mockResolvedValue({ data: {} }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}))
+
 describe("ProjectDetailShell", () => {
   it("renders all 8 tabs with Turkish labels by default", () => {
     const { getByText } = renderWithProviders(
@@ -31,11 +43,15 @@ describe("ProjectDetailShell", () => {
     expect(getByText("Ayarlar")).toBeInTheDocument()
   })
 
-  it("defaults to the Pano (board) tab and shows the plan-05 placeholder", () => {
+  it("defaults to the Pano (board) tab and mounts the BoardTab toolbar", () => {
+    // Plan 11-05 wired the Board tab into the shell — the placeholder is gone.
+    // Assert on a unique BoardToolbar element (the Sıkı density button) which
+    // is not rendered by any other tab.
     const { getByText } = renderWithProviders(
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
-    expect(getByText(/Pano sekmesi/)).toBeInTheDocument()
+    expect(getByText("Sıkı")).toBeInTheDocument()
+    expect(getByText("Detaylı")).toBeInTheDocument()
   })
 
   it("shows the Faz 13 stub on the Aktivite tab", () => {
