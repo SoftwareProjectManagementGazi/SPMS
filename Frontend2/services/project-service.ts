@@ -95,6 +95,25 @@ export const projectService = {
     return mapProject(response.data);
   },
 
+  // Phase 11 Plan 04: Settings > Genel sub-tab patches arbitrary project fields
+  // (name, description, start_date, end_date, process_config, status). The backend
+  // PATCH /projects/{id} accepts ProjectUpdateDTO with all these keys.
+  update: async (
+    id: number,
+    patch: {
+      name?: string;
+      description?: string | null;
+      start_date?: string | null;
+      end_date?: string | null;
+      methodology?: string;
+      process_config?: Record<string, unknown>;
+      status?: string;
+    }
+  ): Promise<Project> => {
+    const response = await apiClient.patch<ProjectResponseDTO>(`/projects/${id}`, patch);
+    return mapProject(response.data);
+  },
+
   getActivity: async (limit = 20, offset = 0) => {
     const response = await apiClient.get('/activity', { params: { limit, offset } });
     return response.data;

@@ -20,6 +20,10 @@ class CreateColumnDTO(BaseModel):
 class UpdateColumnDTO(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=50)
     order_index: Optional[int] = Field(None, ge=0)
+    # Phase 11 Plan 04: Settings > Kolonlar sub-tab edits wip_limit inline.
+    # wip_limit=0 in this column schema means "no limit" (see seeder + migration 005).
+    # ge=0 allows 0 (no limit) and any positive cap.
+    wip_limit: Optional[int] = Field(None, ge=0)
 
 
 class DeleteColumnRequestDTO(BaseModel):

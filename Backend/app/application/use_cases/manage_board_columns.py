@@ -68,13 +68,15 @@ class UpdateColumnUseCase:
             from app.domain.exceptions import ProjectNotFoundError
             raise ValueError(f"Column {column_id} not found")
 
-        # Patch only provided fields
+        # Patch only provided fields — None means "leave unchanged" per UpdateColumnDTO.
+        # Phase 11 Plan 04: wip_limit now flows through so the Settings > Kolonlar
+        # sub-tab can edit WIP caps inline (D-12 — non-Waterfall methodologies).
         updated_column = BoardColumn(
             id=existing.id,
             project_id=existing.project_id,
             name=dto.name if dto.name is not None else existing.name,
             order_index=dto.order_index if dto.order_index is not None else existing.order_index,
-            wip_limit=existing.wip_limit,
+            wip_limit=dto.wip_limit if dto.wip_limit is not None else existing.wip_limit,
         )
         saved = await self.column_repo.update(updated_column)
         task_count = await self.column_repo.count_tasks(saved.id)
