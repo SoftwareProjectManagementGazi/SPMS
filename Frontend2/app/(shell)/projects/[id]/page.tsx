@@ -5,6 +5,7 @@ import { useProject } from "@/hooks/use-projects"
 import { ArchiveBanner } from "@/components/projects/archive-banner"
 import { Card, Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { ProjectDetailShell } from "@/components/project-detail/project-detail-shell"
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -37,7 +38,7 @@ export default function ProjectDetailPage() {
   const isArchived = project.status === 'ARCHIVED'
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, height: "100%" }}>
       {/* PROJ-03: Show ArchiveBanner at top of content area when project is archived */}
       {isArchived && (
         <ArchiveBanner projectId={project.id} projectName={project.name} />
@@ -63,39 +64,8 @@ export default function ProjectDetailPage() {
         </Button>
       </div>
 
-      {/* Phase 11 placeholder — full Board/List/Timeline tabs will replace this */}
-      <Card padding={40}>
-        <div style={{
-          textAlign: "center",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>
-            {language === 'tr' ? 'Proje Detay Görünümü' : 'Project Detail View'}
-          </div>
-          <div style={{
-            fontSize: 12.5,
-            color: "var(--fg-muted)",
-            maxWidth: 360,
-            lineHeight: 1.5,
-          }}>
-            {language === 'tr'
-              ? "Board, Liste, Zaman Çizelgesi ve diğer sekmeler Phase 11'de eklenecek."
-              : 'Board, List, Timeline and other tabs will be added in Phase 11.'}
-          </div>
-          {/* D-34: Additional action buttons also disabled when project is ARCHIVED */}
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <Button variant="ghost" size="sm" disabled={isArchived}>
-              {language === 'tr' ? 'Görev Ekle' : 'Add Task'}
-            </Button>
-            <Button variant="ghost" size="sm" disabled={isArchived}>
-              {language === 'tr' ? 'Üye Ekle' : 'Add Member'}
-            </Button>
-          </div>
-        </div>
-      </Card>
+      {/* Phase 11 Plan 04: 8-tab ProjectDetail shell (PAGE-03, D-09..D-12). */}
+      <ProjectDetailShell project={project} isArchived={isArchived} />
     </div>
   )
 }
