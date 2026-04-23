@@ -77,12 +77,12 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 **: Gorev Olustur Modali yapilir — overlay modal, proje/tur/baslik/aciklama/oncelik/atanan/puan/tarih/cycle/faz/etiket/tekrar alanlari
 - [x] **TASK-02
 **: Backlog Paneli yapilir — proje detayda sol kenarda dikey toggle, 300px panel, arama/filtre/siralama, gorev listesi, drag-drop, toplu islem [E1]
-- [ ] **TASK-03**: Gorev-Faz atamasi eklenir — enable_phase_assignment toggle acikken gorev formuna faz dropdown'i, board kart faz badge'i [E3][E5]
+- [x] **TASK-03**: Gorev-Faz atamasi eklenir — enable_phase_assignment toggle acikken gorev formuna faz dropdown'i, board kart faz badge'i [E3][E5]
 - [x] **TASK-04
 **: Ana gorev sidebar'inda alt gorev faz dagilimi mini stepper gosterilir [E3]
 - [x] **TASK-05
 **: Board toolbar'a "Faza Gore Filtrele" dropdown'i, List Tab'a "Faz" sutunu eklenir [E5]
-- [ ] **TASK-06**: Cycle label'i metodolojiye gore dinamik gosterilir (Sprint/Dongu/Iterasyon/Artim) [E14]
+- [x] **TASK-06**: Cycle label'i metodolojiye gore dinamik gosterilir (Sprint/Dongu/Iterasyon/Artim) [E14]
 
 ### Lifecycle & Phase Gate
 
@@ -202,14 +202,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-04 | Phase 10 | Complete |
 | PROJ-05 | Phase 10 | Complete |
 | PAGE-03 | Phase 11 | Complete |
-| PAGE-04 | Phase 11 | Pending |
-| PAGE-07 | Phase 11 | Pending |
-| TASK-01 | Phase 11 | Pending |
-| TASK-02 | Phase 11 | Pending |
-| TASK-03 | Phase 11 | Pending |
-| TASK-04 | Phase 11 | Pending |
-| TASK-05 | Phase 11 | Pending |
-| TASK-06 | Phase 11 | Pending |
+| PAGE-04 | Phase 11 | Complete |
+| PAGE-07 | Phase 11 | Complete |
+| TASK-01 | Phase 11 | Complete |
+| TASK-02 | Phase 11 | Complete |
+| TASK-03 | Phase 11 | Complete |
+| TASK-04 | Phase 11 | Complete |
+| TASK-05 | Phase 11 | Complete |
+| TASK-06 | Phase 11 | Complete |
 | LIFE-01 | Phase 12 | Pending |
 | LIFE-02 | Phase 12 | Pending |
 | LIFE-03 | Phase 12 | Pending |

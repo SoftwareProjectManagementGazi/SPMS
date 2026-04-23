@@ -39,7 +39,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 8: Foundation & Design System** - Theme tokens, primitive components, i18n, App Shell conversion -- the base everything depends on
 - [x] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints -- completed 2026-04-21
 - [x] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard (completed 2026-04-21)
-- [ ] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions
+- [x] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions (completed 2026-04-23)
 - [ ] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements
 - [ ] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page
 
@@ -127,11 +127,11 @@ Plans:
 - [x] 11-03-PLAN.md — Backend labels slice (Clean Architecture): Label entity + ILabelRepository + SqlAlchemy impl + use cases + router + DI wiring + integration tests (completed 2026-04-22, 6 min, 2 tasks, 7 created + 4 modified = 11 files)
 - [x] 11-04-PLAN.md — ProjectDetail 8-tab shell + Settings sub-tabs (General/Columns/Workflow/Lifecycle stub) + Members tab + Activity/Lifecycle stubs (completed 2026-04-22, 32 min, 2 tasks, 10 created + 4 modified = 14 files)
 - [x] 11-05-PLAN.md — Board tab with @dnd-kit + BoardCard/BoardColumn/BoardToolbar + WIP Warn+Allow (D-20) + density toggle + phase filter (completed 2026-04-22, 6 min, 2 tasks, 9 created + 2 modified = 11 files)
-- [ ] 11-06-PLAN.md — Backlog Panel fixed column + cross-container DnD (lifts DnDContext to shell) + methodology-matrix driven query + filters + responsive
+- [x] 11-06-PLAN.md — Backlog Panel fixed column + cross-container DnD (lifts DnDContext to shell) + methodology-matrix driven query + filters + responsive
 - [x] 11-07-PLAN.md — List tab (TanStack Table) + Timeline tab (custom SVG Gantt, license-clean) + Calendar tab (6x7 grid with Ctrl+wheel zoom) (completed 2026-04-22, 15 min, 2 tasks, 6 created + 1 modified = 7 files)
 - [x] 11-08-PLAN.md — Task Detail page route + Parent link + InlineEdit wrapper + PropertiesSidebar + PhaseStepper (TASK-04) + Sub-tasks + TipTap description editor + Watcher toggle (completed 2026-04-22, 8 min, 2 tasks, 11 created + 0 modified = 11 files)
 - [x] 11-09-PLAN.md — Task Detail remaining sections: Activity (Yorumlar + Geçmiş sub-tabs) + Attachments (drag-drop + links) + Dependencies CRUD + audit-formatter utility (completed 2026-04-22, 8 min, 2 tasks, 7 created + 1 modified = 8 files)
-- [ ] 11-10-PLAN.md — MyTasks (full + Dashboard Member compact) + Header search autocomplete (Cmd/Ctrl+K) + responsive breakpoints + E2E smoke tests
+- [x] 11-10-PLAN.md — MyTasks (full + Dashboard Member compact) + Header search autocomplete (Cmd/Ctrl+K) + responsive breakpoints + E2E smoke tests
 **UI hint**: yes
 
 ### Phase 12: Lifecycle, Phase Gate & Workflow Editor
@@ -199,7 +199,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 8. Foundation & Design System | v2.0 | 4/4 | Plans executed (phase verification pending) | - |
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
-| 11. Task Features & Board Enhancements | v2.0 | 3/10 | In Progress | - |
+| 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
 </content>

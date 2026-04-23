@@ -1,8 +1,8 @@
 ---
 phase: 11-task-features-board-enhancements
 verified: 2026-04-22T11:10:00Z
-status: human_needed
-score: 10/10 must-haves verified
+status: passed
+score: 10/10 must-haves verified (6/6 human checks approved on 2026-04-23 after board-crash fix 89e5b58)
 overrides_applied: 0
 human_verification:
   - test: "Drag a backlog task onto a Board column for a Scrum/Waterfall/Custom project — confirm the row visually disappears from the backlog panel after drop"
