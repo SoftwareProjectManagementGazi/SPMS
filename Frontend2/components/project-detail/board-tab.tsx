@@ -50,7 +50,11 @@ function useColumns(projectId: number) {
 export function BoardTab({ project }: { project: Project }) {
   const pd = useProjectDetail()
 
-  const { data: tasks = [] } = useTasks(project.id)
+  const { data: tasksData } = useTasks(project.id)
+  // Defensive: if the task query returns anything non-array (stale cache
+  // populated by a malformed query elsewhere, or a backend contract change),
+  // treat it as empty instead of crashing the board render.
+  const tasks: Task[] = Array.isArray(tasksData) ? tasksData : []
   const { data: columnsMeta = [] } = useColumns(project.id)
 
   const cfg = (project.processConfig ?? {}) as {

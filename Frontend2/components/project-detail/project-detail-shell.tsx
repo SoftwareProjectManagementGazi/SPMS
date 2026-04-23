@@ -41,9 +41,8 @@ import { useToast } from "@/components/toast"
 import { apiClient } from "@/lib/api-client"
 import { ProjectDnDProvider } from "@/lib/dnd/dnd-provider"
 import { handleBoardDragEnd, type BoardColumnInfo } from "@/lib/dnd/board-dnd"
-import { useMoveTask } from "@/hooks/use-tasks"
+import { useMoveTask, useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
-import type { Task } from "@/services/task-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
@@ -118,16 +117,12 @@ export function ProjectDetailShell({
     staleTime: 60_000,
   })
 
-  const { data: currentTasks = [] } = useQuery<Task[]>({
-    // Must match the useTasks([]) default filter key shape exactly so the
-    // cache is shared (useTasks in hooks/use-tasks.ts: ["tasks", "project",
-    // projectId, filters={}]).
-    queryKey: ["tasks", "project", project.id, {}],
-    queryFn: async () => {
-      const resp = await apiClient.get<Task[]>(`/tasks/project/${project.id}`)
-      return resp.data
-    },
-  })
+  // Reuse useTasks so the service layer unwraps the PaginatedResponse envelope
+  // and we share the same cache entry as BoardTab/ListTab/TimelineTab/etc.
+  // A duplicate inline queryFn here used to populate the cache with the raw
+  // backend envelope, which then crashed every consumer with `tasks.filter is
+  // not a function` (first caught during Phase 11 browser verification).
+  const { data: currentTasks = [] } = useTasks(project.id)
 
   const tabs = [
     { id: "board", label: lang === "tr" ? "Pano" : "Board", icon: <Grid3x3 size={13} /> },

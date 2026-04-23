@@ -44,6 +44,21 @@ interface TaskResponseDTO {
   created_at: string
 }
 
+interface PaginatedTasksDTO {
+  items: TaskResponseDTO[]
+  total: number
+  page: number
+  page_size: number
+}
+
+function unwrapTaskList(data: unknown): TaskResponseDTO[] {
+  if (Array.isArray(data)) return data as TaskResponseDTO[]
+  if (data && typeof data === "object" && Array.isArray((data as PaginatedTasksDTO).items)) {
+    return (data as PaginatedTasksDTO).items
+  }
+  return []
+}
+
 export interface CreateTaskDTO {
   project_id: number
   title: string
@@ -87,8 +102,10 @@ function mapTask(d: TaskResponseDTO): Task {
 
 export const taskService = {
   getByProject: async (projectId: number, filters: Record<string, unknown> = {}): Promise<Task[]> => {
-    const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/project/${projectId}`, { params: filters })
-    return resp.data.map(mapTask)
+    // Backend endpoint returns PaginatedResponse{items, total, page, page_size}.
+    // Accept bare arrays too so existing test mocks keep working.
+    const resp = await apiClient.get(`/tasks/project/${projectId}`, { params: filters })
+    return unwrapTaskList(resp.data).map(mapTask)
   },
   getMyTasks: async (): Promise<Task[]> => {
     const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/my-tasks`)
