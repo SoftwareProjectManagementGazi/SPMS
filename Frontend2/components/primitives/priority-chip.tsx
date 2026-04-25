@@ -35,10 +35,21 @@ export function PriorityChip({
   className,
   style,
 }: PriorityChipProps) {
-  const label = t(`priority.${level}`, lang)
-  const tokenLevel = level === "medium" ? "med" : level
+  // Defense in depth — services/task-service.ts normalizes priority at the
+  // API boundary, but a stray UPPERCASE or unknown value should still render
+  // a meaningful chip rather than 4 grey bars (which is what an undefined
+  // BARS_BY_LEVEL lookup produces).
+  const norm: PriorityLevel = (() => {
+    const lc = String(level ?? "").toLowerCase() as PriorityLevel
+    if (lc === "low" || lc === "medium" || lc === "high" || lc === "critical") {
+      return lc
+    }
+    return "medium"
+  })()
+  const label = t(`priority.${norm}`, lang)
+  const tokenLevel = norm === "medium" ? "med" : norm
   const color = `var(--priority-${tokenLevel})`
-  const filled = BARS_BY_LEVEL[level]
+  const filled = BARS_BY_LEVEL[norm]
   return (
     <span
       title={label}

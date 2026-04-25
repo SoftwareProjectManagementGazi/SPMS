@@ -76,14 +76,37 @@ export interface CreateTaskDTO {
   recurring?: { frequency: string; end: string | number } | null
 }
 
+// Backend serializes TaskPriority / TaskStatus enums via Pydantic, which uses
+// the enum value verbatim — those values are UPPERCASE on the wire ("LOW",
+// "TODO", "IN_PROGRESS", ...). Frontend2 types claim lowercase and every
+// downstream consumer (PriorityChip, StatusDot, MyTasks filters, dueBucket)
+// compares against lowercase tokens. Normalize at the boundary so the type
+// contract is honoured and consumers don't each need their own toLowerCase.
+function normalizePriority(raw: unknown): Task["priority"] {
+  const s = String(raw ?? "").toLowerCase()
+  if (s === "low" || s === "medium" || s === "high" || s === "critical") {
+    return s
+  }
+  return "medium"
+}
+
+function normalizeStatus(raw: unknown): string {
+  const s = String(raw ?? "").toLowerCase()
+  // Map backend's "in_progress" to the prototype's "progress" token used by
+  // StatusDot / dueBucket comparisons. Other unknown values pass through
+  // lowercased so consumers can decide how to treat them.
+  if (s === "in_progress") return "progress"
+  return s
+}
+
 function mapTask(d: TaskResponseDTO): Task {
   return {
     id: d.id,
     key: d.key,
     title: d.title,
     description: d.description ?? "",
-    status: d.status,
-    priority: d.priority,
+    status: normalizeStatus(d.status),
+    priority: normalizePriority(d.priority),
     assigneeId: d.assignee_id,
     reporterId: d.reporter_id,
     parentTaskId: d.parent_task_id,

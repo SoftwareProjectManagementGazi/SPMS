@@ -57,6 +57,19 @@ const STATUS_ORDER: StatusValue[] = [
   "blocked",
 ]
 
+// Coerce arbitrary input into one of the 5 canonical tokens. Mirrors the
+// resolveStatus logic in TaskRow so callers can pass raw backend strings
+// (UPPERCASE, "in_progress", "completed", ...) without a metadata lookup
+// crash on an unknown value.
+function coerce(raw: StatusValue | string | null | undefined): StatusValue {
+  const s = String(raw ?? "").toLowerCase()
+  if (s === "progress" || s === "in_progress" || s === "doing") return "progress"
+  if (s === "review" || s === "in_review") return "review"
+  if (s === "done" || s === "completed" || s === "closed") return "done"
+  if (s === "blocked") return "blocked"
+  return "todo"
+}
+
 export function StatusDot({
   status,
   size = 8,
@@ -65,7 +78,8 @@ export function StatusDot({
   onChange,
   title,
 }: StatusDotProps) {
-  const color = `var(--status-${STATUS_META[status].token})`
+  const safe = coerce(status)
+  const color = `var(--status-${STATUS_META[safe].token})`
 
   // Read-only mode: pure dot, no interactive shell. Avoids context lookups
   // when the caller just wants a static indicator.
@@ -88,7 +102,7 @@ export function StatusDot({
   }
 
   return <InteractiveStatusDot
-    status={status}
+    status={safe}
     size={size}
     className={className}
     style={style}
