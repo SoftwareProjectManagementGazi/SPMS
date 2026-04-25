@@ -34,9 +34,10 @@ import { Card, Kbd } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useMyTasksStore } from "@/hooks/use-my-tasks-store"
 import { useProjects } from "@/hooks/use-projects"
-import { useMyTasks } from "@/hooks/use-tasks"
+import { useChangeTaskStatus, useMyTasks } from "@/hooks/use-tasks"
 import { dueBucket } from "@/lib/my-tasks/due-bucket"
 import type { Task } from "@/services/task-service"
+import type { StatusValue } from "@/components/primitives/status-dot"
 
 import { MTEmpty } from "./mt-empty"
 import { MTHero } from "./mt-hero"
@@ -179,6 +180,17 @@ export function MyTasksExperience({
       }))
     },
     [setStore]
+  )
+
+  // Status change handler — wired through TaskGroupList → TaskRow's leftmost
+  // clickable status circle. Optimistic via useChangeTaskStatus; rolls back
+  // on error.
+  const changeStatusMut = useChangeTaskStatus()
+  const changeStatus = React.useCallback(
+    (id: number, next: StatusValue) => {
+      changeStatusMut.mutate({ id, status: next })
+    },
+    [changeStatusMut]
   )
 
   // -- Filter pipeline ----------------------------------------------------
@@ -423,6 +435,7 @@ export function MyTasksExperience({
               groupBy={groupBy}
               starred={store.starred}
               onToggleStar={toggleStar}
+              onChangeStatus={changeStatus}
               compact={compact}
               density={density}
               projectsByKey={projectsByKey}

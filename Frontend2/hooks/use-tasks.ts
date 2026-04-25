@@ -61,6 +61,42 @@ export function useUpdateTask(taskId: number) {
 }
 
 /**
+ * Status change for any task surfaced in the MyTasks list. Optimistically
+ * patches every cached `["tasks", ...]` array that contains this task id, so
+ * the row visual updates instantly across MyTasks + per-project caches.
+ * On error rolls every cache slot back; on settle invalidates ["tasks"]
+ * broadly to be safe.
+ */
+export function useChangeTaskStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      taskService.patchField(id, "status", status),
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["tasks"] })
+      const snapshots = qc.getQueriesData<Task[] | Task>({ queryKey: ["tasks"] })
+      snapshots.forEach(([key, data]) => {
+        if (Array.isArray(data)) {
+          qc.setQueryData(
+            key,
+            data.map((t) => (t.id === id ? { ...t, status } : t))
+          )
+        } else if (data && (data as Task).id === id) {
+          qc.setQueryData(key, { ...(data as Task), status })
+        }
+      })
+      return { snapshots }
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.snapshots?.forEach(([key, data]) => qc.setQueryData(key, data))
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] })
+    },
+  })
+}
+
+/**
  * Board drag-drop status change. Optimistic on both project task list + single task.
  */
 export function useMoveTask(projectId: number) {

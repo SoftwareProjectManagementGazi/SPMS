@@ -20,6 +20,7 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { useApp } from "@/context/app-context"
 import { dueBucket, type DueBucket } from "@/lib/my-tasks/due-bucket"
 import type { Task } from "@/services/task-service"
+import type { StatusValue } from "@/components/primitives/status-dot"
 
 import { TaskRow, type TaskRowDensity } from "./task-row"
 
@@ -30,6 +31,8 @@ interface TaskGroupListProps {
   groupBy: GroupBy
   starred: number[]
   onToggleStar: (id: number) => void
+  /** Optional — when provided, every row's leftmost status circle becomes interactive. */
+  onChangeStatus?: (id: number, next: StatusValue) => void
   /** Legacy prop (Dashboard Member view). Pass `density="compact"` instead. */
   compact?: boolean
   density?: TaskRowDensity
@@ -160,6 +163,7 @@ export function TaskGroupList({
   groupBy,
   starred,
   onToggleStar,
+  onChangeStatus,
   compact,
   density,
   projectsByKey,
@@ -185,6 +189,11 @@ export function TaskGroupList({
             density={density}
             starred={starred.includes(task.id)}
             onToggleStar={() => onToggleStar(task.id)}
+            onChangeStatus={
+              onChangeStatus
+                ? (next) => onChangeStatus(task.id, next)
+                : undefined
+            }
             showProject={!!projectsByKey}
             projectKey={projectsByKey?.get(task.projectId)}
           />
@@ -249,6 +258,11 @@ export function TaskGroupList({
                   density={density}
                   starred={starred.includes(task.id)}
                   onToggleStar={() => onToggleStar(task.id)}
+                  onChangeStatus={
+                    onChangeStatus
+                      ? (next) => onChangeStatus(task.id, next)
+                      : undefined
+                  }
                   // When grouping by project, the key is already shown in the
                   // header — hide the per-row badge to avoid redundancy.
                   showProject={
