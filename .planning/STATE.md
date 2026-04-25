@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-04 complete
-last_updated: "2026-04-25T11:20:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-04 complete (LIFE-03 MiniMetric --- + LIFE-04 lazy-fetch History + 4-sub-tab Tabs primitive)
+stopped_at: Phase 12 Plan 12-05 complete
+last_updated: "2026-04-25T14:35:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-05 complete (LIFE-05 MilestonesSubTab CRUD + chip picker + ConfirmDialog + Timeline Gantt vertical flag-line layer + popover)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 38
-  percent: 86
+  completed_plans: 39
+  percent: 89
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 5 of 10 (12-04 complete)
+Plan: 6 of 10 (12-05 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-04 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-05 complete
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -93,6 +93,7 @@ Progress: [██████████] 100%
 | Phase 12 P02 | 12min | 2 tasks | 8 files  |
 | Phase 12 P03 | 6min  | 2 tasks | 6 files  |
 | Phase 12 P04 | 9min  | 2 tasks | 8 files  |
+| Phase 12 P05 | 8min  | 2 tasks | 7 files  |
 
 ## Accumulated Context
 
@@ -266,6 +267,14 @@ Key constraints for v2.0:
 - [12-03] Methodology read-only D-60 — METHODOLOGY_LABEL_TR/EN maps in settings-general-subtab.tsx (kept co-located, lift to lib/methodology-matrix.ts only when a second consumer needs them — same strategy as the SummaryStrip mode-chip maps)
 - [12-03] T-12-03-02 mitigation: the editable methodology input is REMOVED from the DOM entirely; backend Phase 9 D-29 no-op behavior (Phase 9 P05) remains as defense-in-depth, not re-verified in Plan 12-03 since no new UI path PATCHes methodology
 - [12-03] settings-tab.tsx AlertBanner import dropped after the lifecycle stub swap — only the lifecycle branch used it; TypeScript flagged the unused import. Trivial cleanup with no behavioral change
+- [12-05] MilestoneInlineAddRow chip picker built INLINE (no shared chip-picker primitive yet) — Phase 11 D-51 label picker is itself co-located inside task-create-modal.tsx; lifting to a shared primitive would be premature abstraction with only 2 consumers. Pattern documented in 12-05-SUMMARY for future lift
+- [12-05] Milestones data flow = ProjectDetailShell calls useMilestones once and forwards as `<TimelineTab milestones={milestones}/>` prop. Choice over "timeline-tab calls useMilestones internally" because it matches Phase 11 D-09 shell-fetches pattern + makes the prop explicit at the test boundary
+- [12-05] Page-level useMilestones prefetch (Plan 12-04 cache-priming side effect) REMOVED — shell-level fetch is now the single source of truth. TanStack Query de-dup means MilestonesSubTab and TimelineTab both hit cache via shared queryKey ['milestones', 'project', projectId]
+- [12-05] Project-wide milestone progress (linkedPhaseIds === []) renders em-dash "—" not "0%" — em-dash signals "not phase-anchored" without misleading the user. ProgressBar still renders at 0 width for legibility. When linkedPhaseIds non-empty, status-driven heuristic (COMPLETED→100, IN_PROGRESS→50, else 0); Plan 12-06 replaces with real per-phase task counts
+- [12-05] Timeline flag-line uses the SAME formula as the today-line: `((target - min) / MS_PER_DAY) * DAY_WIDTH[view]`. Each flag wrapped in its own `<g onClick={...}>` for individual click targeting; outer `<g aria-label="milestones-layer">` is layout-only
+- [12-05] formatDateShort co-located inside timeline-tab.tsx (used 2x — flag label + popover date row). Lift to lib/ only when a third consumer needs it (matches the SummaryStrip mode-chip co-located strategy)
+- [12-05] Click-outside dismiss for both milestone popover AND chip-picker dropdown uses `mousedown` (not `click`) — fires before React click handlers, avoids racing the toggle event that opened them
+- [12-05] ConfirmDialog `confirmTone="danger"` prop NOT passed — current Phase 10 D-25 ConfirmDialog primitive does not accept it. UI-SPEC mentioned the prop, but no consumer uses it (`grep confirmTone` returns 0 hits). Future hardening (red-tone Sil) deferred to a primitive enhancement plan; not Plan 12-05 scope
 
 ### Pending Todos
 
@@ -286,12 +295,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T11:04:31Z
-Stopped at: Phase 12 Plan 12-03 complete
+Last session: 2026-04-25T14:35:00Z
+Stopped at: Phase 12 Plan 12-05 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-04 — Lifecycle Tabs primitive + Overview / History sub-tabs (LIFE-03 + LIFE-04)
+**Next Plan:** 12-06 — Artifacts sub-tab (row table + inline expand + single-file upload + soft-warning delete) + EvaluationReportCard (auto-prefill + PDF download with 30s rate limit) — LIFE-06 + LIFE-07
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
