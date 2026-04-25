@@ -35,15 +35,28 @@ function mapComment(d: CommentResponseDTO): Comment {
   }
 }
 
+// Backend endpoints (Backend/app/api/v1/comments.py):
+//   GET    /comments/task/{task_id}   -> list comments for a task
+//   POST   /comments/                  -> create (body { task_id, body })
+//   PATCH  /comments/{id}              -> update body
+//   DELETE /comments/{id}              -> delete
+// The previous frontend used `/comments?task_id=` which 405'd because no GET
+// is registered on the bare /comments path; FastAPI's auto-redirect from
+// `/comments` to `/comments/` made the failure noisy (307 + 405) on every
+// task-tab switch. Hitting the trailing slash on POST avoids the same
+// redirect on writes.
 export const commentService = {
   getByTask: async (taskId: number): Promise<Comment[]> => {
-    const resp = await apiClient.get<CommentResponseDTO[]>(`/comments`, {
-      params: { task_id: taskId },
-    })
+    const resp = await apiClient.get<CommentResponseDTO[]>(
+      `/comments/task/${taskId}`,
+    )
     return resp.data.map(mapComment)
   },
   create: async (taskId: number, body: string): Promise<Comment> => {
-    const resp = await apiClient.post<CommentResponseDTO>(`/comments`, { task_id: taskId, body })
+    const resp = await apiClient.post<CommentResponseDTO>(`/comments/`, {
+      task_id: taskId,
+      body,
+    })
     return mapComment(resp.data)
   },
   update: async (id: number, body: string): Promise<Comment> => {
