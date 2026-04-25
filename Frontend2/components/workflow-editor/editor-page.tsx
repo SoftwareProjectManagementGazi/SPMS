@@ -1103,7 +1103,6 @@ export function EditorPage({ project }: EditorPageProps) {
   return (
     <div
       style={{
-        padding: 24,
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -1292,15 +1291,17 @@ export function EditorPage({ project }: EditorPageProps) {
         </span>
       </div>
 
-      {/* Body row: canvas + right panel */}
+      {/* Body row: canvas + right panel (prototype: grid 1fr 320px under
+          a single inset-border + radius envelope, no extra background). */}
       <div
         style={{
-          display: "flex",
+          display: "grid",
+          gridTemplateColumns: "1fr 320px",
+          gap: 0,
           flex: 1,
           minHeight: 0,
           borderRadius: "var(--radius)",
           boxShadow: "inset 0 0 0 1px var(--border)",
-          background: "var(--surface)",
           overflow: "hidden",
         }}
       >
