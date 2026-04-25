@@ -205,4 +205,154 @@ describe("TimelineTab", () => {
       spy.mockRestore()
     }
   })
+
+  // ============================================================================
+  // Phase 12 Plan 12-05 — milestone flag-line integration (D-51)
+  // ============================================================================
+
+  it("Test M1: milestone flag-line renders at correct x-position", async () => {
+    const milestones = [
+      {
+        id: 1,
+        projectId: 1,
+        name: "Alpha Launch",
+        targetDate: "2026-04-15",
+        status: "PLANNED",
+        linkedPhaseIds: ["planning"],
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+    ]
+    const { container, findByText } = renderWithProviders(
+      <TimelineTab project={mockProjects[0]} milestones={milestones} />
+    )
+    await findByText(/MOBIL-1/)
+    const svg = container.querySelector("svg")
+    expect(svg).not.toBeNull()
+    const layer = svg!.querySelector('g[aria-label="milestones-layer"]')
+    expect(layer).not.toBeNull()
+    // The flag uses a dashed stroke pattern of "6 3"
+    const flagLine = layer!.querySelector('line[stroke-dasharray="6 3"]')
+    expect(flagLine).not.toBeNull()
+    // Compute expected x using the same formula timeline-tab uses internally:
+    //   ((target - min) / MS_PER_DAY) * DAY_WIDTH[view]
+    // Default view is week → DAY_WIDTH=24. The min equals the earliest task
+    // start (2026-04-10). 2026-04-15 → 5 days into range → x = 5 * 24 = 120.
+    const x1 = Number(flagLine!.getAttribute("x1"))
+    expect(x1).toBeCloseTo(120, 0)
+  })
+
+  it("Test M2: label chip renders with name + short date format", async () => {
+    const milestones = [
+      {
+        id: 1,
+        projectId: 1,
+        name: "Alpha Launch",
+        targetDate: "2026-04-15",
+        status: "PLANNED",
+        linkedPhaseIds: ["planning"],
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+    ]
+    const { container, findByText } = renderWithProviders(
+      <TimelineTab project={mockProjects[0]} milestones={milestones} />
+    )
+    await findByText(/MOBIL-1/)
+    const svg = container.querySelector("svg")
+    expect(svg).not.toBeNull()
+    const texts = Array.from(svg!.querySelectorAll("text")).map(
+      (t) => t.textContent ?? ""
+    )
+    // Turkish locale formatter (default mockProjects test env) -> "15 Nis"
+    // English would be "Apr 15". Either is acceptable — assert the milestone
+    // name + " · " separator appears.
+    const labelText = texts.find((t) => t.includes("Alpha Launch"))
+    expect(labelText).toBeDefined()
+    expect(labelText).toMatch(/Alpha Launch.*·/)
+  })
+
+  it("Test M3: clicking flag opens popover with milestone details", async () => {
+    const milestones = [
+      {
+        id: 1,
+        projectId: 1,
+        name: "Alpha Launch",
+        targetDate: "2026-04-15",
+        status: "PLANNED",
+        linkedPhaseIds: ["n1"], // matches mockProjects[0].processConfig.workflow.nodes[0]
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+    ]
+    const { container, findByText, getByText } = renderWithProviders(
+      <TimelineTab project={mockProjects[0]} milestones={milestones} />
+    )
+    await findByText(/MOBIL-1/)
+    const svg = container.querySelector("svg")
+    expect(svg).not.toBeNull()
+    const flagGroup = svg!.querySelector(
+      'g[aria-label="milestones-layer"] > g'
+    )
+    expect(flagGroup).not.toBeNull()
+    fireEvent.click(flagGroup!)
+    // Popover renders the linked phase name (Analiz from mockProjects[0])
+    await waitFor(() => {
+      expect(getByText("Analiz")).toBeInTheDocument()
+    })
+  })
+
+  it("Test M4: 3 milestones produce 3 distinct flag lines", async () => {
+    const milestones = [
+      {
+        id: 1,
+        projectId: 1,
+        name: "MS A",
+        targetDate: "2026-04-12",
+        status: "PLANNED",
+        linkedPhaseIds: [],
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+      {
+        id: 2,
+        projectId: 1,
+        name: "MS B",
+        targetDate: "2026-04-15",
+        status: "PLANNED",
+        linkedPhaseIds: [],
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+      {
+        id: 3,
+        projectId: 1,
+        name: "MS C",
+        targetDate: "2026-04-20",
+        status: "PLANNED",
+        linkedPhaseIds: [],
+        createdAt: "2026-04-01T00:00:00Z",
+        updatedAt: null,
+      },
+    ]
+    const { container, findByText } = renderWithProviders(
+      <TimelineTab project={mockProjects[0]} milestones={milestones} />
+    )
+    await findByText(/MOBIL-1/)
+    const svg = container.querySelector("svg")
+    const layer = svg!.querySelector('g[aria-label="milestones-layer"]')
+    expect(layer).not.toBeNull()
+    const flagLines = layer!.querySelectorAll('line[stroke-dasharray="6 3"]')
+    expect(flagLines.length).toBe(3)
+  })
+
+  it("Test M5: no milestones-layer rendered when milestones empty/undefined", async () => {
+    const { container, findByText } = renderWithProviders(
+      <TimelineTab project={mockProjects[0]} />
+    )
+    await findByText(/MOBIL-1/)
+    const svg = container.querySelector("svg")
+    const layer = svg!.querySelector('g[aria-label="milestones-layer"]')
+    expect(layer).toBeNull()
+  })
 })
