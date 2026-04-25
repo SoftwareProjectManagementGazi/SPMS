@@ -199,16 +199,24 @@ export default function TaskDetailPage() {
           <div style={{ flex: 1 }} />
         </div>
 
-        {/* Description (D-36) */}
+        {/* Description (D-36) — wrapped in Card to match the prototype's
+            elevated panel treatment (task-detail.jsx:32-45). */}
         <Section title={lang === "tr" ? "Açıklama" : "Description"}>
-          <DescriptionEditor
-            value={descDraft}
-            onChange={handleDescriptionChange}
-          />
+          <Card padding={16}>
+            <DescriptionEditor
+              value={descDraft}
+              onChange={handleDescriptionChange}
+            />
+          </Card>
         </Section>
 
-        {/* Sub-tasks (D-37) */}
-        <SubTasksList parent={task} subtasks={subtasks} />
+        {/* Sub-tasks (D-37) — entire section hidden when there are none, so
+            simple tasks aren't padded with a useless empty-state row. The
+            "Add" affordance lives in the right-rail Quick Actions / sidebar
+            so a user can always create the first sub-task. */}
+        {subtasks.length > 0 && (
+          <SubTasksList parent={task} subtasks={subtasks} />
+        )}
 
         {/* Activity (D-47) — Yorumlar + Geçmiş sub-tabs.
             Members placeholder: Phase 11 does not add GET /projects/{id}/members;
