@@ -78,10 +78,24 @@ const STATE_STYLES: Record<PhaseNodeState, BoxStyle> = {
   },
 }
 
+// Hidden default for top/bottom handles — kept hit-testable but invisible
+// until React Flow reveals them via hover (CSS in globals.css).
 const HANDLE_HIDDEN: React.CSSProperties = {
   visibility: "hidden",
   width: 8,
   height: 8,
+}
+
+// Visible default for the primary left/right edge-create handles. Matches
+// the prototype 10x10 dot with surface fill + border-strong outline.
+const HANDLE_VISIBLE: React.CSSProperties = {
+  width: 10,
+  height: 10,
+  background: "var(--surface)",
+  border: "2px solid var(--border-strong)",
+  borderRadius: "50%",
+  opacity: 0.9,
+  zIndex: 2,
 }
 
 function PhaseNodeImpl({ data, selected }: NodeProps) {
@@ -169,7 +183,7 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
         type="source"
         id="right-source"
         position={Position.Right}
-        style={HANDLE_HIDDEN}
+        style={HANDLE_VISIBLE}
       />
       <Handle
         type="target"
@@ -199,7 +213,7 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
         type="target"
         id="left-target"
         position={Position.Left}
-        style={HANDLE_HIDDEN}
+        style={HANDLE_VISIBLE}
       />
 
       {/* Status dot */}
