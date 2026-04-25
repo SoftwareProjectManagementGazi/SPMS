@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectService, type CreateProjectDTO } from '@/services/project-service';
+import { useAuth } from '@/context/auth-context';
 
 // Status-filtered project list (D-24, PROJ-05)
 export function useProjects(status?: string) {
@@ -45,17 +46,27 @@ export function useCreateProject() {
 }
 
 // Activity feed for dashboard.
-// BL-01 fix: /api/v1/activity is admin-only. Non-admin callers receive HTTP 403 —
-// swallow that and return an empty feed so the Dashboard widget degrades gracefully
-// instead of surfacing a scary error toast. Other errors still propagate normally.
+// BL-01 fix: /api/v1/activity is admin-only — non-admin callers get HTTP 403.
+// UAT round-4 fix: GATE the request on `user.role === "Admin"` so the request
+// is never even fired for non-admin users. Suppressing the global axios
+// console.error via expectedFailureCodes:[403] silenced the JS-side log, but
+// Chrome DevTools still highlights any 4xx response in red at the network
+// layer — that browser-level red ink isn't suppressible from JS. The clean
+// fix is to skip the call entirely for non-admins; the dashboard widget
+// already renders an empty feed when `data` is undefined/empty.
 export function useGlobalActivity(limit = 20) {
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name?.toLowerCase() === 'admin';
   return useQuery({
     queryKey: ['activity', { limit }],
     queryFn: async () => {
       try {
         return await projectService.getActivity(limit, 0);
       } catch (err: unknown) {
-        // Axios error shape: err.response.status === 403 for non-admin users
+        // Defense-in-depth: even with the admin gate, if a real admin somehow
+        // hits a 403 (server-side role drift, expired token edge case), keep
+        // the existing graceful-degrade behavior so the widget shows empty
+        // instead of crashing the dashboard.
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 403) {
           return { items: [], total: 0 };
@@ -63,7 +74,7 @@ export function useGlobalActivity(limit = 20) {
         throw err;
       }
     },
-    // Don't retry on 403 — the user will never be upgraded to admin by a retry.
+    enabled: isAdmin,
     retry: (failureCount, err: unknown) => {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 403) return false;
