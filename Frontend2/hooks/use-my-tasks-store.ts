@@ -23,8 +23,9 @@ export interface MyTasksStore {
   extras: Task[]
   /** IDs of tasks the current user has starred. */
   starred: number[]
-  /** Map of task id → ISO timestamp of local completion (for animation). */
-  completedAt: Record<number, string>
+  /** Map of task id (stringified — JSON object keys are always strings even
+   *  when typed as `Record<number, ...>`) → ISO timestamp of local completion. */
+  completedAt: Record<string, string>
 }
 
 const DEFAULT: MyTasksStore = {

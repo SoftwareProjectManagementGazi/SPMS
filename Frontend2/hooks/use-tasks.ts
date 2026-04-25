@@ -74,21 +74,38 @@ export function useChangeTaskStatus() {
       taskService.patchField(id, "status", status),
     onMutate: async ({ id, status }) => {
       await qc.cancelQueries({ queryKey: ["tasks"] })
-      const snapshots = qc.getQueriesData<Task[] | Task>({ queryKey: ["tasks"] })
-      snapshots.forEach(([key, data]) => {
-        if (Array.isArray(data)) {
-          qc.setQueryData(
-            key,
-            data.map((t) => (t.id === id ? { ...t, status } : t))
-          )
-        } else if (data && (data as Task).id === id) {
-          qc.setQueryData(key, { ...(data as Task), status })
+      // Two snapshot passes — one for queries that hold a Task[] (project +
+      // my-tasks lists), one for queries that hold a single Task (detail
+      // page). The previous combined `Task[] | Task` shape was too loose for
+      // type-safe access of `.id` and forced a runtime guard inside the
+      // forEach. Splitting them keeps each branch monomorphic.
+      const arraySnapshots = qc.getQueriesData<Task[]>({
+        queryKey: ["tasks"],
+        // Reach into nested array-shaped caches only.
+        predicate: (q) => Array.isArray(q.state.data),
+      })
+      const singleSnapshots = qc.getQueriesData<Task>({
+        queryKey: ["tasks"],
+        predicate: (q) =>
+          q.state.data != null && !Array.isArray(q.state.data),
+      })
+      arraySnapshots.forEach(([key, data]) => {
+        if (!data) return
+        qc.setQueryData<Task[]>(
+          key,
+          data.map((t) => (t.id === id ? { ...t, status } : t))
+        )
+      })
+      singleSnapshots.forEach(([key, data]) => {
+        if (data && data.id === id) {
+          qc.setQueryData<Task>(key, { ...data, status })
         }
       })
-      return { snapshots }
+      return { arraySnapshots, singleSnapshots }
     },
     onError: (_err, _vars, ctx) => {
-      ctx?.snapshots?.forEach(([key, data]) => qc.setQueryData(key, data))
+      ctx?.arraySnapshots?.forEach(([key, data]) => qc.setQueryData(key, data))
+      ctx?.singleSnapshots?.forEach(([key, data]) => qc.setQueryData(key, data))
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] })

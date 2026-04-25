@@ -35,7 +35,7 @@ import {
   Star,
 } from "lucide-react"
 
-import { PriorityChip } from "@/components/primitives"
+import { Input, PriorityChip } from "@/components/primitives"
 import type { LangCode } from "@/lib/i18n"
 import type { Task } from "@/services/task-service"
 
@@ -252,41 +252,18 @@ export function MTToolbar({
           flexWrap: "wrap",
         }}
       >
-        {/* Search input — kept inline to match prototype look without coupling
-            to the Input primitive's controlled-value contract. */}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            background: "var(--surface)",
-            borderRadius: "var(--radius-sm)",
-            boxShadow: "inset 0 0 0 1px var(--border)",
-            height: 28,
-            padding: "0 8px",
-            gap: 6,
-            width: compact ? 200 : 240,
-          }}
-        >
-          <Search size={13} style={{ color: "var(--fg-subtle)" }} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={
-              lang === "tr" ? "Görevlerde ara…" : "Search tasks…"
-            }
-            aria-label={lang === "tr" ? "Görevlerde ara" : "Search tasks"}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              height: "100%",
-              background: "transparent",
-              border: 0,
-              fontSize: 13,
-              color: "var(--fg)",
-            }}
-          />
-        </div>
+        {/* Search input — uses the Input primitive so the focus ring + size
+            tokens match the rest of the app. The container `display: flex`
+            override (instead of the primitive's default inline-flex) lets the
+            input fill its width slot consistently across compact / page modes. */}
+        <Input
+          icon={<Search size={13} />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={lang === "tr" ? "Görevlerde ara…" : "Search tasks…"}
+          size="sm"
+          style={{ display: "flex", width: compact ? 200 : 240 }}
+        />
 
         {/* Group-by icon-button group inside an inset pill (prototype lines 449-463) */}
         <div
