@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
-status: executing
-stopped_at: Phase 12 Plan 12-09 complete
-last_updated: "2026-04-25T16:00:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-09 complete (backend additive WorkflowEdge bidirectional + is_all_gate Pydantic fields, ExecutePhaseTransitionUseCase D-16/D-17 honor, seeder canonical edge shape, frontend save flow with full 5-error matrix + dirty-save guard via beforeunload + safePush DirtySaveDialog — EDIT-03 + LIFE-02)
+status: plans_complete_uat_deferred
+stopped_at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
+last_updated: "2026-04-25T23:35:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-10 plans complete: 9 preset workflows (3 NEW per EDIT-07) + Şablon Yükle dropdown with dirty-aware ConfirmDialog + EditorPage applyPreset wiring + 12-UAT-CHECKLIST.md artifact (15 rows). Manual UAT sign-off DEFERRED per user — moved to global deferred queue for a future /gsd-verify-work pass. Phase 12 code-complete; all 14 LIFE-* + EDIT-* requirements implemented.
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 43
-  percent: 97
+  completed_plans: 44
+  percent: 100
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 10 of 10 (12-09 complete)
-Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-09 complete
+Phase: 12 (lifecycle-phase-gate-workflow-editor) — PLANS COMPLETE / UAT DEFERRED
+Plan: 10 of 10 (12-10 plans complete; manual UAT sign-off deferred)
+Status: Phase 12 code-complete, awaiting deferred UAT verification pass
+Last activity: 2026-04-25 -- Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
 
-Progress: [█████████░] 97%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -98,6 +98,7 @@ Progress: [█████████░] 97%
 | Phase 12 P07 | 11min | 2 tasks | 22 files |
 | Phase 12 P08 | 14min | 2 tasks | 10 files |
 | Phase 12 P09 | 14min | 2 tasks | 12 files |
+| Phase 12 P10 | 30min | 3 tasks (2 done + 1 UAT-deferred) | 7 files |
 
 ## Accumulated Context
 
@@ -326,10 +327,20 @@ Key constraints for v2.0:
 - [12-09] Backend tests use in-memory fakes (FakeProjectRepo / FakeTaskRepo / FakeAuditRepo / FakeSession) — no DB dependency, no migration 005 skip-guard needed, runs in 0.04s for all 18 tests. The FakeSession's _R stub class exposes scalar/scalar_one/scalars/first/all to mirror the AsyncSession result-row protocol
 - [12-09] Editor-page test mocks projectService.updateProcessConfig + useToast + useQueryClient via vi.mock at module top — tests do NOT mount QueryClientProvider/ToastProvider. 11 tests (4 baseline + 7 new) pass in ~350ms
 - [12-09] beforeunload Test 16 only verifies listener INSTALLED (preventDefault NOT called when dirty=false). Asserting preventDefault DOES fire on dirty=true requires triggering an interaction-based dirty path — deferred to Plan 12-10 e2e tests
+- [12-10] 9 presets shipped as a single PRESETS_BY_ID lookup table (zero React imports — pure module). resolvePreset(id) deep-clones via JSON parse/stringify so consumers can mutate without poisoning the canonical config. Pattern matches lib/methodology-matrix.ts.
+- [12-10] applyPreset in editor-page calls history.push(workflow) BEFORE setWorkflow(next) so Cmd+Z restores the pre-preset state — extends the single-mutation-entry-point contract from Plan 12-08.
+- [12-10] Three NEW EDIT-07 presets (Incremental / Evolutionary / RAD) designed from scratch per CONTEXT D-01: Incremental = repeated-increment + feedback edge; Evolutionary = prototype-feedback-loop; RAD = parallel data/process-modeling tracks merging into application generation.
+- [12-10] PresetMenu's dirty branch fires ConfirmDialog ('Mevcut değişiklikler kaybolacak…') with confirmTone='danger'; dirty=false skips the dialog and applies directly. Matches the dirty-save dialog UX from Plan 12-09.
+- [12-10] Manual UAT sign-off (Task 3 human-verify checkpoint) DEFERRED per user. Phase 12 is code-complete; the 15-row UAT artifact (12-UAT-CHECKLIST.md) is ready to sign but moves to the global deferred queue.
+- [12-10] Post-checkpoint polish (~35 commits between Tasks 1+2 and the finalization) was driven by in-session UAT feedback across 15 rounds: my-tasks 1:1 prototype rebuild, task-detail header + sidebar + activity + comments + attachments, primitives 4-bar PriorityChip + interactive StatusDot, hydration safety, backend AttributeError on PATCH (dto.status_id → dto.column_id), task_key/due_date field-mapping at API boundary, searchable assignee picker. All polish remained inside Phase 12 surface; nothing introduced a new requirement.
 
 ### Pending Todos
 
-None.
+None within Phase 12.
+
+### Deferred (Phase 12)
+
+- Manual UAT click-through against `.planning/phases/12-lifecycle-phase-gate-workflow-editor/12-UAT-CHECKLIST.md` (15 rows). To be picked up by a later `/gsd-verify-work 12` pass.
 
 ### Blockers/Concerns
 
@@ -344,14 +355,20 @@ Carried from v1.0:
 | verification | Phase 04: 04-VERIFICATION.md | human_needed (UI overhaul will address) |
 | verification | Phase 06: 06-VERIFICATION.md | human_needed (UI overhaul will address) |
 
+v2.0 additions:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat | Phase 12: 12-UAT-CHECKLIST.md (15 rows — LIFE-01..07 + EDIT-01..07 + viewport) | uat_deferred (artifact ready; awaits /gsd-verify-work 12 pass) |
+
 ## Session Continuity
 
-Last session: 2026-04-25T16:00:00Z
-Stopped at: Phase 12 Plan 12-09 complete
+Last session: 2026-04-25T23:35:00Z
+Stopped at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
 Resume file: --resume-file
 
-**Current Phase:** 12
+**Current Phase:** 12 — code-complete
 
-**Next Plan:** 12-10 — Final phase QA / perf-pass / e2e tests (last plan in Phase 12)
+**Next Plan:** None within Phase 12. Awaiting `/gsd-verify-work 12` to consume the deferred 12-UAT-CHECKLIST.md sign-off; otherwise the milestone has no scoped follow-up.
 
-**Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
+**Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25 (all plans complete)

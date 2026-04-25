@@ -40,7 +40,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 9: Backend Schema, Entities & APIs** - All new entities, DI restructure, migration, and API endpoints -- completed 2026-04-21
 - [x] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard (completed 2026-04-21)
 - [x] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions (completed 2026-04-23)
-- [ ] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements
+- [x] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements (plans complete 2026-04-25; manual UAT sign-off deferred to a later /gsd-verify-work pass — see STATE.md "Deferred Items")
 - [ ] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page
 
 ## Phase Details
@@ -155,7 +155,7 @@ Plans:
 - [x] 12-07-PLAN.md — /workflow-editor?projectId route + viewport gate + EditorPage shell + 11 right-panel/toolbar/mode-banner/minimap-wrapper/color-swatch/dirty-save-dialog sub-components — EDIT-* infra (completed 2026-04-25, 11 min, 2 tasks, 22 files)
 - [x] 12-08-PLAN.md — Editor interactivity: DnD + edge create + 5 group-creation entry points + live cloud morph + drop-association + inline edit (PhaseNode name + PhaseEdge label) + ContextMenu (right-click + Shift+F10 + arrow nav + Esc + click-outside) + undo/redo via useEditorHistory + 10 keyboard shortcuts (Cmd+S/Z/Shift+Z/A, N, Delete, F, Esc, Cmd+G, Cmd+D) + bottom-toolbar Sınıflandır align dropdown wired to 5 align helpers + cycle counter wiring via useCycleCounters + BFS-driven node states via computeNodeStates — EDIT-01/02/04/05/06 (completed 2026-04-25, 14 min, 2 tasks, 10 files)
 - [x] 12-09-PLAN.md — Backend additive change (WorkflowEdge.bidirectional + is_all_gate Pydantic defaults, NO _migrate_v1_to_v2, NO migration) + ExecutePhaseTransitionUseCase honor + seeder + 18 integration tests + frontend save flow with full 5-error matrix (200/422/409/429/network) + dirty-save guard via beforeunload + safePush DirtySaveDialog + workflow-validators sequential-flexible parity — EDIT-03 (completed 2026-04-25, 14 min, 2 tasks, 12 files)
-- [ ] 12-10-PLAN.md — 9 preset workflows (incl. Artırımlı/Evrimsel/RAD) + Şablon Yükle menu + ConfirmDialog + 14-row manual UAT checklist artifact + final polish — EDIT-07
+- [x] 12-10-PLAN.md — 9 preset workflows (incl. Artırımlı/Evrimsel/RAD) + Şablon Yükle menu + ConfirmDialog + 15-row manual UAT checklist artifact + final polish — EDIT-07 (Tasks 1+2 complete 2026-04-25; Task 3 manual UAT sign-off DEFERRED to /gsd-verify-work pass)
 **UI hint**: yes
 
 ### Phase 13: Reporting, Activity & User Profile

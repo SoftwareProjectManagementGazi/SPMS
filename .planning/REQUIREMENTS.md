@@ -102,7 +102,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [x] **EDIT-04**: Aktif faz hesaplama graph traversal (BFS) ile yapilir — hardcoded index yerine node.state (active/past/future/unreachable) [E9] (completed 2026-04-25 in 12-08 — computeNodeStates from Plan 12-01 wired into editor-page rfNodes useMemo so PhaseNode.data.state drives every render; LifecycleTab side already wired in Plan 12-04)
 - [x] **EDIT-05**: Paralel aktif fazlar desteklenir — birden fazla node ayni anda "active" ring alabilir [E10] (completed 2026-04-25 in 12-08 — verified via workflow-canvas.test.tsx parallel-actives BFS test using V-Model fixture in flexible mode; computeNodeStates correctly assigns 'active' state to multiple nodes per CONTEXT D-10)
 - [x] **EDIT-06**: Node uzerinde dongu sayaci badge'i (xN) gosterilir — ayni faz birden fazla kez kapatilmissa [E11] (completed 2026-04-25 in 12-08 — useCycleCounters(projectId).data wired into editor-page rfNodes; PhaseNode renders CycleCounterBadge with count from Map; visibility >= 2 enforced by CycleCounterBadge primitive from Plan 12-01)
-- [ ] **EDIT-07**: Eksik preset template'ler eklenir — Artirimli (Incremental), Evrimsel (Evolutionary), RAD [E12]
+- [x] **EDIT-07**: Eksik preset template'ler eklenir — Artirimli (Incremental), Evrimsel (Evolutionary), RAD [E12] (completed 2026-04-25 in 12-10 — 9 presets in `lib/lifecycle/presets.ts` (Scrum / Waterfall / Kanban / Iterative / V-Model / Spiral + 3 NEW Incremental / Evolutionary / RAD), each passing validateWorkflow with zero errors; PresetMenu Şablon Yükle dropdown with dirty-aware ConfirmDialog flow + EditorPage applyPreset wiring with history.push for non-destructive Cmd+Z)
 
 ### Reporting & Charts
 
@@ -223,7 +223,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-04 | Phase 12 | Completed (12-01 BFS pure lib + 12-04 LifecycleTab + 12-08 editor-page wiring) |
 | EDIT-05 | Phase 12 | Completed (12-08 verified via parallel-actives test in workflow-canvas.test.tsx) |
 | EDIT-06 | Phase 12 | Completed (12-01 useCycleCounters hook + 12-08 PhaseNode rfNodes data.cycleCount wiring) |
-| EDIT-07 | Phase 12 | Pending |
+| EDIT-07 | Phase 12 | Completed (12-10 — 9 presets in lib/lifecycle/presets.ts including 3 NEW Incremental/Evolutionary/RAD; PresetMenu dropdown + ConfirmDialog flow; EditorPage applyPreset with history.push for non-destructive Cmd+Z) |
 | REPT-01 | Phase 13 | Pending |
 | REPT-02 | Phase 13 | Pending |
 | REPT-03 | Phase 13 | Pending |
