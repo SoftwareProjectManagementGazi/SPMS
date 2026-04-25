@@ -146,7 +146,7 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
         proOptions={PRO_OPTIONS}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
-        edgesUpdatable={!readOnly}
+        edgesReconnectable={!readOnly}
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}

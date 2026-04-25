@@ -999,14 +999,17 @@ export function EditorPage({ project }: EditorPageProps) {
           setSelected({ type: "node", id: cm.target.nodeId })
         }
       } else if (cm.target.type === "edge") {
+        // Capture the discriminated id locally — TS loses the narrowing
+        // when `cm.target` is read inside an inner .map() callback.
+        const edgeId = cm.target.edgeId
         if (id === "delete") {
-          setSelected({ type: "edge", id: cm.target.edgeId })
+          setSelected({ type: "edge", id: edgeId })
           setTimeout(() => deleteSelection(), 0)
         } else if (id === "toggle-bidir") {
           commitWorkflow({
             ...workflow,
             edges: workflow.edges.map((e) =>
-              e.id === cm.target.edgeId
+              e.id === edgeId
                 ? { ...e, bidirectional: !e.bidirectional }
                 : e,
             ),
@@ -1015,13 +1018,13 @@ export function EditorPage({ project }: EditorPageProps) {
           commitWorkflow({
             ...workflow,
             edges: workflow.edges.map((e) =>
-              e.id === cm.target.edgeId
+              e.id === edgeId
                 ? { ...e, isAllGate: !e.isAllGate }
                 : e,
             ),
           })
         } else if (id === "edit-label") {
-          setSelected({ type: "edge", id: cm.target.edgeId })
+          setSelected({ type: "edge", id: edgeId })
         }
       } else if (cm.target.type === "group") {
         if (id === "ungroup") {
