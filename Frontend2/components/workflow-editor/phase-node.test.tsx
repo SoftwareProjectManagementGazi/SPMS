@@ -1,11 +1,12 @@
 // Unit tests for components/workflow-editor/phase-node.tsx
-// (Phase 12 Plan 12-01).
+// (Phase 12 Plan 12-01 + extensions in Plan 12-08).
 //
-// 5 cases per 12-01-PLAN.md task 3 <behavior> Tests 3-7. Tests directly
-// render PhaseNode with stub NodeProps (no full ReactFlow mount required).
+// Plan 12-01: 5 cases for state styling + 4-way handles (Tests 3-7).
+// Plan 12-08: cycle counter visibility (EDIT-06) + inline name edit on
+//             double-click (CONTEXT D-15).
 
 import { describe, it, expect, vi } from "vitest"
-import { render } from "@testing-library/react"
+import { render, fireEvent } from "@testing-library/react"
 import { PhaseNode } from "./phase-node"
 
 vi.mock("@/context/app-context", () => ({
@@ -92,5 +93,66 @@ describe("PhaseNode — 4-way handle layout", () => {
     expect(ids).toContain("bottom-target")
     expect(ids).toContain("left-source")
     expect(ids).toContain("left-target")
+  })
+})
+
+describe("PhaseNode — Plan 12-08 cycle counter visibility (EDIT-06)", () => {
+  it("renders the cycle counter badge with text 'x3' when cycleCount=3", () => {
+    const { container } = renderPhase({ name: "Risk Analizi", cycleCount: 3 })
+    expect(container.textContent).toMatch(/×3|x3/)
+  })
+
+  it("does NOT render the cycle counter badge when cycleCount<2", () => {
+    const { container } = renderPhase({ name: "Tasarım", cycleCount: 1 })
+    // CycleCounterBadge returns null for count<2 -> no x{n} text in the DOM
+    expect(container.textContent).not.toMatch(/×\d|x\d/)
+  })
+})
+
+describe("PhaseNode — Plan 12-08 inline name edit (CONTEXT D-15)", () => {
+  it("double-click on the node name swaps the span for an <input/> with auto-focus when editMode=true", () => {
+    const { container } = renderPhase({
+      name: "Başlatma",
+      editMode: true,
+    })
+    const root = container.firstChild as HTMLElement
+    // Locate the name display element + simulate dblclick on it
+    const nameEl = root.querySelector("[data-field='name']") as HTMLElement
+    expect(nameEl).toBeTruthy()
+    fireEvent.doubleClick(nameEl)
+    const input = container.querySelector("input") as HTMLInputElement
+    expect(input).toBeTruthy()
+    expect(input.value).toBe("Başlatma")
+  })
+
+  it("Escape during inline edit cancels and restores the name span", () => {
+    const { container } = renderPhase({
+      name: "Yürütme",
+      editMode: true,
+    })
+    const root = container.firstChild as HTMLElement
+    const nameEl = root.querySelector("[data-field='name']") as HTMLElement
+    fireEvent.doubleClick(nameEl)
+    const input = container.querySelector("input") as HTMLInputElement
+    expect(input).toBeTruthy()
+    fireEvent.keyDown(input, { key: "Escape" })
+    // After cancel the input should be removed
+    expect(container.querySelector("input")).toBeNull()
+  })
+
+  it("Enter during inline edit fires data.onNameChange with the new value", () => {
+    const onNameChange = vi.fn()
+    const { container } = renderPhase({
+      name: "Eski Ad",
+      editMode: true,
+      onNameChange,
+    })
+    const root = container.firstChild as HTMLElement
+    const nameEl = root.querySelector("[data-field='name']") as HTMLElement
+    fireEvent.doubleClick(nameEl)
+    const input = container.querySelector("input") as HTMLInputElement
+    fireEvent.change(input, { target: { value: "Yeni Ad" } })
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(onNameChange).toHaveBeenCalledWith("Yeni Ad")
   })
 })

@@ -3,6 +3,9 @@
 // PhaseNode — custom React Flow node renderer with 4-way handles
 // (CONTEXT D-08, D-12, D-15, D-30, D-47; UI-SPEC §10 lines 1167-1207).
 //
+// Plan 12-01 ships the read-only renderer + cycle counter visibility.
+// Plan 12-08 extends with inline name edit on double-click (CONTEXT D-15).
+//
 // Geometry: 140x60 div with oklch tokens. State-driven box-shadow:
 //   default     -> inset 1px var(--border-strong)
 //   active      -> 0 0 0 2px var(--primary) outer ring
@@ -35,6 +38,8 @@ export interface PhaseNodeData {
   selected?: boolean
   /** Set to true in editor mode to expose the inline-edit input on dblclick. */
   editMode?: boolean
+  /** Plan 12-08 — inline rename callback fired on Enter. */
+  onNameChange?: (next: string) => void
 }
 
 interface BoxStyle {
@@ -84,6 +89,43 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
   const state: PhaseNodeState = d.state ?? "default"
   const stateStyle = STATE_STYLES[state] ?? STATE_STYLES.default
   const tokenColor = d.color ?? "status-todo"
+
+  // Plan 12-08 inline name edit — only when editMode=true.
+  const [editing, setEditing] = React.useState(false)
+  const [draftName, setDraftName] = React.useState<string>(d.name)
+  const inputRef = React.useRef<HTMLInputElement | null>(null)
+
+  // Reset draft when the prop name changes externally (e.g. side-panel edit).
+  React.useEffect(() => {
+    if (!editing) setDraftName(d.name)
+  }, [d.name, editing])
+
+  // Auto-focus the input + select-all when entering edit mode.
+  React.useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  const beginEdit = React.useCallback(() => {
+    if (!d.editMode) return
+    setDraftName(d.name)
+    setEditing(true)
+  }, [d.editMode, d.name])
+
+  const commitEdit = React.useCallback(() => {
+    const next = draftName.trim()
+    if (next && next !== d.name) {
+      d.onNameChange?.(next)
+    }
+    setEditing(false)
+  }, [draftName, d])
+
+  const cancelEdit = React.useCallback(() => {
+    setDraftName(d.name)
+    setEditing(false)
+  }, [d.name])
 
   return (
     <div
@@ -172,20 +214,58 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
         }}
       />
 
-      {/* Name */}
-      <div
-        style={{
-          marginLeft: 14,
-          fontWeight: 600,
-          fontSize: 13,
-          lineHeight: 1.2,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {d.name}
-      </div>
+      {/* Name — span (read mode) OR <input/> (edit mode, Plan 12-08) */}
+      {editing ? (
+        <input
+          ref={inputRef}
+          data-field="name-input"
+          value={draftName}
+          onChange={(e) => setDraftName(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              commitEdit()
+            } else if (e.key === "Escape") {
+              e.preventDefault()
+              cancelEdit()
+            }
+            // Stop React Flow's keydown listeners from intercepting the keystroke.
+            e.stopPropagation()
+          }}
+          style={{
+            marginLeft: 14,
+            fontWeight: 600,
+            fontSize: 13,
+            lineHeight: 1.2,
+            width: "calc(100% - 18px)",
+            background: "var(--surface)",
+            color: "var(--fg)",
+            border: 0,
+            outline: 0,
+            boxShadow: "inset 0 0 0 1px var(--primary)",
+            borderRadius: 4,
+            padding: "1px 4px",
+          }}
+        />
+      ) : (
+        <div
+          data-field="name"
+          onDoubleClick={beginEdit}
+          style={{
+            marginLeft: 14,
+            fontWeight: 600,
+            fontSize: 13,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            cursor: d.editMode ? "text" : "default",
+          }}
+        >
+          {d.name}
+        </div>
+      )}
 
       {/* Description */}
       {d.description ? (

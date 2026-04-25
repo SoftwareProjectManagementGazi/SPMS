@@ -1,11 +1,18 @@
 "use client"
 
-// GroupCloudNode — read-only baseline group cloud renderer (CONTEXT D-22,
-// EDIT-02; UI-SPEC §12 lines 1245-1287).
+// GroupCloudNode — group cloud renderer (CONTEXT D-22, EDIT-02; UI-SPEC §12
+// lines 1245-1287).
 //
-// Plan 12-01 ships the read-only visual only. Full DnD / drop-association /
-// "Grupla / Grubu Çöz" toggle wiring lands in Plan 12-08. The cloud's d-string
-// is computed via the pure `computeHull` helper in lib/lifecycle/cloud-hull.
+// Plan 12-01 shipped the read-only baseline. Plan 12-08 extends with:
+//   1. `data.hullPath` prop — pre-computed d-string from the editor's
+//      onNodeDrag live morph. When supplied, takes precedence over the
+//      memoized computeHull() output (so a parent can drive smooth
+//      morphing on every drag frame without forcing the cloud node to
+//      recompute the hull from `childPositions`).
+//   2. `data.dragOver` prop — drop-target visual feedback when a loose
+//      node is being dragged into the group's hull (entry-point #3 in
+//      CONTEXT D-20).
+//   3. CSS `transition: d 100ms ease` on the path (UI-SPEC line 1469).
 
 import * as React from "react"
 import { type NodeProps } from "@xyflow/react"
@@ -14,12 +21,18 @@ import { computeHull, type Point } from "@/lib/lifecycle/cloud-hull"
 export interface GroupCloudNodeData {
   /** Node positions inside the group (parent-relative). Required to compute the cloud. */
   childPositions: Point[]
+  /** Plan 12-08 — pre-computed hull d-string overrides the memoized
+   *  computeHull() output. Used by the editor for live morph during drag. */
+  hullPath?: string
   name?: string
   /** Color token suffix, e.g. 'status-progress'. */
   color?: string
   width?: number
   height?: number
   selected?: boolean
+  /** Plan 12-08 — true while a draggable node is hovering over the cloud
+   *  hull; renders the dashed primary-tone outline drop-target indicator. */
+  dragOver?: boolean
 }
 
 function GroupCloudNodeImpl({ data }: NodeProps) {
@@ -27,14 +40,24 @@ function GroupCloudNodeImpl({ data }: NodeProps) {
   const childPositions = d.childPositions ?? []
   const tokenColor = d.color ?? "primary"
   const fill = `color-mix(in oklch, var(--${tokenColor}) 8%, transparent)`
-  const stroke = `color-mix(in oklch, var(--${tokenColor}) 35%, transparent)`
+  const baseStroke = `color-mix(in oklch, var(--${tokenColor}) 35%, transparent)`
+  const dragOverStroke = "var(--primary)"
 
-  const dPath = React.useMemo(() => computeHull(childPositions, 16), [childPositions])
+  // Plan 12-08: hullPath prop wins; otherwise fall back to the pure helper.
+  const computedPath = React.useMemo(
+    () => computeHull(childPositions, 16),
+    [childPositions],
+  )
+  const dPath = d.hullPath ?? computedPath
 
   // Width/height are caller-supplied (React Flow needs concrete bounds for hit
   // testing); the SVG fills them.
   const width = d.width ?? 600
   const height = d.height ?? 200
+
+  const stroke = d.dragOver ? dragOverStroke : baseStroke
+  const strokeWidth = d.dragOver ? 2 : d.selected ? 2 : 1.2
+  const strokeDasharray = d.dragOver ? "6 4" : "none"
 
   return (
     <div
@@ -62,8 +85,11 @@ function GroupCloudNodeImpl({ data }: NodeProps) {
           d={dPath}
           fill={fill}
           stroke={stroke}
-          strokeWidth={d.selected ? 2 : 1.2}
-          style={{ transition: "d 100ms ease, stroke 120ms ease" }}
+          strokeWidth={strokeWidth}
+          strokeDasharray={strokeDasharray}
+          style={{
+            transition: "d 100ms ease, stroke 120ms ease, stroke-dasharray 120ms ease",
+          }}
         />
       </svg>
 
