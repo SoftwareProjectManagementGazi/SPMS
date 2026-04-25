@@ -78,12 +78,18 @@ describe("SettingsTab", () => {
     expect(getByText("Workflow Editörünü Aç")).toBeInTheDocument()
   })
 
-  it("shows the Faz 12 stub on the Yaşam Döngüsü sub-tab", () => {
-    const { getByText } = renderWithProviders(
+  it("renders the CriteriaEditorPanel on the Yaşam Döngüsü sub-tab (replaces the Faz 12 stub)", async () => {
+    const { getByText, queryByText } = renderWithProviders(
       <SettingsTab project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("Yaşam Döngüsü"))
-    expect(getByText(/Faz 12'de aktive edilecek/)).toBeInTheDocument()
+    // Stub copy must be gone (Plan 12-03 acceptance)
+    expect(queryByText(/Faz 12'de aktive edilecek/)).toBeNull()
+    // CriteriaEditorPanel headers must appear
+    await waitFor(() => {
+      expect(getByText("Görev–Faz Ataması")).toBeInTheDocument()
+    })
+    expect(getByText("Faz Seç")).toBeInTheDocument()
   })
 
   it("preselects the methodology default backlog definition when none is stored", () => {
