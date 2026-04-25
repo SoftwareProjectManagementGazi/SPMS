@@ -32,7 +32,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useQueryClient } from "@tanstack/react-query"
+import { useQueryClient, useQuery } from "@tanstack/react-query"
 import {
   ArrowLeft,
   Save,
@@ -73,8 +73,10 @@ import {
 } from "@/lib/lifecycle/cloud-hull"
 import { projectService, type Project } from "@/services/project-service"
 import {
+  lifecycleService,
   mapWorkflowConfig,
   unmapWorkflowConfig,
+  type PhaseTransitionEntry,
   type WorkflowConfig,
   type WorkflowConfigDTO,
   type WorkflowEdge,
@@ -104,6 +106,9 @@ export interface EditorPageProps {
 
 interface ProcessConfigShape {
   workflow?: WorkflowConfigDTO
+  /** Triage #1 — separate task-status flow stored alongside the lifecycle. */
+  status_workflow?: WorkflowConfigDTO
+  statusWorkflow?: WorkflowConfigDTO
 }
 
 interface ContextMenuState {
@@ -123,6 +128,62 @@ function readWorkflow(project: Project): WorkflowConfig {
     return { mode: "flexible", nodes: [], edges: [], groups: [] }
   }
   return mapWorkflowConfig(cfg.workflow)
+}
+
+/**
+ * Triage #1 — read the project's task-status workflow if it exists; otherwise
+ * synthesize a 4-node default (Yapılacak → Yapılıyor → İncelemede → Bitti) so
+ * the canvas has something to render the first time the user enters status
+ * mode. The save flow persists whatever shape the user produces back into
+ * `processConfig.status_workflow`.
+ */
+function readStatusWorkflow(project: Project): WorkflowConfig {
+  const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
+  const dto = cfg?.statusWorkflow ?? cfg?.status_workflow
+  if (dto) return mapWorkflowConfig(dto)
+  return DEFAULT_STATUS_WORKFLOW
+}
+
+const DEFAULT_STATUS_WORKFLOW: WorkflowConfig = {
+  mode: "continuous",
+  nodes: [
+    {
+      id: "nd_status_todo",
+      name: "Yapılacak",
+      x: 60,
+      y: 120,
+      color: "status-todo",
+      isInitial: true,
+    },
+    {
+      id: "nd_status_prog",
+      name: "Yapılıyor",
+      x: 240,
+      y: 120,
+      color: "status-progress",
+    },
+    {
+      id: "nd_status_revw",
+      name: "İncelemede",
+      x: 420,
+      y: 120,
+      color: "status-review",
+    },
+    {
+      id: "nd_status_done",
+      name: "Bitti",
+      x: 600,
+      y: 120,
+      color: "status-done",
+      isFinal: true,
+    },
+  ],
+  edges: [
+    { id: "es_1", source: "nd_status_todo", target: "nd_status_prog", type: "flow" },
+    { id: "es_2", source: "nd_status_prog", target: "nd_status_revw", type: "flow" },
+    { id: "es_3", source: "nd_status_revw", target: "nd_status_done", type: "flow" },
+  ],
+  groups: [],
 }
 
 // Phase 12 Plan 12-10 (Bug X UAT fix) — node-id helpers live in the pure
@@ -151,9 +212,17 @@ export function EditorPage({ project }: EditorPageProps) {
   )
   const canEdit = useTransitionAuthority(project)
 
-  // Working-copy workflow + dirty flag.
-  const initialWorkflow = React.useMemo(() => readWorkflow(project), [project])
-  const [workflow, setWorkflow] = React.useState<WorkflowConfig>(initialWorkflow)
+  // Working-copy workflows. We track lifecycle and status flows
+  // independently (triage #1) so switching modes shows the right canvas.
+  const initialLifecycle = React.useMemo(() => readWorkflow(project), [project])
+  const initialStatus = React.useMemo(
+    () => readStatusWorkflow(project),
+    [project],
+  )
+  const [lifecycleWorkflow, setLifecycleWorkflow] =
+    React.useState<WorkflowConfig>(initialLifecycle)
+  const [statusWorkflow, setStatusWorkflow] =
+    React.useState<WorkflowConfig>(initialStatus)
   const [dirty, setDirty] = React.useState(false)
   const [selected, setSelected] = React.useState<{
     type: "node" | "edge" | "group"
@@ -190,9 +259,43 @@ export function EditorPage({ project }: EditorPageProps) {
   const dragStartSnapshotRef = React.useRef<WorkflowConfig | null>(null)
   const isDraggingRef = React.useRef<boolean>(false)
 
-  // BFS-driven node states (EDIT-04 / EDIT-05) — empty transitions list for
-  // the editor (transitions are read by LifecycleTab; Editor focuses on
-  // structural state). Plan 12-09 may inject phase_transitions for parity.
+  const modeRaw = searchParams.get("mode")
+  const mode: EditorMode = modeRaw === "status" ? "status" : "lifecycle"
+
+  // Active workflow + setter, derived from `mode`. Mutations route to the
+  // matching state slice so the other mode is never accidentally clobbered.
+  const workflow = mode === "status" ? statusWorkflow : lifecycleWorkflow
+  const setWorkflow = React.useCallback(
+    (next: WorkflowConfig | ((prev: WorkflowConfig) => WorkflowConfig)) => {
+      if (mode === "status") {
+        setStatusWorkflow((prev) =>
+          typeof next === "function"
+            ? (next as (p: WorkflowConfig) => WorkflowConfig)(prev)
+            : next,
+        )
+      } else {
+        setLifecycleWorkflow((prev) =>
+          typeof next === "function"
+            ? (next as (p: WorkflowConfig) => WorkflowConfig)(prev)
+            : next,
+        )
+      }
+    },
+    [mode],
+  )
+
+  // Triage #3 — feed the project's phase_transition activity into
+  // computeNodeStates so the canvas can show real active/past/future
+  // colouring (instead of every node defaulting to "default"). Status mode
+  // doesn't have transitions yet, so we skip the BFS there.
+  const transitionsQuery = useQuery({
+    queryKey: ["phase-transitions", project.id],
+    queryFn: () => lifecycleService.getPhaseTransitions(project.id),
+    enabled: !!project.id && mode === "lifecycle",
+  })
+  const transitions: PhaseTransitionEntry[] = transitionsQuery.data ?? []
+
+  // BFS-driven node states (EDIT-04 / EDIT-05).
   const nodeStates = React.useMemo(
     () =>
       computeNodeStates({
@@ -201,13 +304,10 @@ export function EditorPage({ project }: EditorPageProps) {
           nodes: workflow.nodes,
           edges: workflow.edges,
         },
-        phaseTransitions: [],
+        phaseTransitions: mode === "lifecycle" ? transitions : [],
       }),
-    [workflow.mode, workflow.nodes, workflow.edges],
+    [workflow.mode, workflow.nodes, workflow.edges, mode, transitions],
   )
-
-  const modeRaw = searchParams.get("mode")
-  const mode: EditorMode = modeRaw === "status" ? "status" : "lifecycle"
 
   const handleModeChange = React.useCallback(
     (next: string) => {
@@ -901,7 +1001,10 @@ export function EditorPage({ project }: EditorPageProps) {
         // Serialize camelCase -> snake_case at the wire boundary (Pitfall 21).
         // unmapWorkflowConfig handles bidirectional/is_all_gate, is_initial,
         // is_final, is_archived, parent_id, wip_limit conversions.
-        workflow: unmapWorkflowConfig(workflow),
+        // Triage #1 — persist BOTH lifecycle and status workflows so a user
+        // who edited only one mode doesn't lose the other.
+        workflow: unmapWorkflowConfig(lifecycleWorkflow),
+        status_workflow: unmapWorkflowConfig(statusWorkflow),
       }
       await projectService.updateProcessConfig(project.id, nextProcessConfig)
       // 200 success
@@ -946,7 +1049,16 @@ export function EditorPage({ project }: EditorPageProps) {
     } finally {
       setSaving(false)
     }
-  }, [project.id, project.processConfig, workflow, history, qc, showToast, T])
+  }, [
+    project.id,
+    project.processConfig,
+    lifecycleWorkflow,
+    statusWorkflow,
+    history,
+    qc,
+    showToast,
+    T,
+  ])
 
   // Rate-limit countdown ticker — decrements `countdown` every second; clears
   // saveError when it reaches 0 so the Save button is re-enabled.
