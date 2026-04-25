@@ -14,7 +14,7 @@ import * as React from "react"
 import { CheckSquare } from "lucide-react"
 
 import type { LangCode } from "@/lib/i18n"
-import type { ViewId } from "./saved-views-tabs"
+import type { ViewId } from "@/lib/my-tasks/types"
 
 interface ViewMessage {
   tr: string

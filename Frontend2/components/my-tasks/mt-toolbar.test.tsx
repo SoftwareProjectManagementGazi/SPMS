@@ -8,7 +8,7 @@ import {
   type Priority,
   type SortKey,
 } from "./mt-toolbar"
-import type { ViewId } from "./saved-views-tabs"
+import type { ViewId } from "@/lib/my-tasks/types"
 import type { MTDensityKind } from "./mt-density-icon"
 
 const ZERO_COUNTS: Record<ViewId, number> = {

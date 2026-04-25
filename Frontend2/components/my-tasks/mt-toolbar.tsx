@@ -41,7 +41,7 @@ import type { Task } from "@/services/task-service"
 
 import { MTDensityIcon, type MTDensityKind } from "./mt-density-icon"
 import { MTPicker } from "./mt-picker"
-import type { ViewId } from "./saved-views-tabs"
+import type { ViewId } from "@/lib/my-tasks/types"
 
 export type GroupBy = "due" | "project" | "status" | "priority" | "none"
 export type SortKey = "smart" | "due" | "priority" | "newest"

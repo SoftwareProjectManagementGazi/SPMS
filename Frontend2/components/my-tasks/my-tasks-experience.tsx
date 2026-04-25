@@ -32,10 +32,13 @@ import * as React from "react"
 
 import { Card, Kbd } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useAuth } from "@/context/auth-context"
+import { useLocalStoragePref } from "@/hooks/use-local-storage-pref"
 import { useMyTasksStore } from "@/hooks/use-my-tasks-store"
 import { useProjects } from "@/hooks/use-projects"
 import { useChangeTaskStatus, useMyTasks } from "@/hooks/use-tasks"
 import { dueBucket } from "@/lib/my-tasks/due-bucket"
+import type { ViewId } from "@/lib/my-tasks/types"
 import type { Task } from "@/services/task-service"
 import type { StatusValue } from "@/components/primitives/status-dot"
 
@@ -50,30 +53,7 @@ import {
   type SortKey,
 } from "./mt-toolbar"
 import type { MTDensityKind } from "./mt-density-icon"
-import type { ViewId } from "./saved-views-tabs"
 import { TaskGroupList } from "./task-group-list"
-
-// localStorage helpers — mirror AppContext's prefix scheme so all SPMS keys
-// share the `spms.` namespace. Try/catch is required because Safari Private
-// Mode and quota-exceeded errors throw on setItem.
-function loadLS<T>(key: string, def: T): T {
-  if (typeof window === "undefined") return def
-  try {
-    const v = window.localStorage.getItem("spms." + key)
-    return v !== null ? (JSON.parse(v) as T) : def
-  } catch {
-    return def
-  }
-}
-
-function saveLS<T>(key: string, value: T): void {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.setItem("spms." + key, JSON.stringify(value))
-  } catch {
-    /* ignore — UX state, not data */
-  }
-}
 
 interface MyTasksExperienceProps {
   compact?: boolean
@@ -102,9 +82,20 @@ export function MyTasksExperience({
   subtitle,
 }: MyTasksExperienceProps) {
   const { language: lang } = useApp()
+  const { user } = useAuth()
   const { data: tasks = [] } = useMyTasks()
   const { data: projects = [] } = useProjects()
   const [store, setStore] = useMyTasksStore()
+
+  // First name for the Hero greeting. AuthUser.name is the full name; we
+  // split on whitespace to get the user-facing "Yusuf" out of "Yusuf Bayrakcı".
+  // Empty/null safely yields undefined → MTHero renders the greeting without
+  // the comma+name suffix.
+  const firstName = React.useMemo(() => {
+    const raw = user?.name?.trim()
+    if (!raw) return undefined
+    return raw.split(/\s+/)[0] || undefined
+  }, [user?.name])
 
   // `nowMs` is a captured timestamp that updates roughly once per minute. We
   // use this instead of calling `Date.now()` directly inside `useMemo` so the
@@ -119,70 +110,43 @@ export function MyTasksExperience({
   // so the two surfaces have independent preferences.
   const lsSuffix = compact ? "dash" : "page"
 
-  // Compact (dashboard) callers pin to the "all" view because the dashboard
-  // already filters tasks by project — exposing the saved-views row would let
-  // the user filter to "Bugün" inside a card scoped to one project, which
-  // doesn't make sense.
-  //
-  // Hydration safety: every preference state ALSO has a localStorage source.
-  // Calling `loadLS` inside the useState lazy initializer would return the
-  // default on the server (where window is undefined) and the stored value
-  // on the client, producing a hydration mismatch on the very first paint
-  // for any user who has changed a preference. Instead we render the
-  // defaults on first paint AND on the server, then `useEffect` swaps in
-  // the stored values after mount via `setStateFromLS`. The `hydrated` ref
-  // gates the persist effects so the post-mount load doesn't immediately
-  // overwrite the very value it just read.
-  const [view, setView] = React.useState<ViewId>(
-    compact ? "all" : defaultView
+  // All preference states use the useLocalStoragePref hook — defaults render
+  // on SSR + first paint, stored values swap in via mount-only useEffect, and
+  // the persist write is hydration-gated. Compact mode pins view to "all"
+  // (the dashboard already filters tasks by project, so saved-views are
+  // hidden); we still let the hook track storage so the standalone /my-tasks
+  // page reads back the user's last choice.
+  const [storedView, setView] = useLocalStoragePref<ViewId>(
+    "mt.view",
+    defaultView
   )
-  const [groupBy, setGroupBy] = React.useState<GroupBy>(defaultGroupBy)
+  const view: ViewId = compact ? "all" : storedView
+  const [groupBy, setGroupBy] = useLocalStoragePref<GroupBy>(
+    `mt.groupBy.${lsSuffix}`,
+    defaultGroupBy
+  )
   const [search, setSearch] = React.useState("")
-  const [priFilter, setPriFilter] = React.useState<Priority[]>([])
-  const [density, setDensity] = React.useState<MTDensityKind>("cozy")
-  const [sort, setSort] = React.useState<SortKey>("smart")
-  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
-  const hydrated = React.useRef(false)
-
-  React.useEffect(() => {
-    if (!compact) setView(loadLS<ViewId>("mt.view", defaultView))
-    setGroupBy(loadLS<GroupBy>(`mt.groupBy.${lsSuffix}`, defaultGroupBy))
-    setPriFilter(loadLS<Priority[]>("mt.priFilter", []))
-    setDensity(loadLS<MTDensityKind>("mt.density", "cozy"))
-    setSort(loadLS<SortKey>("mt.sort", "smart"))
-    setCollapsed(loadLS<Record<string, boolean>>(`mt.collapsed.${lsSuffix}`, {}))
-    hydrated.current = true
-    // Mount-only — `lsSuffix`, `defaultGroupBy`, `defaultView`, `compact` are
-    // stable for the lifetime of a single MyTasksExperience instance, so we
-    // intentionally don't depend on them.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Persist on change (skip view in compact mode — the value is forced).
-  // The `hydrated` gate prevents the post-mount load effect from triggering
-  // a clobbering write back with the same value (still a write, but harmless).
-  React.useEffect(() => {
-    if (hydrated.current && !compact) saveLS("mt.view", view)
-  }, [view, compact])
-  React.useEffect(() => {
-    if (hydrated.current) saveLS(`mt.groupBy.${lsSuffix}`, groupBy)
-  }, [groupBy, lsSuffix])
-  React.useEffect(() => {
-    if (hydrated.current) saveLS("mt.priFilter", priFilter)
-  }, [priFilter])
-  React.useEffect(() => {
-    if (hydrated.current) saveLS("mt.density", density)
-  }, [density])
-  React.useEffect(() => {
-    if (hydrated.current) saveLS("mt.sort", sort)
-  }, [sort])
-  React.useEffect(() => {
-    if (hydrated.current) saveLS(`mt.collapsed.${lsSuffix}`, collapsed)
-  }, [collapsed, lsSuffix])
+  const [priFilter, setPriFilter] = useLocalStoragePref<Priority[]>(
+    "mt.priFilter",
+    []
+  )
+  const [density, setDensity] = useLocalStoragePref<MTDensityKind>(
+    "mt.density",
+    "cozy"
+  )
+  const [sort, setSort] = useLocalStoragePref<SortKey>("mt.sort", "smart")
+  const [collapsed, setCollapsed] = useLocalStoragePref<
+    Record<string, boolean>
+  >(`mt.collapsed.${lsSuffix}`, {})
 
   const projectsByKey = React.useMemo(() => {
     const m = new Map<number, string>()
     for (const p of projects) m.set(p.id, p.key)
+    return m
+  }, [projects])
+  const projectsByName = React.useMemo(() => {
+    const m = new Map<number, string>()
+    for (const p of projects) m.set(p.id, p.name)
     return m
   }, [projects])
 
@@ -402,6 +366,7 @@ export function MyTasksExperience({
         <MTHero
           stats={heroStats}
           lang={lang}
+          firstName={firstName}
           title={title}
           subtitle={subtitle}
         />
@@ -449,6 +414,7 @@ export function MyTasksExperience({
           ) : (
             <TaskGroupList
               tasks={sorted}
+              allTasks={tasks}
               groupBy={groupBy}
               starred={store.starred}
               onToggleStar={toggleStar}
@@ -456,6 +422,7 @@ export function MyTasksExperience({
               compact={compact}
               density={density}
               projectsByKey={projectsByKey}
+              projectsByName={projectsByName}
               collapsed={collapsed}
               onToggleCollapse={toggleCollapse}
             />

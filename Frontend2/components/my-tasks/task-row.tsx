@@ -199,15 +199,24 @@ export function TaskRow({
   const isDone = status === "done"
   const due = describeDue(task.due, language)
 
+  // Use the real backend username when present (added to Task in this round
+  // — task-service.ts mapTask reads d.assignee?.username). Falls back to the
+  // legacy "#1"-style hash mock so existing test fixtures without an
+  // assigneeName still render an avatar instead of blanking out.
   const assigneeAvatar =
     task.assigneeId != null
       ? {
-          initials: `#${task.assigneeId}`.slice(0, 2).toUpperCase(),
+          initials: (
+            (task.assigneeName?.trim() || `#${task.assigneeId}`).slice(0, 2)
+          ).toUpperCase(),
           avColor: ((task.assigneeId % 8) + 1) as number,
         }
       : null
 
   function navigate() {
+    // Defensive: a row without a projectId would push to "/projects/null/..."
+    // and 404. Treat that case as a no-op rather than navigate to garbage.
+    if (task.projectId == null || Number.isNaN(task.projectId)) return
     router.push(`/projects/${task.projectId}/tasks/${task.id}`)
   }
 
