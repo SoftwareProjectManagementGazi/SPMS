@@ -87,6 +87,30 @@ function mapProject(data: ProjectResponseDTO): Project {
   };
 }
 
+export interface ProjectMember {
+  id: number
+  fullName: string
+  avatarPath: string | null
+  roleName: string
+}
+
+interface ProjectMemberResponseDTO {
+  id: number
+  full_name: string
+  avatar_path: string | null
+  role_name: string
+  is_current_member?: boolean
+}
+
+function mapMember(d: ProjectMemberResponseDTO): ProjectMember {
+  return {
+    id: d.id,
+    fullName: d.full_name,
+    avatarPath: d.avatar_path,
+    roleName: d.role_name,
+  }
+}
+
 export const projectService = {
   getAll: async (status?: string): Promise<Project[]> => {
     const params: Record<string, string> = {};
@@ -98,6 +122,15 @@ export const projectService = {
   getById: async (id: string | number): Promise<Project> => {
     const response = await apiClient.get<ProjectResponseDTO>(`/projects/${id}`);
     return mapProject(response.data);
+  },
+
+  // Project member roster — used by the Task Detail assignee picker so it
+  // can offer a searchable list instead of asking for a numeric user id.
+  getMembers: async (projectId: number | string): Promise<ProjectMember[]> => {
+    const response = await apiClient.get<ProjectMemberResponseDTO[]>(
+      `/projects/${projectId}/members`,
+    )
+    return response.data.map(mapMember)
   },
 
   create: async (data: CreateProjectDTO): Promise<Project> => {

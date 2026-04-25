@@ -18,6 +18,19 @@ export function useProject(id: string | number) {
   });
 }
 
+// Project member roster — used by the Task Detail assignee picker.
+// 60s staleTime keeps the dropdown snappy when the user opens it repeatedly
+// without firing redundant fetches; mutations on /projects/{id}/members
+// invalidate this key explicitly.
+export function useProjectMembers(projectId: number | string | null) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'members'],
+    queryFn: () => projectService.getMembers(projectId!),
+    enabled: !!projectId,
+    staleTime: 60 * 1000,
+  });
+}
+
 // Status update mutation (D-25, PROJ-02)
 export function useUpdateProjectStatus() {
   const queryClient = useQueryClient();

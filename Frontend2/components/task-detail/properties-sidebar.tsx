@@ -29,6 +29,7 @@
 //                          would actually surface content).
 
 import * as React from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Avatar, Badge, Card, PriorityChip } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useProjectLabels } from "@/hooks/use-labels"
@@ -37,8 +38,10 @@ import {
   resolveCycleLabel,
 } from "@/lib/methodology-matrix"
 import type { Project } from "@/services/project-service"
-import type { Task } from "@/services/task-service"
+import { taskService, type Task } from "@/services/task-service"
+import { useToast } from "@/components/toast"
 
+import { AssigneePicker } from "./assignee-picker"
 import { InlineEdit } from "./inline-edit"
 import { PhaseStepper } from "./phase-stepper"
 
@@ -152,6 +155,42 @@ export function PropertiesSidebar({
   const phaseStepperVisible =
     phaseEnabled && subtasks.length > 0 && phaseNodes.length > 0
 
+  // Assignee picker — managed locally because the AssigneePicker pushes the
+  // new value AND dismisses in a single onSelect call, which the generic
+  // InlineEdit's setDraft → commit dance can't represent without racing on
+  // the closure-captured draft.
+  const qc = useQueryClient()
+  const { showToast } = useToast()
+  const [assigneeOpen, setAssigneeOpen] = React.useState(false)
+  const assignMutation = useMutation({
+    mutationFn: (assigneeId: number | null) =>
+      taskService.patchField(task.id, "assignee_id", assigneeId),
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: ["tasks", task.id] })
+      const prev = qc.getQueryData<Task>(["tasks", task.id])
+      if (prev) {
+        qc.setQueryData<Task>(["tasks", task.id], {
+          ...prev,
+          assigneeId: next,
+        })
+      }
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", task.id], ctx.prev)
+      showToast({
+        variant: "error",
+        message:
+          lang === "tr"
+            ? "Atama kaydedilemedi"
+            : "Failed to save assignee",
+      })
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", task.id] })
+    },
+  })
+
   return (
     <Card padding={0}>
       <div
@@ -219,48 +258,64 @@ export function PropertiesSidebar({
           )}
         </MetaRow>
 
-        {/* Assignee */}
+        {/* Assignee — searchable popover backed by useProjectMembers (Phase
+            12 round 13). Replaces the previous "type a numeric user id"
+            input which forced the user to know an internal id. Managed here
+            (not via InlineEdit) because AssigneePicker pushes the chosen id
+            AND dismisses in a single onSelect call — the generic InlineEdit
+            commit closure would race on stale draft state. */}
         <MetaRow label={lang === "tr" ? "Atanan" : "Assignee"}>
-          <InlineEdit
-            taskId={task.id}
-            field="assignee_id"
-            value={task.assigneeId}
-            renderDisplay={(v) => {
-              const av = userAvatar(v, task.assigneeName)
-              return av ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <Avatar user={av} size={20} />
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setAssigneeOpen((v) => !v)}
+              aria-haspopup="dialog"
+              aria-expanded={assigneeOpen}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                width: "100%",
+                padding: 0,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--fg)",
+                font: "inherit",
+                textAlign: "left",
+              }}
+            >
+              {task.assigneeId != null ? (
+                <>
+                  {(() => {
+                    const av = userAvatar(task.assigneeId, task.assigneeName)
+                    return av ? <Avatar user={av} size={20} /> : null
+                  })()}
                   <span style={{ fontSize: 12.5 }}>
-                    {(task.assigneeName?.trim() ||
-                      `${lang === "tr" ? "Kullanıcı" : "User"} #${v}`)}
+                    {task.assigneeName?.trim() ||
+                      `${lang === "tr" ? "Kullanıcı" : "User"} #${task.assigneeId}`}
                   </span>
-                </div>
+                </>
               ) : (
                 <span style={{ color: "var(--fg-subtle)" }}>
                   {lang === "tr" ? "Atanmamış" : "Unassigned"}
                 </span>
-              )
-            }}
-            renderEditor={(draft, setDraft, commit) => (
-              <input
-                autoFocus
-                type="number"
-                value={draft ?? ""}
-                onChange={(e) =>
-                  setDraft(e.target.value ? Number(e.target.value) : null)
-                }
-                onBlur={commit}
-                style={editorStyle}
-                placeholder="user id"
+              )}
+            </button>
+            {assigneeOpen && (
+              <AssigneePicker
+                projectId={project.id}
+                value={task.assigneeId}
+                onSelect={(id) => {
+                  setAssigneeOpen(false)
+                  if (id !== task.assigneeId) {
+                    assignMutation.mutate(id)
+                  }
+                }}
+                onCancel={() => setAssigneeOpen(false)}
               />
             )}
-          />
+          </div>
         </MetaRow>
 
         {/* Reporter — read-only avatar+id row matching prototype
