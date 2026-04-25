@@ -17,6 +17,8 @@ import dynamic from "next/dynamic"
 import { CanvasSkeleton } from "./canvas-skeleton"
 import type { WorkflowCanvasInnerProps } from "./workflow-canvas-inner"
 
+export type { CanvasControlsHandle } from "./workflow-canvas-inner"
+
 const WorkflowCanvasInner = dynamic(
   () => import("./workflow-canvas-inner").then((m) => m.WorkflowCanvasInner),
   {

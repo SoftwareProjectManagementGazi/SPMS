@@ -25,6 +25,8 @@ import {
   Background,
   MiniMap,
   Controls,
+  ReactFlowProvider,
+  useReactFlow,
   type NodeTypes,
   type EdgeTypes,
   type Node as RFNode,
@@ -55,11 +57,20 @@ const DEFAULT_EDGE_OPTIONS = { type: "phase" }
 
 const PRO_OPTIONS = { hideAttribution: true }
 
+/** Imperative handle exposed to consumers for zoom / fit controls. */
+export interface CanvasControlsHandle {
+  zoomIn: () => void
+  zoomOut: () => void
+  fitView: () => void
+}
+
 export interface WorkflowCanvasInnerProps {
   nodes: RFNode[]
   edges: RFEdge[]
   readOnly?: boolean
   showMiniMap?: boolean
+  /** Optional ref to access zoomIn / zoomOut / fitView from outside. */
+  controlsRef?: React.RefObject<CanvasControlsHandle | null>
   /** Called when a node is clicked. */
   onNodeClick?: (event: React.MouseEvent, node: RFNode) => void
   /** Called when an edge is clicked. */
@@ -93,7 +104,36 @@ export interface WorkflowCanvasInnerProps {
   }) => void
 }
 
+function CanvasControlsBridge({
+  controlsRef,
+}: {
+  controlsRef?: React.RefObject<CanvasControlsHandle | null>
+}) {
+  const rf = useReactFlow()
+  React.useEffect(() => {
+    if (!controlsRef) return
+    controlsRef.current = {
+      zoomIn: () => rf.zoomIn({ duration: 180 }),
+      zoomOut: () => rf.zoomOut({ duration: 180 }),
+      fitView: () => rf.fitView({ duration: 180, padding: 0.15 }),
+    }
+    return () => {
+      if (controlsRef.current) controlsRef.current = null
+    }
+  }, [rf, controlsRef])
+  return null
+}
+
 export function WorkflowCanvasInner(props: WorkflowCanvasInnerProps) {
+  return (
+    <ReactFlowProvider>
+      <CanvasControlsBridge controlsRef={props.controlsRef} />
+      <CanvasBody {...props} />
+    </ReactFlowProvider>
+  )
+}
+
+function CanvasBody(props: WorkflowCanvasInnerProps) {
   const readOnly = Boolean(props.readOnly)
   return (
     <div style={{ width: "100%", height: "100%", minHeight: 600 }}>

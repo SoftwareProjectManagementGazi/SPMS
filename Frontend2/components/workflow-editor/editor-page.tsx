@@ -33,7 +33,7 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Save, Undo2, Redo2 } from "lucide-react"
+import { ArrowLeft, Save, Undo2, Redo2, Maximize, Minus, Plus } from "lucide-react"
 
 import {
   AlertBanner,
@@ -71,7 +71,7 @@ import {
   type WorkflowNode,
 } from "@/services/lifecycle-service"
 
-import { WorkflowCanvas } from "./workflow-canvas"
+import { WorkflowCanvas, type CanvasControlsHandle } from "./workflow-canvas"
 import { RightPanel } from "./right-panel"
 import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
@@ -164,6 +164,7 @@ export function EditorPage({ project }: EditorPageProps) {
   const history = useEditorHistory()
   const cycleQuery = useCycleCounters(project.id)
   const cycleMap: Map<string, number> = cycleQuery.data ?? new Map()
+  const canvasControlsRef = React.useRef<CanvasControlsHandle | null>(null)
 
   // Phase 12 Plan 12-10 (Bug 2 UAT fix) — drag-history coalescing refs.
   //
@@ -1269,6 +1270,14 @@ export function EditorPage({ project }: EditorPageProps) {
           style={{ height: 18, width: 1, background: "var(--border)" }}
           aria-hidden
         />
+        <Button
+          variant="ghost"
+          size="icon"
+          icon={<Minus size={14} />}
+          onClick={() => canvasControlsRef.current?.zoomOut()}
+          title={T("Uzaklaştır", "Zoom out")}
+          aria-label={T("Uzaklaştır", "Zoom out")}
+        />
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -1280,6 +1289,22 @@ export function EditorPage({ project }: EditorPageProps) {
         >
           100%
         </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          icon={<Plus size={14} />}
+          onClick={() => canvasControlsRef.current?.zoomIn()}
+          title={T("Yakınlaştır", "Zoom in")}
+          aria-label={T("Yakınlaştır", "Zoom in")}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          icon={<Maximize size={14} />}
+          onClick={() => canvasControlsRef.current?.fitView()}
+          title={T("Ekrana sığdır", "Fit view")}
+          aria-label={T("Ekrana sığdır", "Fit view")}
+        />
       </div>
 
       {/* Body row: canvas + right panel (prototype: grid 1fr 320px under
@@ -1310,6 +1335,7 @@ export function EditorPage({ project }: EditorPageProps) {
             edges={rfEdges as never}
             readOnly={!canEdit}
             showMiniMap={false}
+            controlsRef={canvasControlsRef}
             onNodeClick={(_e, node) =>
               setNodeSelected(String(node.id))
             }
