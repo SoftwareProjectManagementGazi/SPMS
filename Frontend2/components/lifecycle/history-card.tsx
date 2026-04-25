@@ -20,14 +20,16 @@
 //     `summary.done`.
 
 import * as React from "react"
+import { FileText } from "lucide-react"
 
-import { Badge, Card } from "@/components/primitives"
+import { Badge, Button, Card } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useTasks } from "@/hooks/use-tasks"
 import { TaskRow } from "@/components/my-tasks/task-row"
 import type { Task } from "@/services/task-service"
 import type { WorkflowNode } from "@/services/lifecycle-service"
 import { MiniMetric } from "./mini-metric"
+import { EvaluationReportCard } from "./evaluation-report-card"
 
 // ----------------------------------------------------------------------------
 // Types
@@ -46,6 +48,8 @@ export interface PhaseSummary {
 export interface HistoryCardProject {
   id: number
   key?: string
+  managerId?: number | null
+  manager_id?: number | null
 }
 
 export interface HistoryCardProps {
@@ -66,6 +70,9 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
   )
 
   const [open, setOpen] = React.useState(false)
+  // LIFE-07 — Rapor button toggles inline EvaluationReportCard expand below
+  // the card body. Independent of the lazy-fetch task-details Collapsible.
+  const [reportOpen, setReportOpen] = React.useState(false)
 
   // Lazy-fetch via TanStack Query: query only runs once `open === true`.
   // Cache key includes phase_id so each closed-phase Collapsible has its own
@@ -109,7 +116,16 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
             {closedAtLabel}
           </div>
         </div>
-        {/* Plan 12-06 will add a "Rapor" Button + EvaluationReportCard here. */}
+        {/* LIFE-07 — Rapor button toggles inline EvaluationReportCard. */}
+        <Button
+          size="xs"
+          variant="ghost"
+          icon={<FileText size={12} />}
+          onClick={() => setReportOpen((v) => !v)}
+          active={reportOpen}
+        >
+          {T("Rapor", "Report")}
+        </Button>
       </div>
 
       <div
@@ -226,6 +242,15 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
           </div>
         )}
       </div>
+
+      {/* LIFE-07 — inline EvaluationReportCard expand. */}
+      {reportOpen && (
+        <EvaluationReportCard
+          project={project}
+          phase={phase}
+          onClose={() => setReportOpen(false)}
+        />
+      )}
     </Card>
   )
 }

@@ -143,12 +143,11 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
+    // Wait for the async query to resolve and the report data to render
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      expect(screen.getByText("15")).toBeInTheDocument() // task_count
     })
-
-    // Read-only summary values present
-    expect(screen.getByText("15")).toBeInTheDocument() // task_count
+    expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
     expect(screen.getByText("14")).toBeInTheDocument() // done_count
     expect(screen.getByText("42")).toBeInTheDocument() // duration_days
 
@@ -194,8 +193,11 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
+    // Wait for the report to actually load — rev 3 only appears after the
+    // async usePhaseReports query resolves. Otherwise Save would POST instead
+    // of PATCH because `report` is still null.
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      expect(screen.getByText(/rev 3/i)).toBeInTheDocument()
     })
 
     // Find first textarea (issues label maps to first uppercase block)
@@ -233,8 +235,9 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
+    // Wait for the report to load (rev 3 indicates the query resolved).
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      expect(screen.getByText(/rev 3/i)).toBeInTheDocument()
     })
 
     const textareas = document.querySelectorAll("textarea")
@@ -302,8 +305,9 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
+    // PDF button is disabled until `report` resolves — wait for rev 3.
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      expect(screen.getByText(/rev 3/i)).toBeInTheDocument()
     })
 
     const pdfBtn = screen.getByRole("button", { name: /^PDF$/ })
@@ -322,15 +326,14 @@ describe("EvaluationReportCard", () => {
     createElementSpy.mockRestore()
   })
 
-  it("Test 6: PDF 429 countdown — button disabled until countdown reaches 0", async () => {
-    vi.useFakeTimers()
+  it("Test 6: PDF 429 countdown — button disabled with countdown text shown", async () => {
     apiGet.mockResolvedValueOnce({ data: [baseReport] })
 
-    // 429 response
+    // 429 response — Use a small retry value so the test timeout is fine.
     const err = {
       response: {
         status: 429,
-        data: { retry_after_seconds: 30 },
+        data: { retry_after_seconds: 2 },
       },
     }
     apiGet.mockRejectedValueOnce(err)
@@ -345,18 +348,15 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
-    await vi.advanceTimersByTimeAsync(0)
+    // Wait for report to load (rev 3 indicates query resolved).
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      expect(screen.getByText(/rev 3/i)).toBeInTheDocument()
     })
 
     const pdfBtn = screen.getByRole("button", { name: /^PDF$/ })
     fireEvent.click(pdfBtn)
 
-    // Wait microtask cycle so the rejection propagates
-    await vi.advanceTimersByTimeAsync(50)
-
-    // Button should now be disabled and show countdown text
+    // Button should now be disabled and show countdown text after 429.
     await waitFor(() => {
       const btn = screen.getByRole("button", {
         name: /(s bekleyin|Wait.*s)/i,
@@ -364,16 +364,15 @@ describe("EvaluationReportCard", () => {
       expect(btn).toBeDisabled()
     })
 
-    // Advance 30 s — countdown should reach 0 and button re-enable
-    await vi.advanceTimersByTimeAsync(31000)
+    // Wait for countdown to elapse (2s + buffer).
+    await new Promise((r) => setTimeout(r, 2500))
 
+    // Button label should return to "PDF" after countdown ends.
     await waitFor(() => {
       const btn = screen.getByRole("button", { name: /^PDF$/ })
       expect(btn).not.toBeDisabled()
     })
-
-    vi.useRealTimers()
-  })
+  }, 10000)
 
   it("Test 7: HistoryCard Rapor button toggles inline EvaluationReportCard", async () => {
     apiGet.mockResolvedValue({ data: [baseReport] })
@@ -428,8 +427,12 @@ describe("EvaluationReportCard", () => {
       ),
     )
 
+    // Wait for the report data to bind so the textareas show the placeholders
+    // (placeholders are static strings on the JSX so this still needs the
+    // textareas in the DOM).
     await waitFor(() => {
-      expect(screen.getByText(/Faz Değerlendirme Raporu/)).toBeInTheDocument()
+      const textareas = document.querySelectorAll("textarea")
+      expect(textareas.length).toBeGreaterThanOrEqual(3)
     })
 
     // Issues placeholder
