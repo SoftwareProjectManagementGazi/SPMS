@@ -78,6 +78,8 @@ import { ModeBanner } from "./mode-banner"
 import { MinimapWrapper } from "./minimap-wrapper"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
 import { DirtySaveDialog } from "./dirty-save-dialog"
+import { PresetMenu, detectCurrentPresetId } from "./preset-menu"
+import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
 
 export type EditorMode = "lifecycle" | "status"
 
@@ -195,6 +197,19 @@ export function EditorPage({ project }: EditorPageProps) {
 
   const handleWorkflowChange = React.useCallback(
     (next: WorkflowConfig) => commitWorkflow(next),
+    [commitWorkflow],
+  )
+
+  // Plan 12-10 Task 2 — preset apply handler. Pushes the current workflow
+  // onto the undo stack first (commitWorkflow already does this), then
+  // swaps the canvas to a deep-cloned copy of the chosen preset and clears
+  // the selection so the right panel does not reference a stale node.
+  const applyPreset = React.useCallback(
+    (id: PresetId) => {
+      const next = resolvePreset(id)
+      commitWorkflow(next)
+      setSelected(null)
+    },
     [commitWorkflow],
   )
 
@@ -1131,12 +1146,11 @@ export function EditorPage({ project }: EditorPageProps) {
           style={{ height: 18, width: 1, background: "var(--border)" }}
           aria-hidden
         />
-        <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>
-          {T("Şablon:", "Template:")}{" "}
-          <span style={{ color: "var(--fg)", fontWeight: 500 }}>
-            {project.methodology?.toLowerCase() ?? "-"}
-          </span>
-        </span>
+        <PresetMenu
+          currentPresetId={detectCurrentPresetId(workflow)}
+          dirty={dirty}
+          onApply={applyPreset}
+        />
         <div style={{ flex: 1 }} />
         <Button
           variant="ghost"

@@ -162,13 +162,13 @@ describe("EditorPage", () => {
     expect(screen.getAllByText("Kaydet").length).toBeGreaterThan(0)
   })
 
-  it("Test 7: toolbar renders mode SegmentedControl + template + Undo/Redo + zoom", () => {
+  it("Test 7: toolbar renders mode SegmentedControl + PresetMenu + Undo/Redo + zoom", () => {
     render(<EditorPage project={mockProject} />)
     // Mode pill labels
     expect(screen.getByText("Yaşam Döngüsü")).toBeTruthy()
     expect(screen.getByText("Görev Durumları")).toBeTruthy()
-    // Template label
-    expect(screen.getByText(/Şablon:/)).toBeTruthy()
+    // Plan 12-10 — PresetMenu trigger replaces the static template label
+    expect(screen.getByText("Şablon Yükle")).toBeTruthy()
     // Undo / Redo buttons — "Yinele" appears multiple times; query all
     expect(screen.getByText("Geri Al")).toBeTruthy()
     expect(screen.getAllByText("Yinele").length).toBeGreaterThanOrEqual(1)
@@ -328,5 +328,46 @@ describe("EditorPage", () => {
     window.dispatchEvent(event)
     // Initial dirty=false so preventDefault must NOT have been called
     expect(preventSpy).not.toHaveBeenCalled()
+  })
+
+  // ---------------------- Plan 12-10 — preset menu integration ----------------------
+
+  it("Test 17: preset menu integration — selecting 'Artırımlı' on a clean canvas swaps the workflow and Save sends Incremental shape", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    render(<EditorPage project={mockProject} />)
+
+    // Initial canvas is empty (project.processConfig=null), so dirty=false.
+    // Open the preset dropdown.
+    fireEvent.click(screen.getByText("Şablon Yükle"))
+
+    // Click the Incremental ("Artırımlı") entry — bypasses ConfirmDialog
+    // because dirty=false initially.
+    fireEvent.click(screen.getByText("Artırımlı"))
+
+    // Click Save — header Save button.
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    // Inspect the PATCH body — process_config.workflow.nodes must include
+    // the Incremental preset's "Artırım 1" node.
+    const callArgs = mockUpdateProcessConfig.mock.calls[0]
+    expect(callArgs[0]).toBe(42)
+    const processConfig = callArgs[1] as {
+      workflow?: { nodes: Array<{ id: string; name?: string }> }
+    }
+    expect(processConfig.workflow).toBeDefined()
+    const nodeNames = (processConfig.workflow!.nodes ?? []).map(
+      (n) => n.name,
+    )
+    // "Artırım 1" is unique to the Incremental preset (per
+    // Frontend2/lib/lifecycle/presets.ts INCREMENTAL definition).
+    expect(nodeNames).toContain("Artırım 1")
+    expect(nodeNames).toContain("Artırım 2")
+    expect(nodeNames).toContain("Bütünleştirme")
   })
 })
