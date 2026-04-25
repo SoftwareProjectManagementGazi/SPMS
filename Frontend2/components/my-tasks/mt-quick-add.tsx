@@ -3,14 +3,23 @@
 // MTQuickAdd — inline "create a task" row that sits between the Hero and the
 // Toolbar on /my-tasks.
 //
-// Ports the prototype `addTask` UX (lines 145-157, 199 of my-tasks.jsx) into a
-// real backend create. Unlike the prototype which only patches localStorage,
-// here we hit `POST /tasks` via `useCreateTask`. On success we let the React
-// Query invalidation in `useCreateTask` refresh both the project task list AND
-// the my-tasks list (the "tasks" key invalidates both).
+// Ports the prototype `addTask` UX (my-tasks-parts.jsx 274-330) into a real
+// backend create. Unlike the prototype which only patches localStorage, here
+// we hit POST /tasks via useCreateTask. The query invalidation in the hook
+// refreshes both the project task list AND the my-tasks list (the "tasks"
+// key invalidates both).
 //
-// Empty project list (e.g. user has no project membership) renders the row in
-// a disabled visual state with an explanatory hint.
+// UI/UX decisions matching the prototype (UAT round 8 fixes):
+//   - Project picker uses MTPicker with project colour dot + project key in
+//     compact label form (instead of a native <select>).
+//   - Priority chip opens a 4-option MTPicker popover (instead of cycling
+//     through priorities on click).
+//   - The form gets a focus animation: a 3px glow ring + 1px lift on focus,
+//     mirroring my-tasks-parts.jsx 288-298.
+//   - Padding is asymmetric: 8px 10px 8px 14px so the leftmost Plus icon has
+//     more breathing room than the rightmost Add button.
+//   - Empty project list (e.g. user has no project membership) renders the
+//     row visually disabled.
 
 import * as React from "react"
 import { Plus } from "lucide-react"
@@ -21,6 +30,8 @@ import { useToast } from "@/components/toast"
 import type { LangCode } from "@/lib/i18n"
 import type { Project } from "@/services/project-service"
 import type { Task } from "@/services/task-service"
+
+import { MTPicker, type MTPickerOption } from "./mt-picker"
 
 export interface MTQuickAddProps {
   lang: LangCode
@@ -43,6 +54,12 @@ function priorityLabel(p: Priority, lang: LangCode): string {
   return lang === "tr" ? "Düşük" : "Low"
 }
 
+// Same 8-bucket modulo as TaskRow / Avatar — keeps the project colour stable
+// regardless of where it surfaces.
+function projectColor(projectId: number): string {
+  return `var(--av-${(projectId % 8) + 1})`
+}
+
 export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
   const createTask = useCreateTask()
   const { showToast } = useToast()
@@ -59,6 +76,7 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
       : (projects[0]?.id ?? null)
   const [priority, setPriority] = React.useState<Priority>("medium")
   const [due, setDue] = React.useState<string>("")
+  const [focused, setFocused] = React.useState(false)
 
   const canSubmit =
     title.trim().length > 0 && projectId != null && !createTask.isPending
@@ -104,25 +122,53 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
     ]
   )
 
-  // Cycle through the 4 priorities when the chip is clicked. Faster than a
-  // dropdown for what is fundamentally a 4-choice control.
-  const cyclePriority = React.useCallback(() => {
-    const idx = PRIORITIES.indexOf(priority)
-    setPriority(PRIORITIES[(idx + 1) % PRIORITIES.length])
-  }, [priority])
+  const projectOptions = React.useMemo<MTPickerOption[]>(
+    () =>
+      projects.map((p) => ({
+        id: String(p.id),
+        label: p.name,
+        sub: p.key,
+        dot: projectColor(p.id),
+      })),
+    [projects]
+  )
+
+  const priorityOptions = React.useMemo<MTPickerOption[]>(
+    () =>
+      PRIORITIES.map((p) => ({
+        id: p,
+        label: priorityLabel(p, lang),
+        icon: <PriorityChip level={p} lang={lang} withLabel={false} />,
+      })),
+    [lang]
+  )
 
   return (
     <form
       data-testid="mt-quick-add"
       onSubmit={handleSubmit}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        // Only collapse the focus ring when focus leaves the form entirely.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setFocused(false)
+        }
+      }}
       style={{
         display: "flex",
         alignItems: "center",
         gap: 8,
-        padding: "8px 12px",
+        // Asymmetric padding (prototype my-tasks-parts.jsx:288): plus-icon side
+        // breathes a bit more than the submit button side.
+        padding: "8px 10px 8px 14px",
         background: "var(--surface)",
         borderRadius: "var(--radius)",
-        boxShadow: "inset 0 0 0 1px var(--border), var(--inset-card)",
+        boxShadow: focused
+          ? "0 0 0 3px color-mix(in oklch, var(--primary) 15%, transparent), 0 2px 8px oklch(0 0 0 / 0.05), inset 0 0 0 1px var(--primary)"
+          : "inset 0 0 0 1px var(--border), var(--inset-card)",
+        transform: focused ? "translateY(-1px)" : "translateY(0)",
+        transition:
+          "box-shadow 0.18s ease, transform 0.18s ease",
       }}
     >
       <Plus
@@ -153,65 +199,28 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
         }}
       />
 
-      <select
-        value={projectId ?? ""}
-        onChange={(e) => setSelectedProjectId(Number(e.target.value))}
+      <MTPicker
+        value={projectId != null ? String(projectId) : ""}
+        onChange={(id) => setSelectedProjectId(Number(id))}
+        options={projectOptions}
+        compactLabel="sub"
+        ariaLabel={lang === "tr" ? "Proje" : "Project"}
         disabled={projects.length === 0 || createTask.isPending}
-        aria-label={lang === "tr" ? "Proje" : "Project"}
-        style={{
-          height: 28,
-          padding: "0 8px",
-          fontSize: 12.5,
-          background: "var(--surface-2)",
-          color: "var(--fg)",
-          border: 0,
-          borderRadius: "var(--radius-sm)",
-          boxShadow: "inset 0 0 0 1px var(--border)",
-        }}
-      >
-        {projects.length === 0 && (
-          <option value="">
-            {lang === "tr" ? "Proje yok" : "No projects"}
-          </option>
-        )}
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+        minWidth={92}
+      />
 
-      <button
-        type="button"
-        onClick={cyclePriority}
-        title={priorityLabel(priority, lang)}
-        aria-label={
+      <MTPicker
+        value={priority}
+        onChange={(id) => setPriority(id as Priority)}
+        options={priorityOptions}
+        ariaLabel={
           lang === "tr"
             ? `Öncelik: ${priorityLabel(priority, lang)}`
             : `Priority: ${priorityLabel(priority, lang)}`
         }
         disabled={createTask.isPending}
-        style={{
-          height: 28,
-          display: "inline-flex",
-          alignItems: "center",
-          padding: "0 8px",
-          background: "var(--surface-2)",
-          color: "var(--fg)",
-          border: 0,
-          borderRadius: "var(--radius-sm)",
-          boxShadow: "inset 0 0 0 1px var(--border)",
-          cursor: createTask.isPending ? "not-allowed" : "pointer",
-        }}
-      >
-        <PriorityChip
-          level={priority}
-          lang={lang}
-          withLabel={false}
-          style={{ marginRight: 4 }}
-        />
-        <span style={{ fontSize: 12.5 }}>{priorityLabel(priority, lang)}</span>
-      </button>
+        minWidth={120}
+      />
 
       <input
         type="date"
