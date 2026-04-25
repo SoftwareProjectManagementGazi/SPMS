@@ -751,7 +751,7 @@ function NotificationsSection() {
         display: "grid", gridTemplateColumns: "1fr 70px 70px 70px",
         paddingBottom: 10, borderBottom: "1px solid var(--border)",
         fontSize: 11, color: "var(--fg-subtle)",
-        textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 600,
+        textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600,
       }}>
         <div />
         <div style={{ textAlign: "center" }}>Email</div>

@@ -295,7 +295,7 @@ export function ArtifactsSubTab({ project, workflow }: ArtifactsSubTabProps) {
               padding: "10px 14px",
               fontSize: 11,
               textTransform: "uppercase",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
               color: "var(--fg-subtle)",
               fontWeight: 600,
               borderBottom: "1px solid var(--border)",

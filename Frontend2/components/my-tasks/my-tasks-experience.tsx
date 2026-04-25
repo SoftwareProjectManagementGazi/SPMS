@@ -157,7 +157,8 @@ export function MyTasksExperience({
         <div>
           <h1
             style={{
-              fontSize: 24,
+              // UI-sweep: 24 -> 20 (Display top of UI-SPEC 4-bucket).
+              fontSize: 20,
               fontWeight: 600,
               letterSpacing: -0.6,
               margin: 0,

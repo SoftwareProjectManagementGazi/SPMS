@@ -214,7 +214,7 @@ export function SearchAutocomplete() {
                   textTransform: "uppercase",
                   fontWeight: 600,
                   color: "var(--fg-subtle)",
-                  letterSpacing: 0.4,
+                  letterSpacing: 0.5,
                 }}
               >
                 {lang === "tr" ? "PROJELER" : "PROJECTS"}
@@ -272,7 +272,7 @@ export function SearchAutocomplete() {
                   textTransform: "uppercase",
                   fontWeight: 600,
                   color: "var(--fg-subtle)",
-                  letterSpacing: 0.4,
+                  letterSpacing: 0.5,
                   borderTop:
                     projectResults.length > 0
                       ? "1px solid var(--border)"

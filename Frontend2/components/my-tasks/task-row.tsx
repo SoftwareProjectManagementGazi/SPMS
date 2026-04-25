@@ -126,11 +126,12 @@ export function TaskRow({
         />
       </button>
 
-      {/* Key — mono, subtle */}
+      {/* Key — mono, subtle. UI-sweep: 10.8 -> 10.5 (in-bucket, matches every
+          other mono key column). */}
       <span
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10.8,
+          fontSize: 10.5,
           color: "var(--fg-subtle)",
           letterSpacing: 0.3,
           whiteSpace: "nowrap",

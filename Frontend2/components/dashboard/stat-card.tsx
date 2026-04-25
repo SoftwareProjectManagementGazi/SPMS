@@ -35,7 +35,7 @@ export function StatCard({ label, value, delta, tone, icon }: StatCardProps) {
             fontSize: 11.5,
             fontWeight: 500,
             textTransform: "uppercase",
-            letterSpacing: 0.4,
+            letterSpacing: 0.5,
             color: "var(--fg-muted)",
           }}>
             {label}

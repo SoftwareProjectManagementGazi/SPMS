@@ -103,7 +103,7 @@ export function TaskGroupList({
               fontWeight: 600,
               color: "var(--fg-subtle)",
               textTransform: "uppercase",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
             }}
           >
             {key} · {list.length}

@@ -311,10 +311,12 @@ export function ListTab({ project }: { project: Project }) {
                 onClick={h.column.getToggleSortingHandler()}
                 style={{
                   padding: "8px 12px",
-                  fontSize: 11,
+                  // UI-sweep: 11 -> 10.5 (Body small Heading-weight uppercase variant).
+                  fontSize: 10.5,
                   fontWeight: 600,
                   textTransform: "uppercase",
-                  letterSpacing: 0.4,
+                  // UI-sweep: 0.4 -> 0.5 (standardize uppercase Section labels).
+                  letterSpacing: 0.5,
                   color: isSorted ? "var(--fg)" : "var(--fg-subtle)",
                   background: "var(--surface-2)",
                   borderBottom: "1px solid var(--border)",

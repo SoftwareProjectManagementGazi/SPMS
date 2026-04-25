@@ -342,7 +342,7 @@ export function EvaluationReportCard({
               fontWeight: 600,
               color: "var(--fg-muted)",
               textTransform: "uppercase",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
             }}
           >
             {T("Karşılaşılan Sorunlar", "Issues Encountered")}
@@ -376,7 +376,7 @@ export function EvaluationReportCard({
               fontWeight: 600,
               color: "var(--fg-muted)",
               textTransform: "uppercase",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
             }}
           >
             {T("Öğrenilen Dersler", "Lessons Learned")}
@@ -410,7 +410,7 @@ export function EvaluationReportCard({
               fontWeight: 600,
               color: "var(--fg-muted)",
               textTransform: "uppercase",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
             }}
           >
             {T("Sonraki Faz Önerileri", "Next Phase Recommendations")}

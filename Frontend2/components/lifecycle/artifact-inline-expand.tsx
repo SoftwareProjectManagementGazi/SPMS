@@ -306,7 +306,7 @@ export function ArtifactInlineExpand({
             fontWeight: 600,
             color: "var(--fg-muted)",
             textTransform: "uppercase",
-            letterSpacing: 0.4,
+            letterSpacing: 0.5,
           }}
         >
           {T("Sorumlu", "Assignee")}:

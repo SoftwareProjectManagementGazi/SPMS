@@ -220,7 +220,7 @@ export function CalendarTab({ project }: { project: Project }) {
               fontWeight: 600,
               color: "var(--fg-muted)",
               textAlign: "center",
-              letterSpacing: 0.4,
+              letterSpacing: 0.5,
             }}
           >
             {w}
