@@ -99,11 +99,13 @@ function LabeledField({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         style={{
-          height: 34, padding: "0 10px", fontSize: 13,
+          // UI-sweep: standardized to Input primitive baseline (height:32, pad:"0 8px").
+          height: 32, padding: "0 8px", fontSize: 13,
           background: "var(--surface-2)", border: 0,
           borderRadius: "var(--radius-sm)",
           boxShadow: "inset 0 0 0 1px var(--border)",
           color: "var(--fg)",
+          // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
         }}
       />
     </label>

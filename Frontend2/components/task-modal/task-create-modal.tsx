@@ -49,7 +49,7 @@ const overlayStyle: React.CSSProperties = {
 }
 
 const cardStyle: React.CSSProperties = {
-  width: 540,
+  width: 560,
   maxWidth: "calc(100vw - 32px)",
   maxHeight: "85vh",
   background: "var(--surface)",
