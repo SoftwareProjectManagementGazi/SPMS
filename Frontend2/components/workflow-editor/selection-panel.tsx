@@ -9,6 +9,7 @@
 // context menu actions; this panel is where right-side property edits land.
 
 import * as React from "react"
+import { ArrowRight } from "lucide-react"
 import {
   Button,
   Input,
@@ -319,11 +320,32 @@ function EdgeEditor({
 
   return (
     <div>
-      <div style={TITLE_STYLE}>
-        {sourceNode && targetNode
-          ? `${sourceNode.name} → ${targetNode.name}`
-          : T("Bağlantı", "Edge")}
-      </div>
+      <div style={TITLE_STYLE}>{T("Bağlantı", "Edge")}</div>
+      {sourceNode && targetNode ? (
+        <div
+          style={{
+            fontSize: 12.5,
+            padding: 10,
+            background: "var(--surface-2)",
+            borderRadius: 6,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontWeight: 600 }}>{sourceNode.name}</div>
+          <div
+            style={{
+              color: "var(--fg-muted)",
+              marginTop: 4,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <ArrowRight size={12} />
+            {targetNode.name}
+          </div>
+        </div>
+      ) : null}
       <div style={FIELD_ROW}>
         <span style={FIELD_LABEL}>{T("Bağlantı Tipi", "Edge Type")}</span>
         <SegmentedControl
