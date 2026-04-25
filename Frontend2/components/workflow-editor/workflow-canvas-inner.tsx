@@ -198,13 +198,15 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
           gap={20}
           color="color-mix(in oklch, var(--border-strong) 50%, transparent)"
         />
-        {!readOnly ? <Controls position="bottom-right" /> : null}
+        {!readOnly ? <Controls position="bottom-left" /> : null}
         {props.showMiniMap !== false ? (
           <MiniMap
             pannable
             zoomable
-            position="bottom-left"
+            position="bottom-right"
             style={{
+              width: 180,
+              height: 100,
               background: "var(--surface-2)",
               boxShadow: "inset 0 0 0 1px var(--border)",
               borderRadius: "var(--radius-sm)",

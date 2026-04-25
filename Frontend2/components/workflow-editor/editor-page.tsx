@@ -75,7 +75,6 @@ import { WorkflowCanvas, type CanvasControlsHandle } from "./workflow-canvas"
 import { RightPanel } from "./right-panel"
 import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
-import { MinimapWrapper } from "./minimap-wrapper"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
 import { DirtySaveDialog } from "./dirty-save-dialog"
 import { PresetMenu, detectCurrentPresetId } from "./preset-menu"
@@ -1334,7 +1333,7 @@ export function EditorPage({ project }: EditorPageProps) {
             nodes={rfNodes as never}
             edges={rfEdges as never}
             readOnly={!canEdit}
-            showMiniMap={false}
+            showMiniMap
             controlsRef={canvasControlsRef}
             onNodeClick={(_e, node) =>
               setNodeSelected(String(node.id))
@@ -1365,7 +1364,6 @@ export function EditorPage({ project }: EditorPageProps) {
             }}
             onAlign={handleAlign}
           />
-          <MinimapWrapper />
           <ContextMenu
             open={contextMenu !== null}
             position={contextMenu?.position ?? { x: 0, y: 0 }}

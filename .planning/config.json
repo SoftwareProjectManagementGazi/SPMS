@@ -3,7 +3,7 @@
   "granularity": "standard",
   "parallelization": false,
   "commit_docs": true,
-  "model_profile": "balanced",
+  "model_profile": "quality",
   "workflow": {
     "plan_check": true,
     "research": true,
