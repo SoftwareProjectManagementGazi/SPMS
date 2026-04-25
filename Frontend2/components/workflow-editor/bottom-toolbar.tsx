@@ -75,10 +75,9 @@ export function BottomToolbar(props: BottomToolbarProps) {
         gap: 4,
         padding: 5,
         background: "var(--surface)",
-        borderRadius: 999,
-        // UI-sweep: rgba fallback dropped — --shadow-md always defined.
+        borderRadius: 10,
         boxShadow:
-          "var(--shadow-md), inset 0 0 0 1px var(--border)",
+          "var(--shadow-lg), inset 0 0 0 1px var(--border)",
       }}
     >
       <Button
