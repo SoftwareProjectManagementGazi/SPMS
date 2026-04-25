@@ -1,17 +1,12 @@
 "use client"
 
-// FlowRules (Phase 12 Plan 12-07) — right-panel section that exposes the
-// 4-mode workflow picker via SegmentedControl. Wraps the SegmentedControl
-// in an uppercase section title row per UI-SPEC §1158.
+// FlowRules — right-panel section that exposes the 4-mode workflow picker.
 //
-// Mode change calls onChange(next) which the parent forwards into the
-// workflow + sets dirty=true. Plan 12-09 wires the actual save flow that
-// persists the new mode.
-//
-// Mode descriptions per UI-SPEC §583-595 (TR + EN copy tables).
+// Prototype parity: vertical button list (label + per-mode description) so
+// each mode is self-explanatory and the row never wraps inside the 320px
+// column. Replaces the previous wrap-prone SegmentedControl.
 
 import * as React from "react"
-import { SegmentedControl } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { WorkflowMode } from "@/services/lifecycle-service"
 
@@ -20,19 +15,26 @@ export interface FlowRulesProps {
   onChange: (next: WorkflowMode) => void
 }
 
-const MODE_OPTIONS_TR: Array<{ id: WorkflowMode; label: string }> = [
-  { id: "flexible", label: "Esnek" },
-  { id: "sequential-locked", label: "Sıralı · Kilitli" },
-  { id: "sequential-flexible", label: "Sıralı · Esnek Geri Dönüş" },
-  { id: "continuous", label: "Sürekli Akış" },
+const MODE_ORDER: WorkflowMode[] = [
+  "flexible",
+  "sequential-locked",
+  "sequential-flexible",
+  "continuous",
 ]
 
-const MODE_OPTIONS_EN: Array<{ id: WorkflowMode; label: string }> = [
-  { id: "flexible", label: "Flexible" },
-  { id: "sequential-locked", label: "Sequential · Locked" },
-  { id: "sequential-flexible", label: "Sequential · Flex Return" },
-  { id: "continuous", label: "Continuous" },
-]
+const MODE_LABEL_TR: Record<WorkflowMode, string> = {
+  flexible: "Esnek",
+  "sequential-locked": "Sıralı · Kilitli",
+  "sequential-flexible": "Sıralı · Esnek Geri Dönüş",
+  continuous: "Sürekli Akış",
+}
+
+const MODE_LABEL_EN: Record<WorkflowMode, string> = {
+  flexible: "Flexible",
+  "sequential-locked": "Sequential · Locked",
+  "sequential-flexible": "Sequential · Flex Return",
+  continuous: "Continuous",
+}
 
 const MODE_DESC_TR: Record<WorkflowMode, string> = {
   flexible: "Her düğüm arası geçiş tanımlanabilir.",
@@ -66,28 +68,53 @@ export function FlowRules({ mode, onChange }: FlowRulesProps) {
     (tr: string, en: string) => (language === "tr" ? tr : en),
     [language],
   )
-  const options = language === "tr" ? MODE_OPTIONS_TR : MODE_OPTIONS_EN
-  const desc = language === "tr" ? MODE_DESC_TR[mode] : MODE_DESC_EN[mode]
+  const labels = language === "tr" ? MODE_LABEL_TR : MODE_LABEL_EN
+  const descs = language === "tr" ? MODE_DESC_TR : MODE_DESC_EN
 
   return (
     <div>
       <div style={TITLE_STYLE}>{T("Akış Kuralları", "Flow Rules")}</div>
-      <SegmentedControl
-        options={options}
-        value={mode}
-        onChange={(id) => onChange(id as WorkflowMode)}
-        size="xs"
-        style={{ flexWrap: "wrap" }}
-      />
-      <div
-        style={{
-          fontSize: 11.5,
-          color: "var(--fg-muted)",
-          marginTop: 8,
-          lineHeight: 1.4,
-        }}
-      >
-        {desc}
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {MODE_ORDER.map((id) => {
+          const active = id === mode
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-pressed={active}
+              style={{
+                textAlign: "left",
+                padding: "8px 10px",
+                background: active ? "var(--surface-2)" : "transparent",
+                color: active ? "var(--fg)" : "var(--fg)",
+                borderRadius: "var(--radius-sm)",
+                border: 0,
+                boxShadow: active
+                  ? "inset 0 0 0 1px var(--primary)"
+                  : "inset 0 0 0 1px var(--border)",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                transition: "background 0.12s, box-shadow 0.12s",
+              }}
+            >
+              <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {labels[id]}
+              </span>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-muted)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {descs[id]}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

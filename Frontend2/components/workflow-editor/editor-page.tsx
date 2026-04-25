@@ -33,7 +33,17 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Save, Undo2, Redo2, Maximize, Minus, Plus } from "lucide-react"
+import {
+  ArrowLeft,
+  Save,
+  Undo2,
+  Redo2,
+  Maximize,
+  Minus,
+  Plus,
+  GitBranch,
+  Workflow,
+} from "lucide-react"
 
 import {
   AlertBanner,
@@ -1091,11 +1101,20 @@ export function EditorPage({ project }: EditorPageProps) {
     save,
   ])
 
-  // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550)
+  // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550) — icons
+  // mirror the prototype's Flow / Workflow glyphs.
   const MODE_OPTIONS = React.useMemo(
     () => [
-      { id: "lifecycle", label: T("Yaşam Döngüsü", "Lifecycle") },
-      { id: "status", label: T("Görev Durumları", "Task Statuses") },
+      {
+        id: "lifecycle",
+        label: T("Yaşam Döngüsü", "Lifecycle"),
+        icon: <GitBranch size={12} />,
+      },
+      {
+        id: "status",
+        label: T("Görev Durumları", "Task Statuses"),
+        icon: <Workflow size={12} />,
+      },
     ],
     [T],
   )
