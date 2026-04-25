@@ -305,7 +305,34 @@ export function EditorPage({ project }: EditorPageProps) {
   })
   const transitions: PhaseTransitionEntry[] = transitionsQuery.data ?? []
 
-  // BFS-driven node states (EDIT-04 / EDIT-05).
+  // BFS-driven node states (EDIT-04 / EDIT-05). Memo dependency excludes
+  // position fields — node coordinates do not affect reachability, so we
+  // pre-compute a structural signature that ignores x/y. This avoids the
+  // BFS re-running on every drag frame, which previously cascaded into
+  // rfNodes regeneration and contributed to drag flicker.
+  const nodeStateSignature = React.useMemo(
+    () =>
+      [
+        workflow.mode,
+        workflow.nodes
+          .map(
+            (n) =>
+              `${n.id}|${n.isInitial ? 1 : 0}|${n.isFinal ? 1 : 0}|${
+                n.isArchived ? 1 : 0
+              }`,
+          )
+          .join(","),
+        workflow.edges
+          .map(
+            (e) =>
+              `${e.source}>${e.target}|${e.bidirectional ? 1 : 0}|${
+                e.type ?? "flow"
+              }`,
+          )
+          .join(","),
+      ].join("#"),
+    [workflow.mode, workflow.nodes, workflow.edges],
+  )
   const nodeStates = React.useMemo(
     () =>
       computeNodeStates({
@@ -316,7 +343,8 @@ export function EditorPage({ project }: EditorPageProps) {
         },
         phaseTransitions: mode === "lifecycle" ? transitions : [],
       }),
-    [workflow.mode, workflow.nodes, workflow.edges, mode, transitions],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- structural sig replaces the array deps on purpose
+    [nodeStateSignature, mode, transitions],
   )
 
   const handleModeChange = React.useCallback(
@@ -478,6 +506,12 @@ export function EditorPage({ project }: EditorPageProps) {
       id: e.id,
       source: e.source,
       target: e.target,
+      // Wire each edge into the visible handles so the curve starts at the
+      // right-source dot and ends at the left-target dot instead of the
+      // first (top) handle. Persisted on the WorkflowEdge so handle-aware
+      // edges (e.g., user-created via drag) keep their endpoint choice.
+      sourceHandle: e.sourceHandle ?? "right-source",
+      targetHandle: e.targetHandle ?? "left-target",
       type: "phase",
       selected: selected?.type === "edge" && selected.id === e.id,
       data: {
@@ -564,10 +598,16 @@ export function EditorPage({ project }: EditorPageProps) {
       const source = String(params.source ?? "")
       const target = String(params.target ?? "")
       if (!source || !target || source === target) return
+      const sourceHandle =
+        params.sourceHandle != null ? String(params.sourceHandle) : undefined
+      const targetHandle =
+        params.targetHandle != null ? String(params.targetHandle) : undefined
       const newEdge: WorkflowEdge = {
         id: newEdgeId(),
         source,
         target,
+        sourceHandle,
+        targetHandle,
         type: "flow",
         bidirectional: false,
         isAllGate: false,
@@ -594,29 +634,17 @@ export function EditorPage({ project }: EditorPageProps) {
     [workflow],
   )
 
-  // Live cloud morph during drag — NO debounce per CONTEXT D-23.
+  // Live cloud morph during drag — kept as a no-op now: handleNodesChange
+  // already commits per-frame position changes during the drag, so a second
+  // setWorkflow here only causes redundant re-renders and triggers React
+  // Flow's "node not initialized" warning when adoption races with our
+  // updates. The hull still morphs because the rfNodes useMemo recomputes
+  // hullPath from the updated child positions.
   const handleNodeDrag = React.useCallback(
-    (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
-      // Find the parent group(s) whose children include the dragged node.
-      const groups = workflow.groups ?? []
-      const affected = groups.filter((g) => g.children.includes(node.id))
-      if (affected.length === 0) return
-      // Update the node's position in our local state immediately so the
-      // hull recompute sees the new layout. We don't push to history per
-      // frame — only on drag stop (handleNodesChange already routes
-      // position-only batches around commitWorkflow during a drag).
-      setWorkflow((prev) => {
-        return {
-          ...prev,
-          nodes: prev.nodes.map((n) =>
-            n.id === node.id
-              ? { ...n, x: node.position.x, y: node.position.y }
-              : n,
-          ),
-        }
-      })
+    (_e: React.MouseEvent, _node: { id: string; position: { x: number; y: number } }) => {
+      // intentionally empty
     },
-    [workflow.groups],
+    [],
   )
 
   // Drop-association policy: if the dragged node was in a parent group and

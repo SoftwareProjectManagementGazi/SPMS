@@ -44,6 +44,10 @@ export interface WorkflowEdge {
   bidirectional?: boolean
   /** Phase 12 D-17 — source-agnostic Jira-style "All" gate */
   isAllGate?: boolean
+  /** React Flow handle ids — preserved so a user-drawn edge keeps its
+   * source/target dot regardless of which handle the user dragged from. */
+  sourceHandle?: string
+  targetHandle?: string
 }
 
 export interface WorkflowGroup {
@@ -103,6 +107,10 @@ export interface WorkflowEdgeDTO {
   bidirectional?: boolean
   is_all_gate?: boolean
   isAllGate?: boolean
+  source_handle?: string | null
+  sourceHandle?: string | null
+  target_handle?: string | null
+  targetHandle?: string | null
 }
 
 export interface WorkflowGroupDTO {
@@ -148,6 +156,8 @@ export function mapWorkflowEdge(d: WorkflowEdgeDTO): WorkflowEdge {
     label: d.label ?? undefined,
     bidirectional: d.bidirectional ?? false,
     isAllGate: d.isAllGate ?? d.is_all_gate ?? false,
+    sourceHandle: d.sourceHandle ?? d.source_handle ?? undefined,
+    targetHandle: d.targetHandle ?? d.target_handle ?? undefined,
   }
 }
 
@@ -180,6 +190,8 @@ export function unmapWorkflowEdge(e: WorkflowEdge): WorkflowEdgeDTO {
     label: e.label ?? null,
     bidirectional: e.bidirectional ?? false,
     is_all_gate: e.isAllGate ?? false,
+    source_handle: e.sourceHandle ?? null,
+    target_handle: e.targetHandle ?? null,
   }
 }
 
