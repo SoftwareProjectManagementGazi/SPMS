@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-07 complete
-last_updated: "2026-04-25T12:14:10.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-07 complete (workflow-editor route + viewport gate + EditorPage shell + 11 right-panel/toolbar/mode-banner/minimap-wrapper/color-swatch/dirty-save-dialog sub-components — EDIT-01..06 infra)
+stopped_at: Phase 12 Plan 12-08 complete
+last_updated: "2026-04-25T15:35:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-08 complete (workflow-editor interactivity wiring — DnD callbacks, inline edit, group cloud live morph, drop-association, ContextMenu, undo/redo, 10 keyboard shortcuts, align helpers — EDIT-01/02/04/05/06)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 41
-  percent: 93
+  completed_plans: 42
+  percent: 95
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 8 of 10 (12-07 complete)
+Plan: 9 of 10 (12-08 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-07 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-08 complete
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ Progress: [█████████░] 93%
 | Phase 12 P05 | 8min  | 2 tasks | 7 files  |
 | Phase 12 P06 | 12min | 2 tasks | 5 files  |
 | Phase 12 P07 | 11min | 2 tasks | 22 files |
+| Phase 12 P08 | 14min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -300,6 +301,16 @@ Key constraints for v2.0:
 - [12-07] Mode persistence via `router.replace(`/workflow-editor?${params}`)` — preserves non-mode params (e.g., projectId stays); test 8 in editor-page.test.tsx asserts both `mode=status` AND `projectId=42` are in the replace argument
 - [12-07] ColorSwatch renders 8 buttons with `aria-label={token}` — selection-panel.test.tsx uses `getByLabelText('status-todo')` to assert specific swatches render; aria-label doubles as a screen-reader hint
 - [12-07] ShortcutsPanel reads `isMac()` lazily in `useEffect([])` so SSR and first client render both default to the Windows label set; only after mount does the macOS detection upgrade the labels (avoids hydration mismatch)
+- [12-08] commitWorkflow() single mutation entry point — pushes the OLD workflow to history.push() before applying setWorkflow(next) + setDirty(true). Guarantees Cmd+Z always rolls back to the prior state regardless of which mutation triggered it
+- [12-08] Live cloud morph implemented via direct setWorkflow inside onNodeDrag (NOT commitWorkflow). Per-frame drag positions do NOT push to the undo stack; the atomic position commit lands when React Flow fires the position-change delta in onNodesChange after drag stop — single position move = one history entry regardless of frame count
+- [12-08] Drop-association uses centroid-distance heuristic (240 px threshold) instead of true point-in-polygon. The point-in-polygon + pathToPolygon helpers are exported from workflow-canvas-inner.tsx for Plan 12-10 perf-pass adoption, but the simpler centroid check ships first because Q-bezier hull paths from cloud-hull.ts have control points that are NOT polygon vertices — only Q endpoints are
+- [12-08] Inline edit on PhaseNode + PhaseEdge gates on data.editMode prop. editor-page passes editMode = canEdit, so when useTransitionAuthority returns false (read-only viewer) double-click is a no-op. Cursor changes from 'default' to 'text' to make the affordance discoverable
+- [12-08] ContextMenu's keyboard navigation registers on window keydown (not the menu div) because right-click menus do not focus by default. Esc/Arrow keys must work without clicking. Shift+F10 fallback semantics live at the host level — ContextMenu itself is target-agnostic (open=true at supplied position regardless of trigger)
+- [12-08] history.clear() exposed via useEditorHistory but not called in 12-08 — Plan 12-09's save-success handler will call it after PATCH 200 + invalidate ['project', id]
+- [12-08] useCycleCounters mocked at editor-page test level via vi.mock('@/hooks/use-cycle-counters', () => ({ useCycleCounters: () => ({ data: new Map() }) })) — Plan 12-08 test fix because EditorPage now wires useCycleCounters and tests don't mount QueryClientProvider
+- [12-08] Group/ungroup toggle: bottom-toolbar Grup button + Cmd+G route to groupSelection (single node selected) or ungroup (group selected) based on selected.type — matches CONTEXT D-21 'Grupla / Grubu Çöz' bidirectional label semantic without a separate label state
+- [12-08] Drop-association chose DROP not SNAP-BACK — matches CONTEXT 'Claude\'s Discretion last bullet' default. Cloud reshrinks naturally because the dropped node is filtered from the parent group's children array
+- [12-08] Cmd+A select-all preventDefault but does NOT walk the workflow — multi-select state in editor-page is single-selection only in 12-08; React Flow's internal multi-select via Shift+click is preserved
 
 ### Pending Todos
 
@@ -320,12 +331,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T12:14:10Z
-Stopped at: Phase 12 Plan 12-07 complete
+Last session: 2026-04-25T15:35:00Z
+Stopped at: Phase 12 Plan 12-08 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-08 — Editor interactivity: DnD + edge create + 5 group-creation entry points + live cloud morph + drop-association + inline edit + ContextMenu + undo/redo + 8 keyboard shortcuts + cycle counter wiring — EDIT-01/02/04/05/06
+**Next Plan:** 12-09 — Editor save flow: PATCH /projects/{id} with 200/422/409/429/network error matrix, dirty-save guard intercept, undo stack clear on save success, schema_version v2 normalizer wiring (bidirectional + is_all_gate honoring backend) — EDIT-01/02/03 final
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25

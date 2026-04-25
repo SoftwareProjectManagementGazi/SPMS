@@ -96,12 +96,12 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 ### Workflow Editor
 
-- [ ] **EDIT-01**: Edge tipleri eklenir — flow/verification/feedback, farkli stroke dash/renk, edge secim panelinde SegmentedControl
-- [ ] **EDIT-02**: Node gruplama (Swimlane) eklenir — grup cercevesi, toolbar'da "Grup" butonu, sag panelde grup duzenleme
+- [x] **EDIT-01**: Edge tipleri eklenir — flow/verification/feedback, farkli stroke dash/renk, edge secim panelinde SegmentedControl (completed 2026-04-25 in 12-08 — phase-edge.tsx ships stroke patterns per type from Plan 12-01; 12-08 wires inline label edit on double-click + selection-panel SegmentedControl forwarding via onWorkflowChange)
+- [x] **EDIT-02**: Node gruplama (Swimlane) eklenir — grup cercevesi, toolbar'da "Grup" butonu, sag panelde grup duzenleme (completed 2026-04-25 in 12-08 — group-cloud-node with live morph + 5 entry points wired in editor-page: drag-rect placeholder, multi-select + Grup button, drag-into-existing via parentId, mixed-select + Grup, right-click context menu Grupla; drop-association on drag-out via 240px centroid heuristic)
 - [ ] **EDIT-03**: sequential-flexible akis modu eklenir — sirali ilerleme + tanimli geri donuslere izin veren 4. mod
-- [ ] **EDIT-04**: Aktif faz hesaplama graph traversal (BFS) ile yapilir — hardcoded index yerine node.state (active/past/future/unreachable) [E9]
-- [ ] **EDIT-05**: Paralel aktif fazlar desteklenir — birden fazla node ayni anda "active" ring alabilir [E10]
-- [ ] **EDIT-06**: Node uzerinde dongu sayaci badge'i (xN) gosterilir — ayni faz birden fazla kez kapatilmissa [E11]
+- [x] **EDIT-04**: Aktif faz hesaplama graph traversal (BFS) ile yapilir — hardcoded index yerine node.state (active/past/future/unreachable) [E9] (completed 2026-04-25 in 12-08 — computeNodeStates from Plan 12-01 wired into editor-page rfNodes useMemo so PhaseNode.data.state drives every render; LifecycleTab side already wired in Plan 12-04)
+- [x] **EDIT-05**: Paralel aktif fazlar desteklenir — birden fazla node ayni anda "active" ring alabilir [E10] (completed 2026-04-25 in 12-08 — verified via workflow-canvas.test.tsx parallel-actives BFS test using V-Model fixture in flexible mode; computeNodeStates correctly assigns 'active' state to multiple nodes per CONTEXT D-10)
+- [x] **EDIT-06**: Node uzerinde dongu sayaci badge'i (xN) gosterilir — ayni faz birden fazla kez kapatilmissa [E11] (completed 2026-04-25 in 12-08 — useCycleCounters(projectId).data wired into editor-page rfNodes; PhaseNode renders CycleCounterBadge with count from Map; visibility >= 2 enforced by CycleCounterBadge primitive from Plan 12-01)
 - [ ] **EDIT-07**: Eksik preset template'ler eklenir — Artirimli (Incremental), Evrimsel (Evolutionary), RAD [E12]
 
 ### Reporting & Charts
@@ -217,12 +217,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIFE-05 | Phase 12 | Complete (12-05) |
 | LIFE-06 | Phase 12 | Complete (12-06) |
 | LIFE-07 | Phase 12 | Complete (12-06) |
-| EDIT-01 | Phase 12 | Pending |
-| EDIT-02 | Phase 12 | Pending |
+| EDIT-01 | Phase 12 | Completed (12-01 visuals + 12-08 inline label edit + selection-panel SegmentedControl) |
+| EDIT-02 | Phase 12 | Completed (12-01 group-cloud baseline + 12-08 5 entry points + drop-association + live morph) |
 | EDIT-03 | Phase 12 | Pending |
-| EDIT-04 | Phase 12 | Pending |
-| EDIT-05 | Phase 12 | Pending |
-| EDIT-06 | Phase 12 | Pending |
+| EDIT-04 | Phase 12 | Completed (12-01 BFS pure lib + 12-04 LifecycleTab + 12-08 editor-page wiring) |
+| EDIT-05 | Phase 12 | Completed (12-08 verified via parallel-actives test in workflow-canvas.test.tsx) |
+| EDIT-06 | Phase 12 | Completed (12-01 useCycleCounters hook + 12-08 PhaseNode rfNodes data.cycleCount wiring) |
 | EDIT-07 | Phase 12 | Pending |
 | REPT-01 | Phase 13 | Pending |
 | REPT-02 | Phase 13 | Pending |
