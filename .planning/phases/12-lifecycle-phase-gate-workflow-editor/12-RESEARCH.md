@@ -782,27 +782,31 @@ if not (direct_edge or reverse_edge or all_gate_edge):
 | A6 | The Phase 9 endpoint shape `extra_metadata.source_phase_id` matches the frontend assumption | Activity Feed Aggregation | If the field is named differently (e.g., `source_phase` vs `source_phase_id`), aggregation returns 0 for every node. Verify by adding an integration test that POSTs a transition and asserts the audit_log row has the expected key. |
 | A7 | `Frontend2/components/projects/confirm-dialog.tsx` is the canonical ConfirmDialog (UI-SPEC says `components/toast/confirm-dialog.tsx` "verify path during plan") | Don't Hand-Roll table | Path differs from UI-SPEC line 88; need to confirm in Plan 01. The actual location verified during research is `Frontend2/components/projects/confirm-dialog.tsx`. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Concave-hull vs convex-hull-plus-padding final choice**
    - What we know: UI-SPEC + CONTEXT both endorse convex-hull-plus-padding as v1; concaveman is an upgrade option.
    - What's unclear: Whether the convex-hull baseline produces a "thought bubble" feel at small node counts (3-5 nodes) — the visual difference between convex and concave hulls vanishes for small clusters.
    - Recommendation: Ship the convex-hull baseline. Capture screenshots of 3 / 8 / 20 / 50-node groups during plan-checkpoint; if any look "boxy", swap in concaveman in Plan 09 polish.
+   - **RESOLVED:** Ship convex-hull-plus-padding baseline in Plan 12-01. Capture screenshots during Plan 12-08 cloud morph implementation. Upgrade to `concaveman` (~3 KB gzipped, ISC license) only if convex-hull visual leaves "ear-shaped" gaps when grouping >=4 nodes — that decision is taken by visual inspection during Plan 12-10 polish, not as a separate plan.
 
 2. **Concrete React Flow version pin**
    - What we know: latest stable is in the 12.x line; v12.10.1 was released Feb 2026 [CITED: web search 2026-04-25].
    - What's unclear: Whether a 12.11+ release lands between research and execution. Phase 9 / Phase 11 already pinned other deps to specific versions.
    - Recommendation: Plan 01 task: "Run `npm view @xyflow/react version` immediately before install; record exact version in Plan 01 acceptance notes."
+   - **RESOLVED:** Plan 12-01 Task 1 first step runs `npm view @xyflow/react version` and pins the latest stable 12.x release. As of 2026-04-25, latest stable is 12.10.x. The plan explicitly does NOT hard-pin a version in advance — pin time is at install time so we always get the latest patch.
 
 3. **`Frontend2/components/projects/confirm-dialog.tsx` path vs UI-SPEC `components/toast/confirm-dialog.tsx`**
    - What we know: research confirmed the ConfirmDialog actually lives at `Frontend2/components/projects/confirm-dialog.tsx` (verified file read).
    - What's unclear: Whether UI-SPEC line 88 is wrong about the path or whether a parallel ConfirmDialog also exists in `components/toast/`.
    - Recommendation: Plan 01 task: import from `Frontend2/components/projects/confirm-dialog.tsx`; if a `components/toast/confirm-dialog.tsx` is later found, harmonize and remove the duplicate.
+   - **RESOLVED:** The component lives at `Frontend2/components/projects/confirm-dialog.tsx` (verified file path 2026-04-25). UI-SPEC line 88 reference to `components/toast/confirm-dialog.tsx` is an editorial slip and is corrected here. Plans 02 / 05 / 06 / 09 / 10 import from `@/components/projects/confirm-dialog`. No need to relocate the component — keep the existing path.
 
 4. **Whether `task-row.tsx` (MTTaskRow compact, Phase 11 D-32) accepts a `compact` prop or a different mode flag**
    - What we know: SPEC LIFE-04 says reuse "MTTaskRow compact" for History task details.
    - What's unclear: Whether the existing component accepts a `compact?: boolean` prop, a `density="compact"` mode, or requires a new wrapper.
    - Recommendation: Plan 04 (History sub-tab) starts with reading `Frontend2/components/my-tasks/task-row.tsx`; if a compact mode doesn't exist, add a small `compact` prop in the same plan (one-line conditional on padding/font-size).
+   - **RESOLVED:** Plan 12-04 Task 1 begins with reading `Frontend2/components/my-tasks/task-row.tsx`. If a `compact` mode does not yet exist, the plan adds an optional prop `compact?: boolean` to MTTaskRow with a documented size delta (see `12-UI-SPEC.md` line 1380 for the History compact spec). The plan ships the prop addition as the first edit in Task 1 so subsequent History rendering can use it. No separate primitive plan is needed.
 
 ## Environment Availability
 
