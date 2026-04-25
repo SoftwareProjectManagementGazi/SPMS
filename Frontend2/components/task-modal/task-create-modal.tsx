@@ -62,15 +62,15 @@ const cardStyle: React.CSSProperties = {
 }
 
 const inputStyle: React.CSSProperties = {
-  height: 34,
-  padding: "0 12px",
+  height: 32,
+  padding: "0 8px",
   fontSize: 13,
   background: "var(--surface-2)",
   borderRadius: "var(--radius-sm)",
   boxShadow: "inset 0 0 0 1px var(--border)",
   color: "var(--fg)",
   width: "100%",
-  outline: "none",
+  // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
   border: "none",
   fontFamily: "var(--font-sans)",
 }

@@ -182,7 +182,7 @@ export function SearchAutocomplete() {
             height: "100%",
             background: "transparent",
             border: 0,
-            outline: 0,
+            // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
             fontSize: 13,
             color: "var(--fg)",
           }}

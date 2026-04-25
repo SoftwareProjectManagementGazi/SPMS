@@ -242,7 +242,9 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
             background: "var(--surface)",
             color: "var(--fg)",
             border: 0,
-            outline: 0,
+            // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
+            // Inline-edit primary inset ring is the design "selected" state; the
+            // global focus ring will stack on top when the input is keyboard-focused.
             boxShadow: "inset 0 0 0 1px var(--primary)",
             borderRadius: 4,
             padding: "1px 4px",

@@ -126,7 +126,7 @@ const INPUT_STYLE: React.CSSProperties = {
   boxShadow: "inset 0 0 0 1px var(--border)",
   color: "var(--fg)",
   border: "none",
-  outline: "none",
+  // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
   fontFamily: "inherit",
 }
 
@@ -140,7 +140,7 @@ const TEXTAREA_STYLE: React.CSSProperties = {
   color: "var(--fg)",
   resize: "vertical",
   border: "none",
-  outline: "none",
+  // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
   fontFamily: "inherit",
 }
 

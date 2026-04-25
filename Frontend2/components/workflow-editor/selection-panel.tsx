@@ -219,7 +219,7 @@ function NodeEditor({
             color: "var(--fg)",
             borderRadius: "var(--radius-sm)",
             border: 0,
-            outline: 0,
+            // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
             boxShadow: "inset 0 0 0 1px var(--border)",
             padding: "6px 8px",
             fontSize: 12,

@@ -179,7 +179,7 @@ function PhaseEdgeImpl({
                 borderRadius: 999,
                 fontSize: 10.5,
                 border: 0,
-                outline: 0,
+                // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
                 boxShadow: "inset 0 0 0 1px var(--primary)",
                 minWidth: 80,
               }}

@@ -37,11 +37,11 @@ const editorStyle: React.CSSProperties = {
   fontSize: 12,
   width: "100%",
   background: "var(--surface-2)",
-  borderRadius: 3,
+  borderRadius: "var(--radius-sm)",
   boxShadow: "inset 0 0 0 1px var(--border)",
   color: "var(--fg)",
   border: "none",
-  outline: "none",
+  // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
   font: "inherit",
 }
 

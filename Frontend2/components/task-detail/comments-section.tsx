@@ -186,7 +186,7 @@ export function CommentsSection({
               color: "var(--fg)",
               resize: "vertical",
               border: "none",
-              outline: "none",
+              // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
               fontFamily: "inherit",
             }}
           />
@@ -377,7 +377,7 @@ export function CommentsSection({
                           color: "var(--fg)",
                           resize: "vertical",
                           border: "none",
-                          outline: "none",
+                          // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
                           fontFamily: "inherit",
                         }}
                       />

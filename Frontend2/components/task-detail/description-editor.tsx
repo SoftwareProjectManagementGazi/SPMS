@@ -106,7 +106,7 @@ export function DescriptionEditor({ value, onChange, disabled }: Props) {
             boxShadow: "inset 0 0 0 1px var(--border)",
             color: "var(--fg)",
             border: "none",
-            outline: "none",
+            // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
             resize: "vertical",
             minHeight: 120,
             font: "inherit",

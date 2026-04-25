@@ -91,7 +91,8 @@ export function Input({
           height: "100%",
           background: "transparent",
           border: 0,
-          outline: 0,
+          // outline intentionally NOT set inline so the global :focus-visible
+          // ring (globals.css:144) paints through for keyboard users (a11y).
           fontSize: 13,
           color: "var(--fg)",
         }}
