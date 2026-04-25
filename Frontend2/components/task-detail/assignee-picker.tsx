@@ -30,7 +30,9 @@ interface AssigneePickerProps {
   value: number | null
   onSelect: (id: number | null) => void
   onCancel: () => void
-  /** Optional anchor — defaults to the popover positioning itself in-flow. */
+  /** Anchor side. The picker is 240px wide; "end" right-aligns it so it
+   *  grows leftward — the default in the Task Detail sidebar where the
+   *  300px right column sits flush with the page edge. */
   align?: "start" | "end"
 }
 
@@ -47,11 +49,22 @@ export function AssigneePicker({
   value,
   onSelect,
   onCancel,
-  align = "start",
+  align = "end",
 }: AssigneePickerProps) {
   const { language: lang } = useApp()
-  const { data: members = [], isLoading } = useProjectMembers(projectId)
   const [query, setQuery] = React.useState("")
+  // Debounce so a fast typer fires one fetch per pause, not per keystroke.
+  // 200ms is the sweet spot between perceived responsiveness and request
+  // volume (matches the search input in mt-toolbar's pattern).
+  const [debounced, setDebounced] = React.useState("")
+  React.useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(query), 200)
+    return () => window.clearTimeout(id)
+  }, [query])
+  const { data: members = [], isLoading, isFetching } = useProjectMembers(
+    projectId,
+    debounced,
+  )
   const ref = React.useRef<HTMLDivElement | null>(null)
 
   // Click-outside dismissal — same pattern as MTPicker.
@@ -65,21 +78,13 @@ export function AssigneePicker({
     return () => document.removeEventListener("mousedown", onDown)
   }, [onCancel])
 
-  const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return members
-    return members.filter((m) =>
-      m.fullName.toLowerCase().includes(q),
-    )
-  }, [members, query])
-
   function onKey(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault()
       onCancel()
     } else if (e.key === "Enter") {
       e.preventDefault()
-      const first = filtered[0]
+      const first = members[0]
       if (first) onSelect(first.id)
     }
   }
@@ -169,12 +174,32 @@ export function AssigneePicker({
       {/* Result list */}
       <div
         role="listbox"
+        aria-busy={isFetching}
         style={{
           maxHeight: 240,
           overflowY: "auto",
           padding: 4,
+          position: "relative",
         }}
       >
+        {/* Subtle search-in-flight bar — animates in only while a server
+            fetch is pending (refetch after debounce). Initial isLoading
+            still gets its own centered "Yükleniyor…" row below. */}
+        {!isLoading && isFetching && (
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              background:
+                "linear-gradient(90deg, transparent, var(--primary), transparent)",
+              opacity: 0.7,
+            }}
+          />
+        )}
         {isLoading && (
           <div
             style={{
@@ -187,7 +212,7 @@ export function AssigneePicker({
             {lang === "tr" ? "Yükleniyor…" : "Loading…"}
           </div>
         )}
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && members.length === 0 && (
           <div
             style={{
               padding: 8,
@@ -199,7 +224,7 @@ export function AssigneePicker({
             {lang === "tr" ? "Üye bulunamadı" : "No members"}
           </div>
         )}
-        {filtered.map((m) => {
+        {members.map((m) => {
           const selected = m.id === value
           const av = avatarFor(m)
           return (

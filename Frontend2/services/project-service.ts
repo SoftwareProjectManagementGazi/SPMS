@@ -126,9 +126,15 @@ export const projectService = {
 
   // Project member roster — used by the Task Detail assignee picker so it
   // can offer a searchable list instead of asking for a numeric user id.
-  getMembers: async (projectId: number | string): Promise<ProjectMember[]> => {
+  // Optional `q` triggers backend-side full_name substring filtering.
+  getMembers: async (
+    projectId: number | string,
+    q?: string,
+  ): Promise<ProjectMember[]> => {
+    const params = q && q.trim() ? { q: q.trim() } : undefined
     const response = await apiClient.get<ProjectMemberResponseDTO[]>(
       `/projects/${projectId}/members`,
+      { params },
     )
     return response.data.map(mapMember)
   },

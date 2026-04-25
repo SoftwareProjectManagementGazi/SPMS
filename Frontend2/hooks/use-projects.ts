@@ -19,15 +19,25 @@ export function useProject(id: string | number) {
 }
 
 // Project member roster — used by the Task Detail assignee picker.
-// 60s staleTime keeps the dropdown snappy when the user opens it repeatedly
-// without firing redundant fetches; mutations on /projects/{id}/members
-// invalidate this key explicitly.
-export function useProjectMembers(projectId: number | string | null) {
+//
+// Optional `q` parameter triggers backend-side full_name substring filtering
+// so the picker can search-as-you-type. Caller is expected to pass an
+// already-debounced string; React Query keeps each `q` slot cached
+// independently for 30s so back-and-forth typing doesn't refetch the same
+// query string repeatedly.
+//
+// `staleTime` is shorter when q is set (30s) so a new project member added
+// mid-search shows up faster than the unsearched-list cache would suggest.
+export function useProjectMembers(
+  projectId: number | string | null,
+  q?: string,
+) {
+  const trimmed = q?.trim() ?? ''
   return useQuery({
-    queryKey: ['projects', projectId, 'members'],
-    queryFn: () => projectService.getMembers(projectId!),
+    queryKey: ['projects', projectId, 'members', { q: trimmed }],
+    queryFn: () => projectService.getMembers(projectId!, trimmed || undefined),
     enabled: !!projectId,
-    staleTime: 60 * 1000,
+    staleTime: trimmed ? 30 * 1000 : 60 * 1000,
   });
 }
 

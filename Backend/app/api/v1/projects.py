@@ -262,10 +262,18 @@ async def delete_project(
 @router.get("/{project_id}/members", response_model=List[ProjectMemberDTO])
 async def list_project_members(
     project_id: int,
+    q: Optional[str] = None,
     current_user: User = Depends(get_project_member),
     project_repo: IProjectRepository = Depends(get_project_repo),
 ):
+    """List project members. Optional `q` query parameter filters by
+    case-insensitive substring match on full_name — used by the Task
+    Detail assignee picker for live search-as-you-type."""
     members = await project_repo.get_members(project_id)
+    if q:
+        needle = q.strip().lower()
+        if needle:
+            members = [m for m in members if needle in m.full_name.lower()]
     return [
         ProjectMemberDTO(
             id=m.id,
