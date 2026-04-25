@@ -86,7 +86,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 ### Lifecycle & Phase Gate
 
-- [ ] **LIFE-01**: Faz tamamlanma kriterleri formu yapilir — Settings > Lifecycle'da her faz icin otomatik kriter toggle + manuel kriter listesi [E2]
+- [x] **LIFE-01**: Faz tamamlanma kriterleri formu yapilir — Settings > Lifecycle'da her faz icin otomatik kriter toggle + manuel kriter listesi [E2]
 - [x] **LIFE-02**: Phase Gate inline expand yapilir — "Faza Gecis Yap" butonu, tamamlanma durumu, kriter kontrolleri, acik gorev aksiyonlari, not alani [E7]
 - [~] **LIFE-03**: 0 gorevli faz secildiginde metriklerde "---", Phase Gate kriterlerinde "Uygulanamaz" ve bilgi mesaji gosterilir [E6] (Phase Gate side complete in 12-02; MiniMetric --- mono-zero summary lands in 12-04)
 - [ ] **LIFE-04**: Lifecycle > Gecmis kartlarinda Collapsible "Gorev Detaylari" bolumu MTTaskRow compact ile implemente edilir [E8]
@@ -210,7 +210,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TASK-04 | Phase 11 | Complete |
 | TASK-05 | Phase 11 | Complete |
 | TASK-06 | Phase 11 | Complete |
-| LIFE-01 | Phase 12 | Pending |
+| LIFE-01 | Phase 12 | Complete (12-03) |
 | LIFE-02 | Phase 12 | Complete (12-02) |
 | LIFE-03 | Phase 12 | Partial (Gate side: 12-02; summary metrics: 12-04) |
 | LIFE-04 | Phase 12 | Pending |

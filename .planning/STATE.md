@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-02 complete
-last_updated: "2026-04-25T13:52:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-02 complete (LIFE-02 Phase Gate inline expand + LIFE-03 Phase-Gate side shipped)
+stopped_at: Phase 12 Plan 12-03 complete
+last_updated: "2026-04-25T11:04:31.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-03 complete (LIFE-01 criteria editor + D-60 methodology read-only)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 36
-  percent: 82
+  completed_plans: 37
+  percent: 84
 ---
 
 # Project State
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 3 of 10 (12-02 complete)
+Plan: 4 of 10 (12-03 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-02 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-03 complete
 
 Progress: [██████████] 100%
 
@@ -91,6 +91,7 @@ Progress: [██████████] 100%
 | Phase 11 P10 | 8min | 2 tasks | 13 files |
 | Phase 12 P01 | 18min | 3 tasks | 47 files |
 | Phase 12 P02 | 12min | 2 tasks | 8 files  |
+| Phase 12 P03 | 6min  | 2 tasks | 6 files  |
 
 ## Accumulated Context
 
@@ -258,6 +259,12 @@ Key constraints for v2.0:
 - [12-02] lifecycle-stub-tab.tsx kept as 3-line re-export of LifecycleTab — avoids breaking out-of-tree consumers; orderly Phase 13 cleanup deferred
 - [12-02] project-detail-shell.test.tsx mocks next/navigation (useRouter/usePathname/useSearchParams) so SummaryStrip's useRouter().push works under jsdom; existing useToast/useApp providers come from renderWithProviders
 - [12-02] Test 4 (429 countdown) does NOT use vi.useFakeTimers — fake timers + userEvent + TanStack mutations create ordering issues. Test asserts (a) toast fired with "saniye bekleyin" message and (b) submit disabled while countdown active
+- [12-03] CriteriaEditorPanel uses stable-string useMemo dep (rawNodes.map(n=>n.id).join('|') + JSON.stringify(initialCriteria)) when seeding drafts — Phase 11 D-44 OOM-loop pattern reused for safety against fresh-array references from useQuery-driven re-renders
+- [12-03] enable_phase_assignment Toggle PATCHes inside its own onChange handler (not the bottom Save button) and explicitly preserves project.processConfig?.phase_completion_criteria so toggling EPA never overwrites unsaved per-phase criteria drafts (Test 6 independent-persist contract)
+- [12-03] Deep-link auto-scroll uses 50ms-deferred scrollIntoView so the picker's React render attaches scrollAnchorRef to the active row before the smooth-scroll fires; handler bails out if the deep-link phase id is not in the workflow.nodes list
+- [12-03] Methodology read-only D-60 — METHODOLOGY_LABEL_TR/EN maps in settings-general-subtab.tsx (kept co-located, lift to lib/methodology-matrix.ts only when a second consumer needs them — same strategy as the SummaryStrip mode-chip maps)
+- [12-03] T-12-03-02 mitigation: the editable methodology input is REMOVED from the DOM entirely; backend Phase 9 D-29 no-op behavior (Phase 9 P05) remains as defense-in-depth, not re-verified in Plan 12-03 since no new UI path PATCHes methodology
+- [12-03] settings-tab.tsx AlertBanner import dropped after the lifecycle stub swap — only the lifecycle branch used it; TypeScript flagged the unused import. Trivial cleanup with no behavioral change
 
 ### Pending Todos
 
@@ -278,12 +285,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T13:52:00Z
-Stopped at: Phase 12 Plan 12-02 complete
+Last session: 2026-04-25T11:04:31Z
+Stopped at: Phase 12 Plan 12-03 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-03 — TBD per Phase 12 plan list
+**Next Plan:** 12-04 — Lifecycle Tabs primitive + Overview / History sub-tabs (LIFE-03 + LIFE-04)
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
