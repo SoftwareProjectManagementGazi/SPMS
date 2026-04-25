@@ -1,7 +1,9 @@
 from typing import List, Optional
+from pydantic import ValidationError
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.artifact_repository import IArtifactRepository
 from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
+from app.application.dtos.workflow_dtos import WorkflowConfig as WorkflowConfigDTO
 from app.domain.entities.project import Project, Methodology
 from app.domain.entities.board_column import BoardColumn
 from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError
@@ -130,6 +132,23 @@ class UpdateProjectUseCase:
             raise ProjectNotFoundError(project_id)
         if not is_admin and project.manager_id != manager_id:
             raise ProjectAccessDeniedError(project_id)
+
+        # Phase 12 Plan 12-10 (Bug X + Bug Y UAT fix) — when the client sends
+        # `process_config.workflow`, route it through the WorkflowConfig
+        # Pydantic DTO so D-22 node-id regex + D-55 rules 1-3 + D-19 rule 4
+        # all execute server-side. Pre-fix the dto's `process_config` was
+        # `Dict[str, Any]` which accepted ANY shape, so bad node IDs and
+        # missing isInitial/isFinal landed in the DB and only failed later
+        # at task-creation time. We surface the validation error as a
+        # standard Pydantic ValidationError; FastAPI's exception handler
+        # converts that to a 422 with the standard `detail[]` payload so
+        # the FE save-flow's 422 branch shows the correct toast.
+        if dto.process_config is not None:
+            wf = dto.process_config.get("workflow") if isinstance(dto.process_config, dict) else None
+            if isinstance(wf, dict):
+                # Pydantic raises ValidationError on regex / business-rule
+                # failures; let it propagate up to the API layer.
+                WorkflowConfigDTO(**wf)
 
         old_methodology = project.methodology
         update_data = dto.model_dump(exclude_unset=True)

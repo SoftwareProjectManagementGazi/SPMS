@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from app.api.dependencies import (
     get_project_repo,
     get_current_user,
@@ -190,6 +190,18 @@ async def update_project(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectAccessDeniedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except ValidationError as e:
+        # Phase 12 Plan 12-10 (Bug X + Bug Y UAT fix) — surface WorkflowConfig
+        # Pydantic validation failures as 422 (not 500). Pre-fix the use case
+        # never validated workflow shapes, so bad node IDs / missing
+        # isInitial+isFinal silently landed in the DB. With validation now
+        # active, we must convert pydantic.ValidationError -> 422 so the
+        # FE save-flow's 422 branch (CONTEXT D-32 5-error matrix) shows
+        # the correct "Doğrulama hatası" toast.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=e.errors(),
+        )
 
     # Notify all admins about project update (excluding the actor)
     admins = await user_repo.get_all_by_role("admin")
