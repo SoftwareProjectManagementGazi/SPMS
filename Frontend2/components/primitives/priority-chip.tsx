@@ -1,10 +1,12 @@
 "use client"
 
-// PriorityChip: rotated diamond indicator + localized label
-// Ported from New_Frontend/src/primitives.jsx (lines 198-207) -- exact styling preserved.
-// Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
-// NOTE: prototype CSS exposes --priority-med (not --priority-medium), so "medium"
-// maps to "med" at the token level while the public API keeps the "medium" string.
+// PriorityChip: 4-bar ascending icon + localized label.
+// Mirrors prototype MTPriority (New_Frontend/src/pages/my-tasks-parts.jsx
+// lines 130-149). Bars per level: critical=4, high=3, medium=2, low=1.
+// Inactive bars use --border-strong so the count is always legible.
+// Token bridge: "medium" → --priority-med (prototype CSS exposes "med", not
+// "medium"). Public API keeps "medium" so callers and translation keys do not
+// have to know about it.
 
 import * as React from "react"
 import { t, type LangCode } from "@/lib/i18n"
@@ -19,6 +21,13 @@ export interface PriorityChipProps {
   style?: React.CSSProperties
 }
 
+const BARS_BY_LEVEL: Record<PriorityLevel, number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+}
+
 export function PriorityChip({
   level,
   lang,
@@ -29,13 +38,15 @@ export function PriorityChip({
   const label = t(`priority.${level}`, lang)
   const tokenLevel = level === "medium" ? "med" : level
   const color = `var(--priority-${tokenLevel})`
+  const filled = BARS_BY_LEVEL[level]
   return (
     <span
+      title={label}
       className={className}
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 4,
+        gap: 6,
         fontSize: 12,
         color: "var(--fg-muted)",
         fontWeight: 500,
@@ -43,15 +54,27 @@ export function PriorityChip({
       }}
     >
       <span
+        aria-hidden
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: 2,
-          background: color,
-          transform: "rotate(45deg)",
+          display: "inline-flex",
+          alignItems: "flex-end",
+          gap: 1.5,
+          height: 11,
         }}
-      />
-      {withLabel && label}
+      >
+        {[1, 2, 3, 4].map((n) => (
+          <span
+            key={n}
+            style={{
+              width: 2.5,
+              height: n * 2.5 + 1.5,
+              background: n <= filled ? color : "var(--border-strong)",
+              borderRadius: 0.5,
+            }}
+          />
+        ))}
+      </span>
+      {withLabel && <span style={{ fontSize: 11.5 }}>{label}</span>}
     </span>
   )
 }
