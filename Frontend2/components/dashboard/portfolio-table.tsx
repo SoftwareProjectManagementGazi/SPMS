@@ -98,16 +98,18 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
           >
             {/* Project: key chip + name */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-              <div style={{
-                fontSize: 10.5,
-                fontWeight: 600,
-                color: "var(--fg-muted)",
-                background: "var(--surface-2)",
-                padding: "2px 6px",
-                borderRadius: "var(--radius-sm)",
-                flexShrink: 0,
-                fontFamily: "var(--font-mono)",
-              }}>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: "var(--fg-muted)",
+                  background: "var(--surface-2)",
+                  padding: "2px 6px",
+                  borderRadius: "var(--radius-sm)",
+                  flexShrink: 0,
+                }}
+              >
                 {project.key}
               </div>
               <div style={{
@@ -146,12 +148,13 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               <div style={{ width: 48, height: 4, background: "var(--surface-2)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{ width: `${progress}%`, height: "100%", borderRadius: 2, background: "var(--primary)" }} />
               </div>
-              <span style={{
-                fontSize: 11,
-                fontFamily: "var(--font-mono)",
-                fontVariantNumeric: "tabular-nums",
-                color: "var(--fg-muted)",
-              }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  color: "var(--fg-muted)",
+                }}
+              >
                 {progress}%
               </span>
             </div>

@@ -511,7 +511,7 @@ function UpcomingRowTask({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr 22px 50px",
+        gridTemplateColumns: "60px 1fr 20px 50px",
         gap: 8,
         alignItems: "center",
         padding: "10px 14px",
@@ -572,7 +572,7 @@ function UpcomingRowMilestone({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr 22px 50px",
+        gridTemplateColumns: "60px 1fr 20px 50px",
         gap: 8,
         alignItems: "center",
         padding: "10px 14px",

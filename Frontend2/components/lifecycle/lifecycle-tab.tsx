@@ -297,7 +297,9 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
   // Both cases now render the dual-CTA empty state instead of a dead end.
   if (!workflow || workflow.nodes.length === 0) {
     return (
-      <div style={{ padding: 20 }}>
+      // UI-sweep: empty-state outer padding 20 -> 30 (UI-SPEC permitted exception
+      // line 139, matches prototype lifecycle-tab.jsx:260).
+      <div style={{ padding: 30 }}>
         <Card padding={0}>
           <WorkflowEmptyState
             projectId={project.id}

@@ -110,13 +110,14 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
                   <span style={{ fontWeight: 600 }}>{firstName}</span>
                   <span style={{ color: "var(--fg-muted)" }}> {item.action}</span>
                 </div>
-                <span style={{
-                  fontSize: 11,
-                  color: "var(--fg-subtle)",
-                  fontFamily: "var(--font-mono)",
-                  fontVariantNumeric: "tabular-nums",
-                  flexShrink: 0,
-                }}>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--fg-subtle)",
+                    flexShrink: 0,
+                  }}
+                >
                   {timeStr}
                 </span>
               </div>

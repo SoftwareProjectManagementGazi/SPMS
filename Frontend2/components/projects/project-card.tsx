@@ -201,7 +201,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div style={{ display: "flex", alignItems: "flex-start",
             justifyContent: "space-between", gap: 8, paddingRight: 28 }}>
             <div style={{ minWidth: 0 }}>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600,
+              <span
+                className="mono"
+                style={{ fontSize: 10.5, fontWeight: 600,
                 color: "var(--fg-muted)", background: "var(--surface-2)",
                 padding: "2px 6px", borderRadius: "var(--radius-sm)", marginRight: 6 }}>
                 {project.key}
@@ -237,8 +239,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <div style={{ flex: 1 }}>
               <ProgressBar value={project.progress * 100} />
             </div>
-            <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 600,
-              color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
+            <span
+              className="mono"
+              style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-muted)" }}
+            >
               {Math.round(project.progress * 100)}%
             </span>
           </div>

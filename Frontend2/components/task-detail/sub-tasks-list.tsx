@@ -122,8 +122,8 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
                 }}
               >
                 <span
+                  className="mono"
                   style={{
-                    fontFamily: "var(--font-mono)",
                     fontSize: 11,
                     color: "var(--fg-muted)",
                   }}
