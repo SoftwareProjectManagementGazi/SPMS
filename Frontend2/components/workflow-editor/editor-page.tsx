@@ -71,6 +71,10 @@ import {
   computeHull,
   type Point,
 } from "@/lib/lifecycle/cloud-hull"
+import {
+  pathToPolygon,
+  pointInPolygon,
+} from "./workflow-canvas-inner"
 import { projectService, type Project } from "@/services/project-service"
 import {
   lifecycleService,
@@ -673,18 +677,19 @@ export function EditorPage({ project }: EditorPageProps) {
         setDirty(true)
         return
       }
-      // We don't compute precise point-in-polygon here — drop association
-      // when the new position is more than 64px from the parent group's
-      // child centroid. This keeps Plan 12-08 simple; Plan 12-10's perf
-      // pass can swap in the polygon helper if needed.
-      const cx =
-        childPositions.reduce((s, p) => s + p.x, 0) / childPositions.length
-      const cy =
-        childPositions.reduce((s, p) => s + p.y, 0) / childPositions.length
-      const dx = node.position.x - cx
-      const dy = node.position.y - cy
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist > 240) {
+      // Triage #18 — drop association when the dropped point falls outside
+      // the parent group's hull polygon. Computed off the same `computeHull`
+      // SVG path used to render the cloud, then walked through pointInPolygon
+      // (workflow-canvas-inner). We keep a small padding fudge so a node
+      // dropped right on the hull edge still counts as inside.
+      const HULL_PADDING_PX = 16
+      const hullPath = computeHull(childPositions, HULL_PADDING_PX)
+      const polygon = pathToPolygon(hullPath)
+      const inside = pointInPolygon(
+        { x: node.position.x, y: node.position.y },
+        polygon,
+      )
+      if (!inside) {
         setWorkflow({
           ...workflow,
           nodes: workflow.nodes.map((n) =>

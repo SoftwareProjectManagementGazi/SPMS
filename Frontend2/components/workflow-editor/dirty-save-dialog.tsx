@@ -39,6 +39,48 @@ export function DirtySaveDialog({
     [language],
   )
 
+  // Triage #20 — minimal focus trap. When the dialog opens we move focus
+  // into it and intercept Tab to keep focus inside until the user closes.
+  // Esc routes back to onCancel.
+  const dialogRef = React.useRef<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const focusables = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          "button, [href], input, [tabindex]:not([tabindex='-1'])",
+        ) ?? [],
+      ).filter((el) => !el.hasAttribute("disabled"))
+    // Initial focus on the safest button (Cancel).
+    focusables()[0]?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        onCancel()
+        return
+      }
+      if (e.key !== "Tab") return
+      const items = focusables()
+      if (items.length === 0) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      previouslyFocused?.focus?.()
+    }
+  }, [open, onCancel])
+
   if (!open) return null
 
   return (
@@ -59,6 +101,7 @@ export function DirtySaveDialog({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
         style={{
           background: "var(--surface)",
           borderRadius: "var(--radius)",

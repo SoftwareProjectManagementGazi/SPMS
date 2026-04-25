@@ -48,6 +48,22 @@ export function ContextMenu({
     if (open) setFocusIndex(0)
   }, [open])
 
+  // Triage #20 — move keyboard focus onto the focused menu item so screen
+  // readers + sighted keyboard users see a clear focus indicator. We also
+  // remember the previously focused element and restore it on close.
+  React.useEffect(() => {
+    if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const root = menuRef.current
+    const target = root?.querySelectorAll<HTMLElement>(
+      "[role='menuitem']:not([disabled])",
+    )?.[focusIndex]
+    target?.focus()
+    return () => {
+      previouslyFocused?.focus?.()
+    }
+  }, [open, focusIndex])
+
   // Keyboard handler — registered globally because right-click menus do not
   // get focus rings by default; Esc/Arrow keys must work without clicking.
   React.useEffect(() => {

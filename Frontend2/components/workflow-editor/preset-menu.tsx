@@ -190,30 +190,40 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
 }
 
 /**
- * detectCurrentPresetId — best-effort match between the working workflow
- * and one of the 9 presets. Returns the matching PresetId or null when the
- * workflow has been customized beyond a baseline preset shape.
+ * detectCurrentPresetId — match the working workflow against one of the 9
+ * presets. Returns the matching PresetId or null when the workflow has
+ * been customized beyond a baseline preset shape.
  *
- * Strategy: compare node count, edge count, and mode. This is a coarse
- * heuristic — exact-match with custom node positions is unrealistic since
- * users freely move nodes around. Two presets cannot collide on (mode,
- * nodes.length, edges.length) given the 9 shipped templates today, so the
- * heuristic is unambiguous.
+ * Strategy (triage #17 — tightened from the previous count-only heuristic
+ * that produced false positives once a user reshuffled nodes while keeping
+ * the count): compare mode, the node-id set, and the edge source/target
+ * pair set. Positions are intentionally ignored so layout changes don't
+ * break the match, but any structural deviation does.
  */
 export function detectCurrentPresetId(workflow: {
   mode: string
   nodes: { id: string }[]
-  edges: { id: string }[]
+  edges: { source: string; target: string }[]
 }): PresetId | null {
+  const nodeSig = setSig(workflow.nodes.map((n) => n.id))
+  const edgeSig = setSig(
+    workflow.edges.map((e) => `${e.source}>${e.target}`),
+  )
   for (const id of Object.keys(PRESETS_BY_ID) as PresetId[]) {
     const p = PRESETS_BY_ID[id]
+    if (p.mode !== workflow.mode) continue
+    if (setSig(p.nodes.map((n) => n.id)) !== nodeSig) continue
     if (
-      p.mode === workflow.mode &&
-      p.nodes.length === workflow.nodes.length &&
-      p.edges.length === workflow.edges.length
+      setSig(p.edges.map((e) => `${e.source}>${e.target}`)) !== edgeSig
     ) {
-      return id
+      continue
     }
+    return id
   }
   return null
+}
+
+function setSig(items: string[]): string {
+  // Order-insensitive signature: sort + join.
+  return [...items].sort().join("|")
 }
