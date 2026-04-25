@@ -97,9 +97,10 @@ export function ProjectDetailShell({
   const qc = useQueryClient()
   const [tab, setTab] = React.useState<TabId>("board")
 
-  const { effectiveOpen, narrow, open, setOpen } = useBacklogOpenState(
-    project.id
-  )
+  // `open` is no longer destructured here — the toggle uses the functional
+  // updater form `setOpen((prev) => !prev)` so it cannot capture a stale
+  // value, and `effectiveOpen` is what gates rendering. See backlog-panel.tsx.
+  const { effectiveOpen, narrow, setOpen } = useBacklogOpenState(project.id)
 
   const moveTask = useMoveTask(project.id)
 
@@ -220,18 +221,24 @@ export function ProjectDetailShell({
             height: "100%",
           }}
         >
-          {/* Left edge toggle pill (UI-SPEC §12) */}
+          {/* Left edge toggle pill (UI-SPEC §12).
+              UAT bug fix: explicit `width: 24` on the wrapper guarantees the
+              column cannot collapse to 0 when flex sibling re-layouts after
+              the panel closes. The `setOpen((prev) => !prev)` updater form
+              avoids a stale-closure path where `open` could lag behind the
+              latest setState during the close → reopen sequence. */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               paddingRight: 4,
               flexShrink: 0,
+              width: 24,
             }}
           >
             <BacklogToggle
               open={effectiveOpen}
-              onToggle={() => setOpen(!open)}
+              onToggle={() => setOpen((prev) => !prev)}
             />
           </div>
 

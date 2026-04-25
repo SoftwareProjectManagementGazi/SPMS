@@ -68,12 +68,20 @@ const OPEN_KEY = (projectId: number): string =>
  * narrow still flips `open` to true — but effectiveOpen stays true only when
  * not narrow, so rendering path keeps the user's intent separated from the
  * computed visibility).
+ *
+ * `setOpen` accepts either a boolean value OR a `(prev) => next` updater
+ * function (mirroring React's standard setState contract). The functional
+ * form is required by call sites that toggle off the previous value
+ * (`setOpen((prev) => !prev)`) so they cannot accidentally read a stale
+ * `open` from a closure that captured an earlier render.
  */
+type SetOpenArg = boolean | ((prev: boolean) => boolean)
+
 export function useBacklogOpenState(projectId: number): {
   open: boolean
   effectiveOpen: boolean
   narrow: boolean
-  setOpen: (v: boolean) => void
+  setOpen: (v: SetOpenArg) => void
 } {
   // Default closed on first visit (D-14). Hydrate from localStorage AFTER mount
   // so SSR and first-client render match — avoids hydration mismatch when the
@@ -92,14 +100,22 @@ export function useBacklogOpenState(projectId: number): {
   }, [projectId])
 
   const setOpen = React.useCallback(
-    (v: boolean) => {
-      setOpenState(v)
-      if (typeof window === "undefined") return
-      try {
-        window.localStorage.setItem(OPEN_KEY(projectId), String(v))
-      } catch {
-        /* ignore */
-      }
+    (v: SetOpenArg) => {
+      // Support both `setOpen(true)` and `setOpen((prev) => !prev)` so callers
+      // can avoid stale-closure bugs (UAT bug — toggle didn't reopen after the
+      // X button closed the panel, traced to `() => setOpen(!open)` reading a
+      // stale `open` in a transitional render).
+      setOpenState((prev) => {
+        const next = typeof v === "function" ? v(prev) : v
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(OPEN_KEY(projectId), String(next))
+          } catch {
+            /* ignore */
+          }
+        }
+        return next
+      })
     },
     [projectId]
   )

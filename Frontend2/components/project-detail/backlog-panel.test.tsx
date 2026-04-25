@@ -88,6 +88,45 @@ describe("useBacklogOpenState", () => {
     expect(hookA.result.current.open).toBe(true)
     expect(hookB.result.current.open).toBe(false)
   })
+
+  // UAT bug — toggle pill failed to reopen the panel after the X close button.
+  // Root cause: `() => setOpen(!open)` in project-detail-shell.tsx captured a
+  // stale `open` between renders. Fix is the functional-updater form, which
+  // requires `setOpen` to accept both `(boolean)` AND `((prev) => boolean)`.
+  it("setOpen accepts a functional updater (prev => next)", () => {
+    const { result } = renderHook(() => useBacklogOpenState(994))
+    act(() => {
+      result.current.setOpen((prev) => !prev)
+    })
+    expect(result.current.open).toBe(true)
+    expect(window.localStorage.getItem("spms.backlog.open.994")).toBe("true")
+    act(() => {
+      result.current.setOpen((prev) => !prev)
+    })
+    expect(result.current.open).toBe(false)
+    expect(window.localStorage.getItem("spms.backlog.open.994")).toBe("false")
+  })
+
+  it("close → reopen sequence with functional updater (UAT regression)", () => {
+    const { result } = renderHook(() => useBacklogOpenState(993))
+    // Open
+    act(() => {
+      result.current.setOpen(true)
+    })
+    expect(result.current.effectiveOpen).toBe(true)
+    // Close (simulates panel X button)
+    act(() => {
+      result.current.setOpen(false)
+    })
+    expect(result.current.effectiveOpen).toBe(false)
+    // Reopen via the toggle's functional form — must flip back to true even
+    // though the closure was created before the previous setState landed.
+    act(() => {
+      result.current.setOpen((prev) => !prev)
+    })
+    expect(result.current.open).toBe(true)
+    expect(result.current.effectiveOpen).toBe(true)
+  })
 })
 
 // D-15 compliance check — bulk-operation markers must NOT exist in the panel

@@ -1,6 +1,6 @@
 import * as React from "react"
-import { describe, expect, it, vi } from "vitest"
-import { fireEvent, renderHook } from "@testing-library/react"
+import { describe, expect, it, beforeEach, vi } from "vitest"
+import { act, fireEvent, renderHook } from "@testing-library/react"
 
 import { renderWithProviders } from "@/test/helpers/render-with-providers"
 import { mockProjects } from "@/test/fixtures/projects"
@@ -100,6 +100,76 @@ describe("ProjectDetailShell", () => {
     // mockProjects[0].managerName === "Ayşe"
     expect(getByText("Ayşe")).toBeInTheDocument()
     expect(getByText("Yönetici")).toBeInTheDocument()
+  })
+})
+
+// UAT bug fix — toggle pill must reopen the backlog panel after the panel's X
+// button closed it. Pre-fix path used `() => setOpen(!open)` which could
+// capture a stale `open` between renders. Post-fix uses the functional
+// updater `setOpen((prev) => !prev)` so the close → reopen sequence is
+// guaranteed to flip the state correctly. This RTL test exercises the full
+// open → close (panel X) → reopen (toggle) flow end-to-end.
+describe("ProjectDetailShell — backlog toggle close → reopen (UAT regression)", () => {
+  beforeEach(() => {
+    try {
+      window.localStorage.clear()
+    } catch {
+      /* ignore */
+    }
+    // jsdom defaults innerWidth to 1024 (narrow). Force wide viewport so the
+    // backlog panel is allowed to mount (D-54 narrow auto-close otherwise
+    // forces effectiveOpen=false regardless of stored intent).
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1600,
+    })
+    window.dispatchEvent(new Event("resize"))
+  })
+
+  it("opens, closes via X, then reopens via toggle pill", () => {
+    const { container, getAllByRole, queryByLabelText } = renderWithProviders(
+      <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
+    )
+
+    // Locate the toggle by its aria-label (Turkish default — matches the
+    // BacklogToggle component's label string when language === "tr").
+    const findToggle = (): HTMLButtonElement => {
+      const btn = container.querySelector(
+        'button[aria-label="Backlog\'u aç/kapat"]'
+      ) as HTMLButtonElement | null
+      if (!btn) throw new Error("Backlog toggle pill not found in DOM")
+      return btn
+    }
+
+    // Initially closed (D-14 default, no localStorage value): the toggle is
+    // present but the BacklogPanel renders null.
+    const toggle = findToggle()
+    expect(toggle).toBeInTheDocument()
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(queryByLabelText("Backlog paneli")).toBeNull()
+
+    // 1) Click toggle → panel opens
+    act(() => {
+      fireEvent.click(toggle)
+    })
+    expect(queryByLabelText("Backlog paneli")).toBeInTheDocument()
+    expect(findToggle().getAttribute("aria-expanded")).toBe("true")
+
+    // 2) Click the panel's X button (aria-label="Kapat") → panel closes
+    const closeButtons = getAllByRole("button", { name: "Kapat" })
+    expect(closeButtons.length).toBeGreaterThan(0)
+    act(() => {
+      fireEvent.click(closeButtons[0])
+    })
+    expect(queryByLabelText("Backlog paneli")).toBeNull()
+    expect(findToggle().getAttribute("aria-expanded")).toBe("false")
+
+    // 3) Click toggle again → panel REOPENS (the bug was: it didn't).
+    act(() => {
+      fireEvent.click(findToggle())
+    })
+    expect(queryByLabelText("Backlog paneli")).toBeInTheDocument()
+    expect(findToggle().getAttribute("aria-expanded")).toBe("true")
   })
 })
 
