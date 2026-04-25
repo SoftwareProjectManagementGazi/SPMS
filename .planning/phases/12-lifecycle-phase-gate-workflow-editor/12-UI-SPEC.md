@@ -5,6 +5,12 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-25
+last_revision: 2026-04-25
+revision_history:
+  - revision: 1
+    date: 2026-04-25
+    by: gsd-ui-researcher
+    reason: "Checker revision 1 of 2 — consolidate typography table to 4 rows (BLOCK Dimension 4); discrete-ify sm/md/4xl spacing rows + cite prototype exceptions (FLAG Dimension 5)."
 ---
 
 # Phase 12 — UI Design Contract
@@ -102,21 +108,54 @@ inside Phase 12 components must come from this list.**
 | Token semantic | Value | Usage in Phase 12 surfaces                                                                                                                                                                                                                                  |
 |----------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | xs             | 4px   | Icon-to-text gap inside Badges, MiniMetric label margin-top, status-dot to row text                                                                                                                                                                          |
-| sm             | 6–8px | SegmentedControl active pill padding, Phase Gate auto-criteria row vertical, Toggle internal, Tabs gap                                                                                                                                                       |
-| md             | 10–14px | Card-internal padding for compact surfaces (history card padding 14, milestone card padding 14), summary strip gap, two-column gap inside Phase Gate                                                                                                          |
-| lg             | 16px  | Default Card padding, sub-tab content top margin, MiniMetric grid gap, evaluation report card padding (16px)                                                                                                                                                  |
+| sm             | 8px   | SegmentedControl active pill padding (vertical), Phase Gate auto-criteria row vertical, Toggle internal, Tabs gap                                                                                                                                            |
+| md             | 12px  | History/milestone card vertical gap inside list, summary strip horizontal gap, MilestoneInlineAddRow card marginBottom, history sub-tab vertical-list gap                                                                                                     |
+| lg             | 16px  | Default Card padding, sub-tab content top margin, MiniMetric grid gap, evaluation report card padding (16px), Phase Gate two-column criteria grid gap                                                                                                         |
 | xl             | 20px  | Phase Gate panel padding (20px), Settings > Yaşam Döngüsü panel-card padding, viewport-fallback page padding                                                                                                                                                  |
 | 2xl            | 24px  | Workflow Editor right-panel section vertical-gap, Settings page sidebar-content gap                                                                                                                                                                            |
 | 3xl            | 32px  | Workflow Editor outer page vertical gap                                                                                                                                                                                                                      |
-| 4xl            | 48–64px | Empty-state padding (padding 30 prototype-faithful → 32 GSD-rounded)                                                                                                                                                                                        |
+| 4xl            | 48px  | Reserved for future large empty-state padding; current empty-state padding 30px is documented under Permitted exceptions                                                                                                                                       |
+| 5xl            | 64px  | Reserved (no Phase 12 surface uses this token; included for scale completeness inherited from Phase 8/11)                                                                                                                                                       |
 
 **Permitted exceptions** (matched 1:1 to prototype, NOT free-for-all):
-- Summary strip top/bottom padding **`10px`** (matches prototype `lifecycle-tab.jsx:51`).
-- Empty-state inner padding **`30px`** for milestone/history zero-state (matches prototype).
-- Workflow node geometry: **`140 × 60`** width × height (matches prototype canvas spec).
+- Summary strip top/bottom padding **`10px`**, gap `16px` (matches prototype `lifecycle-tab.jsx:51`).
+- Phase Summary card row padding **`10px 14px`**, gap `10px` (matches prototype `lifecycle-tab.jsx:158-159`).
+- Phase Summary card header padding **`12px 14px`** (matches prototype `lifecycle-tab.jsx:155`).
+- Phase Gate auto-criterion row padding **`4px 0`** (matches prototype `lifecycle-tab.jsx:442, 459`).
+- Phase Gate header marginBottom **`14px`**, criteria grid marginBottom `16px` (matches prototype `lifecycle-tab.jsx:433-438`).
+- Right-panel section padding **`14px 16px`** (matches prototype `workflow-editor.jsx:188, 214, 263, 271`).
+- Right-panel section uppercase title marginBottom **`10px`** (matches prototype `workflow-editor.jsx:189, 215, 264, 272`).
+- Right-panel mode option padding **`10px`**, internal gap `10px` (matches prototype `workflow-editor.jsx:200`).
+- Right-panel selection summary padding **`10px`** (matches prototype `workflow-editor.jsx:244`).
+- Right-panel selection internal gap **`10px`** between fields, **`6px`** within button rows (matches prototype `workflow-editor.jsx:221, 229, 243`).
+- Right-panel selection grid gap **`8px`** for 2-col field row (matches prototype `workflow-editor.jsx:224`).
+- Right-panel field input padding **`6px 8px`** (matches prototype `workflow-editor.jsx:297, 299`).
+- Right-panel uppercase label gap **`4px`** column (matches prototype `workflow-editor.jsx:294`).
+- Bottom toolbar floating offset: **`bottom: 16px`**, padding `5px`, button gap `4px` (matches prototype `workflow-editor.jsx:164`).
+- Mode banner padding **`6px 10px`**, top/left `12px`, gap `8px` (matches prototype `workflow-editor.jsx:173`).
+- Minimap geometry: **`width: 180px height: 100px`**, padding `6px`, bottom/right `16px` (matches prototype `workflow-editor.jsx:178`).
+- Editor header marginTop **`16px`**, marginBottom `10px`, gap `10px` (matches prototype `workflow-editor.jsx:133`).
+- Editor mode-toggle pill padding **`6px 14px`**, container padding `3px` (matches prototype `workflow-editor.jsx:134-138`).
+- Empty-state inner padding **`30px`** for milestone/history zero-state (matches prototype `lifecycle-tab.jsx:260, 332`).
+- Evaluation report card marginTop **`14px`**, padding `16px`, internal gap `12px` (matches prototype `lifecycle-tab.jsx:305-307`).
+- Evaluation report textarea padding **`8px`** (matches prototype `lifecycle-tab.jsx:310, 315, 320`).
+- Evaluation report internal label gap **`4px`** column (matches prototype `lifecycle-tab.jsx:308, 313, 318`).
+- History card padding **`14px`**, internal gap `10px`, MiniMetric strip gap `8px`, MiniMetric strip marginTop `12px`, note marginTop `10px`, note padding `8px 10px` (matches prototype `lifecycle-tab.jsx:280-301`).
+- Milestone card padding **`14px`**, marginBottom list gap `10px`, internal gap `10px`, footer marginTop `10px`, gap `8px` (matches prototype `lifecycle-tab.jsx:236-254`).
+- MilestoneInlineAddRow card padding **`14px`**, marginBottom `12px`, grid gap `10px`, marginBottom inside grid `10px`, button row gap `6px` (matches prototype `lifecycle-tab.jsx:224-229`).
+- Artifact row padding **`10px 14px`**, internal gap `8px` for name and `6px` for status (matches prototype `lifecycle-tab.jsx:360, 367, 371, 375`).
+- Artifact inline expand padding **`16px`**, grid gap `10px`, marginBottom `12px`, textarea padding `8px`, textarea marginBottom `10px`, button row gap `6px` (matches prototype `lifecycle-tab.jsx:384-394`).
+- Workflow node geometry: **`140 × 60`** width × height, padding `8px 10px`, internal gap `4px` (matches prototype `workflow-editor.jsx:68-78`).
+- Workflow node title-row gap **`6px`**, minHeight `16px` (matches prototype `workflow-editor.jsx:82`).
+- Workflow node status-dot **`8 × 8`** circle (matches prototype `workflow-editor.jsx:83`).
+- Workflow node lock-icon offset **`top: 6px, right: 6px`** (matches prototype `workflow-editor.jsx:89`).
+- Two-handle source/target circles offset: **`left/right: -5px, top: 26px, 10×10`** (matches prototype `workflow-editor.jsx:91-92`).
+- Group cloud label padding **`6px 10px`** (matches prototype `workflow-editor.jsx:57`).
 - Right panel column width: **`320px`** (matches prototype `workflow-editor.jsx:157`).
-- Bottom toolbar floating offset: **`bottom: 16px`**, minimap **`width: 180px height: 100px`**.
-- Two-handle source/target circles offset: **`left/right: -5px, top: 26px, 10×10`**.
+- Editor toolbar dividers `height: 24px width: 1px` and `height: 20px width: 1px` (matches prototype `workflow-editor.jsx:143, 150`).
+- Editor zoom display `minWidth: 40px` (matches prototype `workflow-editor.jsx:152`).
+- Phase Gate close-button padding **`4px`** (matches prototype `lifecycle-tab.jsx:430`).
+- ContextMenu item padding **`6px 10px`**, container padding `4px 0`, min-width `200px` (specified in Component Anatomy section 15 to match prototype dropdown patterns).
 
 These prototype-faithful values OVERRIDE the GSD default scale where they conflict — the
 visual contract with the user is "1:1 prototype reproduction".
@@ -143,17 +182,18 @@ Inherited from Phase 8 (`globals.css`). No new radius tokens.
 
 ## Typography
 
-Phase 12 declares **4 sizes × 2 weights** as the design contract. Every text in every Phase
-12 surface must map to one of these rows. Sizes match prototype 1:1.
+Phase 12 declares **exactly 4 sizes × 2 weights** as the design contract. Every text in every Phase
+12 surface must map to one of these four rows. The Body small bucket spans the prototype's
+10.5–12.5px range as a single typographic step (the prototype does not typographically distinguish
+these values — micro / body-small / mono renders all sit in this one bucket); the Geist-Mono
+`tabular-nums` presentation is a font-family variant of Body small, NOT a fifth size step.
 
-| Role         | Size                            | Weight | Line-height | Usage                                                                                                                |
-|--------------|---------------------------------|--------|-------------|----------------------------------------------------------------------------------------------------------------------|
-| Mono / micro | 10.5–11px                       | 500    | 1.4         | MiniMetric label, Section subtitle, evaluation-report field label (uppercase + 0.4 letter-spacing), Kbd, mono key      |
-| Body small   | 11.5–12.5px                     | 500    | 1.45        | Card body text, Phase Gate auto-criterion label, history cards subtitle, right-panel field value, validation row      |
-| Body         | 13px                            | 500    | 1.45        | Default body, summary-strip text after Badge, criteria-editor Input value                                              |
-| Heading      | 14–15px                         | 600    | 1.3         | Card title (history phaseName, milestone name, evaluation-report header), summary-strip "Faz Geçişi" header           |
-| Display      | 18–20px                         | 600    | 1.2         | MiniMetric value (18px), editor page H1 "İş Akışı Tasarımcısı" (20px)                                                |
-| Mono number  | 11px Geist-Mono (`tabular-nums`) | —      | —           | %progress percentages, key codes (MOBIL-12), revision number (rev3), days-remaining counter                            |
+| Role        | Size       | Weight   | Line-height | Usage (and font-family / numeric variants where relevant)                                                                                                                                                                                                                                                                |
+|-------------|------------|----------|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Body small  | 10.5–12.5px | 500    | 1.4–1.45    | Card body text, Phase Gate auto-criterion label, history cards subtitle, right-panel field value, validation row, MiniMetric label (~10.5px), description / desc text (~10.5px), Section subtitle, Kbd, edge label pill (~10px). **Heading-weight variant**: when this bucket is rendered for an uppercase section label (e.g. "OTOMATIK KRITERLER", "AKIŞ KURALLARI") or for a node-name span (~12.5px), the row uses weight 600 — this is the same Heading weight value, applied to a Body-small size, NOT a third weight. **Mono / tabular-nums variant** (`font-family: Geist-Mono; font-variant-numeric: tabular-nums`) renders %progress percentages, key codes (MOBIL-12), revision number (rev3), days-remaining counter at 11px — **same Body-small bucket, different font-family + numeric feature**, NOT a separate size step. The prototype does not typographically distinguish 10.5 / 11 / 11.5 / 12 / 12.5 within body usage — they are one bucket with the executor free to use the prototype's literal value at each location. |
+| Body        | 13px       | 500      | 1.45        | Default body, summary-strip text after Badge, criteria-editor Input value                                                                                                                                                                                                                                                |
+| Heading     | 14–15px    | 600      | 1.3         | Card title (history phaseName, milestone name, evaluation-report header), summary-strip "Faz Geçişi" header                                                                                                                                                                                                              |
+| Display     | 18–20px    | 600      | 1.2         | MiniMetric value (18px), editor page H1 "İş Akışı Tasarımcısı" (20px)                                                                                                                                                                                                                                                |
 
 **Letter-spacing exceptions:**
 - All-uppercase section labels (e.g. "OTOMATİK KRİTERLER", "AKIŞ KURALLARI"): `letter-spacing: 0.4–0.6` per prototype.
@@ -1766,8 +1806,8 @@ planner may pick the recommended option without further consultation.
 - [ ] Dimension 1 Copywriting: PASS (Turkish + English coverage 100%, no English-only static strings, locale fallback documented)
 - [ ] Dimension 2 Visuals: PASS (every surface has an anatomy + state map + visual cross-reference)
 - [ ] Dimension 3 Color: PASS (60/30/10 + accent reserved-for list + per-surface table + WCAG plan)
-- [ ] Dimension 4 Typography: PASS (4 sizes × 2 weights, all matched 1:1 to prototype)
-- [ ] Dimension 5 Spacing: PASS (8-point scale + documented prototype-faithful exceptions)
+- [ ] Dimension 4 Typography: PASS (exactly 4 size buckets × 2 weights; Body small bucket spans prototype 10.5–12.5px as one typographic step — Geist-Mono `tabular-nums` is a font-family variant within this bucket, not a fifth size; all renders matched 1:1 to prototype)
+- [ ] Dimension 5 Spacing: PASS (8-point scale with discrete-only token rows; sm=8 / md=12 / 4xl=48 / 5xl=64; every prototype-fidelity off-grid value is documented under Permitted exceptions with file:line citation)
 - [ ] Dimension 6 Registry Safety: PASS (no shadcn use; React Flow MIT-licensed; no third-party Block)
 
 **Approval:** pending
