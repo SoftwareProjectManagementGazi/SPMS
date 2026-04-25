@@ -60,7 +60,28 @@ apiClient.interceptors.response.use(
         window.location.href = '/session-expired';
       }
     }
-    console.error('API Error:', error.response?.data || error.message);
+
+    // Phase 12 Plan 12-10 (Bug Z UAT fix) — silence the global console.error
+    // for status codes that callers have explicitly opted into via
+    // `config.expectedFailureCodes`. The ActivityFeed widget on /dashboard
+    // taps GET /activity which is admin-only (Phase 10 BL-01); non-admin
+    // users predictably get 403 and useGlobalActivity already swallows the
+    // error to render an empty feed. Pre-fix the interceptor still logged
+    // `API Error: Object` to the console for every 403, polluting the
+    // console for any non-admin user opening the dashboard. The opt-in
+    // model keeps the noisy default for surprises (real bugs) while letting
+    // known-benign expected failures stay quiet.
+    const expectedCodes: number[] | undefined =
+      error.config?.expectedFailureCodes;
+    const status = error.response?.status;
+    const isExpected =
+      Array.isArray(expectedCodes) &&
+      typeof status === 'number' &&
+      expectedCodes.includes(status);
+
+    if (!isExpected) {
+      console.error('API Error:', error.response?.data || error.message);
+    }
     return Promise.reject(error);
   }
 );

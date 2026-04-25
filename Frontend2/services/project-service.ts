@@ -131,7 +131,19 @@ export const projectService = {
   },
 
   getActivity: async (limit = 20, offset = 0) => {
-    const response = await apiClient.get('/activity', { params: { limit, offset } });
+    // Phase 12 Plan 12-10 (Bug Z UAT fix) — /api/v1/activity is admin-only
+    // (Phase 10 BL-01 mitigation). Non-admin callers predictably receive
+    // 403 and useGlobalActivity already swallows the error to render an
+    // empty Dashboard widget. We opt the request into the interceptor's
+    // expected-failure list so the global `console.error` for 403 stays
+    // quiet — only real surprises (other status codes) log.
+    const response = await apiClient.get('/activity', {
+      params: { limit, offset },
+      // Custom axios config flag — see Frontend2/lib/api-client.ts response
+      // interceptor for the gate logic.
+      // @ts-expect-error — expectedFailureCodes is a custom flag, not in axios types
+      expectedFailureCodes: [403],
+    });
     return response.data;
   },
 
