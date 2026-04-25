@@ -43,6 +43,7 @@ import { SummaryStrip } from "./summary-strip"
 import { PhaseGateExpand, type PhaseGateCriteria } from "./phase-gate-expand"
 import { OverviewSubTab } from "./overview-subtab"
 import { HistorySubTab } from "./history-subtab"
+import { MilestonesSubTab } from "./milestones-subtab"
 
 interface PhaseTransitionEntryShape {
   user_id: number
@@ -337,20 +338,7 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
             />
           )}
           {subTab === "milestones" && (
-            <Card padding={20}>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: "var(--fg-subtle)",
-                  textAlign: "center",
-                }}
-              >
-                {T(
-                  "Kilometre Taşları sekmesi Plan 12-05'te geliyor.",
-                  "Milestones sub-tab lands in Plan 12-05.",
-                )}
-              </div>
-            </Card>
+            <MilestonesSubTab project={project} workflow={workflow} />
           )}
           {subTab === "history" && !isKanban && (
             <HistorySubTab
