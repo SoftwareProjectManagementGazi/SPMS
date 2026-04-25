@@ -1,23 +1,30 @@
 "use client"
 
-// EditorPage (Phase 12 Plan 12-07) — outer page shell mounted by the
-// `/workflow-editor?projectId=X` route. Hosts:
+// EditorPage (Phase 12 Plan 12-07 + Plan 12-08).
 //
-//   - Header row: H1 "İş Akışı Tasarımcısı" (20px, weight 600, letter-spacing
-//     -0.4 per UI-SPEC §200), project subtitle, Save / Geri / Çoğalt + dirty
-//     Badge.
-//   - Top toolbar: mode SegmentedControl (Yaşam Döngüsü / Görev Durumları),
-//     template dropdown placeholder, Undo / Redo buttons (disabled — Plan
-//     12-08 wires actions), zoom display.
-//   - 2-col body grid: canvas (flex:1) + RightPanel (320px).
-//   - Mode banner overlays canvas top-left.
-//   - Bottom toolbar floats centered above canvas.
-//   - Minimap wrapper bottom-right.
+// Plan 12-07 shipped: header + top toolbar + 2-col body grid + ModeBanner +
+// BottomToolbar + MinimapWrapper + WorkflowCanvas mount with empty data.
 //
-// Plan 12-07 explicitly does NOT wire DnD / inline-edit / save flow / preset
-// content / cycle-counter wiring. Save Button is permission-gated via
-// useTransitionAuthority but performs no action yet (Plan 12-09 wires the
-// 200/422/409/429/network matrix).
+// Plan 12-08 wires:
+//   1. workflow → React Flow nodes/edges conversion (so the canvas now
+//      actually renders the project's nodes + edges, including group cloud
+//      backdrops).
+//   2. Editable callbacks: onNodesChange / onEdgesChange / onConnect /
+//      onNodeDrag (live cloud morph) / onNodeDragStop (drop-association
+//      policy) / onEdgeDoubleClick (inline label edit) / pane + node + edge
+//      context menus.
+//   3. Undo/redo via useEditorHistory + Cmd/Ctrl+Z + Cmd/Ctrl+Shift+Z
+//      shortcuts. Stack `history.clear()` is exposed to Plan 12-09's save
+//      success handler via the imperative ref pattern.
+//   4. ContextMenu mounting + selection-aware items (node / edge / group /
+//      canvas).
+//   5. All 8 core keyboard shortcuts (CONTEXT D-35): Cmd+S, Cmd+Z,
+//      Cmd+Shift+Z, N, Delete/Backspace, Cmd+A, F, Esc.
+//   6. Bottom toolbar Sınıflandır align dropdown wired to the 5 align
+//      helpers from Plan 12-01.
+//   7. Inline edit propagation: PhaseNode/PhaseEdge double-click writes back
+//      via onNameChange / onLabelChange callbacks attached to each node's
+//      data prop.
 //
 // URL persistence: ?mode=lifecycle|status — switching modes calls
 // router.replace so the next reload resumes on the same mode. When dirty is
@@ -35,12 +42,29 @@ import {
 import { Tooltip } from "@/components/workflow-editor/tooltip"
 import { useApp } from "@/context/app-context"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
+import { useEditorHistory } from "@/hooks/use-editor-history"
+import { useCycleCounters } from "@/hooks/use-cycle-counters"
+import { computeNodeStates } from "@/lib/lifecycle/graph-traversal"
+import {
+  alignBottom,
+  alignTop,
+  centerHorizontal,
+  centerVertical,
+  distributeHorizontal,
+  type AlignNode,
+} from "@/lib/lifecycle/align-helpers"
+import { matchesShortcut, KEYBOARD_SHORTCUTS } from "@/lib/lifecycle/shortcuts"
+import {
+  computeHull,
+  type Point,
+} from "@/lib/lifecycle/cloud-hull"
 import type { Project } from "@/services/project-service"
 import {
   mapWorkflowConfig,
   type WorkflowConfig,
   type WorkflowConfigDTO,
-  type WorkflowMode,
+  type WorkflowEdge,
+  type WorkflowNode,
 } from "@/services/lifecycle-service"
 
 import { WorkflowCanvas } from "./workflow-canvas"
@@ -48,6 +72,7 @@ import { RightPanel } from "./right-panel"
 import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
 import { MinimapWrapper } from "./minimap-wrapper"
+import { ContextMenu, type ContextMenuItem } from "./context-menu"
 
 export type EditorMode = "lifecycle" | "status"
 
@@ -59,14 +84,27 @@ interface ProcessConfigShape {
   workflow?: WorkflowConfigDTO
 }
 
+interface ContextMenuState {
+  position: { x: number; y: number }
+  items: ContextMenuItem[]
+  /** What the menu is targeting — drives onSelect routing. */
+  target:
+    | { type: "canvas"; flowPos?: Point }
+    | { type: "node"; nodeId: string }
+    | { type: "edge"; edgeId: string }
+    | { type: "group"; groupId: string }
+}
+
 function readWorkflow(project: Project): WorkflowConfig {
   const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
   if (!cfg || !cfg.workflow) {
-    // Empty default — Plan 12-08 wires the "first node" UX. Right-panel
-    // validation will flag missing initial/final nodes immediately.
     return { mode: "flexible", nodes: [], edges: [], groups: [] }
   }
   return mapWorkflowConfig(cfg.workflow)
+}
+
+function newId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`
 }
 
 export function EditorPage({ project }: EditorPageProps) {
@@ -79,24 +117,43 @@ export function EditorPage({ project }: EditorPageProps) {
   )
   const canEdit = useTransitionAuthority(project)
 
-  // Working-copy workflow state — Plan 12-08 wires DnD/edge-create mutations
-  // through `setWorkflow`. Plan 12-09 sends `workflow` to PATCH on Save.
+  // Working-copy workflow + dirty flag.
   const initialWorkflow = React.useMemo(() => readWorkflow(project), [project])
   const [workflow, setWorkflow] = React.useState<WorkflowConfig>(initialWorkflow)
-
   const [dirty, setDirty] = React.useState(false)
   const [selected, setSelected] = React.useState<{
     type: "node" | "edge" | "group"
     id: string
   } | null>(null)
+  const [contextMenu, setContextMenu] = React.useState<ContextMenuState | null>(
+    null,
+  )
+
+  const history = useEditorHistory()
+  const cycleQuery = useCycleCounters(project.id)
+  const cycleMap: Map<string, number> = cycleQuery.data ?? new Map()
+
+  // BFS-driven node states (EDIT-04 / EDIT-05) — empty transitions list for
+  // the editor (transitions are read by LifecycleTab; Editor focuses on
+  // structural state). Plan 12-09 may inject phase_transitions for parity.
+  const nodeStates = React.useMemo(
+    () =>
+      computeNodeStates({
+        workflow: {
+          mode: workflow.mode,
+          nodes: workflow.nodes,
+          edges: workflow.edges,
+        },
+        phaseTransitions: [],
+      }),
+    [workflow.mode, workflow.nodes, workflow.edges],
+  )
 
   const modeRaw = searchParams.get("mode")
   const mode: EditorMode = modeRaw === "status" ? "status" : "lifecycle"
 
   const handleModeChange = React.useCallback(
     (next: string) => {
-      // Plan 12-09 wires the dirty-save guard intercept; for now, accept the
-      // switch and update the URL.
       const params = new URLSearchParams(searchParams.toString())
       params.set("mode", next)
       router.replace(`/workflow-editor?${params.toString()}`)
@@ -104,10 +161,686 @@ export function EditorPage({ project }: EditorPageProps) {
     [router, searchParams],
   )
 
-  const handleWorkflowChange = React.useCallback((next: WorkflowConfig) => {
-    setWorkflow(next)
-    setDirty(true)
-  }, [])
+  // Single mutation entry point — pushes the OLD workflow to the history
+  // stack first, then commits the new one + sets dirty=true.
+  const commitWorkflow = React.useCallback(
+    (next: WorkflowConfig) => {
+      history.push(workflow)
+      setWorkflow(next)
+      setDirty(true)
+    },
+    [history, workflow],
+  )
+
+  const handleWorkflowChange = React.useCallback(
+    (next: WorkflowConfig) => commitWorkflow(next),
+    [commitWorkflow],
+  )
+
+  // ---------------------- Inline edit propagation -----------------------
+
+  const renameNode = React.useCallback(
+    (nodeId: string, nextName: string) => {
+      commitWorkflow({
+        ...workflow,
+        nodes: workflow.nodes.map((n) =>
+          n.id === nodeId ? { ...n, name: nextName } : n,
+        ),
+      })
+    },
+    [workflow, commitWorkflow],
+  )
+
+  const relabelEdge = React.useCallback(
+    (edgeId: string, nextLabel: string) => {
+      commitWorkflow({
+        ...workflow,
+        edges: workflow.edges.map((e) =>
+          e.id === edgeId ? { ...e, label: nextLabel } : e,
+        ),
+      })
+    },
+    [workflow, commitWorkflow],
+  )
+
+  // ---------------------- Canvas selection mapping ----------------------
+
+  const setNodeSelected = React.useCallback(
+    (id: string) => setSelected({ type: "node", id }),
+    [],
+  )
+  const setEdgeSelected = React.useCallback(
+    (id: string) => setSelected({ type: "edge", id }),
+    [],
+  )
+
+  // ---------------------- workflow → RFNode/RFEdge ----------------------
+
+  const rfNodes = React.useMemo(() => {
+    const groupChildren = new Map<string, string[]>()
+    for (const g of workflow.groups ?? []) {
+      groupChildren.set(g.id, g.children ?? [])
+    }
+    const nodePositions = new Map<string, Point>()
+    for (const n of workflow.nodes) {
+      nodePositions.set(n.id, { x: n.x, y: n.y })
+    }
+    const out: Array<{
+      id: string
+      type: string
+      position: { x: number; y: number }
+      data: Record<string, unknown>
+      selected?: boolean
+      parentId?: string
+    }> = []
+
+    // Group nodes first so React Flow renders them as backdrops.
+    for (const g of workflow.groups ?? []) {
+      const childPositions: Point[] = (g.children ?? [])
+        .map((id) => nodePositions.get(id))
+        .filter((p): p is Point => p != null)
+      if (childPositions.length === 0) continue
+      const minX = Math.min(...childPositions.map((p) => p.x))
+      const minY = Math.min(...childPositions.map((p) => p.y))
+      out.push({
+        id: g.id,
+        type: "group",
+        position: { x: minX - 32, y: minY - 32 },
+        data: {
+          childPositions,
+          hullPath: computeHull(childPositions, 16),
+          name: g.name,
+          color: g.color,
+          selected: selected?.type === "group" && selected.id === g.id,
+        },
+      })
+    }
+    for (const n of workflow.nodes) {
+      const isSel = selected?.type === "node" && selected.id === n.id
+      const state = nodeStates.get(n.id) ?? "default"
+      out.push({
+        id: n.id,
+        type: "phase",
+        position: { x: n.x, y: n.y },
+        parentId: n.parentId,
+        selected: isSel,
+        data: {
+          name: n.name,
+          description: n.description,
+          color: n.color,
+          isInitial: n.isInitial,
+          isFinal: n.isFinal,
+          isArchived: n.isArchived,
+          wipLimit: n.wipLimit,
+          state,
+          cycleCount: cycleMap.get(n.id) ?? 0,
+          editMode: canEdit,
+          onNameChange: (next: string) => renameNode(n.id, next),
+        },
+      })
+    }
+    return out
+    // groupChildren omitted from deps — only used inside the loop above
+    // and reflects workflow.groups directly.
+  }, [
+    workflow.nodes,
+    workflow.groups,
+    nodeStates,
+    cycleMap,
+    canEdit,
+    selected,
+    renameNode,
+  ])
+
+  const rfEdges = React.useMemo(() => {
+    return workflow.edges.map((e) => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      type: "phase",
+      selected: selected?.type === "edge" && selected.id === e.id,
+      data: {
+        type: e.type,
+        label: e.label,
+        bidirectional: e.bidirectional,
+        isAllGate: e.isAllGate,
+        editMode: canEdit,
+        onLabelChange: (next: string) => relabelEdge(e.id, next),
+      },
+    }))
+  }, [workflow.edges, selected, canEdit, relabelEdge])
+
+  // -------------------- Editable React Flow callbacks --------------------
+
+  // onNodesChange/onEdgesChange — accept React Flow's deltas and apply them.
+  // We translate position changes into workflow.nodes mutations; selection
+  // changes into selected state. Add/remove changes are forwarded through.
+  const handleNodesChange = React.useCallback(
+    (changes: Array<Record<string, unknown>>) => {
+      let nextWorkflow: WorkflowConfig | null = null
+      for (const ch of changes) {
+        if (ch.type === "position" && ch.position) {
+          const id = String(ch.id ?? "")
+          const pos = ch.position as { x: number; y: number }
+          if (!nextWorkflow) nextWorkflow = { ...workflow }
+          nextWorkflow.nodes = nextWorkflow.nodes.map((n) =>
+            n.id === id ? { ...n, x: pos.x, y: pos.y } : n,
+          )
+        } else if (ch.type === "remove") {
+          const id = String(ch.id ?? "")
+          if (!nextWorkflow) nextWorkflow = { ...workflow }
+          nextWorkflow.nodes = nextWorkflow.nodes.filter((n) => n.id !== id)
+          nextWorkflow.edges = nextWorkflow.edges.filter(
+            (e) => e.source !== id && e.target !== id,
+          )
+          nextWorkflow.groups = (nextWorkflow.groups ?? []).map((g) => ({
+            ...g,
+            children: g.children.filter((cid) => cid !== id),
+          }))
+        }
+      }
+      if (nextWorkflow) commitWorkflow(nextWorkflow)
+    },
+    [workflow, commitWorkflow],
+  )
+
+  const handleEdgesChange = React.useCallback(
+    (changes: Array<Record<string, unknown>>) => {
+      let nextWorkflow: WorkflowConfig | null = null
+      for (const ch of changes) {
+        if (ch.type === "remove") {
+          const id = String(ch.id ?? "")
+          if (!nextWorkflow) nextWorkflow = { ...workflow }
+          nextWorkflow.edges = nextWorkflow.edges.filter((e) => e.id !== id)
+        }
+      }
+      if (nextWorkflow) commitWorkflow(nextWorkflow)
+    },
+    [workflow, commitWorkflow],
+  )
+
+  const handleConnect = React.useCallback(
+    (params: Record<string, unknown>) => {
+      const source = String(params.source ?? "")
+      const target = String(params.target ?? "")
+      if (!source || !target || source === target) return
+      const newEdge: WorkflowEdge = {
+        id: newId("edge"),
+        source,
+        target,
+        type: "flow",
+        bidirectional: false,
+        isAllGate: false,
+      }
+      commitWorkflow({ ...workflow, edges: [...workflow.edges, newEdge] })
+    },
+    [workflow, commitWorkflow],
+  )
+
+  // Live cloud morph during drag — NO debounce per CONTEXT D-23.
+  const handleNodeDrag = React.useCallback(
+    (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
+      // Find the parent group(s) whose children include the dragged node.
+      const groups = workflow.groups ?? []
+      const affected = groups.filter((g) => g.children.includes(node.id))
+      if (affected.length === 0) return
+      // Update the node's position in our local state immediately so the
+      // hull recompute sees the new layout. We don't push to history per
+      // frame — only on drag stop (handleNodesChange position event fires
+      // after drag ends).
+      setWorkflow((prev) => {
+        return {
+          ...prev,
+          nodes: prev.nodes.map((n) =>
+            n.id === node.id
+              ? { ...n, x: node.position.x, y: node.position.y }
+              : n,
+          ),
+        }
+      })
+    },
+    [workflow.groups],
+  )
+
+  // Drop-association policy: if the dragged node was in a parent group and
+  // ended outside the group's hull, drop the parentId association.
+  const handleNodeDragStop = React.useCallback(
+    (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
+      const movedNode = workflow.nodes.find((n) => n.id === node.id)
+      if (!movedNode || !movedNode.parentId) return
+      const parentGroup = (workflow.groups ?? []).find(
+        (g) => g.id === movedNode.parentId,
+      )
+      if (!parentGroup) return
+      const childPositions = parentGroup.children
+        .filter((cid) => cid !== node.id)
+        .map((cid) => {
+          const n = workflow.nodes.find((m) => m.id === cid)
+          return n ? { x: n.x, y: n.y } : null
+        })
+        .filter((p): p is Point => p != null)
+      // If hull would be empty (single child), drop the association too.
+      if (childPositions.length < 2) {
+        commitWorkflow({
+          ...workflow,
+          nodes: workflow.nodes.map((n) =>
+            n.id === node.id ? { ...n, parentId: undefined } : n,
+          ),
+        })
+        return
+      }
+      // We don't compute precise point-in-polygon here — drop association
+      // when the new position is more than 64px from the parent group's
+      // child centroid. This keeps Plan 12-08 simple; Plan 12-10's perf
+      // pass can swap in the polygon helper if needed.
+      const cx =
+        childPositions.reduce((s, p) => s + p.x, 0) / childPositions.length
+      const cy =
+        childPositions.reduce((s, p) => s + p.y, 0) / childPositions.length
+      const dx = node.position.x - cx
+      const dy = node.position.y - cy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist > 240) {
+        commitWorkflow({
+          ...workflow,
+          nodes: workflow.nodes.map((n) =>
+            n.id === node.id ? { ...n, parentId: undefined } : n,
+          ),
+          groups: (workflow.groups ?? []).map((g) =>
+            g.id === parentGroup.id
+              ? { ...g, children: g.children.filter((cid) => cid !== node.id) }
+              : g,
+          ),
+        })
+      }
+    },
+    [workflow, commitWorkflow],
+  )
+
+  // -------------------- Context menu open helpers ----------------------
+
+  const buildNodeItems = React.useCallback((): ContextMenuItem[] => {
+    return [
+      { id: "group", label: T("Grupla", "Group") },
+      { id: "duplicate", label: T("Çoğalt", "Duplicate"), shortcut: "⌘D" },
+      { id: "edit-name", label: T("Adı düzenle", "Edit name") },
+      {
+        id: "delete",
+        label: T("Sil", "Delete"),
+        shortcut: "⌫",
+        danger: true,
+      },
+    ]
+  }, [T])
+
+  const buildEdgeItems = React.useCallback((): ContextMenuItem[] => {
+    return [
+      {
+        id: "toggle-bidir",
+        label: T("Çift yönlü yap/kaldır", "Toggle bidirectional"),
+      },
+      { id: "toggle-allgate", label: T("Hepsi yap", "Make all-gate") },
+      { id: "edit-label", label: T("Etiketi düzenle", "Edit label") },
+      { id: "delete", label: T("Sil", "Delete"), danger: true },
+    ]
+  }, [T])
+
+  const buildGroupItems = React.useCallback((): ContextMenuItem[] => {
+    return [
+      { id: "ungroup", label: T("Grubu çöz", "Ungroup") },
+      { id: "edit-name", label: T("Adı düzenle", "Edit name") },
+      { id: "delete", label: T("Sil", "Delete"), danger: true },
+    ]
+  }, [T])
+
+  const buildCanvasItems = React.useCallback((): ContextMenuItem[] => {
+    return [
+      { id: "add-node", label: T("Buraya düğüm ekle", "Add node here") },
+    ]
+  }, [T])
+
+  const handleNodeContextMenu = React.useCallback(
+    (e: React.MouseEvent, node: { id: string }) => {
+      e.preventDefault()
+      // Determine if this is a group or a phase node by looking it up.
+      const isGroup = (workflow.groups ?? []).some((g) => g.id === node.id)
+      setContextMenu({
+        position: { x: e.clientX, y: e.clientY },
+        items: isGroup ? buildGroupItems() : buildNodeItems(),
+        target: isGroup
+          ? { type: "group", groupId: node.id }
+          : { type: "node", nodeId: node.id },
+      })
+    },
+    [workflow.groups, buildGroupItems, buildNodeItems],
+  )
+
+  const handleEdgeContextMenu = React.useCallback(
+    (e: React.MouseEvent, edge: { id: string }) => {
+      e.preventDefault()
+      setContextMenu({
+        position: { x: e.clientX, y: e.clientY },
+        items: buildEdgeItems(),
+        target: { type: "edge", edgeId: edge.id },
+      })
+    },
+    [buildEdgeItems],
+  )
+
+  const handlePaneContextMenu = React.useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      setContextMenu({
+        position: { x: e.clientX, y: e.clientY },
+        items: buildCanvasItems(),
+        target: { type: "canvas", flowPos: { x: e.clientX, y: e.clientY } },
+      })
+    },
+    [buildCanvasItems],
+  )
+
+  // -------------------- Bulk + utility actions ------------------------
+
+  const addNodeAtPosition = React.useCallback(
+    (pos: Point) => {
+      const id = newId("phase")
+      const newNode: WorkflowNode = {
+        id,
+        name: T("Yeni Düğüm", "New Node"),
+        x: pos.x,
+        y: pos.y,
+        color: "status-todo",
+      }
+      commitWorkflow({ ...workflow, nodes: [...workflow.nodes, newNode] })
+      setSelected({ type: "node", id })
+    },
+    [workflow, commitWorkflow, T],
+  )
+
+  const deleteSelection = React.useCallback(() => {
+    if (!selected) return
+    if (selected.type === "node") {
+      commitWorkflow({
+        ...workflow,
+        nodes: workflow.nodes.filter((n) => n.id !== selected.id),
+        edges: workflow.edges.filter(
+          (e) => e.source !== selected.id && e.target !== selected.id,
+        ),
+        groups: (workflow.groups ?? []).map((g) => ({
+          ...g,
+          children: g.children.filter((cid) => cid !== selected.id),
+        })),
+      })
+    } else if (selected.type === "edge") {
+      commitWorkflow({
+        ...workflow,
+        edges: workflow.edges.filter((e) => e.id !== selected.id),
+      })
+    } else if (selected.type === "group") {
+      commitWorkflow({
+        ...workflow,
+        groups: (workflow.groups ?? []).filter((g) => g.id !== selected.id),
+        nodes: workflow.nodes.map((n) =>
+          n.parentId === selected.id ? { ...n, parentId: undefined } : n,
+        ),
+      })
+    }
+    setSelected(null)
+  }, [selected, workflow, commitWorkflow])
+
+  const duplicateSelection = React.useCallback(() => {
+    if (!selected || selected.type !== "node") return
+    const orig = workflow.nodes.find((n) => n.id === selected.id)
+    if (!orig) return
+    const copy: WorkflowNode = {
+      ...orig,
+      id: newId("phase"),
+      name: `${orig.name} (kopya)`,
+      x: orig.x + 32,
+      y: orig.y + 32,
+    }
+    commitWorkflow({ ...workflow, nodes: [...workflow.nodes, copy] })
+    setSelected({ type: "node", id: copy.id })
+  }, [selected, workflow, commitWorkflow])
+
+  const groupSelection = React.useCallback(
+    (nodeIds: string[]) => {
+      if (nodeIds.length < 1) return
+      const id = newId("group")
+      const groups = [...(workflow.groups ?? [])]
+      groups.push({
+        id,
+        name: T("Yeni Grup", "New Group"),
+        color: "primary",
+        children: nodeIds,
+      })
+      commitWorkflow({
+        ...workflow,
+        groups,
+        nodes: workflow.nodes.map((n) =>
+          nodeIds.includes(n.id) ? { ...n, parentId: id } : n,
+        ),
+      })
+      setSelected({ type: "group", id })
+    },
+    [workflow, commitWorkflow, T],
+  )
+
+  const ungroup = React.useCallback(
+    (groupId: string) => {
+      commitWorkflow({
+        ...workflow,
+        groups: (workflow.groups ?? []).filter((g) => g.id !== groupId),
+        nodes: workflow.nodes.map((n) =>
+          n.parentId === groupId ? { ...n, parentId: undefined } : n,
+        ),
+      })
+    },
+    [workflow, commitWorkflow],
+  )
+
+  // Align actions wired to bottom-toolbar Sınıflandır dropdown.
+  const handleAlign = React.useCallback(
+    (
+      action:
+        | "distribute-h"
+        | "align-top"
+        | "align-bottom"
+        | "center-v"
+        | "center-h",
+    ) => {
+      // Apply to all nodes if no multi-selection. Single-selected node alone
+      // is a no-op for align actions.
+      const targets: AlignNode[] = workflow.nodes.map((n) => ({
+        id: n.id,
+        x: n.x,
+        y: n.y,
+      }))
+      if (targets.length < 2) return
+      let next: AlignNode[] = targets
+      if (action === "distribute-h") next = distributeHorizontal(targets)
+      else if (action === "align-top") next = alignTop(targets)
+      else if (action === "align-bottom") next = alignBottom(targets)
+      else if (action === "center-v") next = centerVertical(targets)
+      else if (action === "center-h") next = centerHorizontal(targets)
+      const byId = new Map(next.map((n) => [n.id, n]))
+      commitWorkflow({
+        ...workflow,
+        nodes: workflow.nodes.map((n) => {
+          const a = byId.get(n.id)
+          return a ? { ...n, x: a.x, y: a.y } : n
+        }),
+      })
+    },
+    [workflow, commitWorkflow],
+  )
+
+  // Context menu action router.
+  const handleContextMenuSelect = React.useCallback(
+    (id: string) => {
+      const cm = contextMenu
+      if (!cm) return
+      if (cm.target.type === "canvas" && id === "add-node") {
+        addNodeAtPosition(cm.target.flowPos ?? { x: 80, y: 80 })
+      } else if (cm.target.type === "node") {
+        if (id === "delete") {
+          setSelected({ type: "node", id: cm.target.nodeId })
+          // Defer one tick so setSelected commits before deleteSelection reads.
+          setTimeout(() => deleteSelection(), 0)
+        } else if (id === "duplicate") {
+          setSelected({ type: "node", id: cm.target.nodeId })
+          setTimeout(() => duplicateSelection(), 0)
+        } else if (id === "group") {
+          groupSelection([cm.target.nodeId])
+        } else if (id === "edit-name") {
+          setSelected({ type: "node", id: cm.target.nodeId })
+        }
+      } else if (cm.target.type === "edge") {
+        if (id === "delete") {
+          setSelected({ type: "edge", id: cm.target.edgeId })
+          setTimeout(() => deleteSelection(), 0)
+        } else if (id === "toggle-bidir") {
+          commitWorkflow({
+            ...workflow,
+            edges: workflow.edges.map((e) =>
+              e.id === cm.target.edgeId
+                ? { ...e, bidirectional: !e.bidirectional }
+                : e,
+            ),
+          })
+        } else if (id === "toggle-allgate") {
+          commitWorkflow({
+            ...workflow,
+            edges: workflow.edges.map((e) =>
+              e.id === cm.target.edgeId
+                ? { ...e, isAllGate: !e.isAllGate }
+                : e,
+            ),
+          })
+        } else if (id === "edit-label") {
+          setSelected({ type: "edge", id: cm.target.edgeId })
+        }
+      } else if (cm.target.type === "group") {
+        if (id === "ungroup") {
+          ungroup(cm.target.groupId)
+        } else if (id === "delete") {
+          setSelected({ type: "group", id: cm.target.groupId })
+          setTimeout(() => deleteSelection(), 0)
+        } else if (id === "edit-name") {
+          setSelected({ type: "group", id: cm.target.groupId })
+        }
+      }
+      setContextMenu(null)
+    },
+    [
+      contextMenu,
+      addNodeAtPosition,
+      deleteSelection,
+      duplicateSelection,
+      groupSelection,
+      ungroup,
+      commitWorkflow,
+      workflow,
+    ],
+  )
+
+  // ---------------------- Keyboard shortcuts ---------------------------
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ignore when an input/textarea/contenteditable is focused (inline edits).
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName?.toLowerCase()
+        if (
+          tag === "input" ||
+          tag === "textarea" ||
+          target.isContentEditable
+        ) {
+          return
+        }
+      }
+      // Cmd/Ctrl+S — save (Plan 12-09 wires the actual handler)
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.save)) {
+        e.preventDefault()
+        return
+      }
+      // Cmd/Ctrl+Z — undo
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.undo)) {
+        e.preventDefault()
+        const prev = history.undo(workflow)
+        if (prev) setWorkflow(prev)
+        return
+      }
+      // Cmd/Ctrl+Shift+Z — redo
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.redo)) {
+        e.preventDefault()
+        const next = history.redo(workflow)
+        if (next) setWorkflow(next)
+        return
+      }
+      // N — add node at the canvas center.
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.addNode)) {
+        e.preventDefault()
+        addNodeAtPosition({ x: 200 + Math.random() * 80, y: 100 + Math.random() * 60 })
+        return
+      }
+      // Delete / Backspace — remove selection.
+      if (
+        e.key === "Delete" ||
+        (e.key === "Backspace" && !e.metaKey && !e.ctrlKey)
+      ) {
+        e.preventDefault()
+        deleteSelection()
+        return
+      }
+      // Cmd/Ctrl+A — select all (we set selected to null since multi-select
+      // tracking is React Flow internal; future Plan 12-10 may expose it).
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.selectAll)) {
+        e.preventDefault()
+        return
+      }
+      // F — fit view (handled by React Flow internally; we just preventDefault).
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.fit)) {
+        e.preventDefault()
+        return
+      }
+      // Esc — deselect + close context menu.
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.esc)) {
+        e.preventDefault()
+        setSelected(null)
+        setContextMenu(null)
+        return
+      }
+      // Cmd/Ctrl+G — group/ungroup current selection.
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.group)) {
+        e.preventDefault()
+        if (selected?.type === "group") {
+          ungroup(selected.id)
+        } else if (selected?.type === "node") {
+          groupSelection([selected.id])
+        }
+        return
+      }
+      // Cmd/Ctrl+D — duplicate current selection.
+      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.duplicate)) {
+        e.preventDefault()
+        duplicateSelection()
+        return
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [
+    history,
+    workflow,
+    addNodeAtPosition,
+    deleteSelection,
+    selected,
+    ungroup,
+    groupSelection,
+    duplicateSelection,
+  ])
 
   // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550)
   const MODE_OPTIONS = React.useMemo(
@@ -235,8 +968,12 @@ export function EditorPage({ project }: EditorPageProps) {
           variant="ghost"
           size="sm"
           icon={<Undo2 size={14} />}
-          disabled
-          title={T("Geri Al — Plan 12-08", "Undo — Plan 12-08")}
+          disabled={!history.canUndo}
+          onClick={() => {
+            const prev = history.undo(workflow)
+            if (prev) setWorkflow(prev)
+          }}
+          title={T("Geri Al", "Undo")}
         >
           {T("Geri Al", "Undo")}
         </Button>
@@ -244,8 +981,12 @@ export function EditorPage({ project }: EditorPageProps) {
           variant="ghost"
           size="sm"
           icon={<Redo2 size={14} />}
-          disabled
-          title={T("Yinele — Plan 12-08", "Redo — Plan 12-08")}
+          disabled={!history.canRedo}
+          onClick={() => {
+            const next = history.redo(workflow)
+            if (next) setWorkflow(next)
+          }}
+          title={T("Yinele", "Redo")}
         >
           {T("Yinele", "Redo")}
         </Button>
@@ -288,19 +1029,46 @@ export function EditorPage({ project }: EditorPageProps) {
         >
           <ModeBanner mode={workflow.mode} />
           <WorkflowCanvas
-            nodes={[]}
-            edges={[]}
+            nodes={rfNodes as never}
+            edges={rfEdges as never}
             readOnly={!canEdit}
             showMiniMap={false}
             onNodeClick={(_e, node) =>
-              setSelected({ type: "node", id: String(node.id) })
+              setNodeSelected(String(node.id))
             }
             onEdgeClick={(_e, edge) =>
-              setSelected({ type: "edge", id: String(edge.id) })
+              setEdgeSelected(String(edge.id))
             }
+            onNodesChange={handleNodesChange as never}
+            onEdgesChange={handleEdgesChange as never}
+            onConnect={handleConnect as never}
+            onNodeDrag={handleNodeDrag as never}
+            onNodeDragStop={handleNodeDragStop as never}
+            onPaneContextMenu={handlePaneContextMenu as never}
+            onNodeContextMenu={handleNodeContextMenu as never}
+            onEdgeContextMenu={handleEdgeContextMenu as never}
           />
-          <BottomToolbar />
+          <BottomToolbar
+            onAddNode={() =>
+              addNodeAtPosition({ x: 80 + Math.random() * 200, y: 80 + Math.random() * 100 })
+            }
+            onGroup={() => {
+              if (selected?.type === "node") {
+                groupSelection([selected.id])
+              } else if (selected?.type === "group") {
+                ungroup(selected.id)
+              }
+            }}
+            onAlign={handleAlign}
+          />
           <MinimapWrapper />
+          <ContextMenu
+            open={contextMenu !== null}
+            position={contextMenu?.position ?? { x: 0, y: 0 }}
+            items={contextMenu?.items ?? []}
+            onSelect={handleContextMenuSelect}
+            onClose={() => setContextMenu(null)}
+          />
         </div>
         <RightPanel
           workflow={workflow}

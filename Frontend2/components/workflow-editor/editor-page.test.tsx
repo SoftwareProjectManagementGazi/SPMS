@@ -30,6 +30,13 @@ vi.mock("@/hooks/use-transition-authority", () => ({
     mockUseTransitionAuthority(...args),
 }))
 
+// useCycleCounters mock — Plan 12-08 wires this into EditorPage; tests do
+// NOT mount QueryClientProvider so the underlying useQuery would throw.
+vi.mock("@/hooks/use-cycle-counters", () => ({
+  useCycleCounters: () => ({ data: new Map<string, number>() }),
+  buildCycleMap: () => new Map<string, number>(),
+}))
+
 // React Flow stubs to avoid jsdom layout failures.
 vi.mock("@xyflow/react", () => ({
   ReactFlow: ({ children }: { children?: React.ReactNode }) => (
