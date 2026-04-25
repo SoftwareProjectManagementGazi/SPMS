@@ -194,7 +194,6 @@ export function DependenciesSection({
   return (
     <Section
       title={lang === "tr" ? "Bağımlılıklar" : "Dependencies"}
-      style={{ marginTop: 20 }}
     >
       <Card padding={0}>
         {deps.length === 0 ? (

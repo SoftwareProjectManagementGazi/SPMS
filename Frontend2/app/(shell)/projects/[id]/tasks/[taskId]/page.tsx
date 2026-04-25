@@ -218,30 +218,35 @@ export default function TaskDetailPage() {
           <SubTasksList parent={task} subtasks={subtasks} />
         )}
 
-        {/* Activity (D-47) — Yorumlar + Geçmiş sub-tabs.
-            Members placeholder: Phase 11 does not add GET /projects/{id}/members;
-            the project manager is the only member available from the existing
-            project DTO. Extending the member pool belongs to a later plan. */}
+        {/* Attachments (D-48) — moved above Activity per UAT round 7 so
+            evidence sits with the work and the conversation thread stays
+            anchored at the bottom. Drag-drop + file list + link references. */}
+        <AttachmentsSection taskId={task.id} />
+
+        {/* Activity (D-47) — pinned to the bottom of the main column per
+            UAT request: comments are the long-lived, scroll-heavy thread,
+            so they live below the static evidence (description / sub-tasks
+            / attachments). Members placeholder: Phase 11 does not add
+            GET /projects/{id}/members; the project manager is the only
+            member available from the existing project DTO. */}
         <ActivitySection
           taskId={task.id}
           project={project}
           projectMembers={projectMembers}
         />
-
-        {/* Attachments (D-48) — drag-drop + file list + link references */}
-        <AttachmentsSection taskId={task.id} />
-
-        {/* Dependencies (D-49) — type select + task picker + list + navigate */}
-        <DependenciesSection taskId={task.id} projectId={project.id} />
       </div>
 
-      {/* Right column — Properties sidebar (D-38 + TASK-04) */}
-      <div>
+      {/* Right column — Properties sidebar (D-38 + TASK-04) + Dependencies
+          (D-49) underneath. Dependencies were moved from the main column
+          per UAT round 7 — they're more useful as a sticky sidebar reference
+          than scattered between attachments and the comment thread. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <PropertiesSidebar
           task={task}
           project={project}
           subtasks={subtasks}
         />
+        <DependenciesSection taskId={task.id} projectId={project.id} />
       </div>
     </div>
   )
