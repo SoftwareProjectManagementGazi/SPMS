@@ -92,7 +92,7 @@ export function PhaseStepper({ project, subtasks }: PhaseStepperProps) {
                 background: isMax ? "var(--primary)" : "var(--surface-2)",
                 color: isMax ? "var(--primary-fg)" : "var(--fg-muted)",
                 boxShadow: isMax
-                  ? "0 1px 3px oklch(0.60 0.17 40 / 0.3)"
+                  ? "0 1px 3px color-mix(in oklch, var(--primary) 30%, transparent)"
                   : "inset 0 0 0 1px var(--border)",
                 fontSize: 11,
                 fontWeight: 600,

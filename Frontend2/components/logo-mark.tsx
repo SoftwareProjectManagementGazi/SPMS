@@ -10,9 +10,9 @@ export function LogoMark({ size = 22 }: LogoMarkProps) {
       style={{
         width: size,
         height: size,
-        borderRadius: 6,
+        borderRadius: "var(--radius-sm)",
         background: "var(--primary)",
-        color: "#fff",
+        color: "var(--primary-fg)",
         fontWeight: 700,
         fontSize: size * 0.55,
         display: "flex",

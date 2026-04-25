@@ -35,7 +35,7 @@ export function Avatar({
         height: size,
         borderRadius: "50%",
         background: `var(--av-${user.avColor || 1})`,
-        color: "#fff",
+        color: "var(--primary-fg)",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",

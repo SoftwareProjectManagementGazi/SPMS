@@ -673,7 +673,7 @@ function AppearanceSection() {
             style={{
               padding: "12px 16px", borderRadius: 10,
               background: `oklch(${localLight} ${localChroma} ${localHue})`,
-              color: localLight < 0.55 ? "#fff" : "#111",
+              color: localLight < 0.55 ? "var(--primary-fg)" : "var(--fg)",
               fontSize: 13, fontWeight: 600,
             }}
           >

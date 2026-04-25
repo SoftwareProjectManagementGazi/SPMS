@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { Folder, CheckSquare, CircleCheck, AlertTriangle } from "lucide-react"
 import { useProjects, useGlobalActivity, useTaskStats } from "@/hooks/use-projects"
 import { useAuth } from "@/context/auth-context"
 import { useApp } from "@/context/app-context"
@@ -7,7 +8,7 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { PortfolioTable } from "@/components/dashboard/portfolio-table"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { MethodologyCard } from "@/components/dashboard/methodology-card"
-import { Card } from "@/components/primitives"
+import { Card, SegmentedControl } from "@/components/primitives"
 import type { ActivityItem } from "@/components/dashboard/activity-feed"
 import { MyTasksExperience } from "@/components/my-tasks/my-tasks-experience"
 
@@ -80,7 +81,7 @@ export default function DashboardPage() {
         gap: 20,
       }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: -0.6 }}>
+          <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: -0.6 }}>
             {language === "tr" ? `Merhaba, ${firstName}` : `Welcome back, ${firstName}`}
           </div>
           <div style={{ color: "var(--fg-muted)", fontSize: 13, marginTop: 4 }}>
@@ -88,45 +89,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Manager/Member view toggle */}
-        <div style={{
-          display: "inline-flex",
-          background: "var(--surface-2)",
-          borderRadius: "var(--radius-sm)",
-          padding: 3,
-          gap: 2,
-          boxShadow: "inset 0 0 0 1px var(--border)",
-        }}>
-          {(["manager", "member"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              style={{
-                padding: "5px 12px",
-                borderRadius: 6,
-                fontSize: 12.5,
-                fontWeight: 600,
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                background: view === v ? "var(--surface)" : "transparent",
-                color: view === v ? "var(--fg)" : "var(--fg-muted)",
-                boxShadow:
-                  view === v
-                    ? "0 1px 2px oklch(0 0 0 / 0.05), inset 0 0 0 1px var(--border)"
-                    : "none",
-              }}
-            >
-              {v === "manager"
-                ? language === "tr"
-                  ? "Yönetim"
-                  : "Management"
-                : language === "tr"
-                  ? "Benim İşim"
-                  : "My Work"}
-            </button>
-          ))}
-        </div>
+        {/* Manager/Member view toggle (UI-sweep: hand-rolled SegmentedPills replaced with primitive) */}
+        <SegmentedControl
+          options={[
+            {
+              id: "manager",
+              label: language === "tr" ? "Yönetim" : "Management",
+            },
+            {
+              id: "member",
+              label: language === "tr" ? "Benim İşim" : "My Work",
+            },
+          ]}
+          value={view}
+          onChange={(id) => setView(id as "manager" | "member")}
+        />
       </div>
 
       {view === "manager" ? (
@@ -138,21 +115,21 @@ export default function DashboardPage() {
               value={projectsLoading ? "—" : String(allProjects.length)}
               tone="primary"
               delta={language === "tr" ? "toplam" : "total"}
-              icon={<span style={{ fontSize: 14 }}>📋</span>}
+              icon={<Folder size={14} />}
             />
             <StatCard
               label={language === "tr" ? "Aktif Proje" : "Active"}
               value={projectsLoading ? "—" : String(activeProjects.length)}
               tone="success"
               delta={language === "tr" ? "aktif" : "active"}
-              icon={<span style={{ fontSize: 14 }}>✓</span>}
+              icon={<CheckSquare size={14} />}
             />
             <StatCard
               label={language === "tr" ? "Tamamlanan" : "Completed"}
               value={projectsLoading ? "—" : String(completedCount)}
               tone="info"
               delta={language === "tr" ? "bu dönem" : "this period"}
-              icon={<span style={{ fontSize: 14 }}>🏆</span>}
+              icon={<CircleCheck size={14} />}
             />
             {/* StatCard 4: task stats from GET /tasks — D-26 requirement */}
             <StatCard
@@ -170,7 +147,7 @@ export default function DashboardPage() {
                     : `${taskStats.done} done`
                   : undefined
               }
-              icon={<span style={{ fontSize: 14 }}>📌</span>}
+              icon={<AlertTriangle size={14} />}
             />
           </div>
 

@@ -37,7 +37,7 @@ const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
     background: "var(--primary)",
     color: "var(--primary-fg)",
     boxShadow:
-      "0 2px 4px oklch(0.60 0.17 40 / 0.24), 0 1px 2px oklch(0 0 0 / 0.08), var(--inset-primary-top), var(--inset-primary-bottom)",
+      "0 2px 4px color-mix(in oklch, var(--primary) 24%, transparent), 0 1px 2px oklch(0 0 0 / 0.08), var(--inset-primary-top), var(--inset-primary-bottom)",
   },
   secondary: {
     background: "var(--surface)",
@@ -57,9 +57,9 @@ const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
   },
   danger: {
     background: "var(--priority-critical)",
-    color: "#fff",
+    color: "var(--primary-fg)",
     boxShadow:
-      "0 2px 4px oklch(0.58 0.22 25 / 0.26), var(--inset-top), var(--inset-primary-bottom)",
+      "0 2px 4px color-mix(in oklch, var(--priority-critical) 26%, transparent), var(--inset-top), var(--inset-primary-bottom)",
   },
 }
 

@@ -78,7 +78,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
           fontSize: 12.5,
           color: "var(--fg-subtle)",
         }}>
-          Henüz aktivite yok.
+          {language === "tr" ? "Henüz aktivite yok." : "No activity yet."}
         </div>
       ) : (
         <div

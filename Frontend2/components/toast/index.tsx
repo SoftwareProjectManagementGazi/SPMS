@@ -20,19 +20,20 @@ export function useToast() {
   return ctx
 }
 
-// Error toasts are intentionally theme-independent: fixed alert red on white
-// text so permission-denial and failure messages read the same in light and
-// dark themes. Other variants stay theme-aware by design.
+// All toast variants are theme-aware via --priority-critical/--status-* tokens
+// (UI-sweep: error toast no longer hard-codes #dc2626/#ffffff — it now sits in
+// the same Terracotta/violet palette as the rest of the chrome and uses
+// --priority-critical for the destructive intent).
 const TOAST_BG: Record<Toast['variant'], string> = {
   success: "color-mix(in oklch, var(--status-done) 10%, var(--surface))",
-  error: "#dc2626",
+  error: "color-mix(in oklch, var(--priority-critical) 90%, var(--surface))",
   warning: "color-mix(in oklch, var(--status-review) 10%, var(--surface))",
   info: "color-mix(in oklch, var(--status-progress) 10%, var(--surface))",
 }
 
 const TOAST_COLOR: Record<Toast['variant'], string> = {
   success: "var(--status-done)",
-  error: "#ffffff",
+  error: "var(--primary-fg)",
   warning: "var(--status-review)",
   info: "var(--status-progress)",
 }

@@ -41,7 +41,7 @@ export function StatCard({ label, value, delta, tone, icon }: StatCardProps) {
             {label}
           </div>
           <div style={{
-            fontSize: 28,
+            fontSize: 20,
             fontWeight: 600,
             letterSpacing: -0.8,
             marginTop: 6,

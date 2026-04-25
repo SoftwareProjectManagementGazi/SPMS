@@ -181,12 +181,12 @@ export default function LoginPage() {
               <div
                 style={{
                   fontSize: 13,
-                  color: "var(--danger, #e53e3e)",
+                  color: "var(--priority-critical)",
                   marginBottom: 14,
                   padding: "8px 12px",
-                  background: "color-mix(in oklch, var(--danger, #e53e3e) 10%, var(--surface))",
-                  borderRadius: 6,
-                  border: "1px solid color-mix(in oklch, var(--danger, #e53e3e) 30%, transparent)",
+                  background: "color-mix(in oklch, var(--priority-critical) 10%, var(--surface))",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid color-mix(in oklch, var(--priority-critical) 30%, transparent)",
                 }}
               >
                 {error}

@@ -64,7 +64,10 @@ export function Toggle({
           width: d,
           height: d,
           borderRadius: "50%",
-          background: "#fff",
+          // Knob is intentionally fixed-white (oklch(1 0 0)) so it reads as a knob
+          // on BOTH light and dark backgrounds; --primary-fg flips per mode and
+          // would tint with the surface in dark, defeating the knob affordance.
+          background: "oklch(1 0 0)",
           position: "absolute",
           top: offset,
           left: on ? w - d - offset : offset,
