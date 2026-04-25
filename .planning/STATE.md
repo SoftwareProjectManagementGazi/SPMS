@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-01 complete
-last_updated: "2026-04-25T13:45:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-01 complete (Wave 0 infrastructure shipped)
+stopped_at: Phase 12 Plan 12-02 complete
+last_updated: "2026-04-25T13:52:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-02 complete (LIFE-02 Phase Gate inline expand + LIFE-03 Phase-Gate side shipped)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 35
-  percent: 80
+  completed_plans: 36
+  percent: 82
 ---
 
 # Project State
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 2 of 10 (12-01 complete)
+Plan: 3 of 10 (12-02 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-01 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-02 complete
 
 Progress: [██████████] 100%
 
@@ -90,6 +90,7 @@ Progress: [██████████] 100%
 | Phase 11 P07 | 15 min | 2 tasks | 7 files |
 | Phase 11 P10 | 8min | 2 tasks | 13 files |
 | Phase 12 P01 | 18min | 3 tasks | 47 files |
+| Phase 12 P02 | 12min | 2 tasks | 8 files  |
 
 ## Accumulated Context
 
@@ -247,6 +248,16 @@ Key constraints for v2.0:
 - [12-01] Module-top NODE_TYPES + EDGE_TYPES constants in workflow-canvas-inner.tsx (Pitfall 1 — verified by node:fs source-position assertion test)
 - [12-01] PhaseNode handles use visibility:hidden NOT display:none (Pitfall 4) so React Flow can still hit-test on hover
 - [12-01] CycleCounterBadge returns null when count < 2 (Pitfall 16 — DOM-absent under threshold so single-cycle Scrum/Waterfall projects stay clean)
+- [12-02] PhaseGateExpand uses usePhaseTransition hook from Plan 12-01 — Idempotency-Key state lives in the hook, reused across mutation.mutate calls within a panel-open session, fresh UUID on remount. Verified by RTL Test 7 (3 retries with sequential UUID mock all share uuid-1) + Test 8 (unmount+remount produces uuid-1 then uuid-2)
+- [12-02] 5-error matrix CONTEXT D-41 implemented inline in phase-gate-expand.tsx onError handler: 409 → AlertBanner warning + Tekrar Dene button (re-fires same key); 422 → AlertBanner danger + per-criterion <ul> from response unmet[]; 429 → countdown toast + submit disabled until decrement past 0; 400 → safety-net banner; network → error toast
+- [12-02] LIFE-03 Phase-Gate side: phaseStats.total === 0 → auto-criteria render Uygulanamaz prefix + grey Circle + info AlertBanner above panel. Submit accepts manual+note only when zero-task. MiniMetric --- mono-zero summary-strip rendering deferred to Plan 12-04
+- [12-02] Override flow CONTEXT D-39: sequential-locked + unmet → checkbox visible → primary button relabels Zorla Geç (variant=danger) + DTO carries allow_override:true. Audit override_used logged backend-side
+- [12-02] No backend DTO adaptation needed for exceptions[] — Phase 9 D-04 PhaseTransitionDTO already accepts default_action + exceptions[] + allow_override + note
+- [12-02] Mode-chip localization via two MODE_LABEL_TR + MODE_LABEL_EN Records<WorkflowMode,string> in summary-strip.tsx (kept co-located; lift into lib/methodology-matrix.ts only when a second consumer needs them)
+- [12-02] LifecycleTab synthesizes empty phaseTransitions[] for BFS. Live transitions wire-up lands in Plan 12-04 (useLifecycleProject composite hook). BFS gracefully falls back to first-isInitial=active when transitions empty
+- [12-02] lifecycle-stub-tab.tsx kept as 3-line re-export of LifecycleTab — avoids breaking out-of-tree consumers; orderly Phase 13 cleanup deferred
+- [12-02] project-detail-shell.test.tsx mocks next/navigation (useRouter/usePathname/useSearchParams) so SummaryStrip's useRouter().push works under jsdom; existing useToast/useApp providers come from renderWithProviders
+- [12-02] Test 4 (429 countdown) does NOT use vi.useFakeTimers — fake timers + userEvent + TanStack mutations create ordering issues. Test asserts (a) toast fired with "saniye bekleyin" message and (b) submit disabled while countdown active
 
 ### Pending Todos
 
@@ -267,12 +278,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T13:45:00Z
-Stopped at: Phase 12 Plan 12-01 complete
+Last session: 2026-04-25T13:52:00Z
+Stopped at: Phase 12 Plan 12-02 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-02 — Lifecycle Tab shell + summary strip (LIFE-02 read-only canvas consumer)
+**Next Plan:** 12-03 — TBD per Phase 12 plan list
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25

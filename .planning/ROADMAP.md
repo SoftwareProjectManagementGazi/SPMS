@@ -147,7 +147,7 @@ Plans:
 **Plans**: 10 plans
 Plans:
 - [x] 12-01-PLAN.md — Wave 0 shared infra: @xyflow/react@12.10.2 pinned + 5 pure-logic libs (graph-traversal/workflow-validators/cloud-hull/align-helpers/shortcuts) + 6 services + 9 hooks + 8 React Flow renderers (read-only operational) + RTL setup (completed 2026-04-25, 18 min, 3 tasks, 47 files)
-- [ ] 12-02-PLAN.md — Phase Gate inline expand + summary-strip + LifecycleTab outer shell (replaces lifecycle-stub-tab) — LIFE-02 with Idempotency-Key reuse + 5-error matrix + override flow
+- [x] 12-02-PLAN.md — Phase Gate inline expand + summary-strip + LifecycleTab outer shell (replaces lifecycle-stub-tab) — LIFE-02 with Idempotency-Key reuse + 5-error matrix + override flow + LIFE-03 Phase-Gate side (completed 2026-04-25, 12 min, 2 tasks, 8 files)
 - [ ] 12-03-PLAN.md — Settings > Yaşam Döngüsü criteria editor panel + enable_phase_assignment toggle + methodology read-only field per D-60 — LIFE-01
 - [ ] 12-04-PLAN.md — Lifecycle Tabs primitive + Overview sub-tab (4 MiniMetric default / 3-metric Kanban / `---` zero-task) + History sub-tab (lazy-fetch Collapsible) + MTTaskRow compact prop — LIFE-03 + LIFE-04
 - [ ] 12-05-PLAN.md — Milestones sub-tab (CRUD + chip picker + ConfirmDialog) + Timeline Gantt vertical flag lines + popover — LIFE-05
