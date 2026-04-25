@@ -123,44 +123,61 @@ export function MyTasksExperience({
   // already filters tasks by project — exposing the saved-views row would let
   // the user filter to "Bugün" inside a card scoped to one project, which
   // doesn't make sense.
-  const [view, setView] = React.useState<ViewId>(() =>
-    compact ? "all" : loadLS<ViewId>("mt.view", defaultView)
+  //
+  // Hydration safety: every preference state ALSO has a localStorage source.
+  // Calling `loadLS` inside the useState lazy initializer would return the
+  // default on the server (where window is undefined) and the stored value
+  // on the client, producing a hydration mismatch on the very first paint
+  // for any user who has changed a preference. Instead we render the
+  // defaults on first paint AND on the server, then `useEffect` swaps in
+  // the stored values after mount via `setStateFromLS`. The `hydrated` ref
+  // gates the persist effects so the post-mount load doesn't immediately
+  // overwrite the very value it just read.
+  const [view, setView] = React.useState<ViewId>(
+    compact ? "all" : defaultView
   )
-  const [groupBy, setGroupBy] = React.useState<GroupBy>(() =>
-    loadLS<GroupBy>(`mt.groupBy.${lsSuffix}`, defaultGroupBy)
-  )
+  const [groupBy, setGroupBy] = React.useState<GroupBy>(defaultGroupBy)
   const [search, setSearch] = React.useState("")
-  const [priFilter, setPriFilter] = React.useState<Priority[]>(() =>
-    loadLS<Priority[]>("mt.priFilter", [])
-  )
-  const [density, setDensity] = React.useState<MTDensityKind>(() =>
-    loadLS<MTDensityKind>("mt.density", "cozy")
-  )
-  const [sort, setSort] = React.useState<SortKey>(() =>
-    loadLS<SortKey>("mt.sort", "smart")
-  )
-  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>(
-    () => loadLS<Record<string, boolean>>(`mt.collapsed.${lsSuffix}`, {})
-  )
+  const [priFilter, setPriFilter] = React.useState<Priority[]>([])
+  const [density, setDensity] = React.useState<MTDensityKind>("cozy")
+  const [sort, setSort] = React.useState<SortKey>("smart")
+  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
+  const hydrated = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!compact) setView(loadLS<ViewId>("mt.view", defaultView))
+    setGroupBy(loadLS<GroupBy>(`mt.groupBy.${lsSuffix}`, defaultGroupBy))
+    setPriFilter(loadLS<Priority[]>("mt.priFilter", []))
+    setDensity(loadLS<MTDensityKind>("mt.density", "cozy"))
+    setSort(loadLS<SortKey>("mt.sort", "smart"))
+    setCollapsed(loadLS<Record<string, boolean>>(`mt.collapsed.${lsSuffix}`, {}))
+    hydrated.current = true
+    // Mount-only — `lsSuffix`, `defaultGroupBy`, `defaultView`, `compact` are
+    // stable for the lifetime of a single MyTasksExperience instance, so we
+    // intentionally don't depend on them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Persist on change (skip view in compact mode — the value is forced).
+  // The `hydrated` gate prevents the post-mount load effect from triggering
+  // a clobbering write back with the same value (still a write, but harmless).
   React.useEffect(() => {
-    if (!compact) saveLS("mt.view", view)
+    if (hydrated.current && !compact) saveLS("mt.view", view)
   }, [view, compact])
   React.useEffect(() => {
-    saveLS(`mt.groupBy.${lsSuffix}`, groupBy)
+    if (hydrated.current) saveLS(`mt.groupBy.${lsSuffix}`, groupBy)
   }, [groupBy, lsSuffix])
   React.useEffect(() => {
-    saveLS("mt.priFilter", priFilter)
+    if (hydrated.current) saveLS("mt.priFilter", priFilter)
   }, [priFilter])
   React.useEffect(() => {
-    saveLS("mt.density", density)
+    if (hydrated.current) saveLS("mt.density", density)
   }, [density])
   React.useEffect(() => {
-    saveLS("mt.sort", sort)
+    if (hydrated.current) saveLS("mt.sort", sort)
   }, [sort])
   React.useEffect(() => {
-    saveLS(`mt.collapsed.${lsSuffix}`, collapsed)
+    if (hydrated.current) saveLS(`mt.collapsed.${lsSuffix}`, collapsed)
   }, [collapsed, lsSuffix])
 
   const projectsByKey = React.useMemo(() => {
