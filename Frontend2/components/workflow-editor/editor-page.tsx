@@ -33,7 +33,7 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Copy, Save, Undo2, Redo2 } from "lucide-react"
+import { ArrowLeft, Save, Undo2, Redo2 } from "lucide-react"
 
 import {
   AlertBanner,
@@ -1151,15 +1151,6 @@ export function EditorPage({ project }: EditorPageProps) {
             onClick={() => safePush(`/projects/${project.id}`)}
           >
             {T("Geri", "Back")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Copy size={14} />}
-            disabled
-            title={T("Çoğalt — yakında", "Duplicate — soon")}
-          >
-            {T("Çoğalt", "Duplicate")}
           </Button>
           <Tooltip
             text={
