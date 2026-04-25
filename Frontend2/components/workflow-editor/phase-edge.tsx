@@ -177,7 +177,7 @@ function PhaseEdgeImpl({
                 color: "var(--fg)",
                 padding: "1px 6px",
                 borderRadius: 999,
-                fontSize: 10.5,
+                fontSize: 10,
                 border: 0,
                 // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
                 boxShadow: "inset 0 0 0 1px var(--primary)",
@@ -192,7 +192,7 @@ function PhaseEdgeImpl({
                 background: "var(--surface)",
                 padding: "1px 6px",
                 borderRadius: 999,
-                fontSize: 10.5,
+                fontSize: 10,
                 color: "var(--fg-muted)",
                 boxShadow: "inset 0 0 0 1px var(--border)",
                 whiteSpace: "nowrap",
