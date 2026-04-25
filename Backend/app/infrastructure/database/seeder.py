@@ -97,6 +97,137 @@ PARENT_TASK_TEMPLATES = [
 
 SUBTASK_PREFIXES = ["Analiz", "Tasarım", "Geliştirme", "Unit Test", "Entegrasyon", "Code Review", "Bug Fix"]
 
+# Phase 12 Plan 12-10 (LIFE-01 fix) — default workflow shapes per methodology
+# so a freshly-seeded project never lands with an empty `process_config.workflow`.
+# Each shape ports the canonical preset from
+# Frontend2/lib/lifecycle/presets.ts (which itself ports from
+# New_Frontend/src/data.jsx DEFAULT_LIFECYCLES + EXTRA_LIFECYCLES) so the
+# Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip both
+# render a real workflow on day-zero. Each shape satisfies the FE
+# validateWorkflow() contract (>=1 isInitial, >=1 isFinal, valid edges,
+# orphan-free).
+#
+# `name` is the canonical FE field; `label` is preserved for the legacy
+# WorkflowConfigDTO mapper (mapWorkflowNode reads `name` first). Keys use
+# snake_case at the JSONB boundary (is_initial/is_final) per Pitfall 21.
+
+_DEFAULT_WORKFLOW_SCRUM = {
+    "mode": "flexible",
+    "nodes": [
+        {"id": "n1", "name": "Başlatma", "description": "Vizyon ve hedefler",
+         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
+        {"id": "n2", "name": "Planlama", "description": "Backlog ve sprint planning",
+         "x": 280, "y": 120, "color": "status-todo"},
+        {"id": "n3", "name": "Yürütme", "description": "Sprint'ler",
+         "x": 500, "y": 120, "color": "status-progress"},
+        {"id": "n4", "name": "İzleme", "description": "Metrikler ve retro",
+         "x": 720, "y": 120, "color": "status-review"},
+        {"id": "n5", "name": "Kapanış", "description": "Teslim ve ders",
+         "x": 940, "y": 120, "color": "status-done", "is_final": True},
+    ],
+    "edges": [
+        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e4", "source": "n4", "target": "n3", "type": "feedback",
+         "label": "Retro", "bidirectional": False, "is_all_gate": False},
+        {"id": "e5", "source": "n4", "target": "n5", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+    ],
+    "groups": [],
+}
+
+_DEFAULT_WORKFLOW_WATERFALL = {
+    "mode": "sequential-locked",
+    "nodes": [
+        {"id": "n1", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
+         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
+        {"id": "n2", "name": "Tasarım", "description": "Mimari ve UI",
+         "x": 280, "y": 120, "color": "status-progress"},
+        {"id": "n3", "name": "Uygulama", "description": "Geliştirme",
+         "x": 500, "y": 120, "color": "status-progress"},
+        {"id": "n4", "name": "Test", "description": "QA ve UAT",
+         "x": 720, "y": 120, "color": "status-review"},
+        {"id": "n5", "name": "Yayın", "description": "Dağıtım",
+         "x": 940, "y": 120, "color": "status-done"},
+        {"id": "n6", "name": "Bakım", "description": "Destek",
+         "x": 1160, "y": 120, "color": "status-done", "is_final": True},
+    ],
+    "edges": [
+        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e4", "source": "n4", "target": "n5", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e5", "source": "n5", "target": "n6", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+    ],
+    "groups": [],
+}
+
+_DEFAULT_WORKFLOW_KANBAN = {
+    "mode": "continuous",
+    "nodes": [
+        # Continuous mode requires a single node that is both initial and final.
+        {"id": "n1", "name": "Sürekli Akış", "description": "Tek aktif faz",
+         "x": 400, "y": 120, "color": "status-progress",
+         "is_initial": True, "is_final": True},
+    ],
+    "edges": [],
+    "groups": [],
+}
+
+_DEFAULT_WORKFLOW_ITERATIVE = {
+    "mode": "flexible",
+    "nodes": [
+        {"id": "n1", "name": "Planlama", "description": "Hedef belirleme",
+         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
+        {"id": "n2", "name": "Tasarım", "description": "Yineleme tasarımı",
+         "x": 260, "y": 120, "color": "status-progress"},
+        {"id": "n3", "name": "Uygulama", "description": "Geliştirme ve test",
+         "x": 460, "y": 120, "color": "status-progress"},
+        {"id": "n4", "name": "Değerlendirme", "description": "İnceleme ve karar",
+         "x": 660, "y": 120, "color": "status-done", "is_final": True},
+    ],
+    "edges": [
+        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+         "label": None, "bidirectional": False, "is_all_gate": False},
+        {"id": "e4", "source": "n4", "target": "n1", "type": "feedback",
+         "label": "Yeni iterasyon", "bidirectional": False, "is_all_gate": False},
+    ],
+    "groups": [],
+}
+
+
+def _default_workflow_for_methodology(methodology: Methodology) -> dict:
+    """Return a ready-to-use workflow shape (LIFE-01 fix).
+
+    Maps the project's `methodology` enum to the canonical FE preset shape so
+    the Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip
+    have a real workflow to render on day-zero. The returned dict is a deep
+    copy so callers can mutate it without affecting the module-level fixture.
+    """
+    import copy
+    if methodology == Methodology.WATERFALL:
+        return copy.deepcopy(_DEFAULT_WORKFLOW_WATERFALL)
+    if methodology == Methodology.KANBAN:
+        return copy.deepcopy(_DEFAULT_WORKFLOW_KANBAN)
+    if methodology == Methodology.ITERATIVE:
+        return copy.deepcopy(_DEFAULT_WORKFLOW_ITERATIVE)
+    # SCRUM is the default fallback (matches CLAUDE.md polymorphism rule —
+    # any unhandled methodology degrades to the safest, most-common shape).
+    return copy.deepcopy(_DEFAULT_WORKFLOW_SCRUM)
+
 COMMENT_TEXTS = [
     "Bu konuda biraz daha detaya ihtiyacım var.",
     "Tasarım ekibiyle görüştüm, revize bekliyoruz.",
@@ -329,10 +460,14 @@ async def seed_projects(session: AsyncSession, users_map):
             )
             # D-36: varied project statuses for SegmentedControl filter testing
             project.status = ProjectStatus(p_data.get("status", "ACTIVE"))
-            # D-36: process_config base structure (schema_version 1)
+            # D-36: process_config base structure (schema_version 1).
+            # Phase 12 Plan 12-10 (LIFE-01 fix) — seed a non-empty default
+            # workflow per methodology so freshly-created projects never
+            # land on an empty `nodes: []` and the lifecycle panel always
+            # has a real graph to render on first open.
             project.process_config = {
                 "schema_version": 1,
-                "workflow": {"mode": "flexible", "nodes": [], "edges": [], "groups": []}
+                "workflow": _default_workflow_for_methodology(p_data["methodology"]),
             }
             # Rastgele 4-6 üye ata
             members = random.sample(all_users, k=min(len(all_users), random.randint(4, 6)))

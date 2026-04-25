@@ -150,4 +150,71 @@ describe("SummaryStrip", () => {
     await userEvent.click(gateBtn)
     expect(onOpenGate).toHaveBeenCalled()
   })
+
+  // Phase 12 Plan 12-10 — LIFE-01 UAT fix
+  it("Test 6: empty workflow renders Şablon Yükle + Workflow Editörünü Aç CTAs", () => {
+    const emptyWorkflow: WorkflowConfig = {
+      mode: "flexible",
+      nodes: [],
+      edges: [],
+      groups: [],
+    }
+    render(
+      <SummaryStrip
+        project={baseProject as never}
+        workflow={emptyWorkflow}
+        activePhase={null}
+        phaseProgress={0}
+        openTasksRemaining={0}
+        onOpenGate={vi.fn()}
+      />,
+    )
+    // Empty-state container with the dual CTAs
+    expect(screen.getByTestId("summary-strip-empty")).toBeInTheDocument()
+    expect(
+      screen.getByText(/Bu projede henüz iş akışı tanımlı değil/),
+    ).toBeInTheDocument()
+    // PresetMenu trigger renders the "Şablon Yükle" label.
+    expect(
+      screen.getByRole("button", { name: /Şablon Yükle/ }),
+    ).toBeInTheDocument()
+    // Primary "Workflow Editörünü Aç" deep-link button
+    expect(
+      screen.getByRole("button", { name: /Workflow Editörünü Aç/ }),
+    ).toBeInTheDocument()
+    // Gate / Edit buttons must NOT render when nodes is empty
+    expect(
+      screen.queryByRole("button", { name: /Sonraki Faza Geç/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /^Düzenle$/ }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("Test 7: empty workflow Workflow Editörünü Aç click routes to /workflow-editor", async () => {
+    const emptyWorkflow: WorkflowConfig = {
+      mode: "flexible",
+      nodes: [],
+      edges: [],
+      groups: [],
+    }
+    render(
+      <SummaryStrip
+        project={baseProject as never}
+        workflow={emptyWorkflow}
+        activePhase={null}
+        phaseProgress={0}
+        openTasksRemaining={0}
+        onOpenGate={vi.fn()}
+      />,
+    )
+    const openEditor = screen.getByRole("button", {
+      name: /Workflow Editörünü Aç/,
+    })
+    await userEvent.click(openEditor)
+    expect(pushMock).toHaveBeenCalled()
+    const target = String(pushMock.mock.calls[0][0])
+    expect(target).toContain("/workflow-editor")
+    expect(target).toContain("projectId=7")
+  })
 })

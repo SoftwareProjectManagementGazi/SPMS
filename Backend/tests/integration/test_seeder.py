@@ -103,3 +103,104 @@ def test_workflow_edges_have_v2_fields_in_source():
     # The Waterfall template has 4 edges; both fields explicit → at least 4 of each
     assert bidir_count >= 4, f"Expected >= 4 explicit bidirectional emissions; found {bidir_count}"
     assert allgate_count >= 4, f"Expected >= 4 explicit is_all_gate emissions; found {allgate_count}"
+
+
+# ============================================================================
+# Phase 12 Plan 12-10 (LIFE-01 fix) — default workflow per methodology
+# ============================================================================
+#
+# These tests assert that `_default_workflow_for_methodology` returns a
+# non-empty workflow shape for every supported methodology, satisfying the
+# minimum invariants the FE workflow validator enforces (>=1 isInitial,
+# >=1 isFinal, mode set, edges/groups arrays present).
+#
+# The bug we are guarding against: prior to this plan, freshly-seeded
+# projects landed with `process_config.workflow.nodes = []`, which caused
+# the Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip
+# to render a dead-end "no workflow defined" message with no CTA.
+
+def test_default_workflow_scrum_has_at_least_3_nodes():
+    """Scrum default workflow must include >= 3 nodes with valid initial/final markers."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+
+    wf = _default_workflow_for_methodology(Methodology.SCRUM)
+    assert isinstance(wf, dict)
+    assert wf["mode"] == "flexible"
+    assert len(wf["nodes"]) >= 3, "Scrum default must include at least 3 nodes"
+    assert any(n.get("is_initial") for n in wf["nodes"]), "Scrum default missing isInitial node"
+    assert any(n.get("is_final") for n in wf["nodes"]), "Scrum default missing isFinal node"
+    # Edges must reference real node ids
+    node_ids = {n["id"] for n in wf["nodes"]}
+    for edge in wf["edges"]:
+        assert edge["source"] in node_ids, f"Scrum edge {edge['id']} dangling source"
+        assert edge["target"] in node_ids, f"Scrum edge {edge['id']} dangling target"
+
+
+def test_default_workflow_waterfall_has_at_least_3_nodes():
+    """Waterfall default workflow must include >= 3 nodes in sequential-locked mode."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+
+    wf = _default_workflow_for_methodology(Methodology.WATERFALL)
+    assert wf["mode"] == "sequential-locked"
+    assert len(wf["nodes"]) >= 3, "Waterfall default must include at least 3 nodes"
+    assert any(n.get("is_initial") for n in wf["nodes"]), "Waterfall default missing isInitial node"
+    assert any(n.get("is_final") for n in wf["nodes"]), "Waterfall default missing isFinal node"
+
+
+def test_default_workflow_kanban_continuous_single_node():
+    """Kanban default is continuous-mode single-node (initial=final=True)."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+
+    wf = _default_workflow_for_methodology(Methodology.KANBAN)
+    assert wf["mode"] == "continuous"
+    assert len(wf["nodes"]) >= 1
+    # Continuous mode: the single node must serve both initial and final roles.
+    n0 = wf["nodes"][0]
+    assert n0.get("is_initial") is True, "Kanban node must be isInitial"
+    assert n0.get("is_final") is True, "Kanban node must be isFinal"
+
+
+def test_default_workflow_iterative_has_feedback_edge():
+    """Iterative default must include >= 1 feedback edge to model the cycle."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+
+    wf = _default_workflow_for_methodology(Methodology.ITERATIVE)
+    assert len(wf["nodes"]) >= 3
+    feedback_edges = [e for e in wf["edges"] if e.get("type") == "feedback"]
+    assert len(feedback_edges) >= 1, "Iterative default must include a feedback edge"
+
+
+def test_default_workflow_returns_independent_copies():
+    """Two calls must return independent objects so a caller mutating one does not
+    poison the other (Pitfall 4 — JSON dicts are not deep-copied by reference)."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+
+    a = _default_workflow_for_methodology(Methodology.SCRUM)
+    b = _default_workflow_for_methodology(Methodology.SCRUM)
+    a["nodes"].append({"id": "x"})
+    assert "x" not in {n["id"] for n in b["nodes"]}, "Default workflow shapes must be deep-copied"
+
+
+def test_default_workflow_edges_have_v2_fields():
+    """Every default-workflow edge must include the Phase 12 D-16/D-17 fields
+    (bidirectional + is_all_gate) so it round-trips through the WorkflowEdge
+    Pydantic DTO without surprises."""
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+    from app.application.dtos.workflow_dtos import WorkflowEdge
+
+    for methodology in [Methodology.SCRUM, Methodology.WATERFALL, Methodology.ITERATIVE]:
+        wf = _default_workflow_for_methodology(methodology)
+        for edge in wf["edges"]:
+            # Round-trip every edge through the Pydantic model — must not raise.
+            parsed = WorkflowEdge(**edge)
+            assert parsed.id == edge["id"]
+            assert parsed.source == edge["source"]
+            assert parsed.target == edge["target"]
+            assert parsed.bidirectional is False
+            assert parsed.is_all_gate is False

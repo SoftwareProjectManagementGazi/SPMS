@@ -17,7 +17,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, Pencil, Target } from "lucide-react"
+import { ArrowRight, ExternalLink, Pencil, Target } from "lucide-react"
 
 import { Badge, Button, ProgressBar } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
@@ -27,6 +27,8 @@ import type {
   WorkflowMode,
   WorkflowNode,
 } from "@/services/lifecycle-service"
+import { PresetMenu } from "@/components/workflow-editor/preset-menu"
+import type { PresetId } from "@/lib/lifecycle/presets"
 
 export interface SummaryStripProject {
   id: number
@@ -53,6 +55,10 @@ export interface SummaryStripProps {
   nextMilestone?: SummaryStripMilestone | null
   /** Callback fired when user clicks "Sonraki Faza Geç". */
   onOpenGate: () => void
+  /** Phase 12 Plan 12-10 (LIFE-01 UAT fix) — apply a preset when the
+   *  workflow is empty. When omitted, the empty-state Şablon Yükle button
+   *  routes to the editor with `?preset={id}` so the user can review there. */
+  onApplyPreset?: (id: PresetId) => void
 }
 
 const MODE_LABEL_TR: Record<WorkflowMode, string> = {
@@ -84,6 +90,7 @@ export function SummaryStrip({
   openTasksRemaining,
   nextMilestone,
   onOpenGate,
+  onApplyPreset,
 }: SummaryStripProps) {
   const { language } = useApp()
   const T = React.useCallback(
@@ -107,6 +114,60 @@ export function SummaryStrip({
   const handleEdit = React.useCallback(() => {
     router.push(`/workflow-editor?projectId=${project.id}`)
   }, [router, project.id])
+
+  // Phase 12 Plan 12-10 (LIFE-01 UAT fix) — empty-state branch fires when the
+  // strip is rendered without any workflow nodes. Renders inline:
+  //   - context label "Bu projede henüz iş akışı tanımlı değil"
+  //   - Şablon Yükle PresetMenu (applies in-place via onApplyPreset, or routes
+  //     to the editor with `?preset={id}` when no apply handler is wired)
+  //   - Workflow Editörünü Aç primary button (deep-link)
+  // Skips the Badge / ProgressBar / mode chip / gate button — they have no
+  // meaningful value when nodes is empty.
+  if (workflow.nodes.length === 0) {
+    return (
+      <div
+        data-testid="summary-strip-empty"
+        style={{
+          padding: "10px 16px",
+          borderBottom: "1px solid var(--border)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 12.5,
+          flexWrap: "wrap",
+        }}
+      >
+        <span style={{ fontWeight: 600, color: "var(--fg)" }}>
+          {T(
+            "Bu projede henüz iş akışı tanımlı değil",
+            "No workflow defined for this project yet",
+          )}
+        </span>
+        <div style={{ flex: 1 }} />
+        <PresetMenu
+          currentPresetId={null}
+          dirty={false}
+          onApply={(id: PresetId) => {
+            if (onApplyPreset) {
+              onApplyPreset(id)
+            } else {
+              router.push(
+                `/workflow-editor?projectId=${project.id}&preset=${encodeURIComponent(id)}`,
+              )
+            }
+          }}
+        />
+        <Button
+          size="sm"
+          variant="primary"
+          icon={<ExternalLink size={12} />}
+          onClick={handleEdit}
+        >
+          {T("Workflow Editörünü Aç", "Open Workflow Editor")}
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div

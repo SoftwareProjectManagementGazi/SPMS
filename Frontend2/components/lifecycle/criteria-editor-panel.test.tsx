@@ -46,8 +46,13 @@ vi.mock("@/components/toast", () => ({
 }))
 
 const useSearchParamsMock = vi.fn()
+const useRouterPush = vi.fn()
 vi.mock("next/navigation", () => ({
   useSearchParams: () => useSearchParamsMock(),
+  // The empty-state branch mounts WorkflowEmptyState → PresetMenu, both of
+  // which call useRouter via next/navigation. Mock returns a stable router
+  // object so jsdom can render the empty-state.
+  useRouter: () => ({ push: useRouterPush, replace: vi.fn(), back: vi.fn() }),
 }))
 
 const mockedTransitionAuthority = vi.mocked(transitionAuthorityHook)
@@ -387,5 +392,35 @@ describe("CriteriaEditorPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "İptal" }))
     expect(toggle.getAttribute("aria-checked")).toBe("false")
+  })
+
+  // Phase 12 Plan 12-10 — LIFE-01 UAT fix: empty workflow shows CTAs.
+  it("Test 9 — empty workflow shows Şablon Yükle + Workflow Editörünü Aç CTAs", () => {
+    const project = makeProject({
+      processConfig: {
+        workflow: {
+          mode: "flexible",
+          nodes: [], // empty triggers the empty-state branch
+          edges: [],
+          groups: [],
+        },
+        phase_completion_criteria: {},
+        enable_phase_assignment: false,
+      },
+    })
+    render(wrap(<CriteriaEditorPanel project={project as never} isArchived={false} />))
+    expect(screen.getByTestId("workflow-empty-state")).toBeInTheDocument()
+    // The Şablon Yükle PresetMenu trigger must render the TR copy.
+    expect(
+      screen.getByRole("button", { name: /Şablon Yükle/ }),
+    ).toBeInTheDocument()
+    // Primary "Workflow Editörünü Aç" button must render the TR copy.
+    expect(
+      screen.getByRole("button", { name: /Workflow Editörünü Aç/ }),
+    ).toBeInTheDocument()
+    // The dead-end AlertBanner must no longer render.
+    expect(
+      screen.queryByText(/Bu projede aktif workflow tanımlanmamış/),
+    ).not.toBeInTheDocument()
   })
 })

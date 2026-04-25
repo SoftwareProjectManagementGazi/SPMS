@@ -45,6 +45,12 @@ import { OverviewSubTab } from "./overview-subtab"
 import { HistorySubTab } from "./history-subtab"
 import { MilestonesSubTab } from "./milestones-subtab"
 import { ArtifactsSubTab } from "./artifacts-subtab"
+import { WorkflowEmptyState } from "./workflow-empty-state"
+import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
+import { unmapWorkflowConfig } from "@/services/lifecycle-service"
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/components/toast"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface PhaseTransitionEntryShape {
   user_id: number
@@ -253,16 +259,60 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
     [project, activePhase],
   )
 
-  if (!workflow) {
+  // Phase 12 Plan 12-10 (LIFE-01 UAT fix) — apply-preset handler used by the
+  // empty-state CTA so the lifecycle tab can persist a chosen preset without
+  // routing to the workflow editor.
+  const { showToast } = useToast()
+  const qc = useQueryClient()
+  const applyPresetInline = React.useCallback(
+    async (id: PresetId) => {
+      try {
+        const wf = unmapWorkflowConfig(resolvePreset(id))
+        await apiClient.patch(`/projects/${project.id}`, {
+          process_config: {
+            ...((project.processConfig ?? {}) as Record<string, unknown>),
+            workflow: wf,
+          },
+        })
+        qc.invalidateQueries({ queryKey: ["project", project.id] })
+        showToast({
+          variant: "success",
+          message: T("Şablon uygulandı.", "Template applied."),
+        })
+      } catch {
+        showToast({
+          variant: "error",
+          message: T("Şablon uygulanamadı.", "Failed to apply template."),
+        })
+      }
+    },
+    [project.id, project.processConfig, qc, showToast, T],
+  )
+
+  // Empty-state guard — fires when:
+  //   (a) processConfig is null entirely (legacy/never-seeded projects), or
+  //   (b) workflow.nodes is an empty array (LIFE-01 UAT bug — fixed seeder
+  //       backfills nodes for new projects, but legacy projects may still
+  //       carry an empty `nodes: []` from before the fix).
+  // Both cases now render the dual-CTA empty state instead of a dead end.
+  if (!workflow || workflow.nodes.length === 0) {
     return (
       <div style={{ padding: 20 }}>
-        <Card padding={16}>
-          <div style={{ fontSize: 13, color: "var(--fg-muted)" }}>
-            {T(
-              "Bu projede aktif iş akışı tanımlanmamış. Ayarlar > İş Akışı sekmesinden bir akış oluşturun.",
-              "No active workflow defined. Configure one from Settings > Workflow.",
+        <Card padding={0}>
+          <WorkflowEmptyState
+            projectId={project.id}
+            onApplyPreset={(id) => {
+              void applyPresetInline(id)
+            }}
+            title={T(
+              "Bu projede aktif iş akışı tanımlanmamış",
+              "No active workflow defined",
             )}
-          </div>
+            body={T(
+              "Hazır bir şablonla başlayın veya editörü açıp sıfırdan tasarlayın.",
+              "Start from a preset or open the editor to design from scratch.",
+            )}
+          />
         </Card>
       </div>
     )

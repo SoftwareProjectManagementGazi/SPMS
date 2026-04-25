@@ -32,6 +32,9 @@ import { useToast } from "@/components/toast"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
 import { useCriteriaEditor, type PhaseCriteria } from "@/hooks/use-criteria-editor"
 import { apiClient } from "@/lib/api-client"
+import { WorkflowEmptyState } from "./workflow-empty-state"
+import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
+import { unmapWorkflowConfig } from "@/services/lifecycle-service"
 
 // ----------------------------------------------------------------------------
 // Types — minimal project shape consumed from project-service
@@ -175,15 +178,45 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
   }, [deepLinkPhase, rawNodes.map((n) => n.id).join("|")])
 
   // ---- empty workflow guard --------------------------------------------------
+  // Phase 12 Plan 12-10 (LIFE-01 UAT fix) — replace the dead-end AlertBanner
+  // with the WorkflowEmptyState dual-CTA: "Şablon Yükle" applies a preset
+  // in-place via PATCH /projects/{id}, and "Workflow Editörünü Aç" deep-links
+  // to the editor. Picking a preset here writes
+  // process_config.workflow = unmapWorkflowConfig(resolvePreset(id)) so the
+  // user can immediately start editing per-phase criteria without a route hop.
+  async function applyPresetInline(id: PresetId) {
+    try {
+      const wf = unmapWorkflowConfig(resolvePreset(id))
+      await apiClient.patch(`/projects/${project.id}`, {
+        process_config: {
+          ...(project.processConfig ?? {}),
+          workflow: wf,
+        },
+      })
+      qc.invalidateQueries({ queryKey: ["project", project.id] })
+      showToast({
+        variant: "success",
+        message: T("Şablon uygulandı.", "Template applied."),
+      })
+    } catch (err) {
+      showToast({
+        variant: "error",
+        message:
+          backendErrorMessage(err) ??
+          T("Şablon uygulanamadı.", "Failed to apply template."),
+      })
+    }
+  }
+
   if (rawNodes.length === 0) {
     return (
-      <Card padding={20}>
-        <AlertBanner tone="info">
-          {T(
-            "Bu projede aktif workflow tanımlanmamış.",
-            "No active workflow defined for this project.",
-          )}
-        </AlertBanner>
+      <Card padding={0}>
+        <WorkflowEmptyState
+          projectId={project.id}
+          onApplyPreset={(id) => {
+            void applyPresetInline(id)
+          }}
+        />
       </Card>
     )
   }
