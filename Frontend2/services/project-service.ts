@@ -1,5 +1,10 @@
 import { apiClient } from '@/lib/api-client';
 
+export interface BoardColumnLite {
+  id: number;
+  name: string;
+}
+
 export interface Project {
   id: number;
   key: string;
@@ -14,7 +19,11 @@ export interface Project {
   managerName: string | null;
   managerAvatar: string | null;
   progress: number;
+  /** Column NAMES — kept as the legacy shape for read-only consumers. */
   columns: string[];
+  /** Column id+name pairs — needed by InlineEdit status picker because the
+   *  backend's TaskUpdateDTO accepts `column_id`, not the column NAME. */
+  boardColumns: BoardColumnLite[];
   processConfig: Record<string, unknown> | null;
   createdAt: string;
 }
@@ -66,6 +75,12 @@ function mapProject(data: ProjectResponseDTO): Project {
     progress: data.progress ?? 0,
     columns: (data.columns ?? []).map((c) =>
       typeof c === 'string' ? c : c.name
+    ),
+    // boardColumns preserves the {id, name} pairs that PATCH consumers need
+    // (status updates → column_id). String entries lose the id, so they get
+    // a synthetic 0 — InlineEdit guards against that.
+    boardColumns: (data.columns ?? []).map((c) =>
+      typeof c === 'string' ? { id: 0, name: c } : { id: c.id, name: c.name }
     ),
     processConfig: data.process_config ?? null,
     createdAt: data.created_at,

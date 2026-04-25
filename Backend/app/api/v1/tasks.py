@@ -204,7 +204,12 @@ async def update_task(
                 )
 
     # Notification: status change — notify assignee and watchers
-    if dto.status_id is not None:
+    # NOTE: TaskUpdateDTO has no `status_id` field; status changes are conveyed
+    # via `column_id` in this codebase (a column IS a status bucket). The
+    # previous reference to `dto.status_id` raised AttributeError on every
+    # PATCH/PUT and produced a 500 with no CORS headers, which surfaced as a
+    # cryptic "blocked by CORS policy" in the browser.
+    if dto.column_id is not None:
         if updated_task.assignee_id and updated_task.assignee_id != current_user.id:
             await notif_service.notify(
                 user_id=updated_task.assignee_id,
@@ -326,7 +331,12 @@ async def patch_task(
                 )
 
     # Notification: status change — notify assignee and watchers
-    if dto.status_id is not None:
+    # NOTE: TaskUpdateDTO has no `status_id` field; status changes are conveyed
+    # via `column_id` in this codebase (a column IS a status bucket). The
+    # previous reference to `dto.status_id` raised AttributeError on every
+    # PATCH/PUT and produced a 500 with no CORS headers, which surfaced as a
+    # cryptic "blocked by CORS policy" in the browser.
+    if dto.column_id is not None:
         if updated_task.assignee_id and updated_task.assignee_id != current_user.id:
             await notif_service.notify(
                 user_id=updated_task.assignee_id,

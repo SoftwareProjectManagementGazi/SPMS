@@ -193,7 +193,23 @@ export const taskService = {
     return mapTask(resp.data)
   },
   patchField: async (id: number, field: string, value: unknown): Promise<Task> => {
-    const resp = await apiClient.patch<TaskResponseDTO>(`/tasks/${id}`, { [field]: value })
+    // Frontend ↔ backend field-name map. The backend's TaskUpdateDTO uses
+    // snake_case + a couple of legacy names that don't line up with the
+    // Task entity surface used by InlineEdit / TaskRow:
+    //   due       → due_date     (TaskUpdateDTO renamed in Phase 5)
+    //   cycle_id  → sprint_id    (Sprint table, not Cycle)
+    // Pydantic v2's default `extra="ignore"` previously dropped the
+    // unknown keys silently, so the PATCH returned 200 OK but never
+    // persisted the change — UI optimistically flashed the new value,
+    // then snapped back on the next refetch. Triage round 11.
+    const FIELD_MAP: Record<string, string> = {
+      due: "due_date",
+      cycle_id: "sprint_id",
+    }
+    const backendField = FIELD_MAP[field] ?? field
+    const resp = await apiClient.patch<TaskResponseDTO>(`/tasks/${id}`, {
+      [backendField]: value,
+    })
     return mapTask(resp.data)
   },
   update: async (id: number, dto: Partial<CreateTaskDTO>): Promise<Task> => {

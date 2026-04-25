@@ -169,33 +169,54 @@ export function PropertiesSidebar({
       </div>
       <div style={{ padding: "8px 0" }}>
         {/* Status — Badge tone tracks the 5-status palette per prototype
-            (task-detail.jsx:116). */}
+            (task-detail.jsx:116). The InlineEdit binds to `column_id` (the
+            actual TaskUpdateDTO field) but uses `task.status` for the read-
+            mode label since the backend computes the status string from the
+            column's name. Picking a column from the editor sends the
+            numeric id, which the backend can persist; sending the raw status
+            string would silently drop because TaskUpdateDTO has no such
+            field. Triage round 11 — properties save fix. */}
         <MetaRow label={lang === "tr" ? "Durum" : "Status"}>
-          <InlineEdit
-            taskId={task.id}
-            field="status"
-            value={task.status}
-            renderDisplay={(v) => (
-              <Badge size="xs" dot tone={statusTone(String(v))}>
-                {v || "—"}
-              </Badge>
-            )}
-            renderEditor={(draft, setDraft, commit) => (
-              <select
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onBlur={commit}
-                style={editorStyle}
-              >
-                {(project.columns ?? []).map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            )}
-          />
+          {project.boardColumns.length > 0 ? (
+            <InlineEdit
+              taskId={task.id}
+              field="column_id"
+              value={
+                // Resolve the current column_id from the task's status name.
+                // Falls back to null when no column matches (custom backend
+                // value or an empty board).
+                project.boardColumns.find(
+                  (c) => c.name.toLowerCase() === task.status.toLowerCase(),
+                )?.id ?? null
+              }
+              renderDisplay={() => (
+                <Badge size="xs" dot tone={statusTone(task.status)}>
+                  {task.status || "—"}
+                </Badge>
+              )}
+              renderEditor={(draft, setDraft, commit) => (
+                <select
+                  autoFocus
+                  value={draft ?? ""}
+                  onChange={(e) =>
+                    setDraft(e.target.value ? Number(e.target.value) : null)
+                  }
+                  onBlur={commit}
+                  style={editorStyle}
+                >
+                  {project.boardColumns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            />
+          ) : (
+            <Badge size="xs" dot tone={statusTone(task.status)}>
+              {task.status || "—"}
+            </Badge>
+          )}
         </MetaRow>
 
         {/* Assignee */}
