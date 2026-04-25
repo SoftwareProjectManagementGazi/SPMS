@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-06 complete
-last_updated: "2026-04-25T11:53:52.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-06 complete (LIFE-06 ArtifactsSubTab + ArtifactInlineExpand + LIFE-07 EvaluationReportCard with PDF download + 30s rate-limit countdown + HistoryCard Rapor button wiring)
+stopped_at: Phase 12 Plan 12-07 complete
+last_updated: "2026-04-25T12:14:10.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-07 complete (workflow-editor route + viewport gate + EditorPage shell + 11 right-panel/toolbar/mode-banner/minimap-wrapper/color-swatch/dirty-save-dialog sub-components — EDIT-01..06 infra)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 40
-  percent: 91
+  completed_plans: 41
+  percent: 93
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 7 of 10 (12-06 complete)
+Plan: 8 of 10 (12-07 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-06 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-07 complete
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ Progress: [█████████░] 91%
 | Phase 12 P04 | 9min  | 2 tasks | 8 files  |
 | Phase 12 P05 | 8min  | 2 tasks | 7 files  |
 | Phase 12 P06 | 12min | 2 tasks | 5 files  |
+| Phase 12 P07 | 11min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -286,6 +287,19 @@ Key constraints for v2.0:
 - [12-06] Test 3 fixture switched from Sprint Planı (assignee_id=1, would have hit /mine path) to Daily Notes (assignee_id=null, takes PM full path). Test 4 retained Sprint Planı for the assignee path. Two tests are mirror cases that exercise both branches of the path-selection logic
 - [12-06] Test 4 disambiguates the 'Taslak' chip from the 'Taslak' status label by selecting the SegmentedControl button via role='button' name='Taslak' — getByText would match both
 - [12-06] Tests await `screen.getByText(/rev 3/i)` BEFORE interacting because the rev N badge only renders after usePhaseReports resolves. Without that wait, Save would POST instead of PATCH because `report` is still null — false positive masking
+- [12-07] Route page is a Client Component (`'use client'`) — required because useSearchParams + useRouter are client-only hooks AND because EditorPage dynamic-imports a Client Component (WorkflowCanvasInner) with `ssr:false`, which Next.js 16 lazy-loading docs explicitly forbid inside Server Components
+- [12-07] viewportOK tri-state (boolean | null) — first paint returns null so the server-rendered HTML and the first client render match; the resize-listener installs after mount and flips it to true/false synchronously (avoids hydration mismatch on `window.innerWidth`)
+- [12-07] Plan 12-07 ships all 11 sub-components in Task 1's commit (route + EditorPage shell) because EditorPage imports them directly. Task 2's commit adds the dedicated test files for flow-rules / selection-panel / validation-panel / dirty-save-dialog / viewport-fallback. Splitting into stub-and-replace commits would have added churn for no behavioral benefit
+- [12-07] EditorPage's WorkflowCanvas mount uses `nodes=[] edges=[] showMiniMap=false` for now — Plan 12-08 wires real RFNode/RFEdge construction from `workflow` once DnD/edit handlers land. Acceptable per plan scope (DnD/inline-edit are explicitly Plan 12-08)
+- [12-07] Save Button is permission-gated via useTransitionAuthority + Tooltip, but performs no save action yet — Plan 12-09 wires the actual save flow (200/422/409/429/network matrix). Disabled state with 'Düzenleme yetkiniz yok.' tooltip ships in Plan 12-07 (T-12-07-01 mitigation)
+- [12-07] Mode tables (MODE_OPTIONS_TR / EN + MODE_DESC_TR / EN) co-located in flow-rules.tsx — single consumer; lift to lib/methodology-matrix.ts when a second consumer needs them (matches the SummaryStrip mode-chip co-located strategy from Plan 12-02)
+- [12-07] ValidationPanel uses `setTimeout` ref-mirror not `useDeferredValue` — useDeferredValue defers React state updates but the validator is a pure function on the workflow prop; setTimeout is straightforward and mirrors Phase 11 D-44's debounce pattern
+- [12-07] BottomToolbar's 'Sınıflandır' button is a placeholder — popup renders fully (5 align actions, mousedown click-outside, role=menu/menuitem) but `disabled` until EditorPage passes an `onAlign` prop in Plan 12-08
+- [12-07] MinimapWrapper ships as a 0×0 layout slot — actual `<MiniMap>` is rendered by WorkflowCanvasInner from Plan 12-01; Plan 12-08 may migrate the MiniMap mount here once custom-theming becomes necessary
+- [12-07] `loading.tsx` Next.js segment file NOT added — RESEARCH §Project Structure marks it optional and the route page already returns its own 'Yükleniyor…' string when `useProject().isLoading` is true. Adding loading.tsx would introduce a duplicate skeleton path with no behavioral benefit
+- [12-07] Mode persistence via `router.replace(`/workflow-editor?${params}`)` — preserves non-mode params (e.g., projectId stays); test 8 in editor-page.test.tsx asserts both `mode=status` AND `projectId=42` are in the replace argument
+- [12-07] ColorSwatch renders 8 buttons with `aria-label={token}` — selection-panel.test.tsx uses `getByLabelText('status-todo')` to assert specific swatches render; aria-label doubles as a screen-reader hint
+- [12-07] ShortcutsPanel reads `isMac()` lazily in `useEffect([])` so SSR and first client render both default to the Windows label set; only after mount does the macOS detection upgrade the labels (avoids hydration mismatch)
 
 ### Pending Todos
 
@@ -306,12 +320,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T11:53:52Z
-Stopped at: Phase 12 Plan 12-06 complete
+Last session: 2026-04-25T12:14:10Z
+Stopped at: Phase 12 Plan 12-07 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-07 — Workflow Editor scaffold (page route + standalone editor shell + bottom toolbar + right side panel skeleton) — EDIT-01 / EDIT-02 prep
+**Next Plan:** 12-08 — Editor interactivity: DnD + edge create + 5 group-creation entry points + live cloud morph + drop-association + inline edit + ContextMenu + undo/redo + 8 keyboard shortcuts + cycle counter wiring — EDIT-01/02/04/05/06
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
