@@ -174,52 +174,24 @@ export function CalendarTab({ project }: { project: Project }) {
       >
         <div style={{ fontSize: 15, fontWeight: 600 }}>{monthLabel}</div>
         <div style={{ flex: 1 }} />
-        {/* Month-nav buttons use native <button> so aria-label is honored.
-            Button primitive's public props don't forward aria-label, and
-            inlining a native button keeps the test's getByLabelText query
-            stable without growing the primitive's API surface. */}
-        <button
-          type="button"
+        {/* UI-sweep: Button primitive now forwards aria-label, so we use it
+            instead of the inlined native <button> from the previous patch. */}
+        <Button
+          size="icon"
+          variant="ghost"
           aria-label="Previous"
           title={language === "tr" ? "Önceki" : "Previous"}
           onClick={prevMonth}
-          style={{
-            height: 28,
-            width: 28,
-            padding: 0,
-            borderRadius: "var(--radius-sm)",
-            background: "transparent",
-            color: "var(--fg)",
-            border: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <button
-          type="button"
+          icon={<ChevronLeft size={14} />}
+        />
+        <Button
+          size="icon"
+          variant="ghost"
           aria-label="Next"
           title={language === "tr" ? "Sonraki" : "Next"}
           onClick={nextMonth}
-          style={{
-            height: 28,
-            width: 28,
-            padding: 0,
-            borderRadius: "var(--radius-sm)",
-            background: "transparent",
-            color: "var(--fg)",
-            border: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <ChevronRight size={14} />
-        </button>
+          icon={<ChevronRight size={14} />}
+        />
         <Button size="sm" variant="secondary" onClick={goToday}>
           {language === "tr" ? "Bugün" : "Today"}
         </Button>

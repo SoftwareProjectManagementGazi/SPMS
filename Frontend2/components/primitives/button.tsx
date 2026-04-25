@@ -30,6 +30,9 @@ export interface ButtonProps {
   active?: boolean
   className?: string
   style?: React.CSSProperties
+  // Icon-only buttons MUST set aria-label for screen-reader users (WCAG 2.1 4.1.2).
+  // title is a tooltip, NOT a label substitute. Forwarded to the underlying <button>.
+  "aria-label"?: string
 }
 
 const VARIANTS: Record<ButtonVariant, React.CSSProperties> = {
@@ -84,6 +87,7 @@ export function Button({
   active,
   className,
   style,
+  "aria-label": ariaLabel,
 }: ButtonProps) {
   const v = VARIANTS[variant]
   const s = SIZES[size]
@@ -93,6 +97,7 @@ export function Button({
       disabled={disabled}
       onClick={onClick}
       title={title}
+      aria-label={ariaLabel}
       className={className}
       style={{
         display: "inline-flex",
