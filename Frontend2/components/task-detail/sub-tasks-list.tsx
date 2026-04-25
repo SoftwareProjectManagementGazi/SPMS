@@ -4,15 +4,19 @@
 // is clickable and routes to its sub-task detail page. The "Ekle" action
 // opens the global TaskCreateModal preset for a sub-task with parent pre-filled.
 //
-// Layout matches the prototype task-detail.jsx:54-65 exactly:
-//   80px (mono key) | 20px (checkbox) | 1fr (title) | 90px (Badge dot) | 22px (avatar)
+// Layout matches prototype task-detail.jsx:54-65 exactly:
+//   80px (mono key) | 20px (checkbox) | 1fr (title) | 90px (Badge) | 22px (avatar)
 //
-// The 90px status column is FIXED-width so the badge doesn't grow with text
-// length — which had previously made "in_progress" badges visibly wider than
-// "todo" ones (UAT round 7). The Badge text is the localized human label
-// (Yapılacak / Devam ediyor / İncelemede / Tamamlandı / Engellendi), and the
-// tone tracks the canonical 5-status scheme (success / info / warning /
-// danger / neutral) instead of the previous always-neutral.
+// The Badge label shows the RAW backend status string (i.e. whatever the
+// project's board column is named — "TODO", "Backlog", "QA", "Done", etc.).
+// We deliberately do NOT localise here per UAT round 12: the column name is
+// part of project data, not a translation key, and forcing it through a
+// canonical {todo, progress, review, done, blocked} mapping caused custom
+// columns to show up as "Yapılacak" everywhere.
+//
+// The TONE is still derived from a canonical mapping so the colour palette
+// stays semantic: "done"-shaped statuses paint success, "progress"-shaped
+// paint info, etc. Anything outside the canonical 5 falls back to neutral.
 
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -32,34 +36,23 @@ interface SubTasksListProps {
   subtasks: Task[]
 }
 
-type CanonicalStatus = "todo" | "progress" | "review" | "done" | "blocked"
+type Tone = "success" | "info" | "warning" | "danger" | "neutral"
 
-function canonical(status: string | null | undefined): CanonicalStatus {
+// Coerce a raw backend status string to a Badge tone. Custom column names that
+// don't match any canonical bucket fall through to "neutral", which is the
+// same fallback Badge would use anyway.
+function statusTone(status: string | null | undefined): Tone {
   const s = String(status ?? "").toLowerCase()
-  if (s === "progress" || s === "in_progress" || s === "doing") return "progress"
-  if (s === "review" || s === "in_review") return "review"
-  if (s === "done" || s === "completed" || s === "closed") return "done"
-  if (s === "blocked") return "blocked"
-  return "todo"
+  if (s === "done" || s === "completed" || s === "closed") return "success"
+  if (s === "progress" || s === "in_progress" || s === "doing") return "info"
+  if (s === "review" || s === "in_review") return "warning"
+  if (s === "blocked") return "danger"
+  return "neutral"
 }
 
-const STATUS_LABEL: Record<CanonicalStatus, { tr: string; en: string }> = {
-  todo: { tr: "Yapılacak", en: "To do" },
-  progress: { tr: "Devam ediyor", en: "In progress" },
-  review: { tr: "İncelemede", en: "Review" },
-  done: { tr: "Tamamlandı", en: "Done" },
-  blocked: { tr: "Engellendi", en: "Blocked" },
-}
-
-const STATUS_TONE: Record<
-  CanonicalStatus,
-  "success" | "info" | "warning" | "danger" | "neutral"
-> = {
-  todo: "neutral",
-  progress: "info",
-  review: "warning",
-  done: "success",
-  blocked: "danger",
+function isDoneStatus(status: string | null | undefined): boolean {
+  const s = String(status ?? "").toLowerCase()
+  return s === "done" || s === "completed" || s === "closed"
 }
 
 function avatarFor(assigneeId: number | null, name?: string | null) {
@@ -103,11 +96,8 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
     >
       <Card padding={0}>
         {subtasks.map((st, i) => {
-          const status = canonical(st.status)
-          const isDone = status === "done"
+          const isDone = isDoneStatus(st.status)
           const av = avatarFor(st.assigneeId, st.assigneeName)
-          const label =
-            lang === "tr" ? STATUS_LABEL[status].tr : STATUS_LABEL[status].en
           return (
             <div
               key={st.id}
@@ -125,8 +115,8 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
               style={{
                 display: "grid",
                 // Prototype task-detail.jsx:57 — 5 fixed columns + 1 flexible
-                // title. Status badge column is a hard 90px so "in_progress"
-                // and "todo" badges line up vertically across rows.
+                // title. Status badge column is a hard 90px so badges line up
+                // vertically across rows even when names vary in length.
                 gridTemplateColumns: "80px 20px 1fr 90px 22px",
                 padding: "10px 14px",
                 alignItems: "center",
@@ -139,7 +129,7 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
                 cursor: "pointer",
               }}
             >
-              <span
+              <div
                 className="mono"
                 style={{
                   fontFamily: "var(--font-mono)",
@@ -148,24 +138,17 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
                 }}
               >
                 {st.key}
-              </span>
+              </div>
               {/* Read-only checkbox mirroring the prototype — clicking it
-                  navigates to the row's task page (the row's onClick handles
-                  this) rather than mutating status from the parent task. */}
+                  bubbles to the row's onClick which navigates to the
+                  sub-task page; we stopPropagation only so the row doesn't
+                  trigger TWICE if the browser sends both. */}
               <input
                 type="checkbox"
                 checked={isDone}
                 readOnly
                 tabIndex={-1}
-                aria-label={
-                  isDone
-                    ? lang === "tr"
-                      ? "Tamamlandı"
-                      : "Done"
-                    : lang === "tr"
-                      ? "Bekliyor"
-                      : "Pending"
-                }
+                aria-label={isDone ? "done" : "pending"}
                 style={{
                   width: 14,
                   height: 14,
@@ -174,10 +157,10 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
-              <span
+              <div
                 style={{
-                  color: isDone ? "var(--fg-muted)" : "var(--fg)",
                   textDecoration: isDone ? "line-through" : "none",
+                  color: isDone ? "var(--fg-muted)" : "var(--fg)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -185,14 +168,13 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
                 }}
               >
                 {st.title}
-              </span>
-              {/* Fixed-width status cell so the Badge anchors at the same
-                  visual position regardless of label length. */}
-              <span style={{ display: "inline-flex" }}>
-                <Badge size="xs" tone={STATUS_TONE[status]} dot>
-                  {label}
-                </Badge>
-              </span>
+              </div>
+              {/* Badge label is the raw backend column name — no
+                  localization, no canonical-token fallback. Tone still
+                  paints the canonical palette so colour stays semantic. */}
+              <Badge size="xs" tone={statusTone(st.status)} dot>
+                {st.status || "—"}
+              </Badge>
               {av ? <Avatar user={av} size={20} /> : <span />}
             </div>
           )
