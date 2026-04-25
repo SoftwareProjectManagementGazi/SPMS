@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-05 complete
-last_updated: "2026-04-25T14:35:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-05 complete (LIFE-05 MilestonesSubTab CRUD + chip picker + ConfirmDialog + Timeline Gantt vertical flag-line layer + popover)
+stopped_at: Phase 12 Plan 12-06 complete
+last_updated: "2026-04-25T11:53:52.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-06 complete (LIFE-06 ArtifactsSubTab + ArtifactInlineExpand + LIFE-07 EvaluationReportCard with PDF download + 30s rate-limit countdown + HistoryCard Rapor button wiring)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 39
-  percent: 89
+  completed_plans: 40
+  percent: 91
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 6 of 10 (12-05 complete)
+Plan: 7 of 10 (12-06 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-05 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-06 complete
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ Progress: [█████████░] 89%
 | Phase 12 P03 | 6min  | 2 tasks | 6 files  |
 | Phase 12 P04 | 9min  | 2 tasks | 8 files  |
 | Phase 12 P05 | 8min  | 2 tasks | 7 files  |
+| Phase 12 P06 | 12min | 2 tasks | 5 files  |
 
 ## Accumulated Context
 
@@ -275,6 +276,16 @@ Key constraints for v2.0:
 - [12-05] formatDateShort co-located inside timeline-tab.tsx (used 2x — flag label + popover date row). Lift to lib/ only when a third consumer needs it (matches the SummaryStrip mode-chip co-located strategy)
 - [12-05] Click-outside dismiss for both milestone popover AND chip-picker dropdown uses `mousedown` (not `click`) — fires before React click handlers, avoids racing the toggle event that opened them
 - [12-05] ConfirmDialog `confirmTone="danger"` prop NOT passed — current Phase 10 D-25 ConfirmDialog primitive does not accept it. UI-SPEC mentioned the prop, but no consumer uses it (`grep confirmTone` returns 0 hits). Future hardening (red-tone Sil) deferred to a primitive enhancement plan; not Plan 12-05 scope
+- [12-06] Artifact PATCH path selection at the call site: useUpdateArtifact (PM full path /artifacts/{id}) vs useUpdateArtifactMine (assignee path /artifacts/{id}/mine) chosen by `useAuth().user.id === artifact.assigneeId`. assignee_id is omitted from the /mine PATCH body via the ArtifactUpdateByMineDTO type so the field cannot leak. Backend re-validates so a misclassified call still rejects (T-12-06-01)
+- [12-06] Single-file constraint at the input handler: onFileChange consumes files[0] only; multi-select picker still triggers exactly one upload (Phase 9 D-41). 413 → AlertBanner '10MB sınırı'; generic err → 'Dosya yüklenemedi.'
+- [12-06] revision NEVER sent in PATCH body (T-12-06-03): backend D-25 auto-increments; the PhaseReportUpdateDTO + ArtifactUpdateDTO types omit the field entirely. Component reads `report.revision` for display + filename only (anchor.download = `Phase-Report-${key}-${slug}-rev${revision}.pdf`)
+- [12-06] Lazy-create on first PhaseReport save: when usePhaseReports returns no entry for the active phase, EvaluationReportCard's Kaydet calls useCreatePhaseReport (POST). cycle_number auto-set server-side; frontend never sends it. Subsequent saves PATCH
+- [12-06] PDF rate-limit honored client-side: 429 → pdfCountdown state + setInterval ticker disables the button with '${n}s bekleyin' label until 0; warning toast on entry, success toast on completion. Test 6 uses real timers with retry_after=2 instead of vi.useFakeTimers (TanStack Query micro-task scheduling not advanced under fake timers)
+- [12-06] Soft-warning vs direct delete: artifacts with status='not-created' DELETE immediately on Sil click; status='draft' or 'done' open ConfirmDialog with 'Bu artefakt taslak durumunda. Silmek istediğinize emin misiniz?'. Honors CONTEXT D-54 — PM with transition-authority can manage; backend re-validates
+- [12-06] Assignee dropdown sourced from manager + self stub. Real /projects/{id}/members endpoint lands in Phase 13 PROF-01; Plan 12-06 ships graceful degradation (project.managerId → 'Proje Yöneticisi' option, useAuth().user → 'Ben' option). Three-line swap when members endpoint exists
+- [12-06] Test 3 fixture switched from Sprint Planı (assignee_id=1, would have hit /mine path) to Daily Notes (assignee_id=null, takes PM full path). Test 4 retained Sprint Planı for the assignee path. Two tests are mirror cases that exercise both branches of the path-selection logic
+- [12-06] Test 4 disambiguates the 'Taslak' chip from the 'Taslak' status label by selecting the SegmentedControl button via role='button' name='Taslak' — getByText would match both
+- [12-06] Tests await `screen.getByText(/rev 3/i)` BEFORE interacting because the rev N badge only renders after usePhaseReports resolves. Without that wait, Save would POST instead of PATCH because `report` is still null — false positive masking
 
 ### Pending Todos
 
@@ -295,12 +306,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T14:35:00Z
-Stopped at: Phase 12 Plan 12-05 complete
+Last session: 2026-04-25T11:53:52Z
+Stopped at: Phase 12 Plan 12-06 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-06 — Artifacts sub-tab (row table + inline expand + single-file upload + soft-warning delete) + EvaluationReportCard (auto-prefill + PDF download with 30s rate limit) — LIFE-06 + LIFE-07
+**Next Plan:** 12-07 — Workflow Editor scaffold (page route + standalone editor shell + bottom toolbar + right side panel skeleton) — EDIT-01 / EDIT-02 prep
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
