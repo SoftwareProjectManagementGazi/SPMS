@@ -71,11 +71,13 @@ describe("ProjectDetailShell", () => {
     expect(getByText(/Faz 13'te aktive edilecek/)).toBeInTheDocument()
   })
 
-  it("mounts the real LifecycleTab on the Yaşam Döngüsü tab (Plan 12-02)", () => {
-    // The Phase 11 stub was replaced by <LifecycleTab/> in Plan 12-02. The
-    // mock projects fixture supplies a workflow with 3 nodes, so the
-    // SummaryStrip renders with the "Düzenle" button + the deferred-sub-tabs
-    // placeholder copy from LifecycleTab.
+  it("mounts the real LifecycleTab on the Yaşam Döngüsü tab (Plan 12-02 + 12-04)", () => {
+    // The Phase 11 stub was replaced by <LifecycleTab/> in Plan 12-02. Plan
+    // 12-04 then replaced the sub-tab placeholder div with the real Tabs
+    // primitive (Genel Bakış / Kilometre Taşları / Geçmiş / Artefaktlar).
+    // The mock projects fixture supplies a workflow with 3 nodes, so the
+    // SummaryStrip renders with the "Düzenle" button + the Tabs primitive
+    // mounts the Overview sub-tab content by default.
     const { getByText, getAllByText } = renderWithProviders(
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
@@ -83,8 +85,11 @@ describe("ProjectDetailShell", () => {
     // SummaryStrip "Düzenle" button is reliable — mode-chip + active-phase
     // badge depend on the BFS BUT "Düzenle" is unconditional.
     expect(getAllByText(/Düzenle/).length).toBeGreaterThan(0)
-    // Deferred-sub-tabs placeholder copy from lifecycle-tab.tsx
-    expect(getByText(/Alt sekmeler Plan 12-04/)).toBeInTheDocument()
+    // Plan 12-04: 4-sub-tab Tabs primitive renders the four labels.
+    expect(getByText("Genel Bakış")).toBeInTheDocument()
+    expect(getByText("Kilometre Taşları")).toBeInTheDocument()
+    expect(getByText("Geçmiş")).toBeInTheDocument()
+    expect(getByText("Artefaktlar")).toBeInTheDocument()
   })
 
   it("shows the project manager card on the Üyeler tab", () => {

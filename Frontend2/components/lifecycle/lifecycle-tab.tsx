@@ -21,12 +21,14 @@
 import * as React from "react"
 import type { Node as RFNode, Edge as RFEdge } from "@xyflow/react"
 
-import { Card } from "@/components/primitives"
+import { Card, Tabs, type TabItem } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useCycleCounters } from "@/hooks/use-cycle-counters"
 import { useTasks } from "@/hooks/use-tasks"
+import { lifecycleService } from "@/services/lifecycle-service"
 import {
   mapWorkflowConfig,
+  type PhaseTransitionEntry,
   type WorkflowConfig,
   type WorkflowConfigDTO,
   type WorkflowEdge as DomainEdge,
@@ -35,9 +37,12 @@ import {
 import { computeNodeStates } from "@/lib/lifecycle/graph-traversal"
 import type { Project } from "@/services/project-service"
 import { WorkflowCanvas } from "@/components/workflow-editor/workflow-canvas"
+import { useQuery } from "@tanstack/react-query"
 
 import { SummaryStrip } from "./summary-strip"
 import { PhaseGateExpand, type PhaseGateCriteria } from "./phase-gate-expand"
+import { OverviewSubTab } from "./overview-subtab"
+import { HistorySubTab } from "./history-subtab"
 
 interface PhaseTransitionEntryShape {
   user_id: number
@@ -179,19 +184,18 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
   // Activity feed → cycle counters (per-node ×N).
   const { data: cycleCounters } = useCycleCounters(project.id)
 
-  // Phase transitions feed for BFS — re-derived from the activity hook to
-  // avoid a second network round-trip. The `useCycleCounters` hook applies
-  // a `select` so we can't read the raw entries from the same key; pull the
-  // raw activity from `useCycleCounters`'s underlying query implicitly here.
+  // Phase transitions feed for BFS + History sub-tab. Plan 12-04 wires the
+  // raw activity feed via lifecycleService.getPhaseTransitions; the BFS
+  // function gracefully returns the initial-active branch when the list is
+  // empty.
+  const { data: phaseTransitionsRaw } = useQuery<PhaseTransitionEntry[]>({
+    queryKey: ["activity", project.id, "phase-transition"],
+    queryFn: () => lifecycleService.getPhaseTransitions(project.id),
+    enabled: !!project.id,
+  })
   const phaseTransitions: PhaseTransitionEntryShape[] = React.useMemo(() => {
-    // The hook returns a Map after select(); raw transitions are not exposed
-    // here. We synthesize an empty list on the assumption that node states
-    // beyond the workflow's first isInitial node will be populated once the
-    // dedicated `useLifecycleProject` hook ships in Plan 12-04. For Plan
-    // 12-02 the BFS function gracefully returns the initial-active branch
-    // when the transitions list is empty.
-    return []
-  }, [])
+    return (phaseTransitionsRaw ?? []) as PhaseTransitionEntryShape[]
+  }, [phaseTransitionsRaw])
 
   const nodeStates = React.useMemo(() => {
     if (!workflow) return new Map<string, "active" | "past" | "future" | "unreachable">()
@@ -224,6 +228,14 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
   }, [rawTasks, activePhase])
 
   const [gateOpen, setGateOpen] = React.useState(false)
+
+  // Sub-tab state. Default = Overview. The Kanban methodology hides
+  // History + Artifacts per CONTEXT D-59. Milestones + Artifacts ship as
+  // placeholders in Plan 12-04; Plan 12-05 + 12-06 land them.
+  type SubTabId = "overview" | "milestones" | "history" | "artifacts"
+  const [subTab, setSubTab] = React.useState<SubTabId>("overview")
+  const isKanban =
+    project.methodology === "KANBAN" || workflow?.mode === "continuous"
 
   const rfNodes = React.useMemo(
     () => (workflow ? buildRFNodes(workflow, nodeStates, cycleCounters) : []),
@@ -287,20 +299,85 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
         </div>
       </Card>
 
-      {/* Sub-tabs placeholder — Overview / Milestones / History / Artifacts
-          land in Plans 12-04..06. */}
-      <div
-        style={{
-          padding: 14,
-          marginTop: 12,
-          fontSize: 12.5,
-          color: "var(--fg-subtle)",
-        }}
-      >
-        {T(
-          "Alt sekmeler Plan 12-04..06'da geliyor.",
-          "Sub-tabs land in Plan 12-04..06.",
-        )}
+      {/* Sub-tabs — Overview + History live in Plan 12-04. Milestones lands
+          in Plan 12-05; Artifacts in Plan 12-06. Kanban hides History +
+          Artifacts per CONTEXT D-59. */}
+      <div style={{ marginTop: 12 }}>
+        <Tabs
+          tabs={
+            isKanban
+              ? ([
+                  { id: "overview", label: T("Genel Bakış", "Overview") },
+                  {
+                    id: "milestones",
+                    label: T("Kilometre Taşları", "Milestones"),
+                  },
+                ] as TabItem[])
+              : ([
+                  { id: "overview", label: T("Genel Bakış", "Overview") },
+                  {
+                    id: "milestones",
+                    label: T("Kilometre Taşları", "Milestones"),
+                  },
+                  { id: "history", label: T("Geçmiş", "History") },
+                  { id: "artifacts", label: T("Artefaktlar", "Artifacts") },
+                ] as TabItem[])
+          }
+          active={subTab}
+          onChange={(id) => setSubTab(id as SubTabId)}
+        />
+
+        <div style={{ paddingTop: 16 }}>
+          {subTab === "overview" && (
+            <OverviewSubTab
+              project={project}
+              workflow={workflow}
+              activePhase={activePhase}
+              tasks={(rawTasks ?? []) as never}
+            />
+          )}
+          {subTab === "milestones" && (
+            <Card padding={20}>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: "var(--fg-subtle)",
+                  textAlign: "center",
+                }}
+              >
+                {T(
+                  "Kilometre Taşları sekmesi Plan 12-05'te geliyor.",
+                  "Milestones sub-tab lands in Plan 12-05.",
+                )}
+              </div>
+            </Card>
+          )}
+          {subTab === "history" && !isKanban && (
+            <HistorySubTab
+              project={project}
+              workflow={workflow}
+              activity={
+                (phaseTransitionsRaw ?? []) as PhaseTransitionEntry[]
+              }
+            />
+          )}
+          {subTab === "artifacts" && !isKanban && (
+            <Card padding={20}>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: "var(--fg-subtle)",
+                  textAlign: "center",
+                }}
+              >
+                {T(
+                  "Artefaktlar sekmesi Plan 12-06'da geliyor.",
+                  "Artifacts sub-tab lands in Plan 12-06.",
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   )
