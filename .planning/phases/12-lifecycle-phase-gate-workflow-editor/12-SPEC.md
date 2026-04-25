@@ -105,8 +105,9 @@ The backend `WorkflowEdge` Pydantic model (`Backend/app/application/dtos/workflo
 - Backend additive change: extend `WorkflowEdge` Pydantic model with `bidirectional: bool = False` + `is_all_gate: bool = False`; extend `ExecutePhaseTransitionUseCase` to honor both fields; update `Backend/app/infrastructure/database/seeder.py` so newly seeded projects emit the new fields with defaults — no normalizer migration, no `CURRENT_SCHEMA_VERSION` bump
 - Phase 11 Timeline tab Gantt receives a `milestones` prop and renders vertical flag lines + popover (additive change, no rearchitecture)
 - Settings > General `methodology` field becomes read-only display + info tooltip
-- Manual UAT click-through checklist for every requirement + Playwright E2E smoke specs for the two highest-risk golden flows (Phase Gate transition + Workflow Editor save)
-- Unit + integration tests for pure logic (BFS traversal, workflow validators, cycle counter aggregation, criteria CRUD round-trip, schema additive read)
+- Manual UAT click-through checklist for every requirement
+- Per-plan unit + integration testing: unit tests for pure logic (BFS traversal, workflow validators, cycle counter aggregation, criteria evaluation), RTL component tests for UI, integration tests for backend changes (criteria CRUD round-trip, schema additive read, `ExecutePhaseTransitionUseCase` + new edge fields)
+- No Playwright E2E specs in Phase 12 — matches Phase 11 pattern; E2E smoke suite is deferred until a test-DB seeder lands (CONTEXT D-04)
 
 **Out of scope:**
 - Activity tab content (Phase 13, PROF-01 — Phase 12 ships only the activity feed *consumer* for cycle counters)
@@ -174,7 +175,8 @@ The backend `WorkflowEdge` Pydantic model (`Backend/app/application/dtos/workflo
 - [ ] Phase Gate `422` criteria-unmet response renders the per-criterion failure list from `unmet[]`
 - [ ] Override checkbox appears only when criteria fail in `sequential-locked` mode; the primary button relabels to "Zorla Geç" (danger tone)
 - [ ] Manual UAT click-through checklist (one row per requirement, 14 total) is documented in the Phase 12 verification artifact and signed off
-- [ ] Two Playwright E2E smoke specs exist and pass: (1) Phase Gate transition golden flow, (2) Workflow Editor open → drag node → switch edge type → save → reload → state persists
+- [ ] Per-plan unit + integration tests pass (RTL component tests for UI, vitest unit suites for `graph-traversal`/`workflow-validators`/`cloud-hull`/`align-helpers`/cycle-counter aggregation, backend pytest integration for criteria CRUD round-trip and `ExecutePhaseTransitionUseCase` honoring the new edge fields)
+- [ ] No Playwright E2E specs are added in Phase 12 (matches Phase 11 pattern; deferred until a test-DB seeder lands per CONTEXT D-04)
 - [ ] No imports from `Frontend/` (old frontend) in any Phase 12 code; no shadcn/ui imports anywhere
 - [ ] All user-facing strings render in Turkish + English via `useApp().language`
 - [ ] All Phase 12 code commits run on Frontend2's existing build/test pipeline without regressions in pre-Phase-12 tests
@@ -186,7 +188,7 @@ The backend `WorkflowEdge` Pydantic model (`Backend/app/application/dtos/workflo
 | Goal Clarity       | 0.95  | 0.75 | ✓      | Single-sentence goal with named deliverables                                |
 | Boundary Clarity   | 0.92  | 0.70 | ✓      | 13 explicit out-of-scope items + 5 cross-phase contracts                    |
 | Constraint Clarity | 0.92  | 0.65 | ✓      | Hard perf targets, viewport floor, schema additivity, permission gating     |
-| Acceptance Criteria| 0.92  | 0.70 | ✓      | 27 falsifiable pass/fail checkboxes including E2E + perf + cleanup checks   |
+| Acceptance Criteria| 0.92  | 0.70 | ✓      | 28 falsifiable pass/fail checkboxes covering perf targets + cleanup + per-plan unit/integration testing (no E2E per CONTEXT D-04) |
 | **Ambiguity**      | 0.07  | ≤0.20| ✓      |                                                                             |
 
 Status: ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
@@ -196,11 +198,12 @@ Status: ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
 | Round | Perspective    | Question summary                                       | Decision locked                                                                                  |
 |-------|----------------|--------------------------------------------------------|--------------------------------------------------------------------------------------------------|
 | 0     | (priors)       | Initial assessment from REQUIREMENTS + ROADMAP + CONTEXT | Acceptance Criteria below minimum — interview required                                            |
-| 1     | Boundary Keeper| Acceptance method: manual UAT vs automated vs hybrid?   | Manual UAT click-through + 2 Playwright E2E smoke specs (Phase Gate + Editor save)                |
+| 1     | Boundary Keeper| Acceptance method: manual UAT vs automated vs hybrid?   | Manual UAT + 2 Playwright E2E smoke specs (initial answer) → REVISED: per-plan unit + integration only, no E2E (CONTEXT D-04 priority restored) |
 | 1     | Boundary Keeper| MVP cut: which slice MUST ship if phase runs long?       | All 14 requirements (LIFE-01..07 + EDIT-01..07) MUST ship — no fold-to-followup                  |
 | 2     | Seed Closer    | Editor performance bar — hard target or feel-based?      | Hard targets: 60 fps drag at 50 nodes, BFS < 50 ms at 100 nodes, first-paint < 1 s on dev HW     |
 | 2     | Seed Closer    | Editor mobile/tablet support?                            | Desktop-only (≥1024 px); fallback message below                                                  |
 | 2     | Seed Closer    | Schema v1→v2 backcompat strictness?                      | No normalizer migration. Seeder-only update. Defaults applied via Pydantic optional fields        |
+| 3     | (priors)       | User overrode round 1 acceptance answer post-write       | CONTEXT D-04 restored as authoritative: per-plan unit + integration testing; no E2E in Phase 12   |
 
 ---
 
