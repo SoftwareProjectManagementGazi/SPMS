@@ -31,6 +31,80 @@ function humanSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+// Pre-upload validation. Backend re-validates everything (MIME, size, signed
+// URL etc.) but client-side checks save the user from waiting for a 5GB MP4
+// to fail upload. Limits intentionally match the backend's conservative
+// defaults — bumping either side without coordinating will leave a UX gap.
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB
+const ACCEPTED_TYPES = [
+  // Images
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  // PDFs / docs
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  // Plain / structured text
+  "text/plain",
+  "text/csv",
+  "text/markdown",
+  "application/json",
+  "application/xml",
+  // Archives
+  "application/zip",
+  "application/x-tar",
+  "application/gzip",
+]
+// `accept` attribute mirrors ACCEPTED_TYPES + a couple of extension aliases
+// for common-but-MIMEless cases (.md, .csv saved without a content-type).
+const ACCEPT_ATTR =
+  ACCEPTED_TYPES.join(",") + ",.md,.csv,.tsv,.log"
+
+function validateUpload(
+  file: File,
+  lang: "tr" | "en",
+): { ok: true } | { ok: false; reason: string } {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return {
+      ok: false,
+      reason:
+        lang === "tr"
+          ? `Dosya çok büyük (${humanSize(file.size)} > ${humanSize(MAX_UPLOAD_BYTES)})`
+          : `File too large (${humanSize(file.size)} > ${humanSize(MAX_UPLOAD_BYTES)})`,
+    }
+  }
+  // Empty file.type happens for some bare extensions; allow them through and
+  // let the backend decide. We only block when the browser DOES report a MIME
+  // and that MIME isn't on the allow-list.
+  if (file.type && !ACCEPTED_TYPES.includes(file.type)) {
+    return {
+      ok: false,
+      reason:
+        lang === "tr"
+          ? `Bu dosya tipi desteklenmiyor (${file.type})`
+          : `File type not supported (${file.type})`,
+    }
+  }
+  // Path-traversal guard on the filename. Any `..` segment or path separator
+  // is suspicious — safe to reject client-side; the backend should reject
+  // again but defense-in-depth never hurts.
+  if (/[\\/]|\.\./.test(file.name)) {
+    return {
+      ok: false,
+      reason:
+        lang === "tr"
+          ? "Dosya adı geçersiz karakter içeriyor"
+          : "Filename contains invalid characters",
+    }
+  }
+  return { ok: true }
+}
+
 function avatarForUploader(id: number, name?: string) {
   const initials = (name ?? `#${id}`).slice(0, 2).toUpperCase()
   return { initials, avColor: ((id % 8) + 1) as number }
@@ -104,16 +178,34 @@ export function AttachmentsSection({ taskId }: AttachmentsSectionProps) {
       }),
   })
 
+  // Run client-side validation before kicking the mutation. Failures surface
+  // a toast per offending file; valid files queue normally. Backend still
+  // re-validates everything (defense-in-depth) so this is purely a UX win.
+  const handleFiles = React.useCallback(
+    (files: File[]) => {
+      for (const f of files) {
+        const verdict = validateUpload(f, lang)
+        if (!verdict.ok) {
+          showToast({
+            variant: "error",
+            message: `${f.name}: ${verdict.reason}`,
+          })
+          continue
+        }
+        upload.mutate(f)
+      }
+    },
+    [lang, showToast, upload],
+  )
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
     setDragOver(false)
-    const files = Array.from(e.dataTransfer.files)
-    files.forEach((f) => upload.mutate(f))
+    handleFiles(Array.from(e.dataTransfer.files))
   }
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    files.forEach((f) => upload.mutate(f))
+    handleFiles(Array.from(e.target.files ?? []))
     e.target.value = ""
   }
 
@@ -158,6 +250,11 @@ export function AttachmentsSection({ taskId }: AttachmentsSectionProps) {
                 ? "Dosya sürükleyin veya tıklayın"
                 : "Drag files here or click"}
             </span>
+            <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+              {lang === "tr"
+                ? `En fazla ${humanSize(MAX_UPLOAD_BYTES)} · resim, PDF, ofis, metin, arşiv`
+                : `Up to ${humanSize(MAX_UPLOAD_BYTES)} · image, PDF, office, text, archive`}
+            </span>
             <div style={{ display: "flex", gap: 8 }}>
               <label
                 style={{
@@ -169,6 +266,7 @@ export function AttachmentsSection({ taskId }: AttachmentsSectionProps) {
                 <input
                   type="file"
                   multiple
+                  accept={ACCEPT_ATTR}
                   onChange={handleFileInput}
                   style={{ display: "none" }}
                 />
