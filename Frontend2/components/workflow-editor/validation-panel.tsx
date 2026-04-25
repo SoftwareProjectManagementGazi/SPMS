@@ -85,6 +85,28 @@ export function ValidationPanel({ workflow }: ValidationPanelProps) {
 
   const rule5HasWarning = result.warnings.some((w) => w.rule === 5)
 
+  // Rule 6 (prototype parity) — every non-archived node must be reachable
+  // from at least one initial node (BFS along forward + bidirectional flow
+  // edges). Surfaces unreachable orphans the user might have left behind.
+  const reachabilityOK = React.useMemo(
+    () => isReachable(workflow),
+    [workflow],
+  )
+
+  // Soft warning row — counts nodes that look like they have task-shaped
+  // metadata (wipLimit / wipUsage). The prototype showed "X düğümün atanmış
+  // görevi var" as a non-blocking notice; we use the same heuristic until a
+  // dedicated task-counts query lands.
+  const nodesWithTasks = React.useMemo(
+    () =>
+      (workflow.nodes ?? []).filter(
+        (n) =>
+          (n.wipLimit != null && n.wipLimit > 0) ||
+          ((n as { wipUsage?: number }).wipUsage ?? 0) > 0,
+      ).length,
+    [workflow],
+  )
+
   return (
     <div aria-live="polite">
       <div style={TITLE_STYLE}>{T("Doğrulama", "Validation")}</div>
@@ -128,6 +150,25 @@ export function ValidationPanel({ workflow }: ValidationPanelProps) {
               )
         }
       />
+      <ValidationRow
+        ok={reachabilityOK}
+        okLabel={T("Ulaşılabilirlik kontrolü geçti", "Reachability OK")}
+        failLabel={T(
+          "Bazı düğümler başlangıçtan ulaşılamıyor",
+          "Some nodes are unreachable from initial",
+        )}
+      />
+      {nodesWithTasks > 0 ? (
+        <ValidationRow
+          ok={false}
+          warning
+          okLabel=""
+          failLabel={T(
+            `${nodesWithTasks} düğümün atanmış görevi var`,
+            `${nodesWithTasks} nodes have tasks`,
+          )}
+        />
+      ) : null}
 
       {result.errors.length > 0 && (
         <div style={{ marginTop: 10 }}>
@@ -163,6 +204,38 @@ function hasInitial(wf: WorkflowConfig): boolean {
 
 function hasFinal(wf: WorkflowConfig): boolean {
   return wf.nodes.some((n) => Boolean(n.isFinal))
+}
+
+/**
+ * Forward BFS from any initial node along edges (bidirectional included).
+ * Every non-archived node must be reached for the rule to pass.
+ */
+function isReachable(wf: WorkflowConfig): boolean {
+  const live = wf.nodes.filter((n) => !n.isArchived)
+  if (live.length === 0) return true
+  const initials = live.filter((n) => n.isInitial).map((n) => n.id)
+  if (initials.length === 0) return false
+  const adj = new Map<string, string[]>()
+  for (const e of wf.edges) {
+    if (!adj.has(e.source)) adj.set(e.source, [])
+    adj.get(e.source)!.push(e.target)
+    if (e.bidirectional) {
+      if (!adj.has(e.target)) adj.set(e.target, [])
+      adj.get(e.target)!.push(e.source)
+    }
+  }
+  const visited = new Set<string>(initials)
+  const queue = [...initials]
+  while (queue.length) {
+    const id = queue.shift()!
+    for (const next of adj.get(id) ?? []) {
+      if (!visited.has(next)) {
+        visited.add(next)
+        queue.push(next)
+      }
+    }
+  }
+  return live.every((n) => visited.has(n.id))
 }
 
 function ValidationRow({
