@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 Plan 12-08 complete
-last_updated: "2026-04-25T15:35:00.000Z"
-last_activity: 2026-04-25 -- Phase 12 Plan 12-08 complete (workflow-editor interactivity wiring — DnD callbacks, inline edit, group cloud live morph, drop-association, ContextMenu, undo/redo, 10 keyboard shortcuts, align helpers — EDIT-01/02/04/05/06)
+stopped_at: Phase 12 Plan 12-09 complete
+last_updated: "2026-04-25T16:00:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-09 complete (backend additive WorkflowEdge bidirectional + is_all_gate Pydantic fields, ExecutePhaseTransitionUseCase D-16/D-17 honor, seeder canonical edge shape, frontend save flow with full 5-error matrix + dirty-save guard via beforeunload + safePush DirtySaveDialog — EDIT-03 + LIFE-02)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 42
-  percent: 95
+  completed_plans: 43
+  percent: 97
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
-Plan: 9 of 10 (12-08 complete)
+Plan: 10 of 10 (12-09 complete)
 Status: Executing Phase 12
-Last activity: 2026-04-25 -- Phase 12 Plan 12-08 complete
+Last activity: 2026-04-25 -- Phase 12 Plan 12-09 complete
 
-Progress: [█████████░] 95%
+Progress: [█████████░] 97%
 
 ## Performance Metrics
 
@@ -97,6 +97,7 @@ Progress: [█████████░] 95%
 | Phase 12 P06 | 12min | 2 tasks | 5 files  |
 | Phase 12 P07 | 11min | 2 tasks | 22 files |
 | Phase 12 P08 | 14min | 2 tasks | 10 files |
+| Phase 12 P09 | 14min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -311,6 +312,20 @@ Key constraints for v2.0:
 - [12-08] Group/ungroup toggle: bottom-toolbar Grup button + Cmd+G route to groupSelection (single node selected) or ungroup (group selected) based on selected.type — matches CONTEXT D-21 'Grupla / Grubu Çöz' bidirectional label semantic without a separate label state
 - [12-08] Drop-association chose DROP not SNAP-BACK — matches CONTEXT 'Claude\'s Discretion last bullet' default. Cloud reshrinks naturally because the dropped node is filtered from the parent group's children array
 - [12-08] Cmd+A select-all preventDefault but does NOT walk the workflow — multi-select state in editor-page is single-selection only in 12-08; React Flow's internal multi-select via Shift+click is preserved
+- [12-09] SPEC line 22 + line 163 OVERRIDES CONTEXT D-18 — no _migrate_v1_to_v2 function added, CURRENT_SCHEMA_VERSION stays at 1, no new Alembic migration. Pre-existing JSONB edges read with default False via Pydantic field defaults (Pitfall 9). Verified by canary test test_workflow_edge_defaults.py (5 cases) which is the long-term enforcement that future plans cannot accidentally promote the new fields to required
+- [12-09] InvalidTransitionError NEW domain exception in app/domain/exceptions.py; phase_transitions router maps to HTTP 422 with error_code INVALID_TRANSITION (matches existing Phase 9 error taxonomy pattern). Use case raises after archival check + before criteria evaluation, between steps 4 and 5
+- [12-09] D-16 pair-wise NOT transitive enforced via direct-edge lookup — A↔B + B↔C does NOT permit A→C. Test test_bidirectional_not_transitive locks the rule at the use-case layer with 9 in-memory-fake test cases (no DB dependency, runs in 0.04s)
+- [12-09] Seeder Waterfall edges migrated from legacy `{from,to}` to canonical `{source,target,bidirectional,is_all_gate}` — fresh seeded data is wire-shape canonical. test_seeder.py asserts the source file does NOT contain legacy `"from":` / `"to":` keys (regression guard)
+- [12-09] FE save flow uses safePush wrapper, NOT Next.js useRouter.events — Next.js 16 deprecated/removed router.events. The wrapping helper is the only Next 16 pattern. EditorPage's Geri button now calls safePush instead of router.push
+- [12-09] beforeunload handler uses BROWSER-CONTROLLED message (e.preventDefault + e.returnValue=''). Modern browsers ignore custom strings (security hardening, Pitfall 12). Documented in editor-page.tsx as intended, not a UX miss
+- [12-09] Save button disabled = !canEdit || saving || (rate-limited && countdown>0). Tooltip rotates between permission, in-flight ('Kaydediliyor…'), and countdown messages. Save text stays Kaydet but Tooltip changes
+- [12-09] Save flow useCallback placed BEFORE keyboard-shortcut useEffect — Cmd+S handler reads save() from closure. Initial implementation had save() declared after the effect → TDZ-equivalent issue at the dependency-array level → moved to fix
+- [12-09] qc.invalidateQueries({queryKey: ['project', project.id]}) chosen over manual refetch — TanStack Query handles dedupe + active-subscriber refetch automatically. Both 200-success and 409-Yenile paths use the same invalidate signature
+- [12-09] 422 detail captured in saveError.detail but NOT yet threaded into ValidationPanel props — only the error toast is surfaced. ValidationPanel per-error wiring deferred to a follow-up plan; Plan 12-09 ships the data path (saveError.detail) so the consumer plan can hook in without revisiting save()
+- [12-09] sequential-flexible mode validator coverage explicit — workflow-validators.test.ts gains 2 cases (cycle in flow edges fails rule 5, cycle in feedback edges passes rule 5). EDIT-03 parity locked at FE validator layer
+- [12-09] Backend tests use in-memory fakes (FakeProjectRepo / FakeTaskRepo / FakeAuditRepo / FakeSession) — no DB dependency, no migration 005 skip-guard needed, runs in 0.04s for all 18 tests. The FakeSession's _R stub class exposes scalar/scalar_one/scalars/first/all to mirror the AsyncSession result-row protocol
+- [12-09] Editor-page test mocks projectService.updateProcessConfig + useToast + useQueryClient via vi.mock at module top — tests do NOT mount QueryClientProvider/ToastProvider. 11 tests (4 baseline + 7 new) pass in ~350ms
+- [12-09] beforeunload Test 16 only verifies listener INSTALLED (preventDefault NOT called when dirty=false). Asserting preventDefault DOES fire on dirty=true requires triggering an interaction-based dirty path — deferred to Plan 12-10 e2e tests
 
 ### Pending Todos
 
@@ -331,12 +346,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: 2026-04-25T15:35:00Z
-Stopped at: Phase 12 Plan 12-08 complete
+Last session: 2026-04-25T16:00:00Z
+Stopped at: Phase 12 Plan 12-09 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 12-09 — Editor save flow: PATCH /projects/{id} with 200/422/409/429/network error matrix, dirty-save guard intercept, undo stack clear on save success, schema_version v2 normalizer wiring (bidirectional + is_all_gate honoring backend) — EDIT-01/02/03 final
+**Next Plan:** 12-10 — Final phase QA / perf-pass / e2e tests (last plan in Phase 12)
 
 **Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
