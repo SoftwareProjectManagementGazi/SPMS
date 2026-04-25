@@ -22,6 +22,8 @@ export interface RightPanelProps {
   workflow: WorkflowConfig
   selected: EditorSelection | null
   onWorkflowChange: (next: WorkflowConfig) => void
+  /** Editor mode — surfaces lifecycle vs status field affordances. */
+  editorMode?: "lifecycle" | "status"
 }
 
 const SECTION_STYLE: React.CSSProperties = {
@@ -33,6 +35,7 @@ export function RightPanel({
   workflow,
   selected,
   onWorkflowChange,
+  editorMode = "lifecycle",
 }: RightPanelProps) {
   const handleModeChange = React.useCallback(
     (nextMode: WorkflowConfig["mode"]) => {
@@ -61,6 +64,7 @@ export function RightPanel({
           workflow={workflow}
           selected={selected}
           onWorkflowChange={onWorkflowChange}
+          editorMode={editorMode}
         />
       </section>
       <section style={SECTION_STYLE}>

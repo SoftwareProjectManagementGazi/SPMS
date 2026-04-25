@@ -1376,6 +1376,7 @@ export function EditorPage({ project }: EditorPageProps) {
           workflow={workflow}
           selected={selected}
           onWorkflowChange={handleWorkflowChange}
+          editorMode={mode}
         />
       </div>
 

@@ -9,7 +9,7 @@
 // context menu actions; this panel is where right-side property edits land.
 
 import * as React from "react"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Trash2 } from "lucide-react"
 import {
   Button,
   Input,
@@ -37,6 +37,9 @@ export interface SelectionPanelProps {
   workflow: WorkflowConfig
   selected: EditorSelection | null
   onWorkflowChange: (next: WorkflowConfig) => void
+  /** Editor mode — drives status-only field affordances (e.g. horizontal
+   * Initial/Final checkboxes per prototype). */
+  editorMode?: "lifecycle" | "status"
 }
 
 const TITLE_STYLE: React.CSSProperties = {
@@ -76,6 +79,7 @@ export function SelectionPanel({
   workflow,
   selected,
   onWorkflowChange,
+  editorMode = "lifecycle",
 }: SelectionPanelProps) {
   const { language } = useApp()
   const T = React.useCallback(
@@ -120,6 +124,7 @@ export function SelectionPanel({
         node={node}
         workflow={workflow}
         onWorkflowChange={onWorkflowChange}
+        editorMode={editorMode}
         T={T}
       />
     )
@@ -177,11 +182,13 @@ function NodeEditor({
   node,
   workflow,
   onWorkflowChange,
+  editorMode,
   T,
 }: {
   node: WorkflowNode
   workflow: WorkflowConfig
   onWorkflowChange: (next: WorkflowConfig) => void
+  editorMode: "lifecycle" | "status"
   T: (tr: string, en: string) => string
 }) {
   const updateNode = React.useCallback(
@@ -195,6 +202,20 @@ function NodeEditor({
     },
     [node.id, workflow, onWorkflowChange],
   )
+
+  const removeNode = React.useCallback(() => {
+    onWorkflowChange({
+      ...workflow,
+      nodes: workflow.nodes.filter((n) => n.id !== node.id),
+      edges: workflow.edges.filter(
+        (e) => e.source !== node.id && e.target !== node.id,
+      ),
+      groups: (workflow.groups ?? []).map((g) => ({
+        ...g,
+        children: g.children.filter((cid) => cid !== node.id),
+      })),
+    })
+  }, [node.id, workflow, onWorkflowChange])
 
   return (
     <div>
@@ -252,22 +273,69 @@ function NodeEditor({
           style={{ width: 80 }}
         />
       </div>
-      <div style={TOGGLE_ROW}>
-        <span>{T("Başlangıç düğümü", "Initial node")}</span>
-        <Toggle
-          on={Boolean(node.isInitial)}
-          onChange={(v) => updateNode({ isInitial: v })}
-          size="sm"
-        />
-      </div>
-      <div style={TOGGLE_ROW}>
-        <span>{T("Bitiş düğümü", "Final node")}</span>
-        <Toggle
-          on={Boolean(node.isFinal)}
-          onChange={(v) => updateNode({ isFinal: v })}
-          size="sm"
-        />
-      </div>
+      {editorMode === "status" ? (
+        // Status mode: prototype-faithful inline horizontal Initial/Final
+        // checkboxes (gap=6) so two flags read like a single grouping.
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            fontSize: 12,
+            color: "var(--fg)",
+            marginBottom: 8,
+          }}
+        >
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(node.isInitial)}
+              onChange={(e) => updateNode({ isInitial: e.target.checked })}
+            />
+            {T("Başlangıç", "Initial")}
+          </label>
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(node.isFinal)}
+              onChange={(e) => updateNode({ isFinal: e.target.checked })}
+            />
+            {T("Bitiş", "Final")}
+          </label>
+        </div>
+      ) : (
+        <>
+          <div style={TOGGLE_ROW}>
+            <span>{T("Başlangıç düğümü", "Initial node")}</span>
+            <Toggle
+              on={Boolean(node.isInitial)}
+              onChange={(v) => updateNode({ isInitial: v })}
+              size="sm"
+            />
+          </div>
+          <div style={TOGGLE_ROW}>
+            <span>{T("Bitiş düğümü", "Final node")}</span>
+            <Toggle
+              on={Boolean(node.isFinal)}
+              onChange={(v) => updateNode({ isFinal: v })}
+              size="sm"
+            />
+          </div>
+        </>
+      )}
       <div style={TOGGLE_ROW}>
         <span>
           {T("Arşivli (yeni geçiş alamaz)", "Archived (no new transitions)")}
@@ -277,6 +345,20 @@ function NodeEditor({
           onChange={(v) => updateNode({ isArchived: v })}
           size="sm"
         />
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Button
+          variant="ghost"
+          size="xs"
+          icon={<Trash2 size={12} />}
+          onClick={removeNode}
+          style={{
+            color: "var(--priority-critical)",
+            alignSelf: "flex-start",
+          }}
+        >
+          {T("Sil", "Delete")}
+        </Button>
       </div>
     </div>
   )
@@ -311,6 +393,13 @@ function EdgeEditor({
     },
     [edge.id, workflow, onWorkflowChange],
   )
+
+  const removeEdge = React.useCallback(() => {
+    onWorkflowChange({
+      ...workflow,
+      edges: workflow.edges.filter((e) => e.id !== edge.id),
+    })
+  }, [edge.id, workflow, onWorkflowChange])
 
   const TYPE_OPTIONS = [
     { id: "flow", label: T("Akış", "Flow") },
@@ -408,6 +497,20 @@ function EdgeEditor({
           "Açıkken her aktif düğümden bu hedefe geçişe izin verir.",
           "When on, allows transition to this target from any active node.",
         )}
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Button
+          variant="ghost"
+          size="xs"
+          icon={<Trash2 size={12} />}
+          onClick={removeEdge}
+          style={{
+            color: "var(--priority-critical)",
+            alignSelf: "flex-start",
+          }}
+        >
+          {T("Bağlantıyı sil", "Delete edge")}
+        </Button>
       </div>
     </div>
   )
