@@ -3,24 +3,35 @@
 // PropertiesSidebar — the 300px right column on the Task Detail page (D-38).
 // Every MetaRow uses <InlineEdit> for click-to-edit optimistic PATCH.
 //
-// Rows (top to bottom, matching UI-SPEC §7 + §9):
-//   Durum     (Status)   — dropdown of project.columns
+// Rows (top to bottom, matching UI-SPEC §7 + §9 + prototype task-detail.jsx
+// 113-135):
+//   Durum     (Status)   — dropdown of project.columns; Badge tone tracks the
+//                          5-status palette (done=success, progress=info,
+//                          review=warning, blocked=danger, todo=neutral).
 //   Atanan    (Assignee) — number input (user id); real member picker in Plan 09
+//   Bildiren  (Reporter) — read-only avatar + name (PATCH not implemented in
+//                          backend for reporter_id; surfaces who created the
+//                          task per prototype task-detail.jsx:118).
 //   Öncelik   (Priority) — 4-option select
 //   Puan      (Points)   — number input
 //   Bitiş     (Due)      — date input
 //   {Cycle}              — hidden for Kanban (per resolveCycleLabel), disabled
-//                          for non-Scrum methodologies in Phase 11 (D-44)
+//                          for non-Scrum methodologies in Phase 11 (D-44).
+//                          When set, displays as a tone="info" Badge to match
+//                          the prototype's "Sprint 7" pill.
 //   Faz       (Phase)    — conditional on enable_phase_assignment, select
 //                          backed by process_config.workflow.nodes
-//   Etiketler (Labels)   — read-only chips for now; full chip picker in Plan 09
+//   Etiketler (Labels)   — chips with the human label name (joined via
+//                          useProjectLabels). Falls back to "#${id}" only when
+//                          the master record hasn't loaded yet.
 //   [PhaseStepper]       — below labels when enable_phase_assignment + sub-tasks
-//
-// Comments / History / Attachments / Dependencies live in Plan 11-09.
+//                          (its outer wrapper renders only when the stepper
+//                          would actually surface content).
 
 import * as React from "react"
 import { Avatar, Badge, Card, PriorityChip } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useProjectLabels } from "@/hooks/use-labels"
 import {
   isCycleFieldEnabled,
   resolveCycleLabel,
@@ -41,7 +52,8 @@ const editorStyle: React.CSSProperties = {
   boxShadow: "inset 0 0 0 1px var(--border)",
   color: "var(--fg)",
   border: "none",
-  // outline intentionally NOT set inline so :focus-visible ring paints (a11y).
+  // outline intentionally NOT set inline so :focus-visible ring (globals.css)
+  // paints for keyboard users (a11y).
   font: "inherit",
 }
 
@@ -89,6 +101,19 @@ function readPhaseConfig(
   return { enabled, nodes }
 }
 
+// Map canonical status → Badge tone. Coerce loose backend strings (uppercase
+// "DONE", legacy "in_progress") via the same rules as resolveStatus / coerce
+// elsewhere. Defaults to neutral so an unknown column doesn't crash the row.
+type Tone = "neutral" | "info" | "success" | "warning" | "danger"
+function statusTone(raw: string): Tone {
+  const s = String(raw ?? "").toLowerCase()
+  if (s === "done" || s === "completed" || s === "closed") return "success"
+  if (s === "progress" || s === "in_progress" || s === "doing") return "info"
+  if (s === "review" || s === "in_review") return "warning"
+  if (s === "blocked") return "danger"
+  return "neutral"
+}
+
 interface PropertiesSidebarProps {
   task: Task
   project: Project
@@ -104,14 +129,28 @@ export function PropertiesSidebar({
   const cycleLabel = resolveCycleLabel(project, lang)
   const cycleEnabled = isCycleFieldEnabled(project.methodology)
   const { enabled: phaseEnabled, nodes: phaseNodes } = readPhaseConfig(project)
+  const { data: projectLabels = [] } = useProjectLabels(project.id)
+  const labelById = React.useMemo(() => {
+    const m = new Map<number, string>()
+    for (const l of projectLabels) m.set(l.id, l.name)
+    return m
+  }, [projectLabels])
 
-  const assigneeAvatar = (id: number | null) =>
+  // Avatar initials. Prefer a real name string if the caller has one, else
+  // fall back to the legacy "#1"-style hash so something always renders.
+  const userAvatar = (id: number | null, name?: string | null) =>
     id != null
       ? {
-          initials: `#${id}`.slice(0, 2).toUpperCase(),
+          initials: ((name && name.trim()) || `#${id}`).slice(0, 2).toUpperCase(),
           avColor: ((id % 8) + 1) as number,
         }
       : null
+
+  // PhaseStepper renders null when conditions aren't met. Detecting this
+  // mirror-side keeps the wrapper div from leaving an empty 6/16 padding
+  // strip in the sidebar. Triage 5.12.
+  const phaseStepperVisible =
+    phaseEnabled && subtasks.length > 0 && phaseNodes.length > 0
 
   return (
     <Card padding={0}>
@@ -129,14 +168,15 @@ export function PropertiesSidebar({
         {lang === "tr" ? "Özellikler" : "Properties"}
       </div>
       <div style={{ padding: "8px 0" }}>
-        {/* Status */}
+        {/* Status — Badge tone tracks the 5-status palette per prototype
+            (task-detail.jsx:116). */}
         <MetaRow label={lang === "tr" ? "Durum" : "Status"}>
           <InlineEdit
             taskId={task.id}
             field="status"
             value={task.status}
             renderDisplay={(v) => (
-              <Badge size="xs" dot tone="neutral">
+              <Badge size="xs" dot tone={statusTone(String(v))}>
                 {v || "—"}
               </Badge>
             )}
@@ -165,7 +205,7 @@ export function PropertiesSidebar({
             field="assignee_id"
             value={task.assigneeId}
             renderDisplay={(v) => {
-              const av = assigneeAvatar(v)
+              const av = userAvatar(v, task.assigneeName)
               return av ? (
                 <div
                   style={{
@@ -175,8 +215,9 @@ export function PropertiesSidebar({
                   }}
                 >
                   <Avatar user={av} size={20} />
-                  <span>
-                    {lang === "tr" ? "Kullanıcı" : "User"} #{v}
+                  <span style={{ fontSize: 12.5 }}>
+                    {(task.assigneeName?.trim() ||
+                      `${lang === "tr" ? "Kullanıcı" : "User"} #${v}`)}
                   </span>
                 </div>
               ) : (
@@ -199,6 +240,36 @@ export function PropertiesSidebar({
               />
             )}
           />
+        </MetaRow>
+
+        {/* Reporter — read-only avatar+id row matching prototype
+            task-detail.jsx:118. PATCH for reporter_id is not implemented at
+            the API layer (and rarely needed — reporter is set on create), so
+            this stays display-only. */}
+        <MetaRow label={lang === "tr" ? "Bildiren" : "Reporter"}>
+          {task.reporterId != null ? (
+            (() => {
+              const av = userAvatar(task.reporterId)
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {av && <Avatar user={av} size={20} />}
+                  <span style={{ fontSize: 12.5 }}>
+                    {lang === "tr" ? "Kullanıcı" : "User"} #{task.reporterId}
+                  </span>
+                </div>
+              )
+            })()
+          ) : (
+            <span style={{ color: "var(--fg-subtle)" }}>
+              {lang === "tr" ? "—" : "—"}
+            </span>
+          )}
         </MetaRow>
 
         {/* Priority */}
@@ -300,7 +371,9 @@ export function PropertiesSidebar({
           />
         </MetaRow>
 
-        {/* Cycle — hidden for Kanban (cycleLabel null), disabled with helper for non-Scrum (D-44) */}
+        {/* Cycle — hidden for Kanban (cycleLabel null), disabled with helper for non-Scrum (D-44).
+            Display surfaces the cycle as a tone="info" Badge to mirror the
+            prototype's "Sprint 7" pill (task-detail.jsx:122). */}
         {cycleLabel && (
           <MetaRow label={cycleLabel}>
             <InlineEdit
@@ -309,7 +382,13 @@ export function PropertiesSidebar({
               value={task.cycleId}
               disabled={!cycleEnabled && project.methodology !== "WATERFALL"}
               renderDisplay={(v) => {
-                if (v != null) return `#${v}`
+                if (v != null) {
+                  return (
+                    <Badge size="xs" tone="info">
+                      {cycleLabel} #{v}
+                    </Badge>
+                  )
+                }
                 if (!cycleEnabled && project.methodology !== "WATERFALL") {
                   return (
                     <span style={{ color: "var(--fg-subtle)" }}>
@@ -374,7 +453,9 @@ export function PropertiesSidebar({
           </MetaRow>
         )}
 
-        {/* Labels (read-only list in this plan; chip picker arrives in 11-09) */}
+        {/* Labels — chip per label.name (resolved via useProjectLabels). When
+            the master record hasn't streamed in yet we still surface the id
+            as a "#3" badge so the user sees something is there. */}
         <MetaRow label={lang === "tr" ? "Etiketler" : "Labels"}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {(task.labels ?? []).length === 0 ? (
@@ -382,17 +463,21 @@ export function PropertiesSidebar({
             ) : (
               (task.labels ?? []).map((id) => (
                 <Badge key={id} size="xs" tone="neutral">
-                  #{id}
+                  {labelById.get(id) ?? `#${id}`}
                 </Badge>
               ))
             )}
           </div>
         </MetaRow>
 
-        {/* TASK-04 phase stepper */}
-        <div style={{ padding: "6px 16px" }}>
-          <PhaseStepper project={project} subtasks={subtasks} />
-        </div>
+        {/* TASK-04 phase stepper — only render the wrapper when the stepper
+            itself would surface content (triage 5.12). Avoids an empty
+            6/16 padding strip dangling under Labels for plain Kanban tasks. */}
+        {phaseStepperVisible && (
+          <div style={{ padding: "6px 16px" }}>
+            <PhaseStepper project={project} subtasks={subtasks} />
+          </div>
+        )}
       </div>
     </Card>
   )

@@ -127,7 +127,11 @@ export function InlineEdit<V>({
     )
   }
 
-  // Edit mode: capture Enter/Escape via key bubble from the editor input.
+  // Edit mode: capture Enter/Escape via key bubble from the editor input. The
+  // outer wrapper used to paint a 2px ring around the editor, but that
+  // double-stamped on top of the editor input's own :focus-visible ring and
+  // outlived focus when the user tabbed into a child popover. Now we rely
+  // entirely on the editor element's native focus ring (triage 5.10).
   return (
     <div
       onKeyDown={(e) => {
@@ -138,11 +142,6 @@ export function InlineEdit<V>({
           e.preventDefault()
           commit()
         }
-      }}
-      style={{
-        outline: "2px solid var(--ring)",
-        outlineOffset: 1,
-        borderRadius: 4,
       }}
     >
       {renderEditor(draft, setDraft, commit, cancel)}
