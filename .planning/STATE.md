@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 12
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-04-25T10:07:47.858Z"
-last_activity: 2026-04-25 -- Phase 12 planning complete
+stopped_at: Phase 12 Plan 12-01 complete
+last_updated: "2026-04-25T13:45:00.000Z"
+last_activity: 2026-04-25 -- Phase 12 Plan 12-01 complete (Wave 0 infrastructure shipped)
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 44
-  completed_plans: 34
-  percent: 77
+  completed_plans: 35
+  percent: 80
 ---
 
 # Project State
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase --phase — 11
+**Current focus:** Phase 12 — lifecycle-phase-gate-workflow-editor
 
 ## Current Position
 
-Phase: 11 (task-features-board-enhancements) — EXECUTING
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-25 -- Phase 12 planning complete
+Phase: 12 (lifecycle-phase-gate-workflow-editor) — EXECUTING
+Plan: 2 of 10 (12-01 complete)
+Status: Executing Phase 12
+Last activity: 2026-04-25 -- Phase 12 Plan 12-01 complete
 
 Progress: [██████████] 100%
 
@@ -89,6 +89,7 @@ Progress: [██████████] 100%
 | Phase Phase 11 PP09 | 8 | 2 tasks | 8 files |
 | Phase 11 P07 | 15 min | 2 tasks | 7 files |
 | Phase 11 P10 | 8min | 2 tasks | 13 files |
+| Phase 12 P01 | 18min | 3 tasks | 47 files |
 
 ## Accumulated Context
 
@@ -237,6 +238,15 @@ Key constraints for v2.0:
 - [11-10] SearchAutocomplete inlines a styled raw input rather than forking the Input primitive — tokens mirror the primitive's look while exposing ref + onFocus/onBlur/onKeyDown which the primitive does not forward. Decision keeps Input stable for all existing callers
 - [11-10] D-54 responsive via CSS classes in globals.css (.task-detail-grid collapses to 1fr at ≤1024px; .pd-tabs-wrap uses overflow-x:auto with hidden scrollbar at ≤1024px). Pure CSS — no useMediaQuery, no hydration mismatch risk
 - [11-10] E2E specs ship with defensive skip-guards — both specs are playwright --list-visible today but skip gracefully when auth/seed data unavailable. Phase 11 does not include e2e test-DB seeding; follow-up plan will remove the guards once a seeder lands
+- [12-01] @xyflow/react pinned to exact 12.10.2 (no caret) per RESEARCH RESOLVED Q2 — caret-range later upgrades silently risk Pitfall 1/2 reintroduction
+- [12-01] Convex-hull-plus-padding baseline shipped per UI-SPEC line 1262; concaveman + d3-shape NOT installed (saved ~50 KB transitive dep). Smoothing implemented inline via quadratic-bezier midpoint emit (~10 LOC in cloud-hull.ts)
+- [12-01] Bench files (graph-traversal.bench.ts + cloud-hull.bench.ts) excluded from `npm test` include pattern — vitest's `bench()` API is mode-gated. expect.toBeLessThan backstops remain in source for grep acceptance and run via `npx vitest bench --run`. Measured: BFS 100-node mean 0.023 ms (>2000× headroom under 50 ms budget); cloud-hull 50-node mean 0.038 ms (>400× headroom under 16 ms budget)
+- [12-01] use-editor-history is ref-mirrored — undo/redo callers need synchronous return values. React 19 StrictMode double-invoke broke the original setPast(callback-with-side-effect) approach. Replaced with single useRef + setVersion bumper so callbacks stay pure
+- [12-01] Idempotency-Key REQUIRED positional parameter on phase-gate-service.execute (T-09-08 mitigation, no default) — every call site is visible in code review
+- [12-01] use-transition-authority returns false while ledTeams is undefined (Pitfall 17) — backend re-checks every action so transient false is safe; consumed by Phase Gate / Milestone POST/PATCH/DELETE / Artifact POST/DELETE / PhaseReport CRUD / Editor Save
+- [12-01] Module-top NODE_TYPES + EDGE_TYPES constants in workflow-canvas-inner.tsx (Pitfall 1 — verified by node:fs source-position assertion test)
+- [12-01] PhaseNode handles use visibility:hidden NOT display:none (Pitfall 4) so React Flow can still hit-test on hover
+- [12-01] CycleCounterBadge returns null when count < 2 (Pitfall 16 — DOM-absent under threshold so single-cycle Scrum/Waterfall projects stay clean)
 
 ### Pending Todos
 
@@ -257,12 +267,12 @@ Carried from v1.0:
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 12 context gathered
+Last session: 2026-04-25T13:45:00Z
+Stopped at: Phase 12 Plan 12-01 complete
 Resume file: --resume-file
 
 **Current Phase:** 12
 
-**Next Plan:** 11-02 — Task Create Modal (TASK-01)
+**Next Plan:** 12-02 — Lifecycle Tab shell + summary strip (LIFE-02 read-only canvas consumer)
 
-**Planned Phase:** 11 (task-features-board-enhancements) — 10 plans — 2026-04-22T19:01:20.006Z
+**Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25
