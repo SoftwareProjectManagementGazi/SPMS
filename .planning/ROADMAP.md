@@ -146,16 +146,16 @@ Plans:
   5. Workflow editor supports edge types (flow/verification/feedback), swimlane grouping, sequential-flexible mode, BFS-based active phase calculation, parallel active phases, cycle counter badges, and Incremental/Evolutionary/RAD preset templates
 **Plans**: 10 plans
 Plans:
-- [ ] 12-01-PLAN.md (not yet planned)
-- [ ] 12-02-PLAN.md (not yet planned)
-- [ ] 12-03-PLAN.md (not yet planned)
-- [ ] 12-04-PLAN.md (not yet planned)
-- [ ] 12-05-PLAN.md (not yet planned)
-- [ ] 12-06-PLAN.md (not yet planned)
-- [ ] 12-07-PLAN.md (not yet planned)
-- [ ] 12-08-PLAN.md (not yet planned)
-- [ ] 12-09-PLAN.md (not yet planned)
-- [ ] 12-10-PLAN.md (not yet planned)
+- [ ] 12-01-PLAN.md — Wave 0 shared infra: @xyflow/react install + 5 pure-logic libs (graph-traversal/workflow-validators/cloud-hull/align-helpers/shortcuts) + 6 services + 9 hooks + 8 React Flow renderers (read-only operational) + RTL setup
+- [ ] 12-02-PLAN.md — Phase Gate inline expand + summary-strip + LifecycleTab outer shell (replaces lifecycle-stub-tab) — LIFE-02 with Idempotency-Key reuse + 5-error matrix + override flow
+- [ ] 12-03-PLAN.md — Settings > Yaşam Döngüsü criteria editor panel + enable_phase_assignment toggle + methodology read-only field per D-60 — LIFE-01
+- [ ] 12-04-PLAN.md — Lifecycle Tabs primitive + Overview sub-tab (4 MiniMetric default / 3-metric Kanban / `---` zero-task) + History sub-tab (lazy-fetch Collapsible) + MTTaskRow compact prop — LIFE-03 + LIFE-04
+- [ ] 12-05-PLAN.md — Milestones sub-tab (CRUD + chip picker + ConfirmDialog) + Timeline Gantt vertical flag lines + popover — LIFE-05
+- [ ] 12-06-PLAN.md — Artifacts sub-tab (row table + inline expand + single-file upload + soft-warning delete) + EvaluationReportCard (auto-prefill + PDF download with 30s rate limit) — LIFE-06 + LIFE-07
+- [ ] 12-07-PLAN.md — /workflow-editor?projectId route + viewport gate + EditorPage shell + 11 right-panel/toolbar/mode-banner/minimap-wrapper/color-swatch/dirty-save-dialog sub-components — EDIT-* infra
+- [ ] 12-08-PLAN.md — Editor interactivity: DnD + edge create + 5 group-creation entry points + live cloud morph + drop-association + inline edit + ContextMenu + undo/redo + 8 keyboard shortcuts + cycle counter wiring — EDIT-01/02/04/05/06
+- [ ] 12-09-PLAN.md — Backend additive change (WorkflowEdge.bidirectional + is_all_gate Pydantic defaults, NO _migrate_v1_to_v2, NO migration) + ExecutePhaseTransitionUseCase honor + seeder + 3 integration tests + frontend save flow with full error matrix + dirty-save guard — EDIT-03
+- [ ] 12-10-PLAN.md — 9 preset workflows (incl. Artırımlı/Evrimsel/RAD) + Şablon Yükle menu + ConfirmDialog + 14-row manual UAT checklist artifact + final polish — EDIT-07
 **UI hint**: yes
 
 ### Phase 13: Reporting, Activity & User Profile
@@ -200,6 +200,5 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 9. Backend Schema, Entities & APIs | v2.0 | 10/10 | Complete | 2026-04-21 |
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
-| 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/0 | Not started | - |
+| 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 0/10 | Planned (10 plans) | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 0/0 | Not started | - |
-</content>
