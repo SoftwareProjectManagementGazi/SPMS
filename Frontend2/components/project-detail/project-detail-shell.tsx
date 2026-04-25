@@ -42,6 +42,7 @@ import { apiClient } from "@/lib/api-client"
 import { ProjectDnDProvider } from "@/lib/dnd/dnd-provider"
 import { handleBoardDragEnd, type BoardColumnInfo } from "@/lib/dnd/board-dnd"
 import { useMoveTask, useTasks } from "@/hooks/use-tasks"
+import { useMilestones } from "@/hooks/use-milestones"
 import type { Project } from "@/services/project-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
@@ -123,6 +124,13 @@ export function ProjectDetailShell({
   // backend envelope, which then crashed every consumer with `tasks.filter is
   // not a function` (first caught during Phase 11 browser verification).
   const { data: currentTasks = [] } = useTasks(project.id)
+
+  // Phase 12 Plan 12-05 D-51 — milestones forwarded to TimelineTab as a prop
+  // so the Gantt can render vertical flag lines at each target_date. The
+  // queryKey is shared with the page-level prefetch (Plan 12-04) and the
+  // MilestonesSubTab — TanStack Query de-duplicates the network call across
+  // all consumers via cache hit.
+  const { data: milestones = [] } = useMilestones(project.id)
 
   const tabs = [
     { id: "board", label: lang === "tr" ? "Pano" : "Board", icon: <Grid3x3 size={13} /> },
@@ -265,7 +273,9 @@ export function ProjectDetailShell({
             <div style={{ flex: 1, minHeight: 0 }}>
               {tab === "board" && <BoardTab project={project} />}
               {tab === "list" && <ListTab project={project} />}
-              {tab === "timeline" && <TimelineTab project={project} />}
+              {tab === "timeline" && (
+                <TimelineTab project={project} milestones={milestones} />
+              )}
               {tab === "calendar" && <CalendarTab project={project} />}
               {tab === "activity" && <ActivityStubTab />}
               {tab === "lifecycle" && <LifecycleTab project={project} />}

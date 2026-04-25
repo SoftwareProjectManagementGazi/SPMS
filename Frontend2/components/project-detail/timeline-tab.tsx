@@ -29,10 +29,11 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 
-import { Button } from "@/components/primitives"
+import { Badge, Button, Card } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
+import type { Milestone } from "@/services/milestone-service"
 
 type GanttView = "day" | "week" | "month"
 
@@ -48,11 +49,60 @@ function priorityToken(priority: string | null | undefined): string {
   return p === "medium" ? "med" : p
 }
 
-export function TimelineTab({ project }: { project: Project }) {
+// Phase 12 Plan 12-05 D-51 — short-date formatter shared by the milestone
+// flag-line label and the popover. "15 Nis" / "Apr 15" depending on language.
+function formatDateShort(iso: string, language: "tr" | "en"): string {
+  return new Date(iso).toLocaleDateString(
+    language === "tr" ? "tr-TR" : "en-US",
+    { month: "short", day: "numeric" },
+  )
+}
+
+export interface TimelineTabProps {
+  project: Project
+  /** Phase 12 Plan 12-05 D-51 — milestones rendered as vertical flag lines on
+   *  the Gantt. Default empty so existing callers don't break. */
+  milestones?: Milestone[]
+}
+
+export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
   const { language } = useApp()
   const router = useRouter()
   const { data: tasks = [] } = useTasks(project.id)
   const [view, setView] = React.useState<GanttView>("week")
+  const [openMilestoneId, setOpenMilestoneId] = React.useState<number | null>(
+    null,
+  )
+
+  // Click-outside dismiss for the popover. Listener attaches only while a
+  // popover is open (mousedown phase, gated on openMilestoneId).
+  const popoverRef = React.useRef<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    if (openMilestoneId == null) return
+    const handler = (e: MouseEvent) => {
+      const root = popoverRef.current
+      if (!root) return
+      if (!root.contains(e.target as Node)) {
+        setOpenMilestoneId(null)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [openMilestoneId])
+
+  // Resolve linked phase node names from project.processConfig.workflow.nodes.
+  // The Gantt is the only consumer here so we read the nodes inline rather
+  // than threading another prop.
+  const phaseNameById = React.useMemo(() => {
+    const m = new Map<string, string>()
+    interface ProcessConfigShape {
+      workflow?: { nodes?: { id: string; name: string }[] }
+    }
+    const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
+    const nodes = cfg?.workflow?.nodes ?? []
+    for (const n of nodes) m.set(n.id, n.name)
+    return m
+  }, [project.processConfig])
 
   // Filter to scheduled tasks (both start + due) and sort by start ascending.
   const scheduled = React.useMemo(
@@ -265,8 +315,142 @@ export function TimelineTab({ project }: { project: Project }) {
               </g>
             )
           })}
+
+          {/* Phase 12 Plan 12-05 D-51 — milestone flag-line layer.
+              Renders only when at least one milestone is provided. Each flag
+              is a vertical dashed line from y=0 to y=height + a label-chip
+              rect+text at the top showing "{name} · {short-date}". Click a
+              flag → opens an absolute-positioned popover (rendered outside
+              the SVG, below this block). */}
+          {milestones.length > 0 && (
+            <g aria-label="milestones-layer">
+              {milestones.map((m) => {
+                const target = new Date(m.targetDate).getTime()
+                const x = ((target - min.getTime()) / MS_PER_DAY) * DAY_WIDTH[view]
+                if (x < 0 || x > width) return null
+                const labelText = `${m.name} · ${formatDateShort(
+                  m.targetDate,
+                  language === "tr" ? "tr" : "en",
+                )}`
+                const labelWidth = Math.max(120, labelText.length * 6.5)
+                return (
+                  <g
+                    key={m.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setOpenMilestoneId(m.id)}
+                  >
+                    <line
+                      x1={x}
+                      y1={0}
+                      x2={x}
+                      y2={height}
+                      stroke="var(--priority-high)"
+                      strokeWidth={1.5}
+                      strokeDasharray="6 3"
+                    />
+                    <rect
+                      x={x - labelWidth / 2}
+                      y={2}
+                      width={labelWidth}
+                      height={18}
+                      rx={4}
+                      fill="var(--surface)"
+                      stroke="var(--priority-high)"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={x}
+                      y={15}
+                      textAnchor="middle"
+                      fontSize={10.5}
+                      fill="var(--fg)"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      {labelText}
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          )}
         </svg>
       </div>
+
+      {/* Milestone popover (rendered below the SVG so it can break out of
+          the overflow:auto clip). Open state lives in openMilestoneId.
+          Click-outside dismiss attaches via React.useEffect. */}
+      {openMilestoneId != null && (() => {
+        const m = milestones.find((ms) => ms.id === openMilestoneId)
+        if (!m) return null
+        const target = new Date(m.targetDate).getTime()
+        const today = Date.now()
+        const days = Math.ceil((target - today) / MS_PER_DAY)
+        const linkedNames = (m.linkedPhaseIds ?? [])
+          .map((id) => phaseNameById.get(id))
+          .filter(Boolean) as string[]
+        return (
+          <div
+            ref={popoverRef}
+            style={{
+              alignSelf: "flex-start",
+              maxWidth: 320,
+              marginTop: 4,
+            }}
+          >
+            <Card padding={12}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 6,
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{m.name}</span>
+                <Badge size="xs" tone="info">
+                  {m.status ?? "PLANNED"}
+                </Badge>
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--fg-muted)",
+                  marginBottom: 6,
+                }}
+              >
+                {formatDateShort(
+                  m.targetDate,
+                  language === "tr" ? "tr" : "en",
+                )}
+                {" · "}
+                {days >= 0
+                  ? language === "tr"
+                    ? `${days} gün kaldı`
+                    : `${days}d left`
+                  : language === "tr"
+                    ? `${-days} gün gecikti`
+                    : `${-days}d overdue`}
+              </div>
+              {linkedNames.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 4,
+                  }}
+                >
+                  {linkedNames.map((n) => (
+                    <Badge key={n} size="xs" tone="neutral">
+                      {n}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )
+      })()}
     </div>
   )
 }

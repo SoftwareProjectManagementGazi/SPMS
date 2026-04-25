@@ -2,7 +2,6 @@
 import * as React from "react"
 import { useParams } from "next/navigation"
 import { useProject } from "@/hooks/use-projects"
-import { useMilestones } from "@/hooks/use-milestones"
 import { ArchiveBanner } from "@/components/projects/archive-banner"
 import { Card, Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
@@ -15,11 +14,10 @@ export default function ProjectDetailPage() {
   // T-10-08-02: NaN guard — enabled: !!projectId prevents API call when id is non-numeric
   const { data: project, isLoading } = useProject(projectId)
 
-  // Phase 12 Plan 12-04 Step 6 — pre-fetch milestones at page level so the
-  // TanStack cache primes for child consumers: LifecycleTab's Overview
-  // sub-tab (Yaklaşan Teslimler column) and the Timeline tab (Plan 12-05
-  // milestone flag lines). The hook is a no-op when projectId is invalid.
-  useMilestones(projectId)
+  // Phase 12 Plan 12-05 — Milestones are now fetched inside ProjectDetailShell
+  // and prop-drilled to both TimelineTab and MilestonesSubTab via TanStack
+  // Query's de-duped cache. Page level no longer needs a prefetch — the
+  // shell-level useMilestones is the single source of truth.
 
   if (isLoading) {
     return (
