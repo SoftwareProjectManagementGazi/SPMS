@@ -288,6 +288,8 @@ export function CalendarTab({ project }: { project: Project }) {
                   style={{
                     fontSize: 10.5,
                     padding: "2px 4px",
+                    // 3px tight radius is intentional for the 14px-tall day-cell
+                    // task pill — proportional to height per prototype.
                     borderRadius: 3,
                     background: `color-mix(in oklch, var(--priority-${priorityToken(
                       t.priority
@@ -311,6 +313,7 @@ export function CalendarTab({ project }: { project: Project }) {
                   style={{
                     fontSize: 10.5,
                     padding: "2px 4px",
+                    // 3px tight radius is proportional to the day-cell pill height.
                     borderRadius: 3,
                     background: "transparent",
                     color: "var(--fg-muted)",
@@ -395,7 +398,7 @@ export function CalendarTab({ project }: { project: Project }) {
                           alignItems: "center",
                           gap: 6,
                           padding: "4px 6px",
-                          borderRadius: 3,
+                          borderRadius: "var(--radius-sm)",
                           background: "transparent",
                           border: "none",
                           cursor: "pointer",

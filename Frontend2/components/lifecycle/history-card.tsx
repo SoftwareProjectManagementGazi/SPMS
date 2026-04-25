@@ -166,7 +166,7 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
             fontStyle: "italic",
             padding: "8px 10px",
             background: "var(--surface-2)",
-            borderRadius: 6,
+            borderRadius: "var(--radius-sm)",
           }}
         >
           &quot;{summary.note}&quot;
@@ -290,7 +290,7 @@ function SkeletonRows() {
           style={{
             height: 24,
             background: "var(--surface-2)",
-            borderRadius: 4,
+            borderRadius: "var(--radius-sm)",
             marginBottom: 6,
             opacity: 0.6,
           }}

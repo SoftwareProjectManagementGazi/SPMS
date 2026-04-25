@@ -223,7 +223,7 @@ export default function ForgotPasswordPage() {
             color: "var(--primary)",
             background: "color-mix(in oklch, var(--primary) 12%, var(--surface))",
             padding: "4px 10px",
-            borderRadius: 20,
+            borderRadius: 999,
             marginBottom: 24,
             width: "fit-content",
           }}
@@ -231,10 +231,10 @@ export default function ForgotPasswordPage() {
           ✦ v2.4 — Yeni Özellikler
         </div>
 
-        {/* Headline */}
+        {/* Headline — UI-sweep: 36 -> 24 (auth screen permitted exception). */}
         <div
           style={{
-            fontSize: 36,
+            fontSize: 24,
             fontWeight: 700,
             letterSpacing: -1,
             lineHeight: 1.15,
@@ -247,10 +247,10 @@ export default function ForgotPasswordPage() {
           tek yerden yönetin
         </div>
 
-        {/* Paragraph */}
+        {/* Paragraph — UI-sweep: 14.5 -> 14 (in-bucket; 14.5 was off-grid) */}
         <div
           style={{
-            fontSize: 14.5,
+            fontSize: 14,
             color: "var(--fg-muted)",
             lineHeight: 1.7,
             marginBottom: 40,
@@ -282,13 +282,14 @@ export default function ForgotPasswordPage() {
               style={{
                 padding: "16px 20px",
                 background: "color-mix(in oklch, var(--surface) 60%, var(--bg))",
-                borderRadius: 10,
+                borderRadius: "var(--radius-lg)",
                 border: "1px solid var(--border)",
               }}
             >
               <div
                 style={{
-                  fontSize: 22,
+                  // UI-sweep: 22 -> 20 (Display top of UI-SPEC 4-bucket).
+                  fontSize: 20,
                   fontWeight: 700,
                   color: "var(--fg)",
                   fontVariantNumeric: "tabular-nums",

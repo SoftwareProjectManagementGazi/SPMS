@@ -282,7 +282,7 @@ export function ArtifactInlineExpand({
           padding: 8,
           background: "var(--surface)",
           border: 0,
-          borderRadius: 6,
+          borderRadius: "var(--radius-sm)",
           boxShadow: "inset 0 0 0 1px var(--border)",
           fontFamily: "var(--font-sans)",
           fontSize: 12.5,

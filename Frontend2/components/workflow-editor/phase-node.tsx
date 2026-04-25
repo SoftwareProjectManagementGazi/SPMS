@@ -136,6 +136,8 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
         width: 140,
         height: 60,
         padding: "8px 10px",
+        // 10px radius is the prototype-faithful workflow node geometry per
+        // UI-SPEC line 178 permitted exception (1:1 prototype reproduction).
         borderRadius: 10,
         background: "var(--surface)",
         color: "var(--fg)",
@@ -246,7 +248,7 @@ function PhaseNodeImpl({ data, selected }: NodeProps) {
             // Inline-edit primary inset ring is the design "selected" state; the
             // global focus ring will stack on top when the input is keyboard-focused.
             boxShadow: "inset 0 0 0 1px var(--primary)",
-            borderRadius: 4,
+            borderRadius: "var(--radius-sm)",
             padding: "1px 4px",
           }}
         />

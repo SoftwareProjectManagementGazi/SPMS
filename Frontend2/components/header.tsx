@@ -54,7 +54,7 @@ export function Header({ statusBadge }: HeaderProps) {
   const iconButtonStyle: React.CSSProperties = {
     color: "var(--fg-muted)",
     padding: 6,
-    borderRadius: 6,
+    borderRadius: "var(--radius-sm)",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -119,7 +119,7 @@ export function Header({ statusBadge }: HeaderProps) {
         style={{
           color: "var(--fg-muted)",
           padding: "4px 8px",
-          borderRadius: 6,
+          borderRadius: "var(--radius-sm)",
           display: "inline-flex",
           alignItems: "center",
           fontSize: 12,

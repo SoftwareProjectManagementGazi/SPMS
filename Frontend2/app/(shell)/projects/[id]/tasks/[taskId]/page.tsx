@@ -138,7 +138,7 @@ export default function TaskDetailPage() {
               style={{
                 width: 26,
                 height: 26,
-                borderRadius: 6,
+                borderRadius: "var(--radius-sm)",
                 background:
                   "color-mix(in oklch, var(--priority-critical) 15%, transparent)",
                 color: "var(--priority-critical)",

@@ -175,7 +175,7 @@ export function BoardToolbar({ project }: { project: Project }) {
                   display: "block",
                   width: "100%",
                   textAlign: "left",
-                  padding: "6px 8px",
+                  padding: "6px 10px",
                   fontSize: 12.5,
                   background:
                     pd.phaseFilter === null
@@ -184,7 +184,7 @@ export function BoardToolbar({ project }: { project: Project }) {
                   border: "none",
                   color: "var(--fg)",
                   cursor: "pointer",
-                  borderRadius: 4,
+                  borderRadius: "var(--radius-sm)",
                 }}
               >
                 {language === "tr" ? "Tümü" : "All"}
@@ -201,7 +201,7 @@ export function BoardToolbar({ project }: { project: Project }) {
                     display: "block",
                     width: "100%",
                     textAlign: "left",
-                    padding: "6px 8px",
+                    padding: "6px 10px",
                     fontSize: 12.5,
                     background:
                       pd.phaseFilter === n.id
@@ -210,7 +210,7 @@ export function BoardToolbar({ project }: { project: Project }) {
                     border: "none",
                     color: "var(--fg)",
                     cursor: "pointer",
-                    borderRadius: 4,
+                    borderRadius: "var(--radius-sm)",
                   }}
                 >
                   {n.name}

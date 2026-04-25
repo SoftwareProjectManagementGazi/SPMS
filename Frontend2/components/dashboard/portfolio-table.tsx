@@ -104,7 +104,7 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
                 color: "var(--fg-muted)",
                 background: "var(--surface-2)",
                 padding: "2px 6px",
-                borderRadius: 4,
+                borderRadius: "var(--radius-sm)",
                 flexShrink: 0,
                 fontFamily: "var(--font-mono)",
               }}>

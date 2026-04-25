@@ -349,7 +349,7 @@ function PreferencesSection() {
         <select
           style={{
             height: 30, padding: "0 10px", fontSize: 13,
-            background: "var(--surface-2)", border: 0, borderRadius: 6,
+            background: "var(--surface-2)", border: 0, borderRadius: "var(--radius-sm)",
             boxShadow: "inset 0 0 0 1px var(--border)", color: "var(--fg)",
           }}
         >
@@ -525,7 +525,7 @@ function AppearanceSection() {
                 key={p.id}
                 onClick={() => applyPreset(p.id)}
                 style={{
-                  cursor: "pointer", padding: 14, borderRadius: 10,
+                  cursor: "pointer", padding: 14, borderRadius: "var(--radius-lg)",
                   background: p.tokens.bg,
                   boxShadow: isActive
                     ? "inset 0 0 0 2px var(--primary)"
@@ -536,6 +536,7 @@ function AppearanceSection() {
                 <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
                   {([p.tokens.primary, p.tokens.accent, p.tokens["bg-2"], p.tokens.fg] as string[]).map((c, i) => (
                     <div key={i} style={{
+                      // 3px radius is intentional for the 16px swatch (proportional pill)
                       width: 16, height: 16, borderRadius: 3, background: c,
                       boxShadow: "inset 0 0 0 1px oklch(0 0 0 / 0.1)",
                     }} />
@@ -661,7 +662,7 @@ function AppearanceSection() {
           {/* Preview swatch */}
           <div
             style={{
-              padding: "12px 16px", borderRadius: 10,
+              padding: "12px 16px", borderRadius: "var(--radius-lg)",
               background: `oklch(${localLight} ${localChroma} ${localHue})`,
               color: localLight < 0.55 ? "var(--primary-fg)" : "var(--fg)",
               fontSize: 13, fontWeight: 600,
@@ -820,7 +821,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
-                  padding: "8px 10px", borderRadius: 6,
+                  padding: "6px 10px", borderRadius: "var(--radius-sm)",
                   fontSize: 13, fontWeight: isActive ? 600 : 500,
                   color: isActive ? "var(--fg)" : "var(--fg-muted)",
                   background: isActive ? "var(--accent)" : "transparent",

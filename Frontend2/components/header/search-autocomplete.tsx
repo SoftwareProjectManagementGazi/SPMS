@@ -235,7 +235,7 @@ export function SearchAutocomplete() {
                     alignItems: "center",
                     gap: 8,
                     width: "100%",
-                    padding: "8px 10px",
+                    padding: "6px 10px",
                     fontSize: 13,
                     background:
                       highlight === i ? "var(--surface-2)" : "transparent",
@@ -247,7 +247,7 @@ export function SearchAutocomplete() {
                     cursor: "pointer",
                     color: "var(--fg)",
                     textAlign: "left",
-                    borderRadius: 3,
+                    borderRadius: "var(--radius-sm)",
                   }}
                 >
                   <Badge
@@ -300,7 +300,7 @@ export function SearchAutocomplete() {
                       alignItems: "center",
                       gap: 8,
                       width: "100%",
-                      padding: "8px 10px",
+                      padding: "6px 10px",
                       fontSize: 13,
                       background:
                         highlight === flatIdx
@@ -365,7 +365,7 @@ export function SearchAutocomplete() {
             }}
             style={{
               width: "100%",
-              padding: "8px 10px",
+              padding: "6px 10px",
               fontSize: 12,
               fontWeight: 500,
               color: "var(--primary)",

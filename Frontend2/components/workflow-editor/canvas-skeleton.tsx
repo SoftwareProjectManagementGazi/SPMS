@@ -50,6 +50,9 @@ export function CanvasSkeleton({ height = "100%" }: Props) {
             top: p.y,
             width: 140,
             height: 60,
+            // 10px radius matches the workflow-editor.jsx node geometry per
+            // UI-SPEC line 178 permitted exception (canvas skeleton mirrors
+            // the actual phase-node radius for a faithful loading shimmer).
             borderRadius: 10,
             background: "var(--surface)",
             boxShadow: "inset 0 0 0 1px var(--border)",

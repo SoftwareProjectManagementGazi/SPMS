@@ -51,6 +51,7 @@ function StepIndicator({ currentStep, language }: { currentStep: number; languag
               <div style={{
                 flex: 1,
                 height: 2,
+                // 1px radius is intentional for the 2px-tall step connector line.
                 borderRadius: 1,
                 margin: "0 8px",
                 background: isPast
@@ -403,7 +404,7 @@ function WizardContent() {
                           fontSize: 11,
                           fontWeight: 500,
                           padding: "2px 6px",
-                          borderRadius: 4,
+                          borderRadius: "var(--radius-sm)",
                           background: "var(--surface-2)",
                           color: "var(--fg-muted)",
                         }}>

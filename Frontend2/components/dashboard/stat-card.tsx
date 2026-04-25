@@ -54,7 +54,7 @@ export function StatCard({ label, value, delta, tone, icon }: StatCardProps) {
         <div style={{
           width: 32,
           height: 32,
-          borderRadius: 8,
+          borderRadius: "var(--radius)",
           flexShrink: 0,
           background: TONE_BG[tone] ?? TONE_BG.neutral,
           color: TONE_COLOR[tone] ?? TONE_COLOR.neutral,

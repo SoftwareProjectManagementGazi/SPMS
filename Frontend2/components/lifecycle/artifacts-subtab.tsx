@@ -277,7 +277,7 @@ export function ArtifactsSubTab({ project, workflow }: ArtifactsSubTabProps) {
             color: "var(--fg-subtle)",
             fontSize: 12.5,
             border: "1px dashed var(--border-strong)",
-            borderRadius: 8,
+            borderRadius: "var(--radius)",
           }}
         >
           {T(

@@ -99,7 +99,10 @@ export function BoardCard({
     opacity: isDragging ? 0.3 : 1,
     background: "var(--surface)",
     borderRadius: "var(--radius-sm)",
-    padding: densityMode === "compact" ? "8px 10px 8px 9px" : "10px 12px 10px 11px",
+    // UI-sweep: dropped per-side 9px/11px adjustment that compensated for the
+    // 3px borderLeft. Use symmetric padding; the inner content reads with the
+    // 3px asymmetry visually clearly enough (and box-sizing keeps cards aligned).
+    padding: densityMode === "compact" ? "8px 10px" : "10px 12px",
     borderLeft: `3px solid ${priorityTokenVar(task.priority)}`,
     boxShadow:
       "inset 0 0 0 1px var(--border), 0 1px 2px oklch(0 0 0 / 0.03)",
@@ -197,7 +200,7 @@ export function BoardCard({
                 color: "var(--fg-muted)",
                 background: "var(--surface-2)",
                 padding: "2px 6px",
-                borderRadius: 3,
+                borderRadius: "var(--radius-sm)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >

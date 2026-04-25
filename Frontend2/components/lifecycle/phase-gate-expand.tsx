@@ -627,7 +627,7 @@ export function PhaseGateExpand({
           padding: 8,
           background: "var(--surface)",
           border: 0,
-          borderRadius: 6,
+          borderRadius: "var(--radius-sm)",
           boxShadow: noteOver
             ? "inset 0 0 0 1px var(--priority-critical)"
             : "inset 0 0 0 1px var(--border)",

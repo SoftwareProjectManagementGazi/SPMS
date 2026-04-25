@@ -410,7 +410,7 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
                       borderLeft: active
                         ? "2px solid var(--primary)"
                         : "2px solid transparent",
-                      borderRadius: 4,
+                      borderRadius: "var(--radius-sm)",
                       cursor: "pointer",
                       transition: "background 0.12s",
                     }}
