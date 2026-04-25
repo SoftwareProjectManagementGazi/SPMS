@@ -8,6 +8,11 @@ export interface Task {
   status: string
   priority: "low" | "medium" | "high" | "critical"
   assigneeId: number | null
+  /** Backend `assignee.username` when populated; optional so existing test
+   *  fixtures created before this field existed continue to compile. mapTask
+   *  fills it with "" when the API response has no assignee, so consumers
+   *  can rely on `task.assigneeName ?? ""` returning a string. */
+  assigneeName?: string
   reporterId: number | null
   parentTaskId: number | null
   projectId: number
@@ -22,14 +27,29 @@ export interface Task {
   createdAt: string
 }
 
+interface UserSummaryDTO {
+  id: number
+  email: string
+  username: string
+  avatar_url?: string | null
+}
+
 interface TaskResponseDTO {
   id: number
-  key: string
+  /** Pre-Phase-12 backends shipped this as `key`; current backend ships
+   *  `task_key` (Backend/app/application/dtos/task_dtos.py:86). Both are
+   *  declared here so mapTask can fall through whichever the live API uses. */
+  key?: string | null
+  task_key?: string | null
   title: string
   description: string
   status: string
   priority: "low" | "medium" | "high" | "critical"
   assignee_id: number | null
+  /** Backend includes the populated assignee object on TaskResponseDTO. We
+   *  read username for initials so the UI doesn't have to fetch /users to
+   *  resolve a name. */
+  assignee?: UserSummaryDTO | null
   reporter_id: number | null
   parent_task_id: number | null
   project_id: number
@@ -37,7 +57,10 @@ interface TaskResponseDTO {
   phase_id: string | null
   points: number | null
   start: string | null
-  due: string | null
+  /** Same backend rename as task_key — was `due`, current DTO ships
+   *  `due_date`. Both supported for safe fall-through. */
+  due?: string | null
+  due_date?: string | null
   labels: number[]
   watcher_count: number
   type: "task" | "subtask" | "bug"
@@ -102,12 +125,19 @@ function normalizeStatus(raw: unknown): string {
 function mapTask(d: TaskResponseDTO): Task {
   return {
     id: d.id,
-    key: d.key,
+    // Backend renamed `key` -> `task_key` in the current TaskResponseDTO. Read
+    // either to keep the UI working across rolling deploys. Falls back to ""
+    // so consumers always see a string and never undefined.
+    key: d.task_key ?? d.key ?? "",
     title: d.title,
     description: d.description ?? "",
     status: normalizeStatus(d.status),
     priority: normalizePriority(d.priority),
     assigneeId: d.assignee_id,
+    // Prefer the populated assignee object's username (backend includes the
+    // full user summary); fall back to "" for unassigned tasks. TaskRow uses
+    // this to compute real initials instead of "#1"-style hash mocks.
+    assigneeName: d.assignee?.username ?? "",
     reporterId: d.reporter_id,
     parentTaskId: d.parent_task_id,
     projectId: d.project_id,
@@ -115,7 +145,8 @@ function mapTask(d: TaskResponseDTO): Task {
     phaseId: d.phase_id,
     points: d.points,
     start: d.start,
-    due: d.due,
+    // Same fallback pattern as task_key: backend renamed `due` -> `due_date`.
+    due: d.due_date ?? d.due ?? null,
     labels: d.labels ?? [],
     watcherCount: d.watcher_count ?? 0,
     type: d.type,
