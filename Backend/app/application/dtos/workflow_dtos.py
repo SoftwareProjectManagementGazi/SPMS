@@ -27,6 +27,13 @@ class WorkflowEdge(BaseModel):
     target: str
     type: Literal["flow", "verification", "feedback"] = "flow"
     label: Optional[str] = None
+    # Phase 12 D-16 — pair-wise reverse transition allowed (NOT transitive).
+    # Pre-existing JSONB edges read with default False (Pitfall 9 / SPEC line 22 +
+    # line 163 — additive Pydantic only, no schema-version bump).
+    bidirectional: bool = False
+    # Phase 12 D-17 — Jira-style source-agnostic gate. When True, ANY non-archived
+    # source node may transition to this edge's target.
+    is_all_gate: bool = False
 
 
 class WorkflowGroup(BaseModel):

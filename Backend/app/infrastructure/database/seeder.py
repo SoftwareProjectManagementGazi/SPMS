@@ -281,10 +281,19 @@ async def seed_process_templates(session: AsyncSession):
                     {"id": "maint", "label": "Bakım", "order": 4},
                 ],
                 "edges": [
-                    {"from": "req", "to": "design"},
-                    {"from": "design", "to": "impl"},
-                    {"from": "impl", "to": "test"},
-                    {"from": "test", "to": "maint"},
+                    # Phase 12 Plan 12-09 — emit canonical WorkflowEdge shape
+                    # (source/target naming + new D-16/D-17 fields explicit).
+                    # NOTE: legacy `from`/`to` keys replaced with `source`/`target`
+                    # so the seeder data round-trips through the WorkflowEdge
+                    # Pydantic model without surprises.
+                    {"id": "e1", "source": "req", "target": "design", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e2", "source": "design", "target": "impl", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e3", "source": "impl", "target": "test", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e4", "source": "test", "target": "maint", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
                 ],
                 "groups": [],
             },

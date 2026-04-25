@@ -149,3 +149,19 @@ class ProcessConfigSchemaError(DomainError):
         super().__init__(
             f"No migration path from process_config schema_version {from_version} to {to_version}"
         )
+
+
+class InvalidTransitionError(DomainError):
+    """Phase 12 D-16/D-17 — Raised when ExecutePhaseTransitionUseCase finds no edge
+    (direct, bidirectional pair-wise reverse, or is_all_gate) connects source to target.
+
+    Router maps to HTTP 422 Unprocessable Entity. Bidirectional rule is pair-wise NOT
+    transitive (D-16); is_all_gate=true exempts the source check entirely (D-17).
+    """
+    def __init__(self, source_phase_id: str, target_phase_id: str, reason: str = "no edge connects source to target"):
+        self.source_phase_id = source_phase_id
+        self.target_phase_id = target_phase_id
+        self.reason = reason
+        super().__init__(
+            f"Invalid transition '{source_phase_id}' -> '{target_phase_id}': {reason}"
+        )

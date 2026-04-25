@@ -15,7 +15,7 @@ from app.application.dtos.phase_transition_dtos import (
 from app.application.services import idempotency_cache
 from app.domain.exceptions import (
     PhaseGateLockedError, CriteriaUnmetError, PhaseGateNotApplicableError,
-    ArchivedNodeReferenceError, ProjectNotFoundError,
+    ArchivedNodeReferenceError, ProjectNotFoundError, InvalidTransitionError,
 )
 
 router = APIRouter()
@@ -84,6 +84,16 @@ async def create_phase_transition(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error_code": "ARCHIVED_NODE_REF", "node_id": e.node_id, "reason": e.reason},
+        )
+    except InvalidTransitionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error_code": "INVALID_TRANSITION",
+                "source_phase_id": e.source_phase_id,
+                "target_phase_id": e.target_phase_id,
+                "reason": e.reason,
+            },
         )
     except ProjectNotFoundError as e:
         raise HTTPException(

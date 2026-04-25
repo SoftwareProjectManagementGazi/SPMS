@@ -24,6 +24,7 @@ from app.domain.exceptions import (
     CriteriaUnmetError,
     PhaseGateNotApplicableError,
     ArchivedNodeReferenceError,
+    InvalidTransitionError,
 )
 
 
@@ -73,6 +74,44 @@ class ExecutePhaseTransitionUseCase:
                 raise ArchivedNodeReferenceError(node_id=pid, reason=f"non-existent in project workflow ({label})")
             if node.get("is_archived"):
                 raise ArchivedNodeReferenceError(node_id=pid, reason=f"archived ({label})")
+
+        # 4.5. Edge existence + direction check (Phase 12 D-16, D-17)
+        # Three ways a transition can be allowed:
+        #   (a) direct edge: source -> target exists
+        #   (b) bidirectional pair-wise reverse: target -> source edge with bidirectional=True
+        #       (NOT transitive — D-16 explicitly forbids transitive closure)
+        #   (c) is_all_gate=True edge with target=requested_target (D-17 Jira-style;
+        #       any non-archived source allowed — source check above still enforced)
+        # Edge type (flow / verification / feedback) is intentionally NOT consulted here:
+        # the existence of an edge with matching source+target signals the transition
+        # is structurally permitted. The mode-specific cycle/feedback rules live in
+        # workflow_dtos._has_cycle (D-55 rule 3) and apply at config-validation time.
+        edges = workflow.get("edges", [])
+        direct_edge = next(
+            (e for e in edges
+             if e.get("source") == dto.source_phase_id
+             and e.get("target") == dto.target_phase_id),
+            None,
+        )
+        reverse_edge = next(
+            (e for e in edges
+             if e.get("source") == dto.target_phase_id
+             and e.get("target") == dto.source_phase_id
+             and e.get("bidirectional")),
+            None,
+        )
+        all_gate_edge = next(
+            (e for e in edges
+             if e.get("is_all_gate")
+             and e.get("target") == dto.target_phase_id),
+            None,
+        )
+        if not (direct_edge or reverse_edge or all_gate_edge):
+            raise InvalidTransitionError(
+                source_phase_id=dto.source_phase_id,
+                target_phase_id=dto.target_phase_id,
+                reason="No edge connects source to target (direct, bidirectional, or is_all_gate)",
+            )
 
         # 5. Criteria evaluation (D-03)
         criteria = pc.get("phase_completion_criteria", {}).get(dto.source_phase_id, {})
