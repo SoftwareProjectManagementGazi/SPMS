@@ -88,8 +88,8 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 - [x] **LIFE-01**: Faz tamamlanma kriterleri formu yapilir — Settings > Lifecycle'da her faz icin otomatik kriter toggle + manuel kriter listesi [E2]
 - [x] **LIFE-02**: Phase Gate inline expand yapilir — "Faza Gecis Yap" butonu, tamamlanma durumu, kriter kontrolleri, acik gorev aksiyonlari, not alani [E7]
-- [~] **LIFE-03**: 0 gorevli faz secildiginde metriklerde "---", Phase Gate kriterlerinde "Uygulanamaz" ve bilgi mesaji gosterilir [E6] (Phase Gate side complete in 12-02; MiniMetric --- mono-zero summary lands in 12-04)
-- [ ] **LIFE-04**: Lifecycle > Gecmis kartlarinda Collapsible "Gorev Detaylari" bolumu MTTaskRow compact ile implemente edilir [E8]
+- [x] **LIFE-03**: 0 gorevli faz secildiginde metriklerde "---", Phase Gate kriterlerinde "Uygulanamaz" ve bilgi mesaji gosterilir [E6] (Phase Gate side complete in 12-02; MiniMetric --- mono-zero summary completed 2026-04-25 in 12-04)
+- [x] **LIFE-04**: Lifecycle > Gecmis kartlarinda Collapsible "Gorev Detaylari" bolumu MTTaskRow compact ile implemente edilir [E8] (completed 2026-04-25 in 12-04 — lazy-fetch + cache reuse)
 - [ ] **LIFE-05**: Milestone alt sekmesi yapilir — milestone listesi, ekleme formu, durum badge'leri, ProgressBar, timeline entegrasyonu
 - [ ] **LIFE-06**: Artefakt alt sekmesi yapilir — metodolojiye gore varsayilan artefaktlar, durum takibi, sorumlu atama, dosya baglama
 - [ ] **LIFE-07**: Degerlendirme Raporu inline expand yapilir — gecmis kartlarinda "Rapor" butonu, metrikler, sorunlar, dersler, oneriler, PDF indirme
@@ -212,8 +212,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TASK-06 | Phase 11 | Complete |
 | LIFE-01 | Phase 12 | Complete (12-03) |
 | LIFE-02 | Phase 12 | Complete (12-02) |
-| LIFE-03 | Phase 12 | Partial (Gate side: 12-02; summary metrics: 12-04) |
-| LIFE-04 | Phase 12 | Pending |
+| LIFE-03 | Phase 12 | Complete (Gate side: 12-02 + MiniMetric --- summary: 12-04) |
+| LIFE-04 | Phase 12 | Complete (12-04) |
 | LIFE-05 | Phase 12 | Pending |
 | LIFE-06 | Phase 12 | Pending |
 | LIFE-07 | Phase 12 | Pending |
