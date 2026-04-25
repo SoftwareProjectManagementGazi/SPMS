@@ -238,6 +238,12 @@ export function EditorPage({ project }: EditorPageProps) {
   const [pendingNavigation, setPendingNavigation] = React.useState<string | null>(
     null,
   )
+  // Triage #9 — edge-create flow. null = idle. After the user clicks "Bağlantı"
+  // we enter "pick-source", then on first node click we capture the source id
+  // and switch to "pick-target". The next node click commits the edge.
+  const [edgeCreateState, setEdgeCreateState] = React.useState<
+    null | { phase: "pick-source" } | { phase: "pick-target"; sourceId: string }
+  >(null)
 
   const history = useEditorHistory()
   const cycleQuery = useCycleCounters(project.id)
@@ -380,10 +386,6 @@ export function EditorPage({ project }: EditorPageProps) {
 
   // ---------------------- Canvas selection mapping ----------------------
 
-  const setNodeSelected = React.useCallback(
-    (id: string) => setSelected({ type: "node", id }),
-    [],
-  )
   const setEdgeSelected = React.useCallback(
     (id: string) => setSelected({ type: "edge", id }),
     [],
@@ -784,6 +786,59 @@ export function EditorPage({ project }: EditorPageProps) {
 
   // -------------------- Bulk + utility actions ------------------------
 
+  const startAddEdge = React.useCallback(() => {
+    setEdgeCreateState({ phase: "pick-source" })
+    showToast({
+      variant: "info",
+      message: T("Kaynak düğümü seçin", "Pick a source node"),
+    })
+  }, [showToast, T])
+
+  const cancelAddEdge = React.useCallback(() => {
+    setEdgeCreateState(null)
+  }, [])
+
+  const handleNodeClickWithEdgeMode = React.useCallback(
+    (nodeId: string) => {
+      if (!edgeCreateState) {
+        setSelected({ type: "node", id: nodeId })
+        return
+      }
+      if (edgeCreateState.phase === "pick-source") {
+        setEdgeCreateState({ phase: "pick-target", sourceId: nodeId })
+        showToast({
+          variant: "info",
+          message: T("Hedef düğümü seçin", "Pick a target node"),
+        })
+        return
+      }
+      // pick-target — commit
+      const sourceId = edgeCreateState.sourceId
+      if (nodeId === sourceId) {
+        showToast({
+          variant: "warning",
+          message: T(
+            "Kaynak ve hedef aynı olamaz",
+            "Source and target must differ",
+          ),
+        })
+        return
+      }
+      const newEdge: WorkflowEdge = {
+        id: newEdgeId(),
+        source: sourceId,
+        target: nodeId,
+        type: "flow",
+        bidirectional: false,
+        isAllGate: false,
+      }
+      commitWorkflow({ ...workflow, edges: [...workflow.edges, newEdge] })
+      setEdgeCreateState(null)
+      setSelected({ type: "edge", id: newEdge.id })
+    },
+    [edgeCreateState, workflow, commitWorkflow, showToast, T],
+  )
+
   const addNodeAtPosition = React.useCallback(
     (pos: Point) => {
       const id = newNodeId()
@@ -1173,11 +1228,12 @@ export function EditorPage({ project }: EditorPageProps) {
         e.preventDefault()
         return
       }
-      // Esc — deselect + close context menu.
+      // Esc — deselect + close context menu + cancel edge-create.
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.esc)) {
         e.preventDefault()
         setSelected(null)
         setContextMenu(null)
+        cancelAddEdge()
         return
       }
       // Cmd/Ctrl+G — group/ungroup current selection.
@@ -1211,6 +1267,8 @@ export function EditorPage({ project }: EditorPageProps) {
     canEdit,
     saving,
     save,
+    cancelAddEdge,
+    setWorkflow,
   ])
 
   // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550) — icons
@@ -1317,6 +1375,22 @@ export function EditorPage({ project }: EditorPageProps) {
           </Tooltip>
         </div>
       </div>
+
+      {/* Edge-create guidance banner (triage #9). */}
+      {edgeCreateState ? (
+        <AlertBanner
+          tone="info"
+          action={
+            <Button variant="ghost" size="sm" onClick={cancelAddEdge}>
+              {T("İptal", "Cancel")}
+            </Button>
+          }
+        >
+          {edgeCreateState.phase === "pick-source"
+            ? T("Kaynak düğümü seçin (Esc iptal eder).", "Pick a source node (Esc to cancel).")
+            : T("Hedef düğümü seçin (Esc iptal eder).", "Pick a target node (Esc to cancel).")}
+        </AlertBanner>
+      ) : null}
 
       {/* Plan 12-09 — concurrent-edit (409) AlertBanner */}
       {saveError?.kind === "409" && (
@@ -1467,7 +1541,7 @@ export function EditorPage({ project }: EditorPageProps) {
             showMiniMap
             controlsRef={canvasControlsRef}
             onNodeClick={(_e, node) =>
-              setNodeSelected(String(node.id))
+              handleNodeClickWithEdgeMode(String(node.id))
             }
             onEdgeClick={(_e, edge) =>
               setEdgeSelected(String(edge.id))
@@ -1486,6 +1560,7 @@ export function EditorPage({ project }: EditorPageProps) {
             onAddNode={() =>
               addNodeAtPosition({ x: 80 + Math.random() * 200, y: 80 + Math.random() * 100 })
             }
+            onAddEdge={startAddEdge}
             onGroup={() => {
               if (selected?.type === "node") {
                 groupSelection([selected.id])
