@@ -47,6 +47,9 @@ function SidebarLogo({ collapsed }: { collapsed: boolean }) {
         style={{
           width: 26,
           height: 26,
+          // UI-sweep permitted exception: 7px logo radius matches prototype shell.jsx
+          // — 1px slightly tighter than --radius-sm(6) since the logo is 26px (the
+          // standard 6px radius is tuned for 32-40px controls). Documented here.
           borderRadius: 7,
           background: "var(--primary)",
           color: "var(--primary-fg)",
@@ -67,7 +70,7 @@ function SidebarLogo({ collapsed }: { collapsed: boolean }) {
           <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: -0.2 }}>SPMS</div>
           <div
             className="mono"
-            style={{ fontSize: 9.5, color: "var(--fg-subtle)", marginTop: 2 }}
+            style={{ fontSize: 10.5, color: "var(--fg-subtle)", marginTop: 2 }}
           >
             v2.4
           </div>
@@ -98,10 +101,14 @@ function NavItem({
   badge,
   shortcut,
 }: NavItemProps) {
+  // UI-sweep: hover-row utility class replaces imperative onMouseEnter/Leave
+  // (now also responds to keyboard :focus-visible). Active items skip the
+  // class so the accent background isn't overridden on hover.
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
+      className={active ? undefined : "hover-row"}
       style={{
         display: "flex",
         alignItems: "center",
@@ -118,12 +125,6 @@ function NavItem({
         transition: "background 0.1s, color 0.1s",
         position: "relative",
         textDecoration: "none",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = "var(--surface-2)"
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = "transparent"
       }}
     >
       <span
@@ -186,8 +187,9 @@ function SidebarUserMenu({
     alignItems: "center",
     gap: 8,
     width: "100%",
-    padding: "8px 10px",
-    borderRadius: 6,
+    // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
+    padding: "6px 10px",
+    borderRadius: "var(--radius-sm)",
     fontSize: 12.5,
     textAlign: "left",
     background: "transparent",
@@ -244,7 +246,7 @@ function SidebarUserMenu({
             right: 0,
             marginBottom: 4,
             background: "var(--surface)",
-            borderRadius: 8,
+            borderRadius: "var(--radius)",
             boxShadow: "var(--shadow-lg)",
             padding: 4,
             border: "1px solid var(--border)",
@@ -253,26 +255,16 @@ function SidebarUserMenu({
         >
           <button
             onClick={() => setOpen(false)}
+            className="hover-row"
             style={menuItemStyle}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--surface-2)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
           >
             {lang === "tr" ? "Profilim" : "My Profile"}
           </button>
           <Link
             href="/settings"
             onClick={() => setOpen(false)}
+            className="hover-row"
             style={{ ...menuItemStyle, textDecoration: "none", color: "inherit" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--surface-2)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
           >
             {lang === "tr" ? "Ayarlar" : "Settings"}
           </Link>
@@ -284,13 +276,8 @@ function SidebarUserMenu({
           />
           <button
             onClick={handleLogout}
+            className="hover-row"
             style={{ ...menuItemStyle, color: "var(--priority-critical)" }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "var(--surface-2)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
           >
             <LogOut size={13} />
             {lang === "tr" ? "Çıkış Yap" : "Sign Out"}

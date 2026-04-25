@@ -76,8 +76,9 @@ export function BottomToolbar(props: BottomToolbarProps) {
         padding: 5,
         background: "var(--surface)",
         borderRadius: 999,
+        // UI-sweep: rgba fallback dropped — --shadow-md always defined.
         boxShadow:
-          "0 4px 14px oklch(0 0 0 / 0.10), inset 0 0 0 1px var(--border)",
+          "var(--shadow-md), inset 0 0 0 1px var(--border)",
       }}
     >
       <Button
@@ -149,6 +150,7 @@ export function BottomToolbar(props: BottomToolbarProps) {
                   props.onAlign?.(item.id)
                   setAlignOpen(false)
                 }}
+                className="hover-row"
                 style={{
                   textAlign: "left",
                   fontSize: 12,
@@ -158,12 +160,6 @@ export function BottomToolbar(props: BottomToolbarProps) {
                   background: "transparent",
                   border: 0,
                   cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--surface-2)"
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent"
                 }}
               >
                 {item.label}

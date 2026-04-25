@@ -1,6 +1,7 @@
 "use client"
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { MoreHorizontal } from "lucide-react"
 import { Card, Badge, ProgressBar, AvatarStack } from "@/components/primitives"
 import { useUpdateProjectStatus } from "@/hooks/use-projects"
 import { useToast } from "@/components/toast"
@@ -164,30 +165,26 @@ export function ProjectCard({ project }: ProjectCardProps) {
           onClick={e => e.stopPropagation()}>
           <button
             onClick={() => setMenuOpen(v => !v)}
+            aria-label={language === 'tr' ? "Proje işlemleri" : "Project actions"}
             style={{ background: "none", border: "none", cursor: "pointer", padding: 4,
-              borderRadius: 4, color: "var(--fg-muted)", display: "flex", alignItems: "center" }}>
-            {/* MoreH icon (3 horizontal dots) */}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <circle cx="3" cy="8" r="1.5" />
-              <circle cx="8" cy="8" r="1.5" />
-              <circle cx="13" cy="8" r="1.5" />
-            </svg>
+              borderRadius: "var(--radius-sm)", color: "var(--fg-muted)", display: "flex", alignItems: "center" }}>
+            <MoreHorizontal size={16} />
           </button>
           {menuOpen && (
             <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4,
-              minWidth: 140, background: "var(--surface)", borderRadius: 8,
+              minWidth: 140, background: "var(--surface)", borderRadius: "var(--radius)",
               boxShadow: "var(--shadow-lg)", padding: 4, zIndex: 100,
               border: "1px solid var(--border)" }}>
               {menuActions.map(action => (
                 <button
                   key={action.targetStatus}
                   onClick={() => { setMenuOpen(false); setPendingStatus(action.targetStatus) }}
+                  className="hover-row"
                   style={{ display: "block", width: "100%", textAlign: "left",
                     background: "none", border: "none", cursor: "pointer",
-                    padding: "8px 10px", borderRadius: 5, fontSize: 12.5,
-                    color: "var(--fg)" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--surface-2)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                    // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
+                    padding: "6px 10px", borderRadius: "var(--radius-sm)", fontSize: 12.5,
+                    color: "var(--fg)" }}>
                   {action.label}
                 </button>
               ))}
@@ -206,7 +203,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <div style={{ minWidth: 0 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, fontWeight: 600,
                 color: "var(--fg-muted)", background: "var(--surface-2)",
-                padding: "2px 6px", borderRadius: 4, marginRight: 6 }}>
+                padding: "2px 6px", borderRadius: "var(--radius-sm)", marginRight: 6 }}>
                 {project.key}
               </span>
               <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.3 }}>

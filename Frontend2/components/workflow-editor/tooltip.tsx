@@ -53,7 +53,8 @@ export function Tooltip({ text, children, delay = 400 }: Props) {
             left: "50%",
             transform: "translateX(-50%)",
             background: "var(--surface)",
-            boxShadow: "var(--shadow-md, 0 4px 14px rgba(0,0,0,0.15))",
+            // UI-sweep: rgba fallback dropped — --shadow-md always defined.
+            boxShadow: "var(--shadow-md)",
             padding: "6px 10px",
             maxWidth: 240,
             fontSize: 11.5,

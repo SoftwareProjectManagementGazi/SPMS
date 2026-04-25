@@ -234,17 +234,19 @@ export function CommentsSection({
                   key={m.id}
                   type="button"
                   onClick={() => insertMention(m)}
+                  className="hover-row"
                   style={{
                     display: "block",
                     width: "100%",
                     textAlign: "left",
-                    padding: "6px 8px",
+                    // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
+                    padding: "6px 10px",
                     fontSize: 12,
                     background: "transparent",
                     border: "none",
                     color: "var(--fg)",
                     cursor: "pointer",
-                    borderRadius: 3,
+                    borderRadius: "var(--radius-sm)",
                   }}
                 >
                   @{m.name}

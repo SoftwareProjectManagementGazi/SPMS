@@ -140,8 +140,9 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
             minWidth: 180,
             background: "var(--surface)",
             borderRadius: "var(--radius-sm)",
-            boxShadow:
-              "var(--shadow-md, 0 4px 14px rgba(0,0,0,0.15)), inset 0 0 0 1px var(--border)",
+            // UI-sweep: --shadow-md is always defined in globals.css; rgba fallback
+            // dropped (it would mismatch the oklch color space anyway).
+            boxShadow: "var(--shadow-md), inset 0 0 0 1px var(--border)",
             padding: 4,
             display: "flex",
             flexDirection: "column",
@@ -152,24 +153,18 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
               key={id}
               role="menuitem"
               onClick={() => handleSelect(id)}
+              className="hover-row"
               style={{
                 width: "100%",
                 textAlign: "left",
-                padding: "8px 12px",
+                // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
+                padding: "6px 10px",
                 background: "transparent",
                 border: 0,
                 borderRadius: "var(--radius-sm)",
                 fontSize: 13,
                 color: "var(--fg)",
                 cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--surface-2)"
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  "transparent"
               }}
             >
               {labelFor(id)}

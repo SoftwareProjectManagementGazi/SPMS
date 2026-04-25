@@ -1,7 +1,6 @@
 "use client"
 import * as React from "react"
-import { Badge, Avatar, AvatarStack } from "@/components/primitives"
-import type { AvatarStackUser } from "@/components/primitives"
+import { Badge, Avatar } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { Project } from "@/services/project-service"
 
@@ -30,14 +29,15 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
 
   return (
     <div>
-      {/* Header row */}
+      {/* Header row — UI-sweep: standardize letterSpacing 0.4 -> 0.5 (uppercase Section labels) */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "2fr 90px 120px 100px 90px 90px",
+        // UI-sweep: drop empty Team column until project member endpoint ships.
+        gridTemplateColumns: "2fr 90px 120px 90px 90px",
         padding: "10px 16px",
         fontSize: 11,
         textTransform: "uppercase",
-        letterSpacing: 0.4,
+        letterSpacing: 0.5,
         color: "var(--fg-subtle)",
         fontWeight: 600,
         borderBottom: "1px solid var(--border)",
@@ -45,7 +45,6 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
         <div>{language === "tr" ? "Proje" : "Project"}</div>
         <div>{language === "tr" ? "Yöntem" : "Method"}</div>
         <div>{language === "tr" ? "Yönetici" : "Lead"}</div>
-        <div>{language === "tr" ? "Takım" : "Team"}</div>
         <div style={{ textAlign: "right" }}>{language === "tr" ? "İlerleme" : "Progress"}</div>
         <div style={{ textAlign: "right" }}>{language === "tr" ? "Bitiş" : "End"}</div>
       </div>
@@ -71,9 +70,8 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
           ? project.managerName.split(" ")[0]
           : ""
 
-        // Team avatars: project doesn't carry member list in this shape
-        // — render empty AvatarStack (members wired in Phase 11 project detail)
-        const teamMembers: AvatarStackUser[] = []
+        // UI-sweep: empty AvatarStack column dropped from grid until project
+        // member endpoint ships. Re-add when API delivers member list.
 
         const endDate = project.endDate
           ? new Date(project.endDate).toLocaleDateString(
@@ -85,18 +83,18 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
         return (
           <div
             key={project.id}
+            className="hover-row"
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 90px 120px 100px 90px 90px",
-              padding: "11px 16px",
+              // UI-sweep: drop empty AvatarStack column until project member endpoint ships.
+              gridTemplateColumns: "2fr 90px 120px 90px 90px",
+              // UI-sweep: row pad 11px -> 10px to match header (matches prototype).
+              padding: "10px 16px",
               alignItems: "center",
               fontSize: 13,
               borderBottom: "1px solid var(--border)",
               cursor: "pointer",
-              transition: "background 0.1s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             {/* Project: key chip + name */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -141,13 +139,6 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               }}>
                 {leadFirstName}
               </span>
-            </div>
-
-            {/* Team AvatarStack */}
-            <div>
-              {teamMembers.length > 0 ? (
-                <AvatarStack users={teamMembers} max={3} size={20} />
-              ) : null}
             </div>
 
             {/* Progress bar + % */}

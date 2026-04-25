@@ -124,9 +124,15 @@ export function BoardColumn({
         <div style={{ flex: 1 }} />
       </div>
 
-      {/* WIP violation banner (D-20 Warn + Allow) */}
+      {/* WIP violation banner (D-20 Warn + Allow) — UI-sweep: animation matches
+          column tint transition (D-13 150-200ms band). */}
       {overLimit && (
-        <div style={{ margin: "8px 8px 0" }}>
+        <div
+          style={{
+            margin: "8px 8px 0",
+            animation: "fadeIn 0.15s ease",
+          }}
+        >
           <AlertBanner tone="danger">
             {language === "tr" ? "WIP limiti aşıldı" : "WIP limit exceeded"}
           </AlertBanner>

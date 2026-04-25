@@ -88,7 +88,12 @@ function GroupCloudNodeImpl({ data }: NodeProps) {
           strokeWidth={strokeWidth}
           strokeDasharray={strokeDasharray}
           style={{
-            transition: "d 100ms ease, stroke 120ms ease, stroke-dasharray 120ms ease",
+            // UI-sweep: dropped `d` from transition list — CSS does not animate
+            // SVG path `d` attribute in any browser (experimental SVG attribute
+            // animation API only). The hull morph is intentionally instant
+            // (recompute is <16ms / frame per Plan 01 bench). Stroke + dasharray
+            // still tween for hover/select state changes.
+            transition: "stroke 120ms ease, stroke-dasharray 120ms ease",
           }}
         />
       </svg>

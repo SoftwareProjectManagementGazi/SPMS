@@ -91,6 +91,10 @@ export function Button({
 }: ButtonProps) {
   const v = VARIANTS[variant]
   const s = SIZES[size]
+  // UI-sweep: press feedback moved from imperative onMouseDown/Up/Leave handlers
+  // to a CSS .btn-press class so keyboard space/enter activation also fires the
+  // press, and prefers-reduced-motion is honored (globals.css).
+  const pressClass = disabled ? "" : "btn-press"
   return (
     <button
       type={type}
@@ -98,7 +102,7 @@ export function Button({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
-      className={className}
+      className={[pressClass, className].filter(Boolean).join(" ") || undefined}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -115,15 +119,6 @@ export function Button({
           ? { background: "var(--accent)", color: "var(--accent-fg)" }
           : {}),
         ...style,
-      }}
-      onMouseDown={(e) => {
-        if (!disabled) e.currentTarget.style.transform = "translateY(0.5px)"
-      }}
-      onMouseUp={(e) => {
-        e.currentTarget.style.transform = "translateY(0)"
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)"
       }}
     >
       {icon}

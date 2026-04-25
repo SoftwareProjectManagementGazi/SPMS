@@ -108,16 +108,20 @@ describe("GroupCloudNode — Plan 12-08 dragOver feedback", () => {
 })
 
 describe("GroupCloudNode — Plan 12-08 live morph + transition", () => {
-  it("Test 7 (group create from context menu): the path style includes a `transition: d` rule for smooth morph", () => {
+  it("Test 7 (group create from context menu): the path style declares a transition for stroke / stroke-dasharray (cloud `d` morph is instant — CSS does not animate the SVG `d` attribute in any shipping browser)", () => {
     const { container } = renderGroup()
     const path = container.querySelector("path") as SVGPathElement
     // jsdom serializes `transition` to camelCase or kebab-case depending on
     // the API, so we accept either spelling on the inline style attribute.
     const styleAttr = path.getAttribute("style") ?? ""
     expect(styleAttr.toLowerCase()).toContain("transition")
-    // The `d` keyword must appear in the transition list since cloud morph
-    // animates the path data.
-    expect(styleAttr).toMatch(/transition:[^;]*\bd\b/i)
+    // UI-sweep: the `d` keyword was previously asserted, but `transition: d`
+    // is a no-op in every shipping browser (only the experimental SVG
+    // attribute animation API supports it). The hull path is still updated
+    // on every re-render — see Test 8 — so the morph happens; it is just not
+    // tweened. Verify here that we list at least stroke or stroke-dasharray
+    // so the hover/select state changes still tween.
+    expect(styleAttr).toMatch(/transition:[^;]*\bstroke\b/i)
   })
 
   it("Test 8 (drop association on drag-out): re-rendering with a new hullPath updates the path's d attribute", () => {

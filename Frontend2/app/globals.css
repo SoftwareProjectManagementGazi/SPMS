@@ -187,3 +187,36 @@ svg { display: block; }
   }
   .pd-tabs-wrap::-webkit-scrollbar { display: none; }
 }
+
+/* UI-sweep: previously, task-create-modal.tsx referenced `animation: fadeIn ...`
+   but no @keyframes fadeIn was defined anywhere — modals appeared with no
+   transition. This keyframe activates the existing inline animation lines. */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* UI-sweep: hover-row utility — previously every row that wanted a hover-fill
+   wired imperative onMouseEnter/Leave handlers (15+ instances). That breaks on
+   keyboard :focus-visible AND bypasses prefers-reduced-motion. Use this class
+   on the row element instead. */
+.hover-row {
+  transition: background 0.1s ease;
+}
+.hover-row:hover,
+.hover-row:focus-visible {
+  background: var(--surface-2);
+}
+
+/* UI-sweep: Button primitive previously translated translateY(0.5px) via
+   imperative onMouseDown/Up/Leave handlers — keyboard activations got no
+   feedback. Move the press-down to CSS so :active fires for both pointer
+   AND space/enter activation, and respect reduced-motion. */
+.btn-press:active {
+  transform: translateY(0.5px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-press:active {
+    transform: none;
+  }
+}
