@@ -11,9 +11,9 @@
 
 import * as React from "react"
 import { useParams } from "next/navigation"
-import { Bug } from "lucide-react"
+import { Bug, GitBranch, Link as LinkIcon, MoreHorizontal } from "lucide-react"
 
-import { Card, Section } from "@/components/primitives"
+import { Button, Card, Section } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useProject } from "@/hooks/use-projects"
 import { useTaskDetail } from "@/hooks/use-task-detail"
@@ -124,13 +124,15 @@ export default function TaskDetailPage() {
         {/* Parent breadcrumb (D-35) — only when subtask */}
         <ParentTaskLink task={task} project={project} />
 
-        {/* Title row */}
+        {/* Title row — bug icon + title aligned to center, prototype-faithful
+            (task-detail.jsx:20-23). The breadcrumb above already carries the
+            key, so the previous "key · type" meta line is dropped. */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             gap: 10,
-            marginBottom: 8,
+            marginTop: 10,
           }}
         >
           {task.type === "bug" && (
@@ -166,28 +168,16 @@ export default function TaskDetailPage() {
           </h1>
         </div>
 
-        {/* Key + type meta line */}
+        {/* Action bar — Watch / Link / Branch + spacer + MoreH (prototype
+            task-detail.jsx:24-30). Link/Branch/MoreH are visual stubs while
+            external integrations land; the click handlers are intentionally
+            empty so the buttons surface the affordance without surprising
+            navigation. */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12,
-            color: "var(--fg-muted)",
-            marginBottom: 16,
-          }}
-        >
-          <span style={{ fontFamily: "var(--font-mono)" }}>{task.key}</span>
-          <span>·</span>
-          <span>{task.type}</span>
-        </div>
-
-        {/* Watcher toggle row (D-53) */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
+            gap: 6,
+            marginTop: 12,
             marginBottom: 24,
           }}
         >
@@ -196,7 +186,32 @@ export default function TaskDetailPage() {
             isWatching={isWatching}
             onChange={setIsWatching}
           />
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<LinkIcon size={13} />}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                navigator.clipboard?.writeText(window.location.href)
+              }
+            }}
+          >
+            {lang === "tr" ? "Bağlantı" : "Link"}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<GitBranch size={13} />}
+          >
+            Branch
+          </Button>
           <div style={{ flex: 1 }} />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<MoreHorizontal size={13} />}
+            aria-label={lang === "tr" ? "Daha fazla" : "More"}
+          />
         </div>
 
         {/* Description (D-36) — wrapped in Card to match the prototype's

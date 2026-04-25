@@ -1,11 +1,16 @@
 "use client"
 
-// ParentTaskLink — Jira epic-link style breadcrumb shown ABOVE the task title
-// when task.parentTaskId is set (D-35). Structure:
-//   [Folder icon] [project name] [ChevronRight] [parent key + parent title]
+// ParentTaskLink — Folder + project + chevron + (parent or task.key) breadcrumb
+// rendered ABOVE the task title.
 //
-// Fetches the parent task lazily via taskService.getById — TanStack Query
-// deduplicates with any other consumer that already has the parent cached.
+// Prototype task-detail.jsx:15-19 renders this for EVERY task (not only
+// subtasks): the chevron always points to the project, and the rightmost
+// segment is the current task's key. When the task is a subtask, the
+// rightmost segment swaps in the parent's key + title for an extra hint at
+// the epic-link relationship (D-35 hybrid behaviour).
+//
+// Pre-UAT-round-9 this only rendered when `task.parentTaskId != null`, so
+// regular tasks lost the project crumb entirely.
 
 import Link from "next/link"
 import { ChevronRight, Folder } from "lucide-react"
@@ -28,8 +33,6 @@ export function ParentTaskLink({ task, project }: ParentTaskLinkProps) {
     enabled: parentId != null,
   })
 
-  if (parentId == null) return null
-
   return (
     <div
       style={{
@@ -38,34 +41,45 @@ export function ParentTaskLink({ task, project }: ParentTaskLinkProps) {
         gap: 8,
         fontSize: 12,
         color: "var(--fg-muted)",
-        marginBottom: 12,
+        marginBottom: 10,
       }}
     >
-      <Folder size={13} />
+      <Folder size={13} aria-hidden />
       <Link
         href={`/projects/${project.id}`}
         style={{ color: "var(--fg-muted)", textDecoration: "none" }}
       >
         {project.name}
       </Link>
-      <ChevronRight size={11} />
-      {parent ? (
-        <Link
-          href={`/projects/${project.id}/tasks/${parent.id}`}
+      <ChevronRight size={11} aria-hidden />
+      {parentId != null ? (
+        parent ? (
+          <Link
+            href={`/projects/${project.id}/tasks/${parent.id}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: "var(--fg-muted)",
+              textDecoration: "none",
+            }}
+          >
+            <span style={{ fontFamily: "var(--font-mono)" }}>{parent.key}</span>
+            <span>{parent.title}</span>
+          </Link>
+        ) : (
+          <span style={{ color: "var(--fg-subtle)" }}>
+            {lang === "tr" ? "Ana görev yükleniyor…" : "Loading parent…"}
+          </span>
+        )
+      ) : (
+        <span
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
+            fontFamily: "var(--font-mono)",
             color: "var(--fg-muted)",
-            textDecoration: "none",
           }}
         >
-          <span style={{ fontFamily: "var(--font-mono)" }}>{parent.key}</span>
-          <span>{parent.title}</span>
-        </Link>
-      ) : (
-        <span style={{ color: "var(--fg-subtle)" }}>
-          {lang === "tr" ? "Ana görev yükleniyor…" : "Loading parent…"}
+          {task.key}
         </span>
       )}
     </div>

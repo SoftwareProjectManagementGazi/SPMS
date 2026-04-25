@@ -8,7 +8,7 @@
 // `is_watching` on the Task entity). The POST/DELETE still fire correctly.
 
 import { Eye } from "lucide-react"
-import { Badge, Button } from "@/components/primitives"
+import { Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useAddWatcher, useRemoveWatcher } from "@/hooks/use-watchers"
 import type { Task } from "@/services/task-service"
@@ -40,36 +40,34 @@ export function WatcherToggle({
     }
   }
 
+  // The watcher_count Badge was dropped per UAT round 9 — prototype shows
+  // only the button. The count is still surfaced elsewhere (Properties
+  // sidebar / activity feed) for users who care about it.
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <Button
-        size="sm"
-        variant={isWatching ? "primary" : "secondary"}
-        icon={<Eye size={13} />}
-        onClick={handleClick}
-        disabled={addW.isPending || removeW.isPending}
-        style={
-          isWatching
-            ? {
-                background:
-                  "color-mix(in oklch, var(--primary) 12%, transparent)",
-                color: "var(--primary)",
-                boxShadow: "inset 0 0 0 1px var(--primary)",
-              }
-            : undefined
-        }
-      >
-        {isWatching
-          ? lang === "tr"
-            ? "Takipte"
-            : "Watching"
-          : lang === "tr"
-            ? "Takip et"
-            : "Watch"}
-      </Button>
-      <Badge size="xs" tone="neutral">
-        {task.watcherCount}
-      </Badge>
-    </div>
+    <Button
+      size="sm"
+      variant={isWatching ? "primary" : "secondary"}
+      icon={<Eye size={13} />}
+      onClick={handleClick}
+      disabled={addW.isPending || removeW.isPending}
+      style={
+        isWatching
+          ? {
+              background:
+                "color-mix(in oklch, var(--primary) 12%, transparent)",
+              color: "var(--primary)",
+              boxShadow: "inset 0 0 0 1px var(--primary)",
+            }
+          : undefined
+      }
+    >
+      {isWatching
+        ? lang === "tr"
+          ? "Takipte"
+          : "Watching"
+        : lang === "tr"
+          ? "Takip et"
+          : "Watch"}
+    </Button>
   )
 }
