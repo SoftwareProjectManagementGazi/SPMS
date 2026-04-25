@@ -14,7 +14,7 @@
 //   - letterSpacing: -0.8 (hero title) and -1 (stat number) match prototype
 //
 // Bilingual copy via local literals (lang === "tr" ? ... : ...) — matches the
-// pattern already used by the rest of the my-tasks components (see saved-views-tabs.tsx).
+// pattern used by the rest of the my-tasks components.
 
 import * as React from "react"
 import { AlertTriangle, Calendar, CircleCheck, Flame } from "lucide-react"
@@ -53,13 +53,33 @@ export function MTHero({
   subtitle,
   nowRef,
 }: MTHeroProps) {
-  const now = nowRef ?? new Date()
-  const greet = pickGreeting(now.getHours(), lang)
-  const dateText = now.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  })
+  // Hydration safety: `new Date()` returns the SERVER clock during SSR and
+  // the BROWSER clock during the first client render. If those land in
+  // different greeting/day buckets (e.g. server is UTC just past midnight,
+  // client is TR with date one ahead), the rendered string differs and React
+  // emits a hydration mismatch warning.
+  //
+  // Render a stable placeholder ("—") for greeting + date on first paint and
+  // SSR; swap in the live values via a mount-only useEffect. Tests can pin
+  // the value by passing nowRef, which bypasses the deferred path entirely.
+  const [now, setNow] = React.useState<Date | null>(nowRef ?? null)
+  React.useEffect(() => {
+    if (nowRef) return
+    setNow(new Date())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const greet = now
+    ? pickGreeting(now.getHours(), lang)
+    : lang === "tr"
+      ? "Merhaba"
+      : "Hello"
+  const dateText = now
+    ? now.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      })
+    : "—"
 
   // Subtitle priority mirrors the prototype:
   //   1. Explicit prop wins.
