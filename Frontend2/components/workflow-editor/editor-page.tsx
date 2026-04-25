@@ -80,6 +80,12 @@ import { ContextMenu, type ContextMenuItem } from "./context-menu"
 import { DirtySaveDialog } from "./dirty-save-dialog"
 import { PresetMenu, detectCurrentPresetId } from "./preset-menu"
 import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
+import {
+  newNodeId,
+  newEdgeId,
+  newGroupId,
+  regenerateInvalidNodeIds,
+} from "@/lib/lifecycle/node-ids"
 
 export type EditorMode = "lifecycle" | "status"
 
@@ -110,9 +116,12 @@ function readWorkflow(project: Project): WorkflowConfig {
   return mapWorkflowConfig(cfg.workflow)
 }
 
-function newId(prefix: string): string {
-  return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`
-}
+// Phase 12 Plan 12-10 (Bug X UAT fix) — node-id helpers live in the pure
+// module Frontend2/lib/lifecycle/node-ids.ts so they stay unit-testable
+// without jsdom and so non-React consumers (criteria-editor-panel inline
+// preset apply path) can import them without pulling the editor's React
+// tree. See Backend/app/domain/entities/task.py NODE_ID_REGEX for the
+// authoritative D-22 contract.
 
 // SaveError shape — mirror of the 5-error matrix from CONTEXT D-32 / UI-SPEC.
 interface SaveErrorState {
@@ -219,9 +228,14 @@ export function EditorPage({ project }: EditorPageProps) {
   // onto the undo stack first (commitWorkflow already does this), then
   // swaps the canvas to a deep-cloned copy of the chosen preset and clears
   // the selection so the right panel does not reference a stale node.
+  //
+  // Phase 12 Plan 12-10 (Bug X UAT fix) — regenerateInvalidNodeIds is the
+  // belt-and-suspenders defense against any future preset that ships with
+  // bad IDs. The current presets all pass the regex, but this guard means
+  // a stale build / partial revert can never push 422-bait into the canvas.
   const applyPreset = React.useCallback(
     (id: PresetId) => {
-      const next = resolvePreset(id)
+      const next = regenerateInvalidNodeIds(resolvePreset(id))
       commitWorkflow(next)
       setSelected(null)
     },
@@ -435,7 +449,7 @@ export function EditorPage({ project }: EditorPageProps) {
       const target = String(params.target ?? "")
       if (!source || !target || source === target) return
       const newEdge: WorkflowEdge = {
-        id: newId("edge"),
+        id: newEdgeId(),
         source,
         target,
         type: "flow",
@@ -662,7 +676,7 @@ export function EditorPage({ project }: EditorPageProps) {
 
   const addNodeAtPosition = React.useCallback(
     (pos: Point) => {
-      const id = newId("phase")
+      const id = newNodeId()
       const newNode: WorkflowNode = {
         id,
         name: T("Yeni Düğüm", "New Node"),
@@ -713,7 +727,7 @@ export function EditorPage({ project }: EditorPageProps) {
     if (!orig) return
     const copy: WorkflowNode = {
       ...orig,
-      id: newId("phase"),
+      id: newNodeId(),
       name: `${orig.name} (kopya)`,
       x: orig.x + 32,
       y: orig.y + 32,
@@ -725,7 +739,7 @@ export function EditorPage({ project }: EditorPageProps) {
   const groupSelection = React.useCallback(
     (nodeIds: string[]) => {
       if (nodeIds.length < 1) return
-      const id = newId("group")
+      const id = newGroupId()
       const groups = [...(workflow.groups ?? [])]
       groups.push({
         id,

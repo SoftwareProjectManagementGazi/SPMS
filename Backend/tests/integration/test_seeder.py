@@ -204,3 +204,57 @@ def test_default_workflow_edges_have_v2_fields():
             assert parsed.target == edge["target"]
             assert parsed.bidirectional is False
             assert parsed.is_all_gate is False
+
+
+# ============================================================================
+# Phase 12 Plan 12-10 (Bug X UAT fix) — node IDs MUST satisfy the D-22 regex
+# `^nd_[A-Za-z0-9_-]{10}$` enforced by the Backend WorkflowNode validator.
+# ============================================================================
+
+def test_default_workflow_node_ids_match_d22_regex():
+    """Every node in every _DEFAULT_WORKFLOW_* must satisfy the D-22 regex
+    so the seeded process_config.workflow doesn't 422 on the next user save.
+    """
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+    from app.domain.entities.task import NODE_ID_REGEX
+
+    for methodology in [
+        Methodology.SCRUM,
+        Methodology.WATERFALL,
+        Methodology.KANBAN,
+        Methodology.ITERATIVE,
+    ]:
+        wf = _default_workflow_for_methodology(methodology)
+        for node in wf["nodes"]:
+            assert NODE_ID_REGEX.match(node["id"]), (
+                f"Methodology {methodology}: node id {node['id']!r} fails D-22 regex"
+            )
+
+
+def test_default_workflow_round_trips_through_workflow_config():
+    """Every default workflow shape must round-trip through the WorkflowConfig
+    Pydantic model with no validation errors. This catches drift between the
+    seeder fixtures and the validator (e.g., a future preset shipping a node
+    without an `is_initial`/`is_final` marker).
+    """
+    from app.infrastructure.database.seeder import _default_workflow_for_methodology
+    from app.infrastructure.database.models.project import Methodology
+    from app.application.dtos.workflow_dtos import WorkflowConfig
+
+    for methodology in [
+        Methodology.SCRUM,
+        Methodology.WATERFALL,
+        Methodology.KANBAN,
+        Methodology.ITERATIVE,
+    ]:
+        wf = _default_workflow_for_methodology(methodology)
+        # Inject default `name`+`color` for any node missing them so the test
+        # focuses on id regex + structural validity (the seeder always sets
+        # these but defensive against future drift).
+        for n in wf["nodes"]:
+            n.setdefault("color", "#888")
+        # Must not raise.
+        config = WorkflowConfig(**wf)
+        assert config.mode == wf["mode"]
+        assert len(config.nodes) == len(wf["nodes"])

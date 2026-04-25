@@ -34,24 +34,34 @@ export type PresetId =
   | "evolutionary"
   | "rad"
 
+// Phase 12 Plan 12-10 (Bug X UAT fix) — every node id MUST satisfy the D-22
+// regex `^nd_[A-Za-z0-9_-]{10}$` (defined in Backend/app/domain/entities/task.py
+// and re-imported by Backend/app/application/dtos/workflow_dtos.py
+// WorkflowNode.validate_id_format). Pre-fix the presets shipped `n1`/`n6`/etc.
+// which fail the regex; once a user clicked "Şablon Yükle" + Save, the PATCH
+// would 422 on backend WorkflowConfig validation. The deterministic readable
+// suffixes below mirror the seeder's `_DEFAULT_WORKFLOW_*` IDs so a user
+// switching between seeded data and "Şablon Yükle" sees the same node
+// identities for matching methodology pairs (no churn on apply).
+
 // ----------------------------------------------------------------------------
 // 1. Scrum (port from DEFAULT_LIFECYCLES.scrum, 5-phase flexible)
 // ----------------------------------------------------------------------------
 const SCRUM: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Başlatma", description: "Vizyon ve hedefler", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Planlama", description: "Backlog ve sprint planning", x: 280, y: 120, color: "status-todo" },
-    { id: "n3", name: "Yürütme", description: "Sprint'ler", x: 500, y: 120, color: "status-progress" },
-    { id: "n4", name: "İzleme", description: "Metrikler ve retro", x: 720, y: 120, color: "status-review" },
-    { id: "n5", name: "Kapanış", description: "Teslim ve ders", x: 940, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_scinit0001", name: "Başlatma", description: "Vizyon ve hedefler", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_scplan0002", name: "Planlama", description: "Backlog ve sprint planning", x: 280, y: 120, color: "status-todo" },
+    { id: "nd_scexec0003", name: "Yürütme", description: "Sprint'ler", x: 500, y: 120, color: "status-progress" },
+    { id: "nd_scmoni0004", name: "İzleme", description: "Metrikler ve retro", x: 720, y: 120, color: "status-review" },
+    { id: "nd_sccls00005", name: "Kapanış", description: "Teslim ve ders", x: 940, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n3", type: "feedback", label: "Retro" },
-    { id: "e5", source: "n4", target: "n5", type: "flow" },
+    { id: "e1", source: "nd_scinit0001", target: "nd_scplan0002", type: "flow" },
+    { id: "e2", source: "nd_scplan0002", target: "nd_scexec0003", type: "flow" },
+    { id: "e3", source: "nd_scexec0003", target: "nd_scmoni0004", type: "flow" },
+    { id: "e4", source: "nd_scmoni0004", target: "nd_scexec0003", type: "feedback", label: "Retro" },
+    { id: "e5", source: "nd_scmoni0004", target: "nd_sccls00005", type: "flow" },
   ],
   groups: [],
 }
@@ -62,19 +72,19 @@ const SCRUM: WorkflowConfig = {
 const WATERFALL: WorkflowConfig = {
   mode: "sequential-locked",
   nodes: [
-    { id: "n1", name: "Gereksinimler", description: "Kapsam ve dokümantasyon", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Tasarım", description: "Mimari ve UI", x: 280, y: 120, color: "status-progress" },
-    { id: "n3", name: "Uygulama", description: "Geliştirme", x: 500, y: 120, color: "status-progress" },
-    { id: "n4", name: "Test", description: "QA ve UAT", x: 720, y: 120, color: "status-review" },
-    { id: "n5", name: "Yayın", description: "Dağıtım", x: 940, y: 120, color: "status-done" },
-    { id: "n6", name: "Bakım", description: "Destek", x: 1160, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_wfreq00001", name: "Gereksinimler", description: "Kapsam ve dokümantasyon", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_wfdes00002", name: "Tasarım", description: "Mimari ve UI", x: 280, y: 120, color: "status-progress" },
+    { id: "nd_wfimp00003", name: "Uygulama", description: "Geliştirme", x: 500, y: 120, color: "status-progress" },
+    { id: "nd_wftst00004", name: "Test", description: "QA ve UAT", x: 720, y: 120, color: "status-review" },
+    { id: "nd_wfdep00005", name: "Yayın", description: "Dağıtım", x: 940, y: 120, color: "status-done" },
+    { id: "nd_wfmnt00006", name: "Bakım", description: "Destek", x: 1160, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n5", type: "flow" },
-    { id: "e5", source: "n5", target: "n6", type: "flow" },
+    { id: "e1", source: "nd_wfreq00001", target: "nd_wfdes00002", type: "flow" },
+    { id: "e2", source: "nd_wfdes00002", target: "nd_wfimp00003", type: "flow" },
+    { id: "e3", source: "nd_wfimp00003", target: "nd_wftst00004", type: "flow" },
+    { id: "e4", source: "nd_wftst00004", target: "nd_wfdep00005", type: "flow" },
+    { id: "e5", source: "nd_wfdep00005", target: "nd_wfmnt00006", type: "flow" },
   ],
   groups: [],
 }
@@ -86,7 +96,7 @@ const KANBAN: WorkflowConfig = {
   mode: "continuous",
   nodes: [
     {
-      id: "n1",
+      id: "nd_kbflow0001",
       name: "Sürekli Akış",
       description: "Tek aktif faz",
       x: 400,
@@ -107,16 +117,16 @@ const KANBAN: WorkflowConfig = {
 const ITERATIVE: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Planlama", description: "Hedef belirleme", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Tasarım", description: "Yineleme tasarımı", x: 260, y: 120, color: "status-progress" },
-    { id: "n3", name: "Uygulama", description: "Geliştirme ve test", x: 460, y: 120, color: "status-progress" },
-    { id: "n4", name: "Değerlendirme", description: "İnceleme ve karar", x: 660, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_itplan0001", name: "Planlama", description: "Hedef belirleme", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_itdes00002", name: "Tasarım", description: "Yineleme tasarımı", x: 260, y: 120, color: "status-progress" },
+    { id: "nd_itimp00003", name: "Uygulama", description: "Geliştirme ve test", x: 460, y: 120, color: "status-progress" },
+    { id: "nd_iteva00004", name: "Değerlendirme", description: "İnceleme ve karar", x: 660, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n1", type: "feedback", label: "Yeni iterasyon" },
+    { id: "e1", source: "nd_itplan0001", target: "nd_itdes00002", type: "flow" },
+    { id: "e2", source: "nd_itdes00002", target: "nd_itimp00003", type: "flow" },
+    { id: "e3", source: "nd_itimp00003", target: "nd_iteva00004", type: "flow" },
+    { id: "e4", source: "nd_iteva00004", target: "nd_itplan0001", type: "feedback", label: "Yeni iterasyon" },
   ],
   groups: [],
 }
@@ -131,24 +141,24 @@ const ITERATIVE: WorkflowConfig = {
 const VMODEL: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Gereksinimler", description: "Sistem gereksinimleri", x: 60, y: 60, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Sistem Tasarımı", description: "Yüksek seviye tasarım", x: 260, y: 60, color: "status-todo" },
-    { id: "n3", name: "Modül Tasarımı", description: "Detaylı tasarım", x: 460, y: 60, color: "status-progress" },
-    { id: "n4", name: "Kodlama", description: "Geliştirme", x: 460, y: 220, color: "status-progress" },
-    { id: "n5", name: "Birim Testi", description: "Unit test", x: 460, y: 380, color: "status-review" },
-    { id: "n6", name: "Entegrasyon Testi", description: "Integration test", x: 260, y: 380, color: "status-review" },
-    { id: "n7", name: "Sistem Testi", description: "System test", x: 60, y: 380, color: "status-done", isFinal: true },
+    { id: "nd_vmreq00001", name: "Gereksinimler", description: "Sistem gereksinimleri", x: 60, y: 60, color: "status-todo", isInitial: true },
+    { id: "nd_vmsys00002", name: "Sistem Tasarımı", description: "Yüksek seviye tasarım", x: 260, y: 60, color: "status-todo" },
+    { id: "nd_vmmod00003", name: "Modül Tasarımı", description: "Detaylı tasarım", x: 460, y: 60, color: "status-progress" },
+    { id: "nd_vmcod00004", name: "Kodlama", description: "Geliştirme", x: 460, y: 220, color: "status-progress" },
+    { id: "nd_vmunt00005", name: "Birim Testi", description: "Unit test", x: 460, y: 380, color: "status-review" },
+    { id: "nd_vmint00006", name: "Entegrasyon Testi", description: "Integration test", x: 260, y: 380, color: "status-review" },
+    { id: "nd_vmsts00007", name: "Sistem Testi", description: "System test", x: 60, y: 380, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n5", type: "flow" },
-    { id: "e5", source: "n5", target: "n6", type: "flow" },
-    { id: "e6", source: "n6", target: "n7", type: "flow" },
-    { id: "ev1", source: "n3", target: "n5", type: "verification", label: "Doğrula" },
-    { id: "ev2", source: "n2", target: "n6", type: "verification", label: "Doğrula" },
-    { id: "ev3", source: "n1", target: "n7", type: "verification", label: "Doğrula" },
+    { id: "e1", source: "nd_vmreq00001", target: "nd_vmsys00002", type: "flow" },
+    { id: "e2", source: "nd_vmsys00002", target: "nd_vmmod00003", type: "flow" },
+    { id: "e3", source: "nd_vmmod00003", target: "nd_vmcod00004", type: "flow" },
+    { id: "e4", source: "nd_vmcod00004", target: "nd_vmunt00005", type: "flow" },
+    { id: "e5", source: "nd_vmunt00005", target: "nd_vmint00006", type: "flow" },
+    { id: "e6", source: "nd_vmint00006", target: "nd_vmsts00007", type: "flow" },
+    { id: "ev1", source: "nd_vmmod00003", target: "nd_vmunt00005", type: "verification", label: "Doğrula" },
+    { id: "ev2", source: "nd_vmsys00002", target: "nd_vmint00006", type: "verification", label: "Doğrula" },
+    { id: "ev3", source: "nd_vmreq00001", target: "nd_vmsts00007", type: "verification", label: "Doğrula" },
   ],
   groups: [],
 }
@@ -159,16 +169,16 @@ const VMODEL: WorkflowConfig = {
 const SPIRAL: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Planlama", description: "Hedef ve risk planı", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Risk Analizi", description: "Risk azaltma", x: 260, y: 120, color: "status-review" },
-    { id: "n3", name: "Geliştirme", description: "Prototip ve test", x: 460, y: 120, color: "status-progress" },
-    { id: "n4", name: "Değerlendirme", description: "Müşteri onayı", x: 660, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_spplan0001", name: "Planlama", description: "Hedef ve risk planı", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_sprisk0002", name: "Risk Analizi", description: "Risk azaltma", x: 260, y: 120, color: "status-review" },
+    { id: "nd_spdev00003", name: "Geliştirme", description: "Prototip ve test", x: 460, y: 120, color: "status-progress" },
+    { id: "nd_speval0004", name: "Değerlendirme", description: "Müşteri onayı", x: 660, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n1", type: "feedback", label: "Yeni döngü" },
+    { id: "e1", source: "nd_spplan0001", target: "nd_sprisk0002", type: "flow" },
+    { id: "e2", source: "nd_sprisk0002", target: "nd_spdev00003", type: "flow" },
+    { id: "e3", source: "nd_spdev00003", target: "nd_speval0004", type: "flow" },
+    { id: "e4", source: "nd_speval0004", target: "nd_spplan0001", type: "feedback", label: "Yeni döngü" },
   ],
   groups: [],
 }
@@ -179,18 +189,18 @@ const SPIRAL: WorkflowConfig = {
 const INCREMENTAL: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Planlama", description: "Artım planlaması", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Artırım 1", description: "İlk işlevsel parça", x: 260, y: 120, color: "status-progress" },
-    { id: "n3", name: "Artırım 2", description: "İkinci işlevsel parça", x: 460, y: 120, color: "status-progress" },
-    { id: "n4", name: "Bütünleştirme", description: "Parçaların birleştirilmesi", x: 660, y: 120, color: "status-review" },
-    { id: "n5", name: "Yayın", description: "Müşteriye teslim", x: 860, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_inplan0001", name: "Planlama", description: "Artım planlaması", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_ininc01002", name: "Artırım 1", description: "İlk işlevsel parça", x: 260, y: 120, color: "status-progress" },
+    { id: "nd_ininc02003", name: "Artırım 2", description: "İkinci işlevsel parça", x: 460, y: 120, color: "status-progress" },
+    { id: "nd_inintg0004", name: "Bütünleştirme", description: "Parçaların birleştirilmesi", x: 660, y: 120, color: "status-review" },
+    { id: "nd_inrel00005", name: "Yayın", description: "Müşteriye teslim", x: 860, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n5", type: "flow" },
-    { id: "fb1", source: "n3", target: "n2", type: "feedback", label: "Geri besleme" },
+    { id: "e1", source: "nd_inplan0001", target: "nd_ininc01002", type: "flow" },
+    { id: "e2", source: "nd_ininc01002", target: "nd_ininc02003", type: "flow" },
+    { id: "e3", source: "nd_ininc02003", target: "nd_inintg0004", type: "flow" },
+    { id: "e4", source: "nd_inintg0004", target: "nd_inrel00005", type: "flow" },
+    { id: "fb1", source: "nd_ininc02003", target: "nd_ininc01002", type: "feedback", label: "Geri besleme" },
   ],
   groups: [],
 }
@@ -201,18 +211,18 @@ const INCREMENTAL: WorkflowConfig = {
 const EVOLUTIONARY: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "Analiz", description: "İhtiyaç ve hedef", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Prototip", description: "İlk prototip", x: 260, y: 120, color: "status-progress" },
-    { id: "n3", name: "Geri Bildirim", description: "Kullanıcı geri bildirimi", x: 460, y: 120, color: "status-review" },
-    { id: "n4", name: "Evrim", description: "İyileştirme döngüsü", x: 660, y: 120, color: "status-progress" },
-    { id: "n5", name: "Yayın", description: "Olgunlaşan ürün", x: 860, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_evanl00001", name: "Analiz", description: "İhtiyaç ve hedef", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_evpro00002", name: "Prototip", description: "İlk prototip", x: 260, y: 120, color: "status-progress" },
+    { id: "nd_evfbk00003", name: "Geri Bildirim", description: "Kullanıcı geri bildirimi", x: 460, y: 120, color: "status-review" },
+    { id: "nd_evevo00004", name: "Evrim", description: "İyileştirme döngüsü", x: 660, y: 120, color: "status-progress" },
+    { id: "nd_evrel00005", name: "Yayın", description: "Olgunlaşan ürün", x: 860, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n2", target: "n3", type: "flow" },
-    { id: "e3", source: "n3", target: "n4", type: "flow" },
-    { id: "e4", source: "n4", target: "n5", type: "flow" },
-    { id: "fb1", source: "n4", target: "n2", type: "feedback", label: "Yeniden prototipleme" },
+    { id: "e1", source: "nd_evanl00001", target: "nd_evpro00002", type: "flow" },
+    { id: "e2", source: "nd_evpro00002", target: "nd_evfbk00003", type: "flow" },
+    { id: "e3", source: "nd_evfbk00003", target: "nd_evevo00004", type: "flow" },
+    { id: "e4", source: "nd_evevo00004", target: "nd_evrel00005", type: "flow" },
+    { id: "fb1", source: "nd_evevo00004", target: "nd_evpro00002", type: "feedback", label: "Yeniden prototipleme" },
   ],
   groups: [],
 }
@@ -223,18 +233,18 @@ const EVOLUTIONARY: WorkflowConfig = {
 const RAD: WorkflowConfig = {
   mode: "flexible",
   nodes: [
-    { id: "n1", name: "İş Modelleme", description: "Süreç ve veri akışı", x: 60, y: 120, color: "status-todo", isInitial: true },
-    { id: "n2", name: "Veri Modelleme", description: "Veri yapıları", x: 260, y: 50, color: "status-progress" },
-    { id: "n3", name: "Süreç Modelleme", description: "Fonksiyonlar", x: 260, y: 190, color: "status-progress" },
-    { id: "n4", name: "Uygulama Üretimi", description: "Hızlı prototip", x: 460, y: 120, color: "status-review" },
-    { id: "n5", name: "Test ve Devreye Alma", description: "Kabul ve yayın", x: 660, y: 120, color: "status-done", isFinal: true },
+    { id: "nd_rdbiz00001", name: "İş Modelleme", description: "Süreç ve veri akışı", x: 60, y: 120, color: "status-todo", isInitial: true },
+    { id: "nd_rddata0002", name: "Veri Modelleme", description: "Veri yapıları", x: 260, y: 50, color: "status-progress" },
+    { id: "nd_rdproc0003", name: "Süreç Modelleme", description: "Fonksiyonlar", x: 260, y: 190, color: "status-progress" },
+    { id: "nd_rdgen00004", name: "Uygulama Üretimi", description: "Hızlı prototip", x: 460, y: 120, color: "status-review" },
+    { id: "nd_rdtest0005", name: "Test ve Devreye Alma", description: "Kabul ve yayın", x: 660, y: 120, color: "status-done", isFinal: true },
   ],
   edges: [
-    { id: "e1", source: "n1", target: "n2", type: "flow" },
-    { id: "e2", source: "n1", target: "n3", type: "flow" },
-    { id: "e3", source: "n2", target: "n4", type: "flow" },
-    { id: "e4", source: "n3", target: "n4", type: "flow" },
-    { id: "e5", source: "n4", target: "n5", type: "flow" },
+    { id: "e1", source: "nd_rdbiz00001", target: "nd_rddata0002", type: "flow" },
+    { id: "e2", source: "nd_rdbiz00001", target: "nd_rdproc0003", type: "flow" },
+    { id: "e3", source: "nd_rddata0002", target: "nd_rdgen00004", type: "flow" },
+    { id: "e4", source: "nd_rdproc0003", target: "nd_rdgen00004", type: "flow" },
+    { id: "e5", source: "nd_rdgen00004", target: "nd_rdtest0005", type: "flow" },
   ],
   groups: [],
 }

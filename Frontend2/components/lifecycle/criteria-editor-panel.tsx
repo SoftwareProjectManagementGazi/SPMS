@@ -34,7 +34,10 @@ import { useCriteriaEditor, type PhaseCriteria } from "@/hooks/use-criteria-edit
 import { apiClient } from "@/lib/api-client"
 import { WorkflowEmptyState } from "./workflow-empty-state"
 import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
-import { unmapWorkflowConfig } from "@/services/lifecycle-service"
+import { regenerateInvalidNodeIds } from "@/lib/lifecycle/node-ids"
+import {
+  unmapWorkflowConfig,
+} from "@/services/lifecycle-service"
 
 // ----------------------------------------------------------------------------
 // Types — minimal project shape consumed from project-service
@@ -186,7 +189,12 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
   // user can immediately start editing per-phase criteria without a route hop.
   async function applyPresetInline(id: PresetId) {
     try {
-      const wf = unmapWorkflowConfig(resolvePreset(id))
+      // Phase 12 Plan 12-10 (Bug X UAT fix) — defensive ID regeneration so a
+      // future preset regression that ships with non-`nd_<10>` IDs cannot
+      // 422 the PATCH. Current presets all pass the regex, but this layer
+      // closes the loop so the criteria-editor empty-state CTA never sends
+      // 422-bait to the backend.
+      const wf = unmapWorkflowConfig(regenerateInvalidNodeIds(resolvePreset(id)))
       await apiClient.patch(`/projects/${project.id}`, {
         process_config: {
           ...(project.processConfig ?? {}),

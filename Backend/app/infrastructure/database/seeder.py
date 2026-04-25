@@ -111,30 +111,41 @@ SUBTASK_PREFIXES = ["Analiz", "Tasarım", "Geliştirme", "Unit Test", "Entegrasy
 # WorkflowConfigDTO mapper (mapWorkflowNode reads `name` first). Keys use
 # snake_case at the JSONB boundary (is_initial/is_final) per Pitfall 21.
 
+# Phase 12 Plan 12-10 (Bug X UAT fix) — node IDs MUST satisfy the D-22
+# regex `^nd_[A-Za-z0-9_-]{10}$` (defined in Backend/app/domain/entities/task.py).
+# Pre-fix the seeder shipped `n1`/`n2`/etc. which fails the regex; once the
+# WorkflowConfig validator is wired into the project PATCH path, every save
+# fails 422 unless these IDs are regex-compliant.
+#
+# We use deterministic readable suffixes (e.g. `nd_scinit0001`) that mirror
+# the Frontend2 preset IDs in `Frontend2/lib/lifecycle/presets.ts`, so a
+# user moving between seed data and "Şablon Yükle" sees the same node
+# identities for matching methodology pairs (no churn on apply).
+
 _DEFAULT_WORKFLOW_SCRUM = {
     "mode": "flexible",
     "nodes": [
-        {"id": "n1", "name": "Başlatma", "description": "Vizyon ve hedefler",
+        {"id": "nd_scinit0001", "name": "Başlatma", "description": "Vizyon ve hedefler",
          "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "n2", "name": "Planlama", "description": "Backlog ve sprint planning",
+        {"id": "nd_scplan0002", "name": "Planlama", "description": "Backlog ve sprint planning",
          "x": 280, "y": 120, "color": "status-todo"},
-        {"id": "n3", "name": "Yürütme", "description": "Sprint'ler",
+        {"id": "nd_scexec0003", "name": "Yürütme", "description": "Sprint'ler",
          "x": 500, "y": 120, "color": "status-progress"},
-        {"id": "n4", "name": "İzleme", "description": "Metrikler ve retro",
+        {"id": "nd_scmoni0004", "name": "İzleme", "description": "Metrikler ve retro",
          "x": 720, "y": 120, "color": "status-review"},
-        {"id": "n5", "name": "Kapanış", "description": "Teslim ve ders",
+        {"id": "nd_sccls00005", "name": "Kapanış", "description": "Teslim ve ders",
          "x": 940, "y": 120, "color": "status-done", "is_final": True},
     ],
     "edges": [
-        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+        {"id": "e1", "source": "nd_scinit0001", "target": "nd_scplan0002", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+        {"id": "e2", "source": "nd_scplan0002", "target": "nd_scexec0003", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+        {"id": "e3", "source": "nd_scexec0003", "target": "nd_scmoni0004", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "n4", "target": "n3", "type": "feedback",
+        {"id": "e4", "source": "nd_scmoni0004", "target": "nd_scexec0003", "type": "feedback",
          "label": "Retro", "bidirectional": False, "is_all_gate": False},
-        {"id": "e5", "source": "n4", "target": "n5", "type": "flow",
+        {"id": "e5", "source": "nd_scmoni0004", "target": "nd_sccls00005", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
     ],
     "groups": [],
@@ -143,29 +154,29 @@ _DEFAULT_WORKFLOW_SCRUM = {
 _DEFAULT_WORKFLOW_WATERFALL = {
     "mode": "sequential-locked",
     "nodes": [
-        {"id": "n1", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
+        {"id": "nd_wfreq00001", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
          "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "n2", "name": "Tasarım", "description": "Mimari ve UI",
+        {"id": "nd_wfdes00002", "name": "Tasarım", "description": "Mimari ve UI",
          "x": 280, "y": 120, "color": "status-progress"},
-        {"id": "n3", "name": "Uygulama", "description": "Geliştirme",
+        {"id": "nd_wfimp00003", "name": "Uygulama", "description": "Geliştirme",
          "x": 500, "y": 120, "color": "status-progress"},
-        {"id": "n4", "name": "Test", "description": "QA ve UAT",
+        {"id": "nd_wftst00004", "name": "Test", "description": "QA ve UAT",
          "x": 720, "y": 120, "color": "status-review"},
-        {"id": "n5", "name": "Yayın", "description": "Dağıtım",
+        {"id": "nd_wfdep00005", "name": "Yayın", "description": "Dağıtım",
          "x": 940, "y": 120, "color": "status-done"},
-        {"id": "n6", "name": "Bakım", "description": "Destek",
+        {"id": "nd_wfmnt00006", "name": "Bakım", "description": "Destek",
          "x": 1160, "y": 120, "color": "status-done", "is_final": True},
     ],
     "edges": [
-        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+        {"id": "e1", "source": "nd_wfreq00001", "target": "nd_wfdes00002", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+        {"id": "e2", "source": "nd_wfdes00002", "target": "nd_wfimp00003", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+        {"id": "e3", "source": "nd_wfimp00003", "target": "nd_wftst00004", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "n4", "target": "n5", "type": "flow",
+        {"id": "e4", "source": "nd_wftst00004", "target": "nd_wfdep00005", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e5", "source": "n5", "target": "n6", "type": "flow",
+        {"id": "e5", "source": "nd_wfdep00005", "target": "nd_wfmnt00006", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
     ],
     "groups": [],
@@ -175,7 +186,7 @@ _DEFAULT_WORKFLOW_KANBAN = {
     "mode": "continuous",
     "nodes": [
         # Continuous mode requires a single node that is both initial and final.
-        {"id": "n1", "name": "Sürekli Akış", "description": "Tek aktif faz",
+        {"id": "nd_kbflow0001", "name": "Sürekli Akış", "description": "Tek aktif faz",
          "x": 400, "y": 120, "color": "status-progress",
          "is_initial": True, "is_final": True},
     ],
@@ -186,23 +197,23 @@ _DEFAULT_WORKFLOW_KANBAN = {
 _DEFAULT_WORKFLOW_ITERATIVE = {
     "mode": "flexible",
     "nodes": [
-        {"id": "n1", "name": "Planlama", "description": "Hedef belirleme",
+        {"id": "nd_itplan0001", "name": "Planlama", "description": "Hedef belirleme",
          "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "n2", "name": "Tasarım", "description": "Yineleme tasarımı",
+        {"id": "nd_itdes00002", "name": "Tasarım", "description": "Yineleme tasarımı",
          "x": 260, "y": 120, "color": "status-progress"},
-        {"id": "n3", "name": "Uygulama", "description": "Geliştirme ve test",
+        {"id": "nd_itimp00003", "name": "Uygulama", "description": "Geliştirme ve test",
          "x": 460, "y": 120, "color": "status-progress"},
-        {"id": "n4", "name": "Değerlendirme", "description": "İnceleme ve karar",
+        {"id": "nd_iteva00004", "name": "Değerlendirme", "description": "İnceleme ve karar",
          "x": 660, "y": 120, "color": "status-done", "is_final": True},
     ],
     "edges": [
-        {"id": "e1", "source": "n1", "target": "n2", "type": "flow",
+        {"id": "e1", "source": "nd_itplan0001", "target": "nd_itdes00002", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "n2", "target": "n3", "type": "flow",
+        {"id": "e2", "source": "nd_itdes00002", "target": "nd_itimp00003", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "n3", "target": "n4", "type": "flow",
+        {"id": "e3", "source": "nd_itimp00003", "target": "nd_iteva00004", "type": "flow",
          "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "n4", "target": "n1", "type": "feedback",
+        {"id": "e4", "source": "nd_iteva00004", "target": "nd_itplan0001", "type": "feedback",
          "label": "Yeni iterasyon", "bidirectional": False, "is_all_gate": False},
     ],
     "groups": [],

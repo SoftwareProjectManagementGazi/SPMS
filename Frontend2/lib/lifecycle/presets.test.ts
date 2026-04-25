@@ -119,3 +119,30 @@ describe("presets — pure module", () => {
     expect(new Set(keys)).toEqual(new Set(ALL_PRESET_IDS))
   })
 })
+
+// Phase 12 Plan 12-10 (Bug X UAT fix) — every preset's node IDs must
+// satisfy the FE-tightened regex `^nd_[a-z0-9]{10}$`. Backend D-22 is
+// `^nd_[A-Za-z0-9_-]{10}$` (broader); the FE regex is a strict subset
+// so all FE-emitted IDs are accepted by the backend WorkflowNode validator
+// (Backend/app/application/dtos/workflow_dtos.py:WorkflowNode).
+describe("presets — node id regex compliance (Bug X UAT)", () => {
+  const NODE_ID_REGEX = /^nd_[a-z0-9]{10}$/
+
+  for (const id of ALL_PRESET_IDS) {
+    it(`Bug X: every node id in PRESETS_BY_ID.${id} matches ^nd_[a-z0-9]{10}$`, () => {
+      const wf = PRESETS_BY_ID[id]
+      for (const n of wf.nodes) {
+        expect(NODE_ID_REGEX.test(n.id)).toBe(true)
+      }
+    })
+
+    it(`Bug X: every edge in PRESETS_BY_ID.${id} references existing nodes`, () => {
+      const wf = PRESETS_BY_ID[id]
+      const nodeIds = new Set(wf.nodes.map((n) => n.id))
+      for (const e of wf.edges) {
+        expect(nodeIds.has(e.source)).toBe(true)
+        expect(nodeIds.has(e.target)).toBe(true)
+      }
+    })
+  }
+})

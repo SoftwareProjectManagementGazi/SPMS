@@ -423,4 +423,44 @@ describe("CriteriaEditorPanel", () => {
       screen.queryByText(/Bu projede aktif workflow tanımlanmamış/),
     ).not.toBeInTheDocument()
   })
+
+  // Phase 12 Plan 12-10 (Bug X UAT fix) — applyPresetInline must send node
+  // IDs matching the D-22 regex `^nd_[A-Za-z0-9_-]{10}$`. Pre-fix the
+  // presets shipped `n1`/`n6` IDs which 422'd the backend WorkflowNode
+  // validator. This test guards the regression.
+  it("Test 10 (Bug X) — applyPresetInline sends a PATCH body whose node IDs match the regex", async () => {
+    const project = makeProject({
+      processConfig: {
+        workflow: {
+          mode: "flexible",
+          nodes: [], // empty triggers WorkflowEmptyState
+          edges: [],
+          groups: [],
+        },
+        phase_completion_criteria: {},
+        enable_phase_assignment: false,
+      },
+    })
+    mockedApi.patch.mockResolvedValueOnce({ data: {} })
+    render(wrap(<CriteriaEditorPanel project={project as never} isArchived={false} />))
+
+    // Open the inline PresetMenu and pick "Scrum".
+    fireEvent.click(screen.getByRole("button", { name: /Şablon Yükle/ }))
+    fireEvent.click(screen.getByText("Scrum"))
+
+    await waitFor(() => {
+      expect(mockedApi.patch).toHaveBeenCalled()
+    })
+
+    const [, body] = mockedApi.patch.mock.calls[0] as [
+      string,
+      { process_config: { workflow: { nodes: Array<{ id: string }> } } },
+    ]
+    const NODE_ID_REGEX = /^nd_[A-Za-z0-9_-]{10}$/
+    const ids = body.process_config.workflow.nodes.map((n) => n.id)
+    expect(ids.length).toBeGreaterThan(0)
+    for (const id of ids) {
+      expect(NODE_ID_REGEX.test(id)).toBe(true)
+    }
+  })
 })

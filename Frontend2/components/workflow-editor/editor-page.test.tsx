@@ -573,4 +573,69 @@ describe("EditorPage", () => {
     expect(nodeNames).toContain("Artırım 2")
     expect(nodeNames).toContain("Bütünleştirme")
   })
+
+  // Phase 12 Plan 12-10 (Bug X UAT fix) — node IDs from preset apply must
+  // satisfy the D-22 regex so the backend WorkflowNode validator does not
+  // 422 the PATCH. Pre-fix the editor's `newId(prefix)` produced ids like
+  // `phase-3xk7l9-mn8h6` which fail the regex.
+  it("Test 20 (Bug X): preset apply sends node IDs matching ^nd_[a-z0-9]{10}$", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    render(<EditorPage project={mockProject} />)
+
+    fireEvent.click(screen.getByText("Şablon Yükle"))
+    fireEvent.click(screen.getByText("Scrum"))
+
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    const callArgs = mockUpdateProcessConfig.mock.calls[0]
+    const processConfig = callArgs[1] as {
+      workflow?: { nodes: Array<{ id: string }> }
+    }
+    expect(processConfig.workflow).toBeDefined()
+    const nodeIds = (processConfig.workflow!.nodes ?? []).map((n) => n.id)
+    const NODE_ID_REGEX = /^nd_[a-z0-9]{10}$/
+    expect(nodeIds.length).toBeGreaterThan(0)
+    for (const id of nodeIds) {
+      expect(NODE_ID_REGEX.test(id)).toBe(true)
+    }
+  })
+
+  // Phase 12 Plan 12-10 (Bug X UAT fix) — addNodeAtPosition (the "N"
+  // shortcut + canvas context-menu "Add node here" path + bottom-toolbar
+  // Add button) must mint regex-compliant IDs.
+  it("Test 21 (Bug X): pressing N to add a node mints a regex-compliant ID", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    render(<EditorPage project={mockProject} />)
+
+    // Press N to invoke addNodeAtPosition via the keyboard shortcut.
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "n" }))
+    })
+
+    // Save to inspect the PATCH body.
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    const callArgs = mockUpdateProcessConfig.mock.calls[0]
+    const processConfig = callArgs[1] as {
+      workflow?: { nodes: Array<{ id: string }> }
+    }
+    const nodeIds = (processConfig.workflow!.nodes ?? []).map((n) => n.id)
+    const NODE_ID_REGEX = /^nd_[a-z0-9]{10}$/
+    expect(nodeIds.length).toBeGreaterThan(0)
+    for (const id of nodeIds) {
+      expect(NODE_ID_REGEX.test(id)).toBe(true)
+    }
+  })
 })
