@@ -19,9 +19,18 @@ import { useApp } from "@/context/app-context"
 import type { Task } from "@/services/task-service"
 import type { StatusValue } from "@/components/primitives/status-dot"
 
+export type TaskRowDensity = "compact" | "cozy" | "comfortable"
+
 interface TaskRowProps {
   task: Task
+  /**
+   * Legacy prop. When set (Dashboard Member view), forces compact density and
+   * trims the avatar size. New callers should pass `density` instead and let
+   * the row control its own layout.
+   */
   compact?: boolean
+  /** Visual density of the row. Defaults to "cozy" when not provided. */
+  density?: TaskRowDensity
   starred: boolean
   onToggleStar: () => void
   showProject?: boolean
@@ -43,6 +52,7 @@ function resolveStatus(status: string): StatusValue {
 export function TaskRow({
   task,
   compact,
+  density,
   starred,
   onToggleStar,
   showProject,
@@ -51,11 +61,37 @@ export function TaskRow({
   const router = useRouter()
   const { language } = useApp()
 
+  // `compact` is a legacy boolean used by the dashboard Member view; honor it
+  // first, then the explicit `density` prop, then default to "cozy".
+  const effectiveDensity: TaskRowDensity = compact
+    ? "compact"
+    : (density ?? "cozy")
+
   const gridCols = showProject
     ? "18px 68px 1fr auto auto auto 28px 40px"
     : "18px 68px 1fr auto auto 28px 40px"
-  const padY = compact ? 4 : 8
-  const fontSize = compact ? 12.5 : 13
+  // Density mapping mirrors the prototype:
+  //   compact     -> 4px y-pad, 12.5 font, 18 avatar
+  //   cozy        -> 8px y-pad, 13   font, 20 avatar
+  //   comfortable -> 12px y-pad, 13.5 font, 22 avatar
+  const padY =
+    effectiveDensity === "compact"
+      ? 4
+      : effectiveDensity === "cozy"
+        ? 8
+        : 12
+  const fontSize =
+    effectiveDensity === "compact"
+      ? 12.5
+      : effectiveDensity === "comfortable"
+        ? 13.5
+        : 13
+  const avatarSize =
+    effectiveDensity === "compact"
+      ? 18
+      : effectiveDensity === "comfortable"
+        ? 22
+        : 20
   const isDone = resolveStatus(task.status) === "done"
 
   const assigneeAvatar =
@@ -180,9 +216,9 @@ export function TaskRow({
       )}
 
       {assigneeAvatar ? (
-        <Avatar user={assigneeAvatar} size={compact ? 18 : 20} />
+        <Avatar user={assigneeAvatar} size={avatarSize} />
       ) : (
-        <span style={{ width: compact ? 18 : 20 }} />
+        <span style={{ width: avatarSize }} />
       )}
 
       {/* Placeholder action button — future: row action menu */}
