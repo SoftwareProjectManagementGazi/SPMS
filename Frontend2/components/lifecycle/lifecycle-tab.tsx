@@ -44,6 +44,7 @@ import { PhaseGateExpand, type PhaseGateCriteria } from "./phase-gate-expand"
 import { OverviewSubTab } from "./overview-subtab"
 import { HistorySubTab } from "./history-subtab"
 import { MilestonesSubTab } from "./milestones-subtab"
+import { ArtifactsSubTab } from "./artifacts-subtab"
 
 interface PhaseTransitionEntryShape {
   user_id: number
@@ -350,20 +351,7 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
             />
           )}
           {subTab === "artifacts" && !isKanban && (
-            <Card padding={20}>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: "var(--fg-subtle)",
-                  textAlign: "center",
-                }}
-              >
-                {T(
-                  "Artefaktlar sekmesi Plan 12-06'da geliyor.",
-                  "Artifacts sub-tab lands in Plan 12-06.",
-                )}
-              </div>
-            </Card>
+            <ArtifactsSubTab project={project} workflow={workflow} />
           )}
         </div>
       </div>

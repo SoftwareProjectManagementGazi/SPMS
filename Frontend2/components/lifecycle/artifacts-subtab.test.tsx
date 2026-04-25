@@ -225,7 +225,7 @@ describe("ArtifactsSubTab", () => {
     apiGet.mockResolvedValueOnce({ data: SCRUM_ARTIFACTS })
     apiPatch.mockResolvedValueOnce({
       data: {
-        ...SCRUM_ARTIFACTS[0],
+        ...SCRUM_ARTIFACTS[2],
         status: "done",
         updated_at: "2026-04-25T00:00:00Z",
       },
@@ -241,11 +241,12 @@ describe("ArtifactsSubTab", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Sprint Planı")).toBeInTheDocument()
+      expect(screen.getByText("Daily Notes")).toBeInTheDocument()
     })
 
-    // Expand the row
-    fireEvent.click(screen.getByText("Sprint Planı"))
+    // Use Daily Notes (id=103, assignee_id=null) — PM path expected because
+    // user is not the assignee.
+    fireEvent.click(screen.getByText("Daily Notes"))
     await waitFor(() => {
       expect(screen.getByText("Tamam")).toBeInTheDocument()
     })
@@ -261,7 +262,7 @@ describe("ArtifactsSubTab", () => {
     })
 
     const [url, body] = apiPatch.mock.calls[0]
-    expect(url).toBe("/artifacts/101")
+    expect(url).toBe("/artifacts/103")
     expect(body).toMatchObject({ status: "done" })
     // Critical: revision NOT sent (T-12-06-03)
     expect((body as Record<string, unknown>).revision).toBeUndefined()
@@ -288,11 +289,14 @@ describe("ArtifactsSubTab", () => {
     })
 
     fireEvent.click(screen.getByText("Sprint Planı"))
+    // Wait for SegmentedControl to render (it has a button labeled Yok / Taslak / Tamam)
     await waitFor(() => {
-      expect(screen.getByText("Taslak")).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Tamam" })).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText("Taslak"))
+    // Sprint Backlog row also shows "Taslak" as a status label, so disambiguate
+    // by selecting the SegmentedControl button (role=button) over the span label.
+    fireEvent.click(screen.getByRole("button", { name: "Taslak" }))
     fireEvent.click(screen.getByText("Kaydet"))
 
     await waitFor(() => {
