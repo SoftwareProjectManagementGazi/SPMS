@@ -114,6 +114,22 @@ export const projectService = {
     return mapProject(response.data);
   },
 
+  // Phase 12 Plan 12-09: Workflow Editor save flow.
+  // PATCHes /projects/{id} with body { process_config: { ...current, workflow: newWorkflow } }.
+  // The caller is responsible for spreading the existing processConfig and replacing
+  // workflow with the new (already snake_case-serialized via unmapWorkflowConfig)
+  // shape. Backend re-validates the entire process_config; 422 surfaces validation
+  // errors, 409 on concurrent edit, 429 on rate-limit.
+  updateProcessConfig: async (
+    projectId: number,
+    processConfig: Record<string, unknown>,
+  ): Promise<Project> => {
+    const response = await apiClient.patch<ProjectResponseDTO>(`/projects/${projectId}`, {
+      process_config: processConfig,
+    });
+    return mapProject(response.data);
+  },
+
   getActivity: async (limit = 20, offset = 0) => {
     const response = await apiClient.get('/activity', { params: { limit, offset } });
     return response.data;

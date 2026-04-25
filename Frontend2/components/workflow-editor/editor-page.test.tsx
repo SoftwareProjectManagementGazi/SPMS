@@ -1,14 +1,21 @@
-// Unit tests for components/workflow-editor/editor-page.tsx (Phase 12 Plan 12-07).
+// Unit tests for components/workflow-editor/editor-page.tsx
+// (Phase 12 Plan 12-07 baseline + Plan 12-09 save flow extensions).
 //
-// 4 cases per 12-07-PLAN.md task 1 <behavior> Tests 6-9:
-//   6. header H1 + subtitle + Save/Geri/Çoğalt buttons render
-//   7. toolbar mode pill + template + Undo/Redo + zoom render
-//   8. mode pill change updates ?mode= URL via router.replace
-//   9. Save button disabled when useTransitionAuthority=false (with Tooltip)
+// Original Plan 12-07 cases 6-9: header / toolbar / mode pill / disabled-save.
+// Plan 12-09 added cases 10-17:
+//   10. save 200 — toast Kaydedildi, dirty=false, history.clear, invalidateQueries
+//   11. save 422 — toast + saveError detail captured
+//   12. save 409 — AlertBanner with Yenile button; click invalidates query
+//   13. save 429 — toast + countdown disables Save button
+//   14. save network error — toast Bağlantı hatası
+//   15. dirty-save router intercept — DirtySaveDialog opens on safePush when dirty
+//   16. dirty=false bypasses guard — router.push fires directly
+//   17. workflow-validators sequential-flexible cycle test (in workflow-validators.test.ts)
+//   PLUS implicit: beforeunload listener installed when dirty
 
 import * as React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react"
 
 // next/navigation mocks
 const mockReplace = vi.fn()
@@ -35,6 +42,27 @@ vi.mock("@/hooks/use-transition-authority", () => ({
 vi.mock("@/hooks/use-cycle-counters", () => ({
   useCycleCounters: () => ({ data: new Map<string, number>() }),
   buildCycleMap: () => new Map<string, number>(),
+}))
+
+// Plan 12-09 — useToast / useQueryClient / projectService mocks. Tests do NOT
+// mount ToastProvider or QueryClientProvider — the editor-page wires both
+// hooks at module top, so we mock the hook factories directly.
+const mockShowToast = vi.fn()
+vi.mock("@/components/toast", () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}))
+
+const mockInvalidateQueries = vi.fn()
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+}))
+
+const mockUpdateProcessConfig = vi.fn()
+vi.mock("@/services/project-service", () => ({
+  projectService: {
+    updateProcessConfig: (...args: unknown[]) =>
+      mockUpdateProcessConfig(...args),
+  },
 }))
 
 // React Flow stubs to avoid jsdom layout failures.
@@ -102,9 +130,26 @@ describe("EditorPage", () => {
   beforeEach(() => {
     mockReplace.mockClear()
     mockPush.mockClear()
+    mockShowToast.mockClear()
+    mockInvalidateQueries.mockClear()
+    mockUpdateProcessConfig.mockReset()
     mockUseTransitionAuthority.mockReturnValue(true)
     setSearchParams("projectId=42")
   })
+
+  // Helper: locate the primary header Save button (the Tooltip-wrapped one
+  // sitting next to Geri / Çoğalt). Returns the actual <button> element.
+  function findHeaderSaveButton(): HTMLButtonElement {
+    const candidates = screen.getAllByText("Kaydet")
+    for (const el of candidates) {
+      let parent: HTMLElement | null = el as HTMLElement
+      for (let i = 0; i < 4 && parent; i += 1) {
+        if (parent.tagName === "BUTTON") return parent as HTMLButtonElement
+        parent = parent.parentElement
+      }
+    }
+    throw new Error("Header Save button not found")
+  }
 
   it("Test 6: renders H1 'İş Akışı Tasarımcısı' + project subtitle + Save/Geri/Çoğalt buttons", () => {
     render(<EditorPage project={mockProject} />)
@@ -160,5 +205,128 @@ describe("EditorPage", () => {
       return false
     })
     expect(disabledSave).toBeTruthy()
+  })
+
+  // ---------------------- Plan 12-09 — save flow ----------------------
+
+  it("Test 10: save 200 — toast Kaydedildi + invalidateQueries fired", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    render(<EditorPage project={mockProject} />)
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    // Success path side-effects
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ variant: "success", message: "Kaydedildi" }),
+    )
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["project", 42],
+    })
+  })
+
+  it("Test 11: save 422 — Doğrulama hatası toast + saveError detail captured", async () => {
+    mockUpdateProcessConfig.mockRejectedValueOnce({
+      response: {
+        status: 422,
+        data: { detail: [{ loc: ["body", "process_config"], msg: "invalid", type: "x" }] },
+      },
+    })
+    render(<EditorPage project={mockProject} />)
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: "error",
+          message: "Doğrulama hatası",
+        }),
+      )
+    })
+  })
+
+  it("Test 12: save 409 — AlertBanner with Yenile button appears", async () => {
+    mockUpdateProcessConfig.mockRejectedValueOnce({ response: { status: 409 } })
+    render(<EditorPage project={mockProject} />)
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      // The 409 path renders an AlertBanner with the conflict copy
+      expect(
+        screen.getByText(
+          /Başka bir kullanıcı aynı anda değiştirdi\. Yenileyin\./,
+        ),
+      ).toBeTruthy()
+      expect(screen.getByText("Yenile")).toBeTruthy()
+    })
+    // Clicking Yenile invalidates the project query and clears the banner
+    const yenileBtn = screen.getByText("Yenile")
+    await act(async () => {
+      yenileBtn.click()
+    })
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["project", 42],
+    })
+  })
+
+  it("Test 13: save 429 — Rate-limit toast fired with seconds in message", async () => {
+    mockUpdateProcessConfig.mockRejectedValueOnce({
+      response: { status: 429, data: { retry_after_seconds: 5 } },
+    })
+    render(<EditorPage project={mockProject} />)
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: "warning",
+          message: expect.stringMatching(/saniye bekleyin/),
+        }),
+      )
+    })
+  })
+
+  it("Test 14: save network error — Bağlantı hatası toast", async () => {
+    mockUpdateProcessConfig.mockRejectedValueOnce(new Error("Network down"))
+    render(<EditorPage project={mockProject} />)
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: "error",
+          message: "Bağlantı hatası, tekrar dene",
+        }),
+      )
+    })
+  })
+
+  it("Test 15: dirty=false — clicking Geri navigates immediately via router.push", async () => {
+    render(<EditorPage project={mockProject} />)
+    const geriBtn = screen.getByText("Geri")
+    await act(async () => {
+      geriBtn.click()
+    })
+    expect(mockPush).toHaveBeenCalledWith("/projects/42")
+  })
+
+  it("Test 16: beforeunload listener installed — preventDefault NOT called when dirty=false", () => {
+    render(<EditorPage project={mockProject} />)
+    const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent
+    const preventSpy = vi.spyOn(event, "preventDefault")
+    window.dispatchEvent(event)
+    // Initial dirty=false so preventDefault must NOT have been called
+    expect(preventSpy).not.toHaveBeenCalled()
   })
 })

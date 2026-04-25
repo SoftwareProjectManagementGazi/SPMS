@@ -32,15 +32,18 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Copy, Save, Undo2, Redo2 } from "lucide-react"
 
 import {
+  AlertBanner,
   Badge,
   Button,
   SegmentedControl,
 } from "@/components/primitives"
 import { Tooltip } from "@/components/workflow-editor/tooltip"
 import { useApp } from "@/context/app-context"
+import { useToast } from "@/components/toast"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
 import { useEditorHistory } from "@/hooks/use-editor-history"
 import { useCycleCounters } from "@/hooks/use-cycle-counters"
@@ -58,9 +61,10 @@ import {
   computeHull,
   type Point,
 } from "@/lib/lifecycle/cloud-hull"
-import type { Project } from "@/services/project-service"
+import { projectService, type Project } from "@/services/project-service"
 import {
   mapWorkflowConfig,
+  unmapWorkflowConfig,
   type WorkflowConfig,
   type WorkflowConfigDTO,
   type WorkflowEdge,
@@ -73,6 +77,7 @@ import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
 import { MinimapWrapper } from "./minimap-wrapper"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
+import { DirtySaveDialog } from "./dirty-save-dialog"
 
 export type EditorMode = "lifecycle" | "status"
 
@@ -107,10 +112,19 @@ function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`
 }
 
+// SaveError shape — mirror of the 5-error matrix from CONTEXT D-32 / UI-SPEC.
+interface SaveErrorState {
+  kind: "409" | "422" | "rate-limited" | "network"
+  detail?: unknown
+  countdown?: number
+}
+
 export function EditorPage({ project }: EditorPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { language } = useApp()
+  const { showToast } = useToast()
+  const qc = useQueryClient()
   const T = React.useCallback(
     (tr: string, en: string) => (language === "tr" ? tr : en),
     [language],
@@ -126,6 +140,13 @@ export function EditorPage({ project }: EditorPageProps) {
     id: string
   } | null>(null)
   const [contextMenu, setContextMenu] = React.useState<ContextMenuState | null>(
+    null,
+  )
+  // Plan 12-09 — save flow state.
+  const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<SaveErrorState | null>(null)
+  // Plan 12-09 — dirty-save router intercept state.
+  const [pendingNavigation, setPendingNavigation] = React.useState<string | null>(
     null,
   )
 
@@ -744,6 +765,116 @@ export function EditorPage({ project }: EditorPageProps) {
     ],
   )
 
+  // ---------------------- Plan 12-09 save flow ------------------------
+
+  // Reusable save function — covers the full 5-error matrix (200/422/409/429/
+  // network) per CONTEXT D-32 + UI-SPEC §725-734.
+  const save = React.useCallback(async (): Promise<boolean> => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const currentPC = (project.processConfig ?? {}) as Record<string, unknown>
+      const nextProcessConfig = {
+        ...currentPC,
+        // Serialize camelCase -> snake_case at the wire boundary (Pitfall 21).
+        // unmapWorkflowConfig handles bidirectional/is_all_gate, is_initial,
+        // is_final, is_archived, parent_id, wip_limit conversions.
+        workflow: unmapWorkflowConfig(workflow),
+      }
+      await projectService.updateProcessConfig(project.id, nextProcessConfig)
+      // 200 success
+      showToast({ variant: "success", message: T("Kaydedildi", "Saved") })
+      setDirty(false)
+      history.clear()
+      qc.invalidateQueries({ queryKey: ["project", project.id] })
+      return true
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number; data?: unknown } }
+      const status = e?.response?.status
+      if (status === 422) {
+        setSaveError({ kind: "422", detail: e.response?.data })
+        showToast({
+          variant: "error",
+          message: T("Doğrulama hatası", "Validation error"),
+        })
+      } else if (status === 409) {
+        setSaveError({ kind: "409" })
+      } else if (status === 429) {
+        const data = e.response?.data as
+          | { retry_after_seconds?: number }
+          | undefined
+        const seconds = data?.retry_after_seconds ?? 5
+        setSaveError({ kind: "rate-limited", countdown: seconds })
+        showToast({
+          variant: "warning",
+          message: T(
+            `${seconds} saniye bekleyin`,
+            `Wait ${seconds} seconds`,
+          ),
+        })
+      } else {
+        // Network error / 5xx / unknown
+        setSaveError({ kind: "network" })
+        showToast({
+          variant: "error",
+          message: T("Bağlantı hatası, tekrar dene", "Connection error, retry"),
+        })
+      }
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }, [project.id, project.processConfig, workflow, history, qc, showToast, T])
+
+  // Rate-limit countdown ticker — decrements `countdown` every second; clears
+  // saveError when it reaches 0 so the Save button is re-enabled.
+  React.useEffect(() => {
+    if (saveError?.kind !== "rate-limited") return
+    const cur = saveError.countdown ?? 0
+    if (cur <= 0) {
+      setSaveError(null)
+      return
+    }
+    const t = setTimeout(() => {
+      setSaveError((prev) =>
+        prev?.kind === "rate-limited"
+          ? { ...prev, countdown: (prev.countdown ?? 0) - 1 }
+          : prev,
+      )
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [saveError])
+
+  // beforeunload guard — browser-controlled message per Pitfall 12. The
+  // browser shows its generic "Leave site?" dialog when preventDefault is
+  // called and dirty is true. Custom messages are NOT supported by modern
+  // browsers (security hardening).
+  React.useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [dirty])
+
+  // safePush — used by all in-app navigations from the editor. Opens the
+  // DirtySaveDialog when dirty is true; bypasses straight to router.push
+  // when clean. Next.js 16 does not expose router.events, so the wrapping
+  // helper is the only available pattern.
+  const safePush = React.useCallback(
+    (href: string) => {
+      if (dirty) {
+        setPendingNavigation(href)
+      } else {
+        router.push(href)
+      }
+    },
+    [dirty, router],
+  )
+
   // ---------------------- Keyboard shortcuts ---------------------------
 
   React.useEffect(() => {
@@ -763,6 +894,9 @@ export function EditorPage({ project }: EditorPageProps) {
       // Cmd/Ctrl+S — save (Plan 12-09 wires the actual handler)
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.save)) {
         e.preventDefault()
+        if (canEdit && !saving) {
+          void save()
+        }
         return
       }
       // Cmd/Ctrl+Z — undo
@@ -840,6 +974,9 @@ export function EditorPage({ project }: EditorPageProps) {
     ungroup,
     groupSelection,
     duplicateSelection,
+    canEdit,
+    saving,
+    save,
   ])
 
   // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550)
@@ -900,7 +1037,7 @@ export function EditorPage({ project }: EditorPageProps) {
             variant="ghost"
             size="sm"
             icon={<ArrowLeft size={14} />}
-            onClick={() => router.push(`/projects/${project.id}`)}
+            onClick={() => safePush(`/projects/${project.id}`)}
           >
             {T("Geri", "Back")}
           </Button>
@@ -920,6 +1057,11 @@ export function EditorPage({ project }: EditorPageProps) {
                     "Düzenleme yetkiniz yok.",
                     "You don't have edit permission.",
                   )
+                : saveError?.kind === "rate-limited" && saveError.countdown
+                ? T(
+                    `${saveError.countdown} saniye bekleyin`,
+                    `Wait ${saveError.countdown} seconds`,
+                  )
                 : T("Kaydet", "Save")
             }
           >
@@ -927,13 +1069,45 @@ export function EditorPage({ project }: EditorPageProps) {
               variant="primary"
               size="sm"
               icon={<Save size={14} />}
-              disabled={!canEdit}
+              disabled={
+                !canEdit ||
+                saving ||
+                (saveError?.kind === "rate-limited" &&
+                  (saveError.countdown ?? 0) > 0)
+              }
+              onClick={() => {
+                void save()
+              }}
             >
-              {T("Kaydet", "Save")}
+              {saving ? T("Kaydediliyor…", "Saving…") : T("Kaydet", "Save")}
             </Button>
           </Tooltip>
         </div>
       </div>
+
+      {/* Plan 12-09 — concurrent-edit (409) AlertBanner */}
+      {saveError?.kind === "409" && (
+        <AlertBanner
+          tone="warning"
+          action={
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                qc.invalidateQueries({ queryKey: ["project", project.id] })
+                setSaveError(null)
+              }}
+            >
+              {T("Yenile", "Refresh")}
+            </Button>
+          }
+        >
+          {T(
+            "Başka bir kullanıcı aynı anda değiştirdi. Yenileyin.",
+            "Another user edited concurrently. Refresh.",
+          )}
+        </AlertBanner>
+      )}
 
       {/* Top toolbar — mode + template + undo/redo + zoom */}
       <div
@@ -1076,6 +1250,26 @@ export function EditorPage({ project }: EditorPageProps) {
           onWorkflowChange={handleWorkflowChange}
         />
       </div>
+
+      {/* Plan 12-09 — DirtySaveDialog (router intercept). beforeunload handles
+          tab close / refresh in a separate effect with browser-controlled UI. */}
+      <DirtySaveDialog
+        open={pendingNavigation !== null}
+        saving={saving}
+        onCancel={() => setPendingNavigation(null)}
+        onDiscard={() => {
+          setDirty(false)
+          if (pendingNavigation) router.push(pendingNavigation)
+          setPendingNavigation(null)
+        }}
+        onSaveAndLeave={async () => {
+          const ok = await save()
+          if (ok && pendingNavigation) {
+            router.push(pendingNavigation)
+            setPendingNavigation(null)
+          }
+        }}
+      />
     </div>
   )
 }

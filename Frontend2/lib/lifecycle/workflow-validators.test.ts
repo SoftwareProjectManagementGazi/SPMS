@@ -152,6 +152,37 @@ describe("Rule 5 — flow-edge acyclicity by mode", () => {
     )
     expect(result.errors.some((e) => e.rule === 5)).toBe(true)
   })
+  it("FAIL: sequential-flexible mode with cycle returns rule-5 error (Plan 12-09 EDIT-03)", () => {
+    // Plan 12-09: explicit sequential-flexible coverage. Per CONTEXT D-55 rule 3,
+    // sequential-flexible mode also requires acyclic flow edges (feedback edges
+    // are exempt). This case mirrors the sequential-locked cycle case but for
+    // sequential-flexible mode to lock in EDIT-03 parity.
+    const result = validateWorkflow(
+      baseWorkflow({
+        mode: "sequential-flexible",
+        edges: [
+          { id: "e1", source: "A", target: "B", type: "flow" },
+          { id: "e2", source: "B", target: "C", type: "flow" },
+          { id: "e3", source: "C", target: "A", type: "flow" }, // creates cycle
+        ],
+      }),
+    )
+    expect(result.errors.some((e) => e.rule === 5)).toBe(true)
+  })
+  it("OK: sequential-flexible with feedback-typed cycle returns no rule-5 error (EDIT-03)", () => {
+    // sequential-flexible permits feedback edges that close a cycle.
+    const result = validateWorkflow(
+      baseWorkflow({
+        mode: "sequential-flexible",
+        edges: [
+          { id: "e1", source: "A", target: "B", type: "flow" },
+          { id: "e2", source: "B", target: "C", type: "flow" },
+          { id: "e3", source: "C", target: "A", type: "feedback" }, // exempt
+        ],
+      }),
+    )
+    expect(result.errors.filter((e) => e.rule === 5)).toHaveLength(0)
+  })
   it("WARN: flexible mode with cycle returns rule-5 WARNING (not error)", () => {
     const result = validateWorkflow(
       baseWorkflow({
