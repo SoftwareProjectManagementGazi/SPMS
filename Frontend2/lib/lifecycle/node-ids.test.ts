@@ -85,10 +85,10 @@ describe("node-ids — regenerateInvalidNodeIds", () => {
       mode: "flexible",
       nodes: [
         { id: "bad-1", name: "A", x: 0, y: 0 },
-        { id: "nd_validone1", name: "B", x: 100, y: 0 },
+        { id: "nd_validate00", name: "B", x: 100, y: 0 },
       ],
       edges: [],
-      groups: [{ id: "g1", name: "G", children: ["bad-1", "nd_validone1"] }],
+      groups: [{ id: "g1", name: "G", children: ["bad-1", "nd_validate00"] }],
     }
     const next = regenerateInvalidNodeIds(wf)
     const validIds = new Set(next.nodes.map((n) => n.id))
@@ -96,7 +96,7 @@ describe("node-ids — regenerateInvalidNodeIds", () => {
       expect(validIds.has(c)).toBe(true)
     }
     // The previously-valid ID must be preserved (not regenerated).
-    expect(validIds.has("nd_validone1")).toBe(true)
+    expect(validIds.has("nd_validate00")).toBe(true)
   })
 
   it("preserves valid IDs when only some are invalid", () => {
