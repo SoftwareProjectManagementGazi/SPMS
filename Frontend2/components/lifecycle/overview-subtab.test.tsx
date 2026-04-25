@@ -88,8 +88,8 @@ describe("OverviewSubTab", () => {
     // Total = 3 ; Done = 1
     expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1)
-    // Progress = round(1/3 * 100) = 33 → "%33"
-    expect(screen.getByText("%33")).toBeInTheDocument()
+    // Progress = round(1/3 * 100) = 33 → "%33" appears in MiniMetric value + Faz Özeti mono row
+    expect(screen.getAllByText("%33").length).toBeGreaterThanOrEqual(1)
   })
 
   it("Test 5: Kanban variant renders 3 MiniMetrics — Lead Time / Cycle Time / WIP", () => {
