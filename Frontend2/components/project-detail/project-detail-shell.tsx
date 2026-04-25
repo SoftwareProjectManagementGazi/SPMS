@@ -10,7 +10,7 @@
 //   - timeline                      — TimelineTab (Plan 11-07) — custom SVG Gantt
 //   - calendar                      — CalendarTab (Plan 11-07) — 6×7 grid + scroll-zoom
 //   - activity                      — Faz 13 stub (ActivityStubTab)
-//   - lifecycle                     — Faz 12 stub (LifecycleStubTab)
+//   - lifecycle                     — LifecycleTab (Phase 12 Plan 12-02)
 //   - members                       — Manager card (Plan 11-04)
 //   - settings                      — 4 sub-tabs (Plan 11-04)
 //
@@ -48,7 +48,7 @@ import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
 import { BoardCardGhost } from "./board-card"
 import { CalendarTab } from "./calendar-view"
-import { LifecycleStubTab } from "./lifecycle-stub-tab"
+import { LifecycleTab } from "@/components/lifecycle/lifecycle-tab"
 import { ListTab } from "./list-tab"
 import { MembersTab } from "./members-tab"
 import { ProjectDetailProvider } from "./project-detail-context"
@@ -268,7 +268,7 @@ export function ProjectDetailShell({
               {tab === "timeline" && <TimelineTab project={project} />}
               {tab === "calendar" && <CalendarTab project={project} />}
               {tab === "activity" && <ActivityStubTab />}
-              {tab === "lifecycle" && <LifecycleStubTab />}
+              {tab === "lifecycle" && <LifecycleTab project={project} />}
               {tab === "members" && <MembersTab project={project} />}
               {tab === "settings" && (
                 <React.Suspense

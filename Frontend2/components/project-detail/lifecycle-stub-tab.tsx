@@ -1,19 +1,3 @@
-"use client"
-
-// Lifecycle tab stub per D-10 — real content lands in Phase 12 (LIFE-01..07).
-
-import { AlertBanner } from "@/components/primitives"
-import { useApp } from "@/context/app-context"
-
-export function LifecycleStubTab() {
-  const { language: lang } = useApp()
-  return (
-    <div style={{ padding: 20 }}>
-      <AlertBanner tone="info">
-        {lang === "tr"
-          ? "Bu sekme Faz 12'de aktive edilecek."
-          : "This tab will be activated in Phase 12."}
-      </AlertBanner>
-    </div>
-  )
-}
+// Phase 12 Plan 12-02: this stub is replaced by LifecycleTab.
+// Kept as a re-export to minimize import churn; remove in Phase 13 if desired.
+export { LifecycleTab as LifecycleStubTab } from "@/components/lifecycle/lifecycle-tab"

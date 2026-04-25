@@ -28,6 +28,15 @@ vi.mock("@/lib/api-client", () => ({
   },
 }))
 
+// Plan 12-02: SummaryStrip uses next/navigation's useRouter for the "Düzenle"
+// button. The shell test isn't running inside a Next.js app shell, so stub
+// the navigation module like the other unit tests do.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 describe("ProjectDetailShell", () => {
   it("renders all 8 tabs with Turkish labels by default", () => {
     const { getByText } = renderWithProviders(
@@ -62,12 +71,20 @@ describe("ProjectDetailShell", () => {
     expect(getByText(/Faz 13'te aktive edilecek/)).toBeInTheDocument()
   })
 
-  it("shows the Faz 12 stub on the Yaşam Döngüsü tab", () => {
-    const { getByText } = renderWithProviders(
+  it("mounts the real LifecycleTab on the Yaşam Döngüsü tab (Plan 12-02)", () => {
+    // The Phase 11 stub was replaced by <LifecycleTab/> in Plan 12-02. The
+    // mock projects fixture supplies a workflow with 3 nodes, so the
+    // SummaryStrip renders with the "Düzenle" button + the deferred-sub-tabs
+    // placeholder copy from LifecycleTab.
+    const { getByText, getAllByText } = renderWithProviders(
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("Yaşam Döngüsü"))
-    expect(getByText(/Faz 12'de aktive edilecek/)).toBeInTheDocument()
+    // SummaryStrip "Düzenle" button is reliable — mode-chip + active-phase
+    // badge depend on the BFS BUT "Düzenle" is unconditional.
+    expect(getAllByText(/Düzenle/).length).toBeGreaterThan(0)
+    // Deferred-sub-tabs placeholder copy from lifecycle-tab.tsx
+    expect(getByText(/Alt sekmeler Plan 12-04/)).toBeInTheDocument()
   })
 
   it("shows the project manager card on the Üyeler tab", () => {
