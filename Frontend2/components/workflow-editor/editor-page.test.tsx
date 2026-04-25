@@ -65,11 +65,41 @@ vi.mock("@/services/project-service", () => ({
   },
 }))
 
-// React Flow stubs to avoid jsdom layout failures.
+// React Flow stubs to avoid jsdom layout failures. The stub captures the
+// editable callbacks (onNodesChange / onNodeDragStart / onNodeDragStop) on
+// a module-scoped ref so individual test cases can fire synthetic drag
+// sequences against the editor-page's real handlers.
+//
+// Phase 12 Plan 12-10 (Bug 2 UAT fix) — capturedHandlers exposes the
+// editor's drag handlers so the new history-coalescing test (Test 18)
+// can simulate a 30-frame drag and assert the resulting undo stack
+// depth equals 1, not 30.
+const capturedHandlers: {
+  onNodesChange?: (changes: Array<Record<string, unknown>>) => void
+  onNodeDragStart?: (e: unknown, node: unknown) => void
+  onNodeDrag?: (e: unknown, node: unknown) => void
+  onNodeDragStop?: (e: unknown, node: unknown) => void
+} = {}
 vi.mock("@xyflow/react", () => ({
-  ReactFlow: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="reactflow">{children}</div>
-  ),
+  ReactFlow: ({
+    children,
+    onNodesChange,
+    onNodeDragStart,
+    onNodeDrag,
+    onNodeDragStop,
+  }: {
+    children?: React.ReactNode
+    onNodesChange?: typeof capturedHandlers.onNodesChange
+    onNodeDragStart?: typeof capturedHandlers.onNodeDragStart
+    onNodeDrag?: typeof capturedHandlers.onNodeDrag
+    onNodeDragStop?: typeof capturedHandlers.onNodeDragStop
+  }) => {
+    capturedHandlers.onNodesChange = onNodesChange
+    capturedHandlers.onNodeDragStart = onNodeDragStart
+    capturedHandlers.onNodeDrag = onNodeDrag
+    capturedHandlers.onNodeDragStop = onNodeDragStop
+    return <div data-testid="reactflow">{children}</div>
+  },
   Background: () => <div data-testid="bg" />,
   MiniMap: () => <div data-testid="minimap" />,
   Controls: () => <div data-testid="controls" />,
@@ -80,8 +110,9 @@ vi.mock("@xyflow/react", () => ({
   getBezierPath: () => ["", 0, 0, 0, 0],
 }))
 
-// next/dynamic stub — execute the loader synchronously and return the
-// component so the dynamic-imported WorkflowCanvas mounts in jsdom.
+// next/dynamic stub — kept for Plan 12-07 baseline tests that observe
+// the static toolbar. Returns a placeholder so the editor-page renders
+// without crashing when the inner canvas hasn't loaded.
 vi.mock("next/dynamic", () => ({
   default: (loader: () => Promise<{ [k: string]: unknown }>) => {
     let Mod: React.ComponentType<unknown> | null = null
@@ -99,6 +130,17 @@ vi.mock("next/dynamic", () => ({
     return Wrapped
   },
 }))
+
+// Phase 12 Plan 12-10 (Bug 2 UAT fix) — short-circuit the workflow-canvas
+// outer wrapper so editor-page mounts the inner ReactFlow stub directly.
+// This avoids the async dynamic-import dance entirely and lets the
+// captured drag handlers be available synchronously after render.
+vi.mock("./workflow-canvas", async () => {
+  const inner = await import("./workflow-canvas-inner")
+  return {
+    WorkflowCanvas: inner.WorkflowCanvasInner,
+  }
+})
 
 import { EditorPage } from "./editor-page"
 import type { Project } from "@/services/project-service"
@@ -135,6 +177,12 @@ describe("EditorPage", () => {
     mockUpdateProcessConfig.mockReset()
     mockUseTransitionAuthority.mockReturnValue(true)
     setSearchParams("projectId=42")
+    // Reset captured handlers between tests so cross-test contamination
+    // is impossible (Pitfall 5: jsdom hangs onto closures).
+    capturedHandlers.onNodesChange = undefined
+    capturedHandlers.onNodeDragStart = undefined
+    capturedHandlers.onNodeDrag = undefined
+    capturedHandlers.onNodeDragStop = undefined
   })
 
   // Helper: locate the primary header Save button (the Tooltip-wrapped one
@@ -331,6 +379,161 @@ describe("EditorPage", () => {
   })
 
   // ---------------------- Plan 12-10 — preset menu integration ----------------------
+
+  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — drag history coalescing.
+  it("Test 18: 30 per-frame node-drag position changes produce exactly ONE history entry", async () => {
+    // Project with a single node so we can drag it.
+    const dragProject: Project = {
+      ...mockProject,
+      processConfig: {
+        workflow: {
+          mode: "flexible",
+          nodes: [
+            {
+              id: "n1",
+              name: "Yürütme",
+              x: 100,
+              y: 100,
+              is_initial: true,
+              is_final: true,
+            },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+
+    render(<EditorPage project={dragProject} />)
+
+    // The dynamic-imported canvas resolves on the microtask queue. Wait
+    // for the captured drag handlers to be wired up via the ReactFlow stub
+    // before firing synthetic events.
+    await waitFor(() => {
+      expect(capturedHandlers.onNodeDragStart).toBeTypeOf("function")
+    })
+    expect(capturedHandlers.onNodesChange).toBeTypeOf("function")
+    expect(capturedHandlers.onNodeDragStop).toBeTypeOf("function")
+
+    // Simulate React Flow's drag sequence:
+    //   1. onNodeDragStart fires once → editor snapshots workflow
+    //   2. 30× onNodesChange fires with `position` deltas + dragging:true
+    //   3. onNodeDragStop fires once → editor pushes ONE history entry
+    await act(async () => {
+      capturedHandlers.onNodeDragStart!({} as never, { id: "n1" })
+    })
+
+    for (let i = 1; i <= 30; i += 1) {
+      await act(async () => {
+        capturedHandlers.onNodesChange!([
+          {
+            type: "position",
+            id: "n1",
+            position: { x: 100 + i, y: 100 + i },
+            dragging: true,
+          },
+        ])
+      })
+    }
+
+    await act(async () => {
+      capturedHandlers.onNodeDragStop!(
+        {} as never,
+        { id: "n1", position: { x: 130, y: 130 } },
+      )
+    })
+
+    // Expectation: ONE click on the toolbar Undo button (Geri Al) reverts
+    // the canvas back to the pre-drag position. After that one click,
+    // canUndo becomes false → the Undo button is disabled. This proves
+    // the 30 position changes coalesced into a single history entry; if
+    // there were 30 entries we'd need 30 clicks to drain.
+    const undoBtns = screen.getAllByText("Geri Al")
+    // Pick the first Undo button (toolbar variant).
+    let undoBtn: HTMLButtonElement | null = null
+    for (const el of undoBtns) {
+      let parent: HTMLElement | null = el as HTMLElement
+      for (let i = 0; i < 4 && parent; i += 1) {
+        if (parent.tagName === "BUTTON") {
+          undoBtn = parent as HTMLButtonElement
+          break
+        }
+        parent = parent.parentElement
+      }
+      if (undoBtn) break
+    }
+    expect(undoBtn).toBeTruthy()
+    // Before the single undo click, canUndo must be true.
+    expect(undoBtn!.disabled).toBe(false)
+
+    await act(async () => {
+      undoBtn!.click()
+    })
+
+    // After ONE undo, canUndo must be false → button disabled. If we had
+    // 30 entries, the button would still be enabled and require 29 more
+    // clicks to drain — that's the regression this test guards against.
+    expect(undoBtn!.disabled).toBe(true)
+  })
+
+  it("Test 19: a no-op drag (no movement) does NOT push a history entry", async () => {
+    const dragProject: Project = {
+      ...mockProject,
+      processConfig: {
+        workflow: {
+          mode: "flexible",
+          nodes: [
+            {
+              id: "n1",
+              name: "Yürütme",
+              x: 100,
+              y: 100,
+              is_initial: true,
+              is_final: true,
+            },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+
+    render(<EditorPage project={dragProject} />)
+
+    await waitFor(() => {
+      expect(capturedHandlers.onNodeDragStart).toBeTypeOf("function")
+    })
+
+    // Simulate clicking-without-dragging: DragStart + DragStop with the
+    // same coordinates and zero position events in between.
+    await act(async () => {
+      capturedHandlers.onNodeDragStart!({} as never, { id: "n1" })
+    })
+    await act(async () => {
+      capturedHandlers.onNodeDragStop!(
+        {} as never,
+        { id: "n1", position: { x: 100, y: 100 } },
+      )
+    })
+
+    // Locate the toolbar Undo button.
+    const undoBtns = screen.getAllByText("Geri Al")
+    let undoBtn: HTMLButtonElement | null = null
+    for (const el of undoBtns) {
+      let parent: HTMLElement | null = el as HTMLElement
+      for (let i = 0; i < 4 && parent; i += 1) {
+        if (parent.tagName === "BUTTON") {
+          undoBtn = parent as HTMLButtonElement
+          break
+        }
+        parent = parent.parentElement
+      }
+      if (undoBtn) break
+    }
+    expect(undoBtn).toBeTruthy()
+    // No movement → no history entry → button remains disabled.
+    expect(undoBtn!.disabled).toBe(true)
+  })
 
   it("Test 17: preset menu integration — selecting 'Artırımlı' on a clean canvas swaps the workflow and Save sends Incremental shape", async () => {
     mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })

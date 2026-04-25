@@ -156,6 +156,21 @@ export function EditorPage({ project }: EditorPageProps) {
   const cycleQuery = useCycleCounters(project.id)
   const cycleMap: Map<string, number> = cycleQuery.data ?? new Map()
 
+  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — drag-history coalescing refs.
+  //
+  // Before this fix, every per-frame `position` change React Flow dispatched
+  // during a node drag pushed an entry onto the undo stack via commitWorkflow.
+  // A single 30-frame drag therefore produced ~30 history entries and required
+  // 30 Cmd+Z presses to undo one logical move.
+  //
+  // The fix: capture the workflow ONCE in onNodeDragStart, suppress per-frame
+  // history pushes during the drag, then push the captured snapshot ONCE in
+  // onNodeDragStop so a single drag becomes a single undo entry. Position
+  // changes during drag still update local state (so the canvas + group cloud
+  // hulls live-morph) — they just don't touch the history stack.
+  const dragStartSnapshotRef = React.useRef<WorkflowConfig | null>(null)
+  const isDraggingRef = React.useRef<boolean>(false)
+
   // BFS-driven node states (EDIT-04 / EDIT-05) — empty transitions list for
   // the editor (transitions are read by LifecycleTab; Editor focuses on
   // structural state). Plan 12-09 may inject phase_transitions for parity.
@@ -351,8 +366,16 @@ export function EditorPage({ project }: EditorPageProps) {
   // onNodesChange/onEdgesChange — accept React Flow's deltas and apply them.
   // We translate position changes into workflow.nodes mutations; selection
   // changes into selected state. Add/remove changes are forwarded through.
+  //
+  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — coalesce per-frame drag positions
+  // into a single history entry. While `isDraggingRef.current === true`,
+  // position changes update local state via setWorkflow directly (no
+  // history push). The single push happens in onNodeDragStop using the
+  // snapshot captured by onNodeDragStart. Non-position changes (e.g.,
+  // remove) still flow through commitWorkflow to keep their history entry.
   const handleNodesChange = React.useCallback(
     (changes: Array<Record<string, unknown>>) => {
+      let positionOnly = true
       let nextWorkflow: WorkflowConfig | null = null
       for (const ch of changes) {
         if (ch.type === "position" && ch.position) {
@@ -363,6 +386,7 @@ export function EditorPage({ project }: EditorPageProps) {
             n.id === id ? { ...n, x: pos.x, y: pos.y } : n,
           )
         } else if (ch.type === "remove") {
+          positionOnly = false
           const id = String(ch.id ?? "")
           if (!nextWorkflow) nextWorkflow = { ...workflow }
           nextWorkflow.nodes = nextWorkflow.nodes.filter((n) => n.id !== id)
@@ -375,7 +399,17 @@ export function EditorPage({ project }: EditorPageProps) {
           }))
         }
       }
-      if (nextWorkflow) commitWorkflow(nextWorkflow)
+      if (!nextWorkflow) return
+      // While a drag is in progress AND every change in this batch is a
+      // pure position delta, bypass history.push by writing local state
+      // directly. The `setDirty(true)` is preserved so the toolbar Badge
+      // and dirty-save guard still see uncommitted work.
+      if (isDraggingRef.current && positionOnly) {
+        setWorkflow(nextWorkflow)
+        setDirty(true)
+        return
+      }
+      commitWorkflow(nextWorkflow)
     },
     [workflow, commitWorkflow],
   )
@@ -413,6 +447,23 @@ export function EditorPage({ project }: EditorPageProps) {
     [workflow, commitWorkflow],
   )
 
+  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — capture the BEFORE-drag snapshot
+  // exactly once when React Flow starts dragging a node (or any node within
+  // a multi-select drag). This snapshot becomes the SINGLE history entry
+  // pushed in handleNodeDragStop, so a 30-frame drag = 1 undo entry.
+  const handleNodeDragStart = React.useCallback(
+    (_e: React.MouseEvent, _node: { id: string }) => {
+      // Re-entrant safety: don't overwrite an in-progress snapshot if a
+      // synthetic event somehow fires twice. The matching DragStop will
+      // clear it.
+      if (!isDraggingRef.current) {
+        dragStartSnapshotRef.current = workflow
+        isDraggingRef.current = true
+      }
+    },
+    [workflow],
+  )
+
   // Live cloud morph during drag — NO debounce per CONTEXT D-23.
   const handleNodeDrag = React.useCallback(
     (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
@@ -422,8 +473,8 @@ export function EditorPage({ project }: EditorPageProps) {
       if (affected.length === 0) return
       // Update the node's position in our local state immediately so the
       // hull recompute sees the new layout. We don't push to history per
-      // frame — only on drag stop (handleNodesChange position event fires
-      // after drag ends).
+      // frame — only on drag stop (handleNodesChange already routes
+      // position-only batches around commitWorkflow during a drag).
       setWorkflow((prev) => {
         return {
           ...prev,
@@ -440,8 +491,35 @@ export function EditorPage({ project }: EditorPageProps) {
 
   // Drop-association policy: if the dragged node was in a parent group and
   // ended outside the group's hull, drop the parentId association.
+  //
+  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — also responsible for committing
+  // the SINGLE history entry for the entire drag using the snapshot taken
+  // by handleNodeDragStart. The drop-association branch may further
+  // mutate the workflow; in that case we run history.push BEFORE the
+  // mutation so the snapshot points to the original pre-drag state.
   const handleNodeDragStop = React.useCallback(
     (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
+      const snapshot = dragStartSnapshotRef.current
+      // Reset drag refs FIRST so any state mutations below take the
+      // non-drag (commitWorkflow → history.push) path.
+      dragStartSnapshotRef.current = null
+      isDraggingRef.current = false
+
+      // Push the single history entry for the whole drag, only when the
+      // node actually moved (skips no-op clicks / cancel-drags).
+      if (snapshot) {
+        const beforeNode = snapshot.nodes.find((n) => n.id === node.id)
+        const afterNode = workflow.nodes.find((n) => n.id === node.id)
+        const moved =
+          beforeNode &&
+          afterNode &&
+          (beforeNode.x !== afterNode.x || beforeNode.y !== afterNode.y)
+        if (moved) {
+          history.push(snapshot)
+          setDirty(true)
+        }
+      }
+
       const movedNode = workflow.nodes.find((n) => n.id === node.id)
       if (!movedNode || !movedNode.parentId) return
       const parentGroup = (workflow.groups ?? []).find(
@@ -457,12 +535,16 @@ export function EditorPage({ project }: EditorPageProps) {
         .filter((p): p is Point => p != null)
       // If hull would be empty (single child), drop the association too.
       if (childPositions.length < 2) {
-        commitWorkflow({
+        // We just pushed the move-only snapshot to history above; for the
+        // additional drop-association mutation, write directly to state so
+        // a *single* drag still produces *one* undo entry.
+        setWorkflow({
           ...workflow,
           nodes: workflow.nodes.map((n) =>
             n.id === node.id ? { ...n, parentId: undefined } : n,
           ),
         })
+        setDirty(true)
         return
       }
       // We don't compute precise point-in-polygon here — drop association
@@ -477,7 +559,7 @@ export function EditorPage({ project }: EditorPageProps) {
       const dy = node.position.y - cy
       const dist = Math.sqrt(dx * dx + dy * dy)
       if (dist > 240) {
-        commitWorkflow({
+        setWorkflow({
           ...workflow,
           nodes: workflow.nodes.map((n) =>
             n.id === node.id ? { ...n, parentId: undefined } : n,
@@ -488,9 +570,10 @@ export function EditorPage({ project }: EditorPageProps) {
               : g,
           ),
         })
+        setDirty(true)
       }
     },
-    [workflow, commitWorkflow],
+    [workflow, history],
   )
 
   // -------------------- Context menu open helpers ----------------------
@@ -1230,6 +1313,7 @@ export function EditorPage({ project }: EditorPageProps) {
             onNodesChange={handleNodesChange as never}
             onEdgesChange={handleEdgesChange as never}
             onConnect={handleConnect as never}
+            onNodeDragStart={handleNodeDragStart as never}
             onNodeDrag={handleNodeDrag as never}
             onNodeDragStop={handleNodeDragStop as never}
             onPaneContextMenu={handlePaneContextMenu as never}

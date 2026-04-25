@@ -69,9 +69,14 @@ export interface WorkflowCanvasInnerProps {
   onEdgesChange?: (changes: EdgeChange[]) => void
   /** Edge created via drag-from-handle-to-handle. */
   onConnect?: (params: Connection) => void
+  /** Phase 12 Plan 12-10 (Bug 2 UAT fix) — capture pre-drag snapshot once
+   *  for history coalescing. The editor pushes the snapshot in onNodeDragStop
+   *  so a single drag becomes a single undo entry. */
+  onNodeDragStart?: (event: React.MouseEvent, node: RFNode) => void
   /** Per-frame drag callback — used to live-morph group cloud hulls. */
   onNodeDrag?: (event: React.MouseEvent, node: RFNode) => void
-  /** End-of-drag callback — used to detect drop-association changes. */
+  /** End-of-drag callback — used to detect drop-association changes
+   *  AND push the single coalesced history entry (Bug 2 UAT fix). */
   onNodeDragStop?: (event: React.MouseEvent, node: RFNode) => void
   /** Edge label inline-edit trigger. */
   onEdgeDoubleClick?: (event: React.MouseEvent, edge: RFEdge) => void
@@ -111,6 +116,7 @@ export function WorkflowCanvasInner(props: WorkflowCanvasInnerProps) {
         onNodesChange={props.onNodesChange as never}
         onEdgesChange={props.onEdgesChange as never}
         onConnect={props.onConnect as never}
+        onNodeDragStart={props.onNodeDragStart as never}
         onNodeDrag={props.onNodeDrag as never}
         onNodeDragStop={props.onNodeDragStop as never}
         onEdgeDoubleClick={props.onEdgeDoubleClick as never}
