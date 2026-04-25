@@ -75,15 +75,19 @@ html:not([data-mode]) body {
   --inset-primary-top: inset 0 1px 0 oklch(1 0 0 / 0.20);
   --inset-primary-bottom: inset 0 -1px 0 oklch(0.1 0.05 40 / 0.30);
 
-  /* Avatar colors (8 distinct oklch hues) */
-  --av-1: oklch(0.65 0.18 25);
-  --av-2: oklch(0.60 0.15 250);
-  --av-3: oklch(0.62 0.16 150);
-  --av-4: oklch(0.65 0.14 320);
-  --av-5: oklch(0.60 0.17 45);
-  --av-6: oklch(0.63 0.12 200);
-  --av-7: oklch(0.60 0.15 290);
-  --av-8: oklch(0.65 0.10 100);
+  /* Avatar colors (8 distinct oklch hues — UAT retune).
+     Old palette spanned the full color wheel at chroma 0.10–0.18, which
+     clashed with the muted terracotta theme (most tokens sit at chroma
+     0.05–0.13). Retuned to harmonized earth tones: lightness held at
+     0.65–0.66, chroma in the 0.07–0.10 range, hues kept distinguishable. */
+  --av-1: oklch(0.65 0.10 28);   /* warm clay */
+  --av-2: oklch(0.65 0.08 250);  /* dusty blue */
+  --av-3: oklch(0.66 0.09 145);  /* sage */
+  --av-4: oklch(0.66 0.08 320);  /* mauve */
+  --av-5: oklch(0.65 0.10 50);   /* burnt amber */
+  --av-6: oklch(0.66 0.07 200);  /* slate */
+  --av-7: oklch(0.65 0.08 290);  /* lavender */
+  --av-8: oklch(0.66 0.07 100);  /* olive */
 }
 
 [data-mode="dark"] {
@@ -119,6 +123,19 @@ html:not([data-mode]) body {
   --shadow-md: 0 4px 14px oklch(0 0 0 / 0.40), 0 2px 6px oklch(0 0 0 / 0.25);
   --shadow-lg: 0 12px 30px oklch(0 0 0 / 0.50), 0 4px 10px oklch(0 0 0 / 0.30);
   --shadow-xl: 0 20px 44px oklch(0 0 0 / 0.55), 0 8px 18px oklch(0 0 0 / 0.35);
+
+  /* Avatar colors — dark mode overrides (UAT retune).
+     Light mode tokens are too bright against the dark surface — drop
+     lightness to 0.55–0.56 while keeping chroma identical so the muted
+     earth-tone identity carries across themes. */
+  --av-1: oklch(0.55 0.10 28);
+  --av-2: oklch(0.55 0.08 250);
+  --av-3: oklch(0.56 0.09 145);
+  --av-4: oklch(0.56 0.08 320);
+  --av-5: oklch(0.55 0.10 50);
+  --av-6: oklch(0.56 0.07 200);
+  --av-7: oklch(0.55 0.08 290);
+  --av-8: oklch(0.56 0.07 100);
 }
 
 /* Density selectors */
