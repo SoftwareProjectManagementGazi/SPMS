@@ -1,14 +1,16 @@
 "use client"
 
-// ShortcutsPanel (Phase 12 Plan 12-07) — right-panel section that lists the
-// editor keyboard shortcuts using the Kbd primitive (CONTEXT D-35 + UI-SPEC
-// §649-672).
+// ShortcutsPanel — right-panel section that lists the editor keyboard
+// shortcuts using the Kbd primitive (CONTEXT D-35 + UI-SPEC §649-672).
 //
-// Plan 12-07 ships the static list with platform-aware Cmd/Ctrl labels via
-// isMac() from Plan 12-01. Plan 12-08 wires the actual keydown handler
-// inside editor-page.tsx.
+// Triage #22: trimmed to the 5-shortcut prototype set (Save, Add node,
+// Undo, Delete, Fit view) plus Redo (kept because the toolbar exposes it).
+// Triage #26: lazy-mount via next/dynamic so isMac() is evaluated only
+// after hydration — Mac users no longer see a "Ctrl+S → ⌘S" flash on
+// initial paint.
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { Kbd } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { isMac } from "@/lib/lifecycle/shortcuts"
@@ -49,6 +51,7 @@ interface ShortcutItem {
 
 const SHORTCUTS: ShortcutItem[] = [
   { labelTr: "Kaydet", labelEn: "Save", mac: ["⌘", "S"], win: ["Ctrl", "S"] },
+  { labelTr: "Yeni düğüm", labelEn: "Add node", mac: ["N"], win: ["N"] },
   { labelTr: "Geri al", labelEn: "Undo", mac: ["⌘", "Z"], win: ["Ctrl", "Z"] },
   {
     labelTr: "Yinele",
@@ -56,31 +59,19 @@ const SHORTCUTS: ShortcutItem[] = [
     mac: ["⌘", "⇧", "Z"],
     win: ["Ctrl", "Shift", "Z"],
   },
-  { labelTr: "Yeni düğüm", labelEn: "Add node", mac: ["N"], win: ["N"] },
   { labelTr: "Sil", labelEn: "Delete", mac: ["⌫"], win: ["Del"] },
-  {
-    labelTr: "Tümünü seç",
-    labelEn: "Select all",
-    mac: ["⌘", "A"],
-    win: ["Ctrl", "A"],
-  },
   { labelTr: "Tam ekran", labelEn: "Fit view", mac: ["F"], win: ["F"] },
-  { labelTr: "Seçimi kaldır", labelEn: "Deselect", mac: ["Esc"], win: ["Esc"] },
 ]
 
-export function ShortcutsPanel() {
+function ShortcutsPanelImpl() {
   const { language } = useApp()
   const T = React.useCallback(
     (tr: string, en: string) => (language === "tr" ? tr : en),
     [language],
   )
-
-  // Read isMac() once on mount — it depends on navigator which is only
-  // available on the client. SSR returns false unconditionally.
-  const [mac, setMac] = React.useState(false)
-  React.useEffect(() => {
-    setMac(isMac())
-  }, [])
+  // Triage #26 — this component is client-only via dynamic({ ssr: false })
+  // so navigator is available on first paint and there's no Ctrl→⌘ flash.
+  const mac = isMac()
 
   return (
     <div>
@@ -101,3 +92,8 @@ export function ShortcutsPanel() {
     </div>
   )
 }
+
+export const ShortcutsPanel = dynamic(
+  () => Promise.resolve({ default: ShortcutsPanelImpl }),
+  { ssr: false },
+)

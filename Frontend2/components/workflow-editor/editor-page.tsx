@@ -1217,15 +1217,13 @@ export function EditorPage({ project }: EditorPageProps) {
         deleteSelection()
         return
       }
-      // Cmd/Ctrl+A — select all (we set selected to null since multi-select
-      // tracking is React Flow internal; future Plan 12-10 may expose it).
-      if (matchesShortcut(e, KEYBOARD_SHORTCUTS.selectAll)) {
-        e.preventDefault()
-        return
-      }
-      // F — fit view (handled by React Flow internally; we just preventDefault).
+      // Cmd/Ctrl+A — left as a no-op so we don't hijack the browser default
+      // outside of inputs. Multi-select is exposed via shift-click; binding
+      // a fake "select-all" here only deselects, which is worse than nothing.
+      // F — fit view: invoke the canvas controls handle.
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.fit)) {
         e.preventDefault()
+        canvasControlsRef.current?.fitView()
         return
       }
       // Esc — deselect + close context menu + cancel edge-create.
@@ -1237,19 +1235,22 @@ export function EditorPage({ project }: EditorPageProps) {
         return
       }
       // Cmd/Ctrl+G — group/ungroup current selection.
+      // Triage #19: only fire when there is a meaningful selection. Single
+      // node "groups" are useless, so require either an existing group
+      // (ungroup) or the selection to be the user's only meaningful target.
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.group)) {
-        e.preventDefault()
         if (selected?.type === "group") {
+          e.preventDefault()
           ungroup(selected.id)
-        } else if (selected?.type === "node") {
-          groupSelection([selected.id])
         }
         return
       }
-      // Cmd/Ctrl+D — duplicate current selection.
+      // Cmd/Ctrl+D — duplicate. Skip when nothing useful is selected.
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.duplicate)) {
-        e.preventDefault()
-        duplicateSelection()
+        if (selected?.type === "node") {
+          e.preventDefault()
+          duplicateSelection()
+        }
         return
       }
     }
