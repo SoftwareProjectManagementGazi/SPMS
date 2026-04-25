@@ -21,6 +21,7 @@
 // styling rather than forking the primitive (keeps Rule 3 scope boundary).
 
 import * as React from "react"
+import { Info } from "lucide-react"
 
 import {
   AlertBanner,
@@ -31,6 +32,7 @@ import {
 import { useApp } from "@/context/app-context"
 import { useToast } from "@/components/toast"
 import { ConfirmDialog } from "@/components/projects/confirm-dialog"
+import { Tooltip } from "@/components/workflow-editor/tooltip"
 import { projectService, type Project } from "@/services/project-service"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -38,6 +40,33 @@ import {
   type BacklogDefinition,
   type Methodology,
 } from "@/lib/methodology-matrix"
+
+// CONTEXT D-60 — methodology is fixed at project creation. The Settings >
+// General sub-tab displays the methodology as a localized read-only label
+// with an info-icon Tooltip; there is no editable input or PATCH path.
+const METHODOLOGY_LABEL_TR: Record<string, string> = {
+  SCRUM: "Scrum",
+  KANBAN: "Kanban",
+  WATERFALL: "Şelale (Waterfall)",
+  ITERATIVE: "İteratif",
+  INCREMENTAL: "Artırımlı",
+  EVOLUTIONARY: "Evrimsel",
+  RAD: "RAD",
+}
+const METHODOLOGY_LABEL_EN: Record<string, string> = {
+  SCRUM: "Scrum",
+  KANBAN: "Kanban",
+  WATERFALL: "Waterfall",
+  ITERATIVE: "Iterative",
+  INCREMENTAL: "Incremental",
+  EVOLUTIONARY: "Evolutionary",
+  RAD: "RAD",
+}
+
+function methodologyLabel(methodology: string, lang: string): string {
+  const map = lang === "tr" ? METHODOLOGY_LABEL_TR : METHODOLOGY_LABEL_EN
+  return map[methodology] ?? methodology
+}
 
 interface BacklogOption {
   id: BacklogDefinition
@@ -341,6 +370,53 @@ export function SettingsGeneralSubtab({
               value={backlogDefinition}
               onChange={(v) => onChangeBacklogDef(v as BacklogDefinition)}
             />
+          </div>
+
+          {/* Methodology — read-only display + Tooltip per CONTEXT D-60.
+              Phase 12 intentionally REMOVES any editable methodology input
+              from the DOM (T-12-03-02 mitigation: client-side tampering
+              eliminated at the UI surface; backend Phase 9 D-29 still no-ops
+              the change as the second defense). */}
+          <div>
+            <label style={LABEL_STYLE}>
+              {lang === "tr" ? "Metodoloji" : "Methodology"}
+            </label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "0 8px",
+                height: 32,
+                fontSize: 13,
+                background: "var(--surface-2)",
+                borderRadius: "var(--radius-sm)",
+                boxShadow: "inset 0 0 0 1px var(--border)",
+                color: "var(--fg)",
+              }}
+            >
+              <span style={{ flex: 1, fontWeight: 500 }}>
+                {methodologyLabel(project.methodology, lang)}
+              </span>
+              <Tooltip
+                text={
+                  lang === "tr"
+                    ? "Metodoloji proje oluşturulduğu an sabittir. Değiştirmek için yeni proje oluşturun."
+                    : "Methodology is fixed at project creation. Create a new project to change it."
+                }
+              >
+                <span
+                  aria-label={lang === "tr" ? "Bilgi" : "Info"}
+                  style={{
+                    color: "var(--fg-subtle)",
+                    display: "inline-flex",
+                    cursor: "help",
+                  }}
+                >
+                  <Info size={14} />
+                </span>
+              </Tooltip>
+            </div>
           </div>
         </div>
       </Card>

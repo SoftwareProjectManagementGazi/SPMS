@@ -1,10 +1,12 @@
 "use client"
 
 // Settings tab — 4 sub-tabs per D-11:
-//   - Genel       → SettingsGeneralSubtab (name/desc/dates/backlog_def/cycle_label)
+//   - Genel       → SettingsGeneralSubtab (name/desc/dates/backlog_def/cycle_label;
+//                   methodology field read-only per CONTEXT D-60 from Phase 12)
 //   - Kolonlar    → SettingsColumnsSubtab (column rename + WIP limit; hidden WIP for Waterfall)
-//   - İş Akışı   → Link-out button to /workflow-editor (editor itself lands in Phase 12)
-//   - Yaşam Döngüsü → "Faz 12'de aktive edilecek" stub
+//   - İş Akışı   → Link-out button to /workflow-editor
+//   - Yaşam Döngüsü → CriteriaEditorPanel (LIFE-01 — Phase 12 Plan 12-03 replaces
+//                     the Phase 11 D-11 AlertBanner stub)
 //
 // The sub-tab state is local React.useState — matches the shell's outer tab
 // pattern (D-09). Default is "general" (most-used field in day-to-day editing).
@@ -13,12 +15,13 @@ import * as React from "react"
 import Link from "next/link"
 import { ExternalLink } from "lucide-react"
 
-import { AlertBanner, Button, Card, Tabs } from "@/components/primitives"
+import { Button, Card, Tabs } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { Project } from "@/services/project-service"
 
 import { SettingsGeneralSubtab } from "./settings-general-subtab"
 import { SettingsColumnsSubtab } from "./settings-columns-subtab"
+import { CriteriaEditorPanel } from "@/components/lifecycle/criteria-editor-panel"
 
 type SubTab = "general" | "columns" | "workflow" | "lifecycle"
 
@@ -101,11 +104,7 @@ export function SettingsTab({ project, isArchived }: SettingsTabProps) {
         </Card>
       )}
       {sub === "lifecycle" && (
-        <AlertBanner tone="info">
-          {lang === "tr"
-            ? "Bu sekme Faz 12'de aktive edilecek."
-            : "This tab will be activated in Phase 12."}
-        </AlertBanner>
+        <CriteriaEditorPanel project={project} isArchived={isArchived} />
       )}
     </div>
   )
