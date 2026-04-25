@@ -279,6 +279,7 @@ export function EvaluationReportCard({
             icon={<X size={12} />}
             onClick={onClose}
             title={T("Kapat", "Close")}
+            aria-label={T("Kapat", "Close")}
           />
         )}
       </div>

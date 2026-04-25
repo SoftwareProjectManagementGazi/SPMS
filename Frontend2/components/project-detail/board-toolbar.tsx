@@ -115,13 +115,20 @@ export function BoardToolbar({ project }: { project: Project }) {
       />
 
       {currentSprint && (
+        // UI-sweep: wrap Sprint indicator in a containment chip so the user reads
+        // it as an information-only tag, not as a control. Avoids visual collision
+        // with the SegmentedControl + Search input siblings.
         <div
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            gap: 4,
+            gap: 6,
             color: "var(--fg-muted)",
             fontSize: 12,
+            padding: "2px 6px",
+            background: "var(--surface)",
+            borderRadius: "var(--radius-sm)",
+            boxShadow: "inset 0 0 0 1px var(--border)",
           }}
         >
           <span>{language === "tr" ? "Sprint:" : "Sprint:"}</span>

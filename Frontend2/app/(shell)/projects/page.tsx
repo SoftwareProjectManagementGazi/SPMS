@@ -54,16 +54,27 @@ export default function ProjectsPage() {
   const segments = language === 'tr' ? STATUS_SEGMENTS : STATUS_SEGMENTS_EN
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: -0.6 }}>
-            {language === 'tr' ? 'Projeler' : 'Projects'}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Header row — UI-sweep: split into 2 rows so primary CTA stands alone.
+          Top row: title + Yeni Proje (single focal point per Phase 10 D-22 +
+          UI-SPEC accent-reserved-list). Sub-row: filter + search. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: -0.6 }}>
+              {language === 'tr' ? 'Projeler' : 'Projects'}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--fg-muted)", marginTop: 4 }}>
+              {projects.length} {language === 'tr' ? 'proje · klavyeyle gezin' : 'projects · keyboard friendly'}
+            </div>
           </div>
-          <div style={{ fontSize: 13, color: "var(--fg-muted)", marginTop: 4 }}>
-            {projects.length} {language === 'tr' ? 'proje · klavyeyle gezin' : 'projects · keyboard friendly'}
-          </div>
+          {canCreateProject && (
+            <Link href="/projects/new">
+              <Button variant="primary">
+                {language === 'tr' ? 'Yeni proje' : 'New project'}
+              </Button>
+            </Link>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <SegmentedControl
@@ -77,13 +88,6 @@ export default function ProjectsPage() {
             onChange={e => setSearchQuery(e.target.value)}
             style={{ width: 220 }}
           />
-          {canCreateProject && (
-            <Link href="/projects/new">
-              <Button variant="primary">
-                {language === 'tr' ? 'Yeni proje' : 'New project'}
-              </Button>
-            </Link>
-          )}
         </div>
       </div>
 

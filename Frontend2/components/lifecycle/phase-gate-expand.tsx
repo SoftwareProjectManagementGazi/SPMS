@@ -22,7 +22,6 @@ import {
 
 import {
   AlertBanner,
-  Badge,
   Button,
   Collapsible,
   SegmentedControl,
@@ -590,9 +589,13 @@ export function PhaseGateExpand({
                       style={{
                         fontSize: 11.5,
                         padding: "2px 6px",
-                        borderRadius: 4,
+                        // UI-sweep: standardized at --radius-sm + boxShadow inset to
+                        // match every other input/select; previously had a 1px solid
+                        // border which doubled the visual weight against neighbors.
+                        borderRadius: "var(--radius-sm)",
                         background: "var(--surface)",
-                        border: "1px solid var(--border)",
+                        border: "none",
+                        boxShadow: "inset 0 0 0 1px var(--border)",
                       }}
                     >
                       <option value="same">{T("Aynı", "Same")}</option>
@@ -775,10 +778,9 @@ export function PhaseGateExpand({
             {T("Faz Geçişini Onayla", "Confirm Phase Transition")}
           </Button>
         )}
-        {/* Mode chip — secondary visual confirmation of which gate is in play */}
-        <Badge size="xs" tone="neutral">
-          {workflowMode}
-        </Badge>
+        {/* UI-sweep: redundant mode Badge dropped — UI-SPEC §242-244 declares
+            mode badges live in the SummaryStrip only. Having a second badge
+            next to the primary CTA weakened the action hierarchy. */}
       </div>
     </div>
   )

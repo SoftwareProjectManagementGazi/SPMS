@@ -5,7 +5,7 @@ import { authService } from "@/services/auth-service"
 import { useAuth } from "@/context/auth-context"
 import { useApp } from "@/context/app-context"
 import { useToast } from "@/components/toast"
-import { Card, Button, Toggle } from "@/components/primitives"
+import { Card, Button, Toggle, SegmentedControl } from "@/components/primitives"
 import {
   PRESETS,
   applyTokens,
@@ -132,33 +132,21 @@ function PrefRow({ label, children, last = false }: { label: string; children: R
 }
 
 // ---------------------------------------------------------------------------
-// Helper: SegmentedPills (used inside Tercihler rows)
+// Helper: SegmentedPills — UI-sweep: now delegates to SegmentedControl primitive.
+// Previously this was a hand-rolled inline copy that drifted (pad "5px 12px"
+// vs primitive "4px 10px", borderRadius 6 vs 4, fontSize 12 vs 11.5). The
+// signature stays generic-typed so existing call sites do not have to change.
 // ---------------------------------------------------------------------------
 
 function SegmentedPills<T extends string>({
   options, value, onChange,
 }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div style={{
-      display: "inline-flex", gap: 2,
-      background: "var(--surface-2)", padding: 2,
-      borderRadius: 6, boxShadow: "inset 0 0 0 1px var(--border)",
-    }}>
-      {options.map(opt => (
-        <button
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          style={{
-            padding: "5px 12px", borderRadius: 4, fontSize: 12, fontWeight: 600,
-            background: value === opt.value ? "var(--surface)" : "transparent",
-            color: value === opt.value ? "var(--fg)" : "var(--fg-muted)",
-            border: "none", cursor: "pointer",
-          }}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      options={options.map((o) => ({ id: o.value, label: o.label }))}
+      value={value}
+      onChange={(id) => onChange(id as T)}
+    />
   )
 }
 

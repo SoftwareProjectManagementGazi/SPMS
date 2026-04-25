@@ -20,7 +20,7 @@
 //     `summary.done`.
 
 import * as React from "react"
-import { FileText } from "lucide-react"
+import { FileText, ChevronRight as LucideChevronRight } from "lucide-react"
 
 import { Badge, Button, Card } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
@@ -259,21 +259,24 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
 // Helpers
 // ----------------------------------------------------------------------------
 
+// UI-sweep: Unicode `▶` glyph replaced by lucide ChevronRight (matches the
+// rest of the codebase; the Unicode glyph rendered as an emoji on some OSes).
 function ChevronRight({ open }: { open: boolean }) {
   return (
     <span
       style={{
-        display: "inline-block",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
         width: 13,
+        height: 13,
         transform: open ? "rotate(90deg)" : "none",
         transition: "transform 0.15s",
         color: "var(--fg-subtle)",
-        fontSize: 12,
-        lineHeight: 1,
       }}
       aria-hidden="true"
     >
-      ▶
+      <LucideChevronRight size={12} />
     </span>
   )
 }
