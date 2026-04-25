@@ -1,39 +1,16 @@
 "use client"
 
-// ModeBanner (Phase 12 Plan 12-07) — top-left overlay above the canvas that
-// shows the current workflow.mode as a localized Badge per UI-SPEC §1395 +
-// §673-677.
+// ModeBanner — top-left overlay above the canvas.
 //
-// Plan 12-07 ships the read-only display. The mode is changed via the right-
-// panel FlowRules SegmentedControl which calls onWorkflowChange — this
-// banner only reflects what's set, it does not change it.
+// Prototype parity: only the `sequential-locked` mode renders a critical-tone
+// callout (Lock icon + long warning copy). All other modes stay quiet so the
+// canvas isn't visually polluted by a benign Badge for every mode.
 
 import * as React from "react"
+import { Lock } from "lucide-react"
 
-import { Badge } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { WorkflowMode } from "@/services/lifecycle-service"
-
-const MODE_LABEL_TR: Record<WorkflowMode, string> = {
-  flexible: "Esnek",
-  "sequential-locked": "Sıralı kilitli",
-  "sequential-flexible": "Sıralı esnek",
-  continuous: "Sürekli",
-}
-
-const MODE_LABEL_EN: Record<WorkflowMode, string> = {
-  flexible: "Flexible",
-  "sequential-locked": "Sequential locked",
-  "sequential-flexible": "Sequential flex",
-  continuous: "Continuous",
-}
-
-const MODE_TONE: Record<WorkflowMode, "warning" | "info" | "neutral" | "primary"> = {
-  flexible: "neutral",
-  "sequential-locked": "warning",
-  "sequential-flexible": "primary",
-  continuous: "info",
-}
 
 export interface ModeBannerProps {
   mode: WorkflowMode
@@ -41,9 +18,11 @@ export interface ModeBannerProps {
 
 export function ModeBanner({ mode }: ModeBannerProps) {
   const { language } = useApp()
+  if (mode !== "sequential-locked") return null
   const label =
-    language === "tr" ? MODE_LABEL_TR[mode] : MODE_LABEL_EN[mode]
-  const tone = MODE_TONE[mode]
+    language === "tr"
+      ? "Sıralı kilitli: Fazlar tek yönde, geri dönüş yok."
+      : "Sequential locked: phases one-way, no reversal."
   return (
     <div
       style={{
@@ -51,11 +30,24 @@ export function ModeBanner({ mode }: ModeBannerProps) {
         top: 12,
         left: 12,
         zIndex: 5,
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 10px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        color: "var(--priority-critical)",
+        background:
+          "color-mix(in oklch, var(--priority-critical) 8%, var(--surface))",
+        boxShadow:
+          "inset 0 0 0 1px color-mix(in oklch, var(--priority-critical) 25%, transparent)",
+        borderRadius: 999,
       }}
+      role="status"
+      aria-live="polite"
     >
-      <Badge size="sm" tone={tone}>
-        {label}
-      </Badge>
+      <Lock size={12} aria-hidden />
+      {label}
     </div>
   )
 }
