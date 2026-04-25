@@ -26,7 +26,10 @@ function mapComment(d: CommentResponseDTO): Comment {
   return {
     id: d.id,
     taskId: d.task_id,
-    body: d.body,
+    // Backend returns null body for soft-deleted comments (the deleted flag
+    // is set on the row, body is cleared). Coerce to empty string so
+    // downstream string ops (stripHtml, etc.) never see null/undefined.
+    body: d.body ?? "",
     authorId: d.author_id,
     authorName: d.author_name ?? "",
     createdAt: d.created_at,

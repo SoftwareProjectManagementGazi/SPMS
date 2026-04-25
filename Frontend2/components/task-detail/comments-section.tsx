@@ -33,9 +33,14 @@ interface CommentsSectionProps {
   projectMembers: Member[]
 }
 
-function stripHtml(s: string): string {
+function stripHtml(s: string | null | undefined): string {
   // XSS mitigation — strip tags before rendering. Mentions become @Name text.
-  return s.replace(/<[^>]*>/g, "")
+  // Defensive: backend may return body as null for soft-deleted comments
+  // before the deleted-flag short-circuit kicks in (race during cache
+  // invalidation), and React will crash on .replace(undefined). Coerce to
+  // empty string instead.
+  if (s == null) return ""
+  return String(s).replace(/<[^>]*>/g, "")
 }
 
 function avatarFromMember(id: number, name?: string) {

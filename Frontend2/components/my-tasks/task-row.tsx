@@ -50,9 +50,11 @@ interface TaskRowProps {
 }
 
 // Task.status comes from the backend as a free-form string. Coerce to one of
-// the 5 canonical tokens so StatusDot renders correctly.
-function resolveStatus(status: string): StatusValue {
-  const s = status.toLowerCase()
+// the 5 canonical tokens so StatusDot renders correctly. Accepts null /
+// undefined defensively in case a Task row arrives mid-mutation with the
+// field temporarily missing from an optimistic patch.
+function resolveStatus(status: string | null | undefined): StatusValue {
+  const s = String(status ?? "").toLowerCase()
   if (s === "progress" || s === "in_progress" || s === "doing") return "progress"
   if (s === "review" || s === "in_review") return "review"
   if (s === "done" || s === "completed" || s === "closed") return "done"
