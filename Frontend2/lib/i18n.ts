@@ -95,6 +95,63 @@ export const STRINGS = {
     rules: { tr: "Akış Kuralları", en: "Flow Rules" },
     locked: { tr: "Kilitli", en: "Locked" },
   },
+  // Task-detail surface — first wave of i18n centralization (triage 1.13).
+  // The page used to scatter `lang === "tr" ? "..." : "..."` ternaries in
+  // every leaf component; consumers can now call t("taskDetail.X", lang).
+  // The full migration is incremental — these are the strings that already
+  // appeared in 3+ task-detail components.
+  taskDetail: {
+    properties: { tr: "Özellikler", en: "Properties" },
+    status: { tr: "Durum", en: "Status" },
+    assignee: { tr: "Atanan", en: "Assignee" },
+    reporter: { tr: "Bildiren", en: "Reporter" },
+    priority: { tr: "Öncelik", en: "Priority" },
+    points: { tr: "Puan", en: "Points" },
+    due: { tr: "Bitiş", en: "Due" },
+    phase: { tr: "Faz", en: "Phase" },
+    labels: { tr: "Etiketler", en: "Labels" },
+    description: { tr: "Açıklama", en: "Description" },
+    subTasks: { tr: "Alt Görevler", en: "Sub-tasks" },
+    activity: { tr: "Aktivite", en: "Activity" },
+    comments: { tr: "Yorumlar", en: "Comments" },
+    history: { tr: "Geçmiş", en: "History" },
+    worklog: { tr: "Worklog", en: "Worklog" },
+    attachments: { tr: "Ekler", en: "Attachments" },
+    dependencies: { tr: "Bağımlılıklar", en: "Dependencies" },
+    watch: { tr: "Takip et", en: "Watch" },
+    watching: { tr: "Takipte", en: "Watching" },
+    branch: { tr: "Branch", en: "Branch" },
+    link: { tr: "Bağlantı", en: "Link" },
+    more: { tr: "Daha fazla", en: "More" },
+    add: { tr: "Ekle", en: "Add" },
+    cancel: { tr: "Vazgeç", en: "Cancel" },
+    send: { tr: "Gönder", en: "Send" },
+    edit: { tr: "Düzenle", en: "Edit" },
+    delete: { tr: "Sil", en: "Delete" },
+    user: { tr: "Kullanıcı", en: "User" },
+    unassigned: { tr: "Atanmamış", en: "Unassigned" },
+    composerPlaceholder: {
+      tr: "Yorum yaz… @ ile birinden bahset",
+      en: "Write a comment… @ to mention",
+    },
+    deletedComment: { tr: "Silindi", en: "Deleted" },
+    noResults: { tr: "Yorum yok", en: "No comments" },
+    confirmDeleteTitle: { tr: "Yorum silinsin mi?", en: "Delete comment?" },
+    confirmDeleteBody: {
+      tr: "Bu işlem geri alınamaz.",
+      en: "This action cannot be undone.",
+    },
+    failedPost: { tr: "Yorum eklenemedi", en: "Failed to post comment" },
+    failedUpdate: {
+      tr: "Yorum güncellenemedi",
+      en: "Failed to update comment",
+    },
+    failedDelete: { tr: "Yorum silinemedi", en: "Failed to delete comment" },
+    worklogPlaceholder: {
+      tr: "Worklog yakında — zaman takibi sonraki fazda.",
+      en: "Worklog coming soon — time tracking ships in a later phase.",
+    },
+  },
 } as const
 
 // Resolve a dot-notation path to the translated string.
