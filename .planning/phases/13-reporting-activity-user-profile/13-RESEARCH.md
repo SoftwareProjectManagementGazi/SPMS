@@ -1236,32 +1236,32 @@ export function chartApplicabilityFor(methodology: Methodology): ChartApplicabil
 | A11 | Chart endpoints do NOT need rate limiting | Don't Hand-Roll | Could DoS via repeated CFD calls on a 10k-event project. Mitigation: existing FastAPI middleware (if any) handles broad throttling; document in OPS.md. |
 | A12 | `lucide-react@^1.8.0` includes the icons used by AvatarDropdown (`Globe`, `Shield`, `Check`, `ChevronRight`, `LogOut`, `Settings`, `Users`) | Component fidelity | If any icon was renamed/removed in 1.8, build fails. Mitigation: trivial — verify via `grep -rn "from \"lucide-react\"" Frontend2/components/` and add to existing imports list before writing the dropdown. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Do task creates / status changes / assignment changes write to `audit_log` today? If so, with what `action` value?**
    - What we know: `task_repo.update()` writes one row per changed field with `action='updated'`. `task_repo.create()` is not visible from grep. Phase transitions write `action='phase_transition'`.
    - What's unclear: is there a `'created'` action for new tasks? For comments? For milestones?
-   - Recommendation: Plan 13-01 starts with a 30-minute backend audit script: `SELECT DISTINCT entity_type, action, field_name FROM audit_log GROUP BY 1,2,3` against the dev DB. The output drives the `audit-event-mapper.ts` map exactly.
+   - RESOLVED: Plan 13-01 starts with a 30-minute backend audit script: `SELECT DISTINCT entity_type, action, field_name FROM audit_log GROUP BY 1,2,3` against the dev DB. The output drives the `audit-event-mapper.ts` map exactly.
 
 2. **Does the existing `get_project_activity` endpoint return ANY task events today, or is it phase-transitions-only?**
    - What we know: SQL filter is `WHERE entity_type='project' AND entity_id=:project_id`. Task events have `entity_type='task'`, so they are NOT included.
    - What's unclear: was this an oversight or intentional?
-   - Recommendation: Plan 13-01 broadens the project-activity SQL via UNION (both task events scoped through `tasks WHERE project_id=:p` AND project events at `entity_id=:p`) and updates Phase 9's existing `test_activity.py` to verify both event sources are returned.
+   - RESOLVED: Plan 13-01 broadens the project-activity SQL via UNION (both task events scoped through `tasks WHERE project_id=:p` AND project events at `entity_id=:p`) and updates Phase 9's existing `test_activity.py` to verify both event sources are returned.
 
 3. **Iteration Comparison: how do we identify "planned at sprint start" vs. "added mid-sprint"?**
    - What we know: tasks have `sprint_id` (set when assigned), `created_at` (task creation date), `updated_at` (last update).
    - What's unclear: there's no explicit "added to sprint at" timestamp. Using `created_at <= sprint.start_date + 1 day` is an approximation.
-   - Recommendation: planner accepts the approximation for v2.0; document in CHARTS.md. v2.1 candidate: add a `sprint_assigned_at` column or query audit_log for `field_name='sprint_id'` change events.
+   - RESOLVED: planner accepts the approximation for v2.0; document in CHARTS.md. v2.1 candidate: add a `sprint_assigned_at` column or query audit_log for `field_name='sprint_id'` change events.
 
 4. **AvatarDropdown mobile behavior: anchored dropdown vs. full-screen sheet?**
    - What we know: D-G2 / Claude's Discretion last bullet says "default to anchored dropdown."
    - What's unclear: at extremely narrow viewports (<360px), the 260px menu may exceed viewport width.
-   - Recommendation: ship anchored with `right: 8px` clamp; accept the rest as a v2.1 polish.
+   - RESOLVED: ship anchored with `right: 8px` clamp; accept the rest as a v2.1 polish.
 
 5. **PDF download from Reports page Faz Raporları rows: rate limit shared with Phase 12 path?**
    - What we know: Phase 12 D-58 implements `_pdf_last_request[user_id]` 30s cooldown.
    - What's unclear: if a user opens 3 phase reports on the Reports page and tries to download all, the second/third return 429.
-   - Recommendation: keep the existing rate limit; document in PHASE-13-NOTES.md that downloads are per-user 30s cooldown across the entire app.
+   - RESOLVED: keep the existing rate limit; document in PHASE-13-NOTES.md that downloads are per-user 30s cooldown across the entire app.
 
 ## Environment Availability
 

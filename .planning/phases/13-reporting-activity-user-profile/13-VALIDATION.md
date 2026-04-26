@@ -45,7 +45,7 @@ created: 2026-04-26
 | 13-03-* | 03 | 2 | PROF-03 (cross-site avatar links) | — | Avatar `href` optional, no consumer regression, AvatarStack overflow chip non-linkable | unit + RTL | `cd Frontend2 && npx vitest run components/primitives/avatar.test.tsx` | ❌ W0 | ⬜ pending |
 | 13-04-* | 04 | 3 | PROF-01 (project Activity tab) | SEC-09 | Audit-event mapper handles 10 types; filter persistence per-project; clickable refs | unit + RTL | `cd Frontend2 && npx vitest run components/activity/activity-tab.test.tsx` | ❌ W0 | ⬜ pending |
 | 13-05-* | 05 | 3 | PROF-02, PROF-04 (profile route + Tasks tab) | SEC-PRIV (any auth user can view) | Sen badge on self; tasks grouped by project; row click → task detail | unit + RTL | `cd Frontend2 && npx vitest run app/\(shell\)/users/\[id\]/page.test.tsx` | ❌ W0 | ⬜ pending |
-| 13-06-* | 06 | 3 | PROF-02 (Profile Projects + Activity tabs) | SEC-PRIV | Activity uses viewer-filtered endpoint; query-param tab routing | unit + RTL | `cd Frontend2 && npx vitest run components/profile/profile-projects-tab.test.tsx components/profile/profile-activity-tab.test.tsx` | ❌ W0 | ⬜ pending |
+| 13-06-* | 06 | 3 | PROF-02 (Profile Projects + Activity tabs) | SEC-PRIV | Activity reuses Plan 13-04 ActivityTab via `<ActivityTab userId={id} variant="full"/>`; query-param tab routing | unit + RTL | `cd Frontend2 && npx vitest run components/profile/profile-projects-tab.test.tsx` (Activity coverage provided by Plan 13-04 `components/activity/activity-tab.test.tsx`) | ❌ W0 | ⬜ pending |
 | 13-07-* | 07 | 3 | REPT-01, REPT-02 (CFD + Lead/Cycle) | SEC-09 | Methodology gating (CFD = Kanban only); chart cards consume DataState | unit + RTL | `cd Frontend2 && npx vitest run components/reports/cfd-chart.test.tsx components/reports/lead-cycle-chart.test.tsx` | ❌ W0 | ⬜ pending |
 | 13-08-* | 08 | 3 | REPT-03, REPT-04 (Iteration + Faz Raporları) | SEC-09 | Iteration gated to cycle methodologies; phase-report row inline expand reuses Phase 12 EvaluationReportCard | unit + RTL | `cd Frontend2 && npx vitest run components/reports/iteration-chart.test.tsx components/reports/phase-reports-section.test.tsx` | ❌ W0 | ⬜ pending |
 | 13-09-* | 09 | 4 | REPT-01..04 + PROF-01..04 (responsive + a11y) | A11Y | Mobile ≤640px layouts; chart aria-labels; keyboard nav for dropdown + tabs | unit + RTL + axe | `cd Frontend2 && npx vitest run --grep "responsive\|a11y"` | ❌ W0 | ⬜ pending |
@@ -67,7 +67,7 @@ created: 2026-04-26
 - [ ] `Frontend2/app/(shell)/users/[id]/page.test.tsx` — stubs for self-vs-other rendering + tab routing
 - [ ] `Frontend2/components/reports/{cfd,lead-cycle,iteration}-chart.test.tsx` — stubs for chart methodology gating + DataState integration
 - [ ] `Frontend2/components/reports/phase-reports-section.test.tsx` — stubs for 2-tab outer Tabs + project+phase pickers + row inline expand
-- [ ] `Frontend2/tests/e2e/phase-13-smoke.spec.ts` — skip-guarded E2E specs (Phase 11 D-50 pattern)
+- [ ] `Frontend2/e2e/reports-charts.spec.ts`, `Frontend2/e2e/profile-page.spec.ts`, `Frontend2/e2e/avatar-dropdown.spec.ts`, `Frontend2/e2e/activity-tab.spec.ts`, `Frontend2/e2e/phase-reports.spec.ts` — 5 skip-guarded E2E specs (Phase 11 D-50 pattern)
 - [ ] `13-UAT-CHECKLIST.md` artifact — manual UAT rows for REPT-01..04 + PROF-01..04 (~15-20 rows)
 
 ---
