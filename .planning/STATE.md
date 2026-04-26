@@ -5,14 +5,14 @@ milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
 stopped_at: Completed 13-07-PLAN.md
-last_updated: "2026-04-26T02:05:35.948Z"
+last_updated: "2026-04-26T02:14:30.701Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 50
-  percent: 93
+  completed_plans: 51
+  percent: 94
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 7 of 10
+Plan: 8 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -105,6 +105,7 @@ Progress: [█████████░] 93%
 | Phase 13 P04 | 9 | 2 tasks | 13 files |
 | Phase 13 P05 | 11min | 2 tasks | 8 files |
 | Phase 13 P07 | 22min | 2 tasks tasks | 10 files files |
+| Phase 13 P06 | 4min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -373,6 +374,9 @@ Key constraints for v2.0:
 - [Phase ?]: [13-07] PDF Button has no onClick wiring — purely visual per CONTEXT T-13-07-04; v1.0 PDF endpoint already audited
 - [Phase ?]: [13-07] Chart card layout intentionally leaves space at the bottom for Plan 13-08 — current row order (header / StatCards / Burndown+TeamLoad / CFD / Lead-Cycle) is the final architecture; 13-08 appends, not re-arranges
 - [Phase ?]: [13-07] ProjectPicker is a native select styled to match Input primitive — keeps mobile native (iOS/Android open OS picker), satisfies keyboard a11y without a roving-tabindex implementation
+- [Phase ?]: [13-06] adaptSummaryProject in-file helper bridges UserSummaryProject to full Project interface for D-C5 ProjectCard reuse
+- [Phase ?]: [13-06] Activity tab on profile mounts Plan 13-04 ActivityTab in userId variant — viewer-privacy filter enforced server-side via /users/{id}/activity per Plan 13-01 D-X4 (no client-side filter)
+- [Phase ?]: [13-06] Inline grid + .profile-projects-grid className together — inline 3-col is v2.0 baseline (works TODAY); className is the Plan 13-09 mobile responsive hook (will need !important due to inline-style specificity)
 
 ### Pending Todos
 
@@ -403,7 +407,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T02:05:35.938Z
+Last session: 2026-04-26T02:14:19.751Z
 Stopped at: Completed 13-07-PLAN.md
 Resume file: None
 
