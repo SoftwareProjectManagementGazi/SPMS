@@ -2,6 +2,10 @@
 import * as React from "react"
 import { Card, Avatar } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+// Phase 13 Plan 13-02 — getInitials lifted into the shared lib for the third
+// consumer (AvatarDropdown mini-profile header). activity-feed.tsx now
+// imports from the canonical location instead of defining its own copy.
+import { getInitials } from "@/lib/initials"
 
 export interface ActivityItem {
   id: string | number
@@ -44,15 +48,6 @@ function formatTime(timestamp: string, language: string): string {
     month: "short",
     day: "numeric",
   })
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
 }
 
 export function ActivityFeed({ items }: ActivityFeedProps) {

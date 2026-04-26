@@ -19,6 +19,7 @@ import { useApp } from "@/context/app-context"
 import { Breadcrumb } from "./breadcrumb"
 import { CreateButton } from "./header/create-button"
 import { SearchAutocomplete } from "./header/search-autocomplete"
+import { AvatarDropdown } from "./shell/avatar-dropdown"
 
 interface HeaderProps {
   /** Rendered next to breadcrumb — PROJ-02 dynamic status badge from AppShell */
@@ -129,6 +130,12 @@ export function Header({ statusBadge }: HeaderProps) {
       >
         {lang.toUpperCase()}
       </button>
+
+      {/* Phase 13 Plan 13-02 (D-D1): header-mounted AvatarDropdown replaces
+          Phase 8 D-04 SidebarUserMenu. Mounted AFTER the language button so
+          the order is: search | create | theme | LANG | <AvatarDropdown/>.
+          Theme + language buttons stay in the header (D-D2 explicit). */}
+      <AvatarDropdown />
     </header>
   )
 }

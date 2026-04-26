@@ -1,12 +1,18 @@
 "use client"
 
-// Sidebar: collapsible navigation (232px expanded / 56px collapsed) with logo,
-// WORKSPACE + ADMIN sections, and user menu with click-outside dismiss.
+// Sidebar: collapsible navigation (232px expanded / 56px collapsed) with logo
+// and WORKSPACE + ADMIN sections.
 // The collapse toggle lives in the Header (single source of control); this sidebar
 // reads `sidebarCollapsed` from useApp() but does not render its own toggle button.
 // Ported from New_Frontend/src/shell.jsx (lines 8-155). Prototype RouterContext is fully
 // replaced with next/link + usePathname() per D-09. All icons via lucide-react (size={16}).
 // Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
+//
+// Phase 13 Plan 13-02 (PROF-03 / CONTEXT D-D1): SidebarUserMenu and the
+// sidebar footer wrapper that hosted it have been REMOVED. The user menu is
+// now header-mounted via <AvatarDropdown/> (Frontend2/components/shell/
+// avatar-dropdown.tsx). The sidebar footer area becomes a pure nav region —
+// the flex layout flows naturally to the bottom without the footer block.
 
 import * as React from "react"
 import Link from "next/link"
@@ -19,15 +25,11 @@ import {
   BarChart3,
   Settings,
   Shield,
-  ChevronUp,
-  LogOut,
 } from "lucide-react"
 
-import { Avatar, Badge, Kbd } from "@/components/primitives"
+import { Badge, Kbd } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
-import { useAuth } from "@/context/auth-context"
-import { t, type LangCode } from "@/lib/i18n"
-import { useRouter } from "next/navigation"
+import { t } from "@/lib/i18n"
 
 // --- SidebarLogo ---------------------------------------------------------
 
@@ -146,147 +148,10 @@ function NavItem({
   )
 }
 
-// --- SidebarUserMenu -----------------------------------------------------
-
-// Placeholder user data -- real auth integration in later phases.
-const PLACEHOLDER_USER = { name: "User", initials: "U", avColor: 1 } as const
-
-function SidebarUserMenu({
-  collapsed,
-  lang,
-}: {
-  collapsed: boolean
-  lang: LangCode
-}) {
-  const [open, setOpen] = React.useState(false)
-  const ref = React.useRef<HTMLDivElement | null>(null)
-  const { logout } = useAuth()
-  const router = useRouter()
-
-  // D-03: logout must clear both AuthContext state (which clears localStorage
-  // token + auth_session cookie) and send the user back to /login. Previously
-  // the button only closed the menu — session stayed open until the next 401.
-  const handleLogout = () => {
-    setOpen(false)
-    logout()
-    router.push("/login")
-  }
-
-  // Click-outside dismiss (exact pattern from shell.jsx lines 104-107)
-  React.useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [open])
-
-  const menuItemStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-    // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
-    padding: "6px 10px",
-    borderRadius: "var(--radius-sm)",
-    fontSize: 12.5,
-    textAlign: "left",
-    background: "transparent",
-  }
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          width: "100%",
-          padding: 0,
-          textAlign: "left",
-        }}
-      >
-        <Avatar user={PLACEHOLDER_USER} size={28} />
-        {!collapsed && (
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: "flex",
-              flexDirection: "column",
-              lineHeight: 1.2,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {PLACEHOLDER_USER.name}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--fg-subtle)" }}>Member</div>
-          </div>
-        )}
-        {!collapsed && (
-          <ChevronUp size={12} style={{ color: "var(--fg-subtle)" }} />
-        )}
-      </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "100%",
-            left: 0,
-            right: 0,
-            marginBottom: 4,
-            background: "var(--surface)",
-            borderRadius: "var(--radius)",
-            boxShadow: "var(--shadow-lg)",
-            padding: 4,
-            border: "1px solid var(--border)",
-            zIndex: 100,
-          }}
-        >
-          <button
-            onClick={() => setOpen(false)}
-            className="hover-row"
-            style={menuItemStyle}
-          >
-            {lang === "tr" ? "Profilim" : "My Profile"}
-          </button>
-          <Link
-            href="/settings"
-            onClick={() => setOpen(false)}
-            className="hover-row"
-            style={{ ...menuItemStyle, textDecoration: "none", color: "inherit" }}
-          >
-            {lang === "tr" ? "Ayarlar" : "Settings"}
-          </Link>
-          <div
-            style={{
-              borderTop: "1px solid var(--border)",
-              margin: "4px 0",
-            }}
-          />
-          <button
-            onClick={handleLogout}
-            className="hover-row"
-            style={{ ...menuItemStyle, color: "var(--priority-critical)" }}
-          >
-            <LogOut size={13} />
-            {lang === "tr" ? "Çıkış Yap" : "Sign Out"}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
+// SidebarUserMenu removed in Plan 13-02 — replaced by AvatarDropdown in
+// header.tsx (PROF-03 / CONTEXT D-D1). The Phase 8 placeholder user constant
+// was removed alongside it; the real user is read from auth context inside
+// the AvatarDropdown.
 
 // --- Sidebar main component ----------------------------------------------
 
@@ -413,14 +278,6 @@ export function Sidebar() {
           active={isActive("/admin")}
           collapsed={sidebarCollapsed}
         />
-      </div>
-      <div
-        style={{
-          borderTop: "1px solid var(--border)",
-          padding: 10,
-        }}
-      >
-        <SidebarUserMenu collapsed={sidebarCollapsed} lang={lang} />
       </div>
     </aside>
   )
