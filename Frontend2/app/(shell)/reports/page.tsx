@@ -45,6 +45,7 @@ import {
 } from "@/components/reports/date-range-filter"
 import { CFDChart } from "@/components/reports/cfd-chart"
 import { LeadCycleChart } from "@/components/reports/lead-cycle-chart"
+import { IterationChart } from "@/components/reports/iteration-chart"
 import { chartApplicabilityFor } from "@/lib/charts/applicability"
 import type { Methodology } from "@/lib/methodology-matrix"
 
@@ -240,7 +241,17 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Plan 13-08 mounts <IterationChart/> + <PhaseReportsSection/> here. */}
+      {/* Iteration card — Scrum / Iterative / Incremental / Evolutionary /
+          RAD only (D-A4). Returns null entirely for non-cycle methodologies
+          (different gate strategy than CFD's AlertBanner — for iteration the
+          card is removed from the layout flow because the data simply does
+          not exist for non-cycle workflows). */}
+      <IterationChart
+        projectId={selectedProjectId}
+        applicable={applicable?.iteration ?? null}
+      />
+
+      {/* Plan 13-08 Task 2 mounts <PhaseReportsSection/> here. */}
     </div>
   )
 }
