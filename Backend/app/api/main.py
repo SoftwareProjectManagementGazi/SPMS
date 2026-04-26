@@ -165,6 +165,10 @@ from app.api.v1 import users as users_router
 app.include_router(activity_router.router, prefix="/api/v1", tags=["activity"])
 app.include_router(users_router.router, prefix="/api/v1", tags=["users"])
 
+# Phase 13 chart aggregation router (D-X1..X3 — CFD / Lead-Cycle / Iteration)
+from app.api.v1 import charts as charts_router
+app.include_router(charts_router.router, prefix="/api/v1", tags=["charts"])
+
 from app.api.v1 import milestones as milestones_router
 from app.api.v1 import artifacts as artifacts_router
 from app.api.v1 import phase_reports as phase_reports_router

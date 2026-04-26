@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
-from datetime import datetime
+from datetime import date, datetime
 
 
 class IAuditRepository(ABC):
@@ -84,4 +84,62 @@ class IAuditRepository(ABC):
     @abstractmethod
     async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
         """D-48: most recent audit_log rows for a user across all entities."""
+        pass
+
+    # ------------------------------------------------------------------
+    # Phase 13 chart aggregation + user activity privacy filter (D-X1..X4)
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    async def get_cfd_snapshots(
+        self, project_id: int, date_from: date, date_to: date,
+    ) -> List[dict]:
+        """D-X1 CFD daily snapshot list per RESEARCH.md §Pattern lines 757-808.
+
+        Returns one dict per day in [date_from, date_to] with keys
+        ``date`` (ISO string), ``todo``, ``progress``, ``review``, ``done`` (ints).
+        """
+        pass
+
+    @abstractmethod
+    async def get_lead_cycle_data(
+        self, project_id: int, range_days: int,
+    ) -> dict:
+        """D-X2 Lead+Cycle aggregation per RESEARCH.md §Pattern lines 818-887.
+
+        Returns a flat dict with ``lead_avg/p50/p85/p95``, ``cycle_avg/p50/p85/p95``,
+        and ``lead_b1..b5`` / ``cycle_b1..b5`` bucket counts. The use case wraps
+        these into ``LeadCycleResponseDTO``.
+        """
+        pass
+
+    @abstractmethod
+    async def get_iteration_data(
+        self, project_id: int, count: int,
+    ) -> List[dict]:
+        """D-X3 Last-N sprints per RESEARCH.md §Pattern lines 894-924.
+
+        Returns one dict per sprint ordered by ``end_date ASC`` with keys
+        ``id``, ``name``, ``planned``, ``completed``, ``carried`` (ints).
+        """
+        pass
+
+    @abstractmethod
+    async def get_user_activity(
+        self,
+        target_user_id: int,
+        viewer_user_id: int,
+        is_admin: bool,
+        types: Optional[List[str]] = None,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        limit: int = 30,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int]:
+        """D-X4 viewer-privacy-filtered activity per RESEARCH.md §Pattern lines 931-992.
+
+        Non-admin viewers see only audit_log rows scoped to projects they belong
+        to via ``team_projects``. Admin viewers bypass the filter entirely.
+        Returns ``(items, total)``.
+        """
         pass
