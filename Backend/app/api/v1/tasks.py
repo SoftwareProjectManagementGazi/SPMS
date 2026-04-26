@@ -77,6 +77,17 @@ async def create_task(
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+
+@router.get("/", response_model=List[TaskResponseDTO])
+async def list_tasks(
+    assignee_id: int = Query(..., ge=1, description="Filter tasks by assignee user_id (Phase 13 D-C4 — profile Tasks tab)"),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    current_user: User = Depends(get_current_user),
+):
+    use_case = ListMyTasksUseCase(task_repo)
+    return await use_case.execute(assignee_id)
+
+
 @router.get("/project/{project_id}", response_model=PaginatedResponse)
 async def list_project_tasks(
     project_id: int,
