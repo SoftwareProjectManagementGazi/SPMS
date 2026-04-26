@@ -41,7 +41,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 10: Shell Pages & Project Features** - Core page conversions (Dashboard, Login, Projects, Settings) plus project status management and create wizard (completed 2026-04-21)
 - [x] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions (completed 2026-04-23)
 - [x] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements (plans complete 2026-04-25; manual UAT sign-off deferred to a later /gsd-verify-work pass — see STATE.md "Deferred Items")
-- [ ] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page
+- [x] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page (completed 2026-04-26)
 
 ## Phase Details
 
@@ -179,7 +179,7 @@ Plans:
 - [x] 13-07-PLAN.md — Wave 3: REWRITE /reports page — top toolbar (ProjectPicker + DateRangeFilter + PDF) + 4 StatCards + Burndown+TeamLoad row preserved + ChartCard shell + CFDChart (Recharts AreaChart 4-band, Kanban-only methodology gate) + Lead/Cycle row pair (Recharts BarChart histogram + P50/P85/P95) (REPT-01 + REPT-02)
 - [x] 13-08-PLAN.md — Wave 3: IterationChart (Recharts grouped BarChart 3-series, hides for non-cycle methodologies) + PhaseReportsSection (2-tab outer Tabs + cascading project/phase pickers + recent rows + inline EvaluationReportCard read-only expand reusing Phase 12) (REPT-03 + REPT-04)
 - [x] 13-09-PLAN.md — Wave 4: globals.css mobile @media blocks (≤1024px + ≤640px) for all Phase 13 surfaces (Reports grids, Profile grids, Activity timeline, Avatar dropdown, chart heights) + chart SVG aria-label + ProfileHeader h1 + AvatarDropdown ArrowDown/Up keyboard nav (D-F1 + D-G2 a11y polish)
-- [ ] 13-10-PLAN.md — Wave 4: 5 Playwright e2e specs (reports-charts / profile-page / avatar-dropdown / activity-tab / phase-reports) skip-guarded per Phase 11 D-50 + 13-UAT-CHECKLIST.md manual UAT artifact (~28 rows for REPT-01..04 + PROF-01..04 + viewport + a11y) for /gsd-verify-work 13 pickup
+- [x] 13-10-PLAN.md — Wave 4: 5 Playwright e2e specs (reports-charts / profile-page / avatar-dropdown / activity-tab / phase-reports) skip-guarded per Phase 11 D-50 + 13-UAT-CHECKLIST.md manual UAT artifact (~28 rows for REPT-01..04 + PROF-01..04 + viewport + a11y) for /gsd-verify-work 13 pickup
 **UI hint**: yes
 
 ## Progress
@@ -201,4 +201,4 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
-| 13. Reporting, Activity & User Profile | v2.0 | 9/10 | In Progress|  |
+| 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete   | 2026-04-26 |

@@ -5,14 +5,14 @@ milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
 stopped_at: Completed 13-07-PLAN.md
-last_updated: "2026-04-26T08:16:00.658Z"
+last_updated: "2026-04-26T08:26:49.917Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 54
-  completed_plans: 53
-  percent: 98
+  completed_plans: 54
+  percent: 100
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 9 of 10
+Plan: 10 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -107,6 +107,7 @@ Progress: [██████████] 98%
 | Phase 13 P07 | 22min | 2 tasks tasks | 10 files files |
 | Phase 13 P06 | 4min | 1 tasks | 3 files |
 | Phase 13 P09 | 4 | 2 tasks | 8 files |
+| Phase 13 P10 | 12 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -384,6 +385,10 @@ Key constraints for v2.0:
 - [Phase ?]: [13-09] AvatarDropdown ArrowDown/Up/Home/End added as a SECOND useEffect (not merged with Esc handler). ArrowDown wraps last→first; ArrowUp wraps first→last; preventDefault blocks page scroll while menu open. Test 13 added.
 - [Phase ?]: [13-09] StatCard aria-label via wrapper div, NOT primitive extension — wrapping is smallest possible surgery (no API change to a shared primitive used in many places). 3 wrappers in one file is cheaper than forking the primitive.
 - [Phase ?]: [13-09] .faz-rapor-row className ADDED in this plan — Plan 13-08 had a CSS-hook gap. Without the className, the @media (max-width: 640px) row collapse would have no DOM target. Rule 3 fix in Task 1 commit.
+- [Phase ?]: [13-10] Each spec calls page.goto(target).catch(() => {}) BEFORE the health-check page.evaluate, so the skip-guard probes /api/v1/health from a real page context. The .catch absorbs router-level failures so beforeEach reaches test.skip rather than throwing.
+- [Phase ?]: [13-10] OR-locator pattern (locator.or(otherLocator)) for multi-state UI assertions — handles both 'data present' and 'empty state' branches in a single .toBeVisible() check. Used for CFD chart vs methodology AlertBanner (D-A4 gate), profile projects grid vs empty, activity timeline vs empty.
+- [Phase ?]: [13-10] Specs prefer getByRole over CSS class selectors wherever a primitive exposes a semantic role (h1/h3 by level, tab/combobox/menuitem). i18n regex (TR|EN) catches both languages. Class-name selectors only used as stable hooks from earlier plans (.activity-timeline, .profile-projects-grid, .chart-card-cfd-svg).
+- [Phase ?]: [13-10] UAT checklist uses 28 single-line table rows (116 file lines) — denser + easier to scan/tick than multi-line rows. Substantive acceptance gate (15+ rows, 8 IDs, viewport, a11y, sign-off) cleanly met (28 rows, 35 ID mentions, 2 viewport, 3 a11y). Phase 12 D-50 deferred-UAT precedent reused.
 
 ### Pending Todos
 
@@ -414,7 +419,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T08:15:13.067Z
+Last session: 2026-04-26T08:26:10.544Z
 Stopped at: Completed 13-07-PLAN.md
 Resume file: None
 
