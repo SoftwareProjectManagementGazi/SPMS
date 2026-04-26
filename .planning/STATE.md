@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
-stopped_at: Phase 13 Plan 13-04 complete (canonical ActivityTab + 16 RTL tests + activity-stub-tab REPLACED)
-last_updated: "2026-04-26T01:33:23.700Z"
+stopped_at: Completed 13-05-PLAN.md
+last_updated: "2026-04-26T01:50:12.843Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 48
-  percent: 89
+  completed_plans: 49
+  percent: 91
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 5 of 10
+Plan: 6 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -103,6 +103,7 @@ Progress: [█████████░] 89%
 | Phase 13 P02 | 9 | 2 tasks | 7 files |
 | Phase 13 P03 | 7 | 2 tasks | 19 files |
 | Phase 13 P04 | 9 | 2 tasks | 13 files |
+| Phase 13 P05 | 11min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -361,6 +362,8 @@ Key constraints for v2.0:
 - [Phase ?]: [13-04] Status badge tone heuristic catches future status-name payloads via toLowerCase + includes('done|progress|review'); current column_id integers fall through to neutral (column-name lookup is future polish)
 - [Phase ?]: [13-04] Discriminated-union prop ({projectId} XOR {userId}) calls BOTH hooks every render — Rules of Hooks compliance; the enabled flag inside each hook decides actual fetch (Test 2 verifies userId routes through useUserActivity)
 - [Phase ?]: [13-04] localStorage key passed to useLocalStoragePref WITHOUT spms. prefix — the hook auto-prepends; on-disk key becomes spms.activity.filter.{id} matching D-B7. Verified by Test 4 reading the on-disk JSON directly
+- [Phase ?]: Plan 13-05 layered profileService.getUser on /auth/users (Rule 2 fix) — backend /users/{id}/summary doesn't return user identity fields
+- [Phase ?]: Plan 13-05 self-only role enrichment via useAuth().user.role — UserListDTO has no role field; other-user profiles render without role badge (v2.1 candidate: dedicated /users/{id}/profile endpoint)
 
 ### Pending Todos
 
@@ -391,8 +394,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:33:09.653Z
-Stopped at: Phase 13 Plan 13-04 complete (canonical ActivityTab + 16 RTL tests + activity-stub-tab REPLACED)
+Last session: 2026-04-26T01:50:12.833Z
+Stopped at: Completed 13-05-PLAN.md
 Resume file: None
 
 **Current Phase:** 13

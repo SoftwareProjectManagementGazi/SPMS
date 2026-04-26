@@ -174,7 +174,7 @@ Plans:
 - [x] 13-02-PLAN.md — Wave 2: Header AvatarDropdown component (5-item menu + admin gating + Dil submenu + 3-way dismiss) replaces Phase 8 SidebarUserMenu; lib/initials lift; activity-feed import switch (PROF-03)
 - [x] 13-03-PLAN.md — Wave 2: Cross-site Avatar href propagation across 14 consumers (board card, list, backlog, members, project card, comments, properties, attachments, sub-tasks, history, lifecycle artifacts) + AvatarStack href forwarding + dashboard ActivityFeed DataState retro-adoption + Avatar RTL test (PROF-03)
 - [x] 13-04-PLAN.md — Wave 3: ProjectDetail Activity tab full impl — vertical timeline with 10 event types via audit-event-mapper, filter SegmentedControl + user-avatar row + localStorage persistence + Daha fazla yükle + date-aware grouping + comment 160-char preview + replaces activity-stub-tab.tsx (PROF-01)
-- [ ] 13-05-PLAN.md — Wave 3: User Profile route /users/[id] + ProfileHeader (Avatar 64 + ring/Sen/Düzenle if self) + 3 StatCards + Tabs (?tab= URL sync) + Tasks tab (MTTaskRow compact + group-by-project + filter) + Projects tab stub (PROF-02 + PROF-04)
+- [x] 13-05-PLAN.md — Wave 3: User Profile route /users/[id] + ProfileHeader (Avatar 64 + ring/Sen/Düzenle if self) + 3 StatCards + Tabs (?tab= URL sync) + Tasks tab (MTTaskRow compact + group-by-project + filter) + Projects tab stub (PROF-02 + PROF-04)
 - [ ] 13-06-PLAN.md — Wave 3: ProfileProjectsTab full impl (3-col ProjectCard grid via /users/{id}/summary.projects) + Activity tab wire-up in /users/[id]/page.tsx mounts ActivityTab from Plan 13-04 with userId variant (PROF-02)
 - [ ] 13-07-PLAN.md — Wave 3: REWRITE /reports page — top toolbar (ProjectPicker + DateRangeFilter + PDF) + 4 StatCards + Burndown+TeamLoad row preserved + ChartCard shell + CFDChart (Recharts AreaChart 4-band, Kanban-only methodology gate) + Lead/Cycle row pair (Recharts BarChart histogram + P50/P85/P95) (REPT-01 + REPT-02)
 - [ ] 13-08-PLAN.md — Wave 3: IterationChart (Recharts grouped BarChart 3-series, hides for non-cycle methodologies) + PhaseReportsSection (2-tab outer Tabs + cascading project/phase pickers + recent rows + inline EvaluationReportCard read-only expand reusing Phase 12) (REPT-03 + REPT-04)
@@ -201,4 +201,4 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
-| 13. Reporting, Activity & User Profile | v2.0 | 4/10 | In Progress|  |
+| 13. Reporting, Activity & User Profile | v2.0 | 5/10 | In Progress|  |

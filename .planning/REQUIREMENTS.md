@@ -116,7 +116,7 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [x] **PROF-01**: Activity Tab yapilir — proje detayda yeni sekme, dikey timeline, olay ikonlari, tarih gruplari, filtre, sayfalama
 - [x] **PROF-02**: Kullanici Profil sayfasi yapilir — profil header, 3 StatCard, Gorevler/Projeler/Aktivite sekmeleri
 - [x] **PROF-03**: Header avatar dropdown'i yapilir — Profilim/Ayarlar/Cikis Yap menusu
-- [ ] **PROF-04**: Profil gorev listesinde MTTaskRow bileseninden yeniden kullanilir [E15]
+- [x] **PROF-04**: Profil gorev listesinde MTTaskRow bileseninden yeniden kullanilir [E15]
 
 ### Page Conversions
 
@@ -231,7 +231,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-01 | Phase 13 | Complete |
 | PROF-02 | Phase 13 | Complete |
 | PROF-03 | Phase 13 | Complete |
-| PROF-04 | Phase 13 | Pending |
+| PROF-04 | Phase 13 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 63 total
