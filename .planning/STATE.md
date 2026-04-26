@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
-stopped_at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
-last_updated: "2026-04-26T00:42:25.831Z"
+stopped_at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
+last_updated: "2026-04-26T01:00:26.247Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 45
-  percent: 83
+  completed_plans: 46
+  percent: 85
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 2 of 10
+Plan: 3 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -100,6 +100,7 @@ Progress: [████████░░] 83%
 | Phase 12 P09 | 14min | 2 tasks | 12 files |
 | Phase 12 P10 | 30min | 3 tasks (2 done + 1 UAT-deferred) | 7 files |
 | Phase 13 P01 | 16 | 2 tasks | 37 files |
+| Phase 13 P02 | 9 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -341,6 +342,12 @@ Key constraints for v2.0:
 - [Phase ?]: [13-01] activity-service uses manual paramsSerializer (buildActivityQuery) for type[] alias — Phase 9 D-46 manual-pair pattern, immune to axios version drift
 - [Phase ?]: [13-01] DataState primitive uses Fragment-only render (no wrapper DOM box) — primitive is layout-neutral so chart cards / activity timelines control their own padding/border
 - [Phase ?]: [13-01] Avatar href onClick chain calls e.stopPropagation() FIRST then user-supplied onClick — guarantees row-click handlers on parents never fire when the avatar is the click target (D-D4 backwards compat)
+- [Phase 13]: [13-02] AvatarDropdown reads useAuth().user.name (not full_name) — verified canonical AuthUser shape at services/auth-service.ts; defensive fallback for full_name → email kept for forward-compat
+- [Phase 13]: [13-02] Trigger button intentionally NOT wrapped in Avatar href — trigger opens menu, navigation goes through Profilim menu item via router.push (avoids dual-intent click ambiguity)
+- [Phase 13]: [13-02] Pathname-change effect runs on first render (Next.js 16 effect with pathname dep fires on mount); setOpen(false) on mount is benign no-op and avoids stale-closure bug a if(open) guard would introduce
+- [Phase 13]: [13-02] Dil submenu in-place expand keeps main menu open; selecting language closes only Dil sub via setDilOpen(false), parent menu stays so user sees the switch take effect
+- [Phase 13]: [13-02] Sidebar drops 5 unused imports after SidebarUserMenu removal (useAuth, useRouter, ChevronUp, LogOut, Avatar, LangCode); footer wrapper removed entirely so flex layout flows naturally to bottom (CONTEXT D-D1)
+- [Phase 13]: [13-02] Acceptance-grep precision drove a comment rewrite — original docstring contained literal router-events which tripped the must-NOT-contain check; reworded preserves intent without matching the token
 
 ### Pending Todos
 
@@ -371,8 +378,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T00:41:45.938Z
-Stopped at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
+Last session: 2026-04-26T01:00:26.236Z
+Stopped at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
 Resume file: None
 
 **Current Phase:** 13
