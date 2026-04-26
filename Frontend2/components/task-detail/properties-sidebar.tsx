@@ -289,7 +289,18 @@ export function PropertiesSidebar({
                 <>
                   {(() => {
                     const av = userAvatar(task.assigneeId, task.assigneeName)
-                    return av ? <Avatar user={av} size={20} /> : null
+                    // Phase 13 Plan 13-03 (D-D4) — current-assignee Avatar
+                    // links to profile. Surrounding button still toggles the
+                    // AssigneePicker on clicks NOT on the avatar itself
+                    // (Avatar Link's stopPropagation ensures the picker stays
+                    // closed when the avatar is the click target).
+                    return av ? (
+                      <Avatar
+                        user={av}
+                        size={20}
+                        href={`/users/${task.assigneeId}`}
+                      />
+                    ) : null
                   })()}
                   <span style={{ fontSize: 12.5 }}>
                     {task.assigneeName?.trim() ||
@@ -334,7 +345,14 @@ export function PropertiesSidebar({
                     gap: 6,
                   }}
                 >
-                  {av && <Avatar user={av} size={20} />}
+                  {/* Phase 13 Plan 13-03 (D-D4) — reporter Avatar links to profile. */}
+                  {av && (
+                    <Avatar
+                      user={av}
+                      size={20}
+                      href={`/users/${task.reporterId}`}
+                    />
+                  )}
                   <span style={{ fontSize: 12.5 }}>
                     {lang === "tr" ? "Kullanıcı" : "User"} #{task.reporterId}
                   </span>

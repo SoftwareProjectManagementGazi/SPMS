@@ -127,6 +127,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   // Build avatar list from manager info if available
   // AvatarUser requires initials — derive from managerName (first letters of words)
+  // Phase 13 Plan 13-03 (D-D4) — AvatarStackUser carries optional `href`;
+  // AvatarStack forwards it to each inner Avatar so the manager chip becomes
+  // click-to-profile site-wide. Skipped when managerId is missing (no link target).
   const managerAvatars = project.managerName
     ? [{
         id: project.managerId ?? 0,
@@ -136,6 +139,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           .map(w => w[0]?.toUpperCase() ?? '')
           .join(''),
         avColor: 1,
+        href: project.managerId != null ? `/users/${project.managerId}` : undefined,
       }]
     : []
 

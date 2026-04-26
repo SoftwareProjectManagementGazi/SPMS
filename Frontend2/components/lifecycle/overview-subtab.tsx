@@ -538,7 +538,12 @@ function UpcomingRowTask({
         {entry.title}
       </span>
       {assigneeAvatar ? (
-        <Avatar user={assigneeAvatar} size={20} />
+        // Phase 13 Plan 13-03 (D-D4) — assignee Avatar links to profile.
+        <Avatar
+          user={assigneeAvatar}
+          size={20}
+          href={entry.assigneeId != null ? `/users/${entry.assigneeId}` : undefined}
+        />
       ) : (
         <span style={{ width: 20 }} />
       )}

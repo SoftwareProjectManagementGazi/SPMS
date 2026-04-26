@@ -118,7 +118,16 @@ export function BacklogTaskRow({ task, projectId }: BacklogTaskRowProps) {
         {task.title}
       </span>
       <PriorityChip level={task.priority} lang={language} withLabel={false} />
-      {assigneeAvatar && <Avatar user={assigneeAvatar} size={20} />}
+      {assigneeAvatar && (
+        // Phase 13 Plan 13-03 (D-D4) — Avatar Link to /users/{assigneeId}.
+        // The row's onClick navigates to the task; Avatar's stopPropagation
+        // ensures clicking the avatar specifically lands on the profile.
+        <Avatar
+          user={assigneeAvatar}
+          size={20}
+          href={task.assigneeId != null ? `/users/${task.assigneeId}` : undefined}
+        />
+      )}
     </div>
   )
 }

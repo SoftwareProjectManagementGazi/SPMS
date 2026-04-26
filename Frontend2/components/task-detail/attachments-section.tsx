@@ -386,7 +386,12 @@ export function AttachmentsSection({ taskId }: AttachmentsSectionProps) {
                     {humanSize(a.size)}
                   </span>
                 )}
-                <Avatar user={av} size={18} />
+                {/* Phase 13 Plan 13-03 (D-D4) — uploader Avatar links to profile. */}
+                <Avatar
+                  user={av}
+                  size={18}
+                  href={a.uploaderId != null ? `/users/${a.uploaderId}` : undefined}
+                />
                 <span
                   style={{ fontSize: 11, color: "var(--fg-subtle)" }}
                 >

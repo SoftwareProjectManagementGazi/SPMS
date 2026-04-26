@@ -213,11 +213,17 @@ export function BoardCard({
             </span>
           )}
           <div style={{ flex: 1 }} />
-          {assigneeAvatar && <Avatar user={assigneeAvatar} size={20} />}
+          {assigneeAvatar && (
+            <Avatar
+              user={assigneeAvatar}
+              size={20}
+              href={task.assigneeId != null ? `/users/${task.assigneeId}` : undefined}
+            />
+          )}
         </div>
       )}
 
-      {/* Compact mode avatar row */}
+      {/* Compact mode avatar row — Phase 13 Plan 13-03 (D-D4) Avatar gets href. */}
       {densityMode === "compact" && assigneeAvatar && (
         <div
           style={{
@@ -227,7 +233,11 @@ export function BoardCard({
             marginTop: 2,
           }}
         >
-          <Avatar user={assigneeAvatar} size={18} />
+          <Avatar
+            user={assigneeAvatar}
+            size={18}
+            href={task.assigneeId != null ? `/users/${task.assigneeId}` : undefined}
+          />
         </div>
       )}
     </div>

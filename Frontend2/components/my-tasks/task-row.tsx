@@ -373,9 +373,16 @@ export function TaskRow({
         <span style={{ color: "var(--fg-subtle)", fontSize: 11.5 }}>—</span>
       )}
 
-      {/* Assignee avatar */}
+      {/* Assignee avatar — Phase 13 Plan 13-03 (D-D4): href forwarded so the
+          assignee chip becomes a Next.js Link to /users/{assigneeId}. The
+          row's parent has its own onClick={navigate}; the Avatar Link calls
+          e.stopPropagation() so the row-click handler doesn't double-fire. */}
       {assigneeAvatar ? (
-        <Avatar user={assigneeAvatar} size={avatarSize} />
+        <Avatar
+          user={assigneeAvatar}
+          size={avatarSize}
+          href={task.assigneeId != null ? `/users/${task.assigneeId}` : undefined}
+        />
       ) : (
         <span style={{ width: avatarSize }} />
       )}

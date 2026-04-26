@@ -57,6 +57,8 @@ export function MembersTab({ project }: { project: Project }) {
             <Avatar
               user={{ initials: deriveInitials(managerName), avColor: 1 }}
               size={28}
+              // Phase 13 Plan 13-03 (D-D4) — manager avatar links to profile.
+              href={project.managerId != null ? `/users/${project.managerId}` : undefined}
             />
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>

@@ -358,12 +358,17 @@ export function ArtifactsSubTab({ project, workflow }: ArtifactsSubTabProps) {
                   </div>
                   <div>
                     {a.assigneeId != null ? (
+                      // Phase 13 Plan 13-03 (D-D4) — owner avatar links to
+                      // profile; row's onClick (toggle expand) keeps working
+                      // because Avatar's Link calls e.stopPropagation() per
+                      // Plan 13-01 contract.
                       <Avatar
                         user={{
                           initials: `U${a.assigneeId}`,
                           avColor: ((a.assigneeId - 1) % 8) + 1,
                         }}
                         size={20}
+                        href={`/users/${a.assigneeId}`}
                       />
                     ) : (
                       <span style={{ color: "var(--fg-subtle)" }}>—</span>

@@ -99,7 +99,16 @@ export function HistorySection({
               borderRadius: "var(--radius-sm)",
             }}
           >
-            {u && <Avatar user={avatarFromUser(u)} size={20} />}
+            {/* Phase 13 Plan 13-03 (D-D4) — history actor Avatar links to profile.
+                u.id is the resolved member id; e.user_id is the audit-log actor.
+                Use e.user_id so the link still works when u is undefined too. */}
+            {u && (
+              <Avatar
+                user={avatarFromUser(u)}
+                size={20}
+                href={e.user_id != null ? `/users/${e.user_id}` : undefined}
+              />
+            )}
             <div style={{ flex: 1 }}>
               <div
                 style={{

@@ -175,7 +175,18 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
               <Badge size="xs" tone={statusTone(st.status)} dot>
                 {st.status || "—"}
               </Badge>
-              {av ? <Avatar user={av} size={20} /> : <span />}
+              {/* Phase 13 Plan 13-03 (D-D4) — sub-task assignee Avatar links
+                  to profile; row's onClick (navigate to sub-task) keeps
+                  working because Avatar Link's stopPropagation fires first. */}
+              {av ? (
+                <Avatar
+                  user={av}
+                  size={20}
+                  href={st.assigneeId != null ? `/users/${st.assigneeId}` : undefined}
+                />
+              ) : (
+                <span />
+              )}
             </div>
           )
         })}

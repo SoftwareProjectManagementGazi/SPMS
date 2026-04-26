@@ -190,7 +190,15 @@ export function CommentsSection({
           position: "relative",
         }}
       >
-        {currentUserAvatar && <Avatar user={currentUserAvatar} size={26} />}
+        {currentUserAvatar && (
+          // Phase 13 Plan 13-03 (D-D4) — composer Avatar (current user) links
+          // to /users/{currentUserId}. currentUserId is the normalized user.id.
+          <Avatar
+            user={currentUserAvatar}
+            size={26}
+            href={currentUserId != null ? `/users/${currentUserId}` : undefined}
+          />
+        )}
         <div style={{ flex: 1, position: "relative" }}>
           {!composerOpen ? (
             <button
@@ -354,7 +362,14 @@ export function CommentsSection({
             const av = avatarFromMember(c.authorId, c.authorName)
             return (
               <div key={c.id} style={{ display: "flex", gap: 10 }}>
-                <Avatar user={av} size={26} />
+                {/* Phase 13 Plan 13-03 (D-D4) — comment-author Avatar links
+                    to /users/{authorId}. authorId is always present on a
+                    persisted comment row. */}
+                <Avatar
+                  user={av}
+                  size={26}
+                  href={c.authorId != null ? `/users/${c.authorId}` : undefined}
+                />
                 <div style={{ flex: 1 }}>
                   <div
                     style={{

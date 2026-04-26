@@ -214,7 +214,14 @@ export function ListTab({ project }: { project: Project }) {
           }
           const initials = `#${aid}`.slice(0, 2).toUpperCase()
           const avColor = ((aid % 8) + 1) as number
-          return <Avatar user={{ initials, avColor }} size={20} />
+          // Phase 13 Plan 13-03 (D-D4) — Avatar links to the assignee profile.
+          return (
+            <Avatar
+              user={{ initials, avColor }}
+              size={20}
+              href={`/users/${aid}`}
+            />
+          )
         },
       },
       {

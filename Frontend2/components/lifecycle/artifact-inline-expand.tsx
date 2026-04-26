@@ -332,12 +332,20 @@ export function ArtifactInlineExpand({
           >
             {currentAssignee ? (
               <>
+                {/* Phase 13 Plan 13-03 (D-D4) — current-assignee Avatar links
+                    to profile. The picker trigger button still toggles the
+                    dropdown when the user clicks the surrounding chrome (name
+                    text, caret) — Avatar's stopPropagation only short-circuits
+                    clicks on the avatar circle itself. The dropdown OPTION
+                    Avatars below are intentionally NOT linked (RESEARCH
+                    §Pattern 3 — picker option buttons stay non-nav). */}
                 <Avatar
                   user={{
                     initials: currentAssignee.initials,
                     avColor: currentAssignee.avColor,
                   }}
                   size={18}
+                  href={currentAssignee.id != null ? `/users/${currentAssignee.id}` : undefined}
                 />
                 <span>{currentAssignee.name}</span>
               </>
