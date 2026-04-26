@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
-stopped_at: Completed 13-05-PLAN.md
-last_updated: "2026-04-26T01:50:12.843Z"
+stopped_at: Completed 13-07-PLAN.md
+last_updated: "2026-04-26T02:05:35.948Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 49
-  percent: 91
+  completed_plans: 50
+  percent: 93
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 6 of 10
+Plan: 7 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -104,6 +104,7 @@ Progress: [█████████░] 91%
 | Phase 13 P03 | 7 | 2 tasks | 19 files |
 | Phase 13 P04 | 9 | 2 tasks | 13 files |
 | Phase 13 P05 | 11min | 2 tasks | 8 files |
+| Phase 13 P07 | 22min | 2 tasks tasks | 10 files files |
 
 ## Accumulated Context
 
@@ -364,6 +365,14 @@ Key constraints for v2.0:
 - [Phase ?]: [13-04] localStorage key passed to useLocalStoragePref WITHOUT spms. prefix — the hook auto-prepends; on-disk key becomes spms.activity.filter.{id} matching D-B7. Verified by Test 4 reading the on-disk JSON directly
 - [Phase ?]: Plan 13-05 layered profileService.getUser on /auth/users (Rule 2 fix) — backend /users/{id}/summary doesn't return user identity fields
 - [Phase ?]: Plan 13-05 self-only role enrichment via useAuth().user.role — UserListDTO has no role field; other-user profiles render without role badge (v2.1 candidate: dedicated /users/{id}/profile endpoint)
+- [Phase ?]: [13-07] Recharts test mock uses passthrough stubs (vi.mock recharts) emitting div data-recharts-leaf attributes — tests assert on DOM attributes rather than booting the real SVG measurement; harmless React dataKey warning is the cost
+- [Phase ?]: [13-07] StatCards / Burndown / Team Load values are placeholders (em-dash) NOT a scope reduction — D-A2 explicitly says preserve v1.0 layout; data wiring is a follow-up
+- [Phase ?]: [13-07] q2 chip is decorative — chartRange falls back to 90 when globalRange === q2; preserves prototype Q2 2026 chip without breaking the 7/30/90 backend contract
+- [Phase ?]: [13-07] selectedProjectId auto-defaults to projectList[0].id once useProjects resolves — page is not empty on first paint after sign-in
+- [Phase ?]: [13-07] CFD applicable prop is boolean | null (3-state) — null while loading, false → AlertBanner gate, true → render; Lead/Cycle has no applicable prop because all-methodology
+- [Phase ?]: [13-07] PDF Button has no onClick wiring — purely visual per CONTEXT T-13-07-04; v1.0 PDF endpoint already audited
+- [Phase ?]: [13-07] Chart card layout intentionally leaves space at the bottom for Plan 13-08 — current row order (header / StatCards / Burndown+TeamLoad / CFD / Lead-Cycle) is the final architecture; 13-08 appends, not re-arranges
+- [Phase ?]: [13-07] ProjectPicker is a native select styled to match Input primitive — keeps mobile native (iOS/Android open OS picker), satisfies keyboard a11y without a roving-tabindex implementation
 
 ### Pending Todos
 
@@ -394,8 +403,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:50:12.833Z
-Stopped at: Completed 13-05-PLAN.md
+Last session: 2026-04-26T02:05:35.938Z
+Stopped at: Completed 13-07-PLAN.md
 Resume file: None
 
 **Current Phase:** 13
