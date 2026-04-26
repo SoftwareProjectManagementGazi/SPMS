@@ -177,7 +177,7 @@ Plans:
 - [x] 13-05-PLAN.md — Wave 3: User Profile route /users/[id] + ProfileHeader (Avatar 64 + ring/Sen/Düzenle if self) + 3 StatCards + Tabs (?tab= URL sync) + Tasks tab (MTTaskRow compact + group-by-project + filter) + Projects tab stub (PROF-02 + PROF-04)
 - [x] 13-06-PLAN.md — Wave 3: ProfileProjectsTab full impl (3-col ProjectCard grid via /users/{id}/summary.projects) + Activity tab wire-up in /users/[id]/page.tsx mounts ActivityTab from Plan 13-04 with userId variant (PROF-02)
 - [x] 13-07-PLAN.md — Wave 3: REWRITE /reports page — top toolbar (ProjectPicker + DateRangeFilter + PDF) + 4 StatCards + Burndown+TeamLoad row preserved + ChartCard shell + CFDChart (Recharts AreaChart 4-band, Kanban-only methodology gate) + Lead/Cycle row pair (Recharts BarChart histogram + P50/P85/P95) (REPT-01 + REPT-02)
-- [ ] 13-08-PLAN.md — Wave 3: IterationChart (Recharts grouped BarChart 3-series, hides for non-cycle methodologies) + PhaseReportsSection (2-tab outer Tabs + cascading project/phase pickers + recent rows + inline EvaluationReportCard read-only expand reusing Phase 12) (REPT-03 + REPT-04)
+- [x] 13-08-PLAN.md — Wave 3: IterationChart (Recharts grouped BarChart 3-series, hides for non-cycle methodologies) + PhaseReportsSection (2-tab outer Tabs + cascading project/phase pickers + recent rows + inline EvaluationReportCard read-only expand reusing Phase 12) (REPT-03 + REPT-04)
 - [ ] 13-09-PLAN.md — Wave 4: globals.css mobile @media blocks (≤1024px + ≤640px) for all Phase 13 surfaces (Reports grids, Profile grids, Activity timeline, Avatar dropdown, chart heights) + chart SVG aria-label + ProfileHeader h1 + AvatarDropdown ArrowDown/Up keyboard nav (D-F1 + D-G2 a11y polish)
 - [ ] 13-10-PLAN.md — Wave 4: 5 Playwright e2e specs (reports-charts / profile-page / avatar-dropdown / activity-tab / phase-reports) skip-guarded per Phase 11 D-50 + 13-UAT-CHECKLIST.md manual UAT artifact (~28 rows for REPT-01..04 + PROF-01..04 + viewport + a11y) for /gsd-verify-work 13 pickup
 **UI hint**: yes
@@ -201,4 +201,4 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
-| 13. Reporting, Activity & User Profile | v2.0 | 7/10 | In Progress|  |
+| 13. Reporting, Activity & User Profile | v2.0 | 8/10 | In Progress|  |
