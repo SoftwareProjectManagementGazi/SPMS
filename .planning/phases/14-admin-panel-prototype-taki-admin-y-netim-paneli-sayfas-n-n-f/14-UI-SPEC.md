@@ -26,7 +26,7 @@ created: 2026-04-26
 |----------|-------|--------|
 | Tool | none (custom prototype-driven design system) | `.planning/PROJECT.md` v2.0 constraint: "shadcn/ui KULLANILMAZ" + Phase 13 D-00 carry-forward |
 | Preset | not applicable | n/a |
-| Component library | none — 18 in-repo primitives at `Frontend2/components/primitives/*` + `Frontend2/components/primitives/data-state.tsx` (Phase 13) | Phase 8 D-01..D-08 + Phase 13 D-F2 |
+| Component library | none — 17 in-repo primitives at `Frontend2/components/primitives/*` (Phase 8 D-01..D-08 + Phase 13 D-F2 added `data-state.tsx`); Phase 14 adds 1 new primitive (`nav-tabs.tsx`) → 18 after merge | Phase 8 D-01..D-08 + Phase 13 D-F2 |
 | Icon library | `lucide-react@^1.8.0` | `Frontend2/package.json` line 30 |
 | Chart library | **`recharts@3.8.1`** (already installed Phase 13) — REUSED for stats charts | `Frontend2/package.json` line 34 + Phase 13 D-A2 |
 | Font (sans) | `Geist` via `--font-sans` (`Frontend2/app/globals.css` line 18) | Phase 8 |
@@ -515,7 +515,7 @@ The new `audit-event-mapper.ts` semantic types (Plan 14-10) have these verb form
 
 | Semantic Type | Verb formatter (TR / EN) — uses `extra_metadata` enrichment |
 |--------------|--------------|
-| `task_field_updated` | "değiştirdi **'{task_title}'** {field_label}: {old_value_label} → {new_value_label}" / "changed **'{task_title}'** {field_label}: {old_value_label} → {new_value_label}" |
+| `task_field_updated` (NEW) | "değiştirdi **'{task_title}'** {field_label}: {old_value_label} → {new_value_label}" / "changed **'{task_title}'** {field_label}: {old_value_label} → {new_value_label}" |
 | `task_status_changed` (existing — kept) | "durumunu değiştirdi **'{task_title}'**: {old_label} → {new_label}" / "changed status of **'{task_title}'**: {old_label} → {new_label}" |
 | `task_assigned` (existing — enriched) | "atadı **'{task_title}'** görevini **{assignee_name}**'e" / "assigned **'{task_title}'** to **{assignee_name}**" |
 | `task_created` (existing — enriched) | "oluşturdu **'{task_title}'** ({task_key})" / "created **'{task_title}'** ({task_key})" |
@@ -1857,7 +1857,7 @@ See **Copywriting Contract → Surface I**.
 ### Surface J — Cross-cutting Jira-style audit detail (D-D1..D6)
 
 **Files extended:**
-- `Frontend2/lib/audit-event-mapper.ts` — extend `SemanticEventType` union with 12 new members (D-D3)
+- `Frontend2/lib/audit-event-mapper.ts` — extend `SemanticEventType` union with 13 new members (D-D3)
 - `Frontend2/lib/activity/event-meta.ts` — extend verb formatter with enriched-metadata consumers (D-D4)
 - `Frontend2/components/activity/activity-row.tsx` — add new render branches (D-D4)
 - **NEW** `Frontend2/lib/admin/audit-field-labels.ts` — TR/EN field name localization
@@ -1930,7 +1930,7 @@ See **Copywriting Contract → Surface J** for the verb formatter strings.
 - `Frontend2/components/dashboard/activity-feed.tsx` (Phase 10) — same (unchanged consumer; auto-benefits from richer metadata)
 
 **Improvements over prototype + Phase 13:**
-1. `[IMPROVEMENT]` 12 new SemanticEventType members (task_field_updated, project_archived, user_invited, etc.) — D-D3.
+1. `[IMPROVEMENT]` 13 new SemanticEventType members (task_field_updated, project_archived, user_invited, etc.) — D-D3.
 2. `[IMPROVEMENT]` Enriched metadata consumption (task_title, project_name, old_value_label, new_value_label) — D-D2 + D-D4.
 3. `[IMPROVEMENT]` Single-line compact variant for Audit table — D-D5.
 4. `[IMPROVEMENT]` Field-label localization map — D-D4.
@@ -1985,9 +1985,9 @@ This section lists every primitive / component the planner needs to know about f
 | `useApp()` (`Frontend2/context/app-context.tsx`) | language for i18n in every surface | None |
 | `project-service.ts` (Phase 10) | F (Projeler table) | None |
 | `process-template-service.ts` (Phase 12) | G (Şablonlar grid) | None |
-| `audit-event-mapper.ts` (Phase 13) | J (cross-cutting) | EXTEND: 12 new SemanticEventType members |
+| `audit-event-mapper.ts` (Phase 13) | J (cross-cutting) | EXTEND: 13 new SemanticEventType members |
 | `event-meta.ts` (Phase 13) | J + B (Recent admin events) + H (Detay column) | EXTEND: verb formatters consume enriched metadata |
-| `activity-row.tsx` (Phase 13) | B (compact recent events use the verb formatter), H (compact Detay variant), and Phase 13's existing tabs | EXTEND: 12 new render branches |
+| `activity-row.tsx` (Phase 13) | B (compact recent events use the verb formatter), H (compact Detay variant), and Phase 13's existing tabs | EXTEND: 13 new render branches |
 | `formatRelativeTime` | All time display | None |
 
 ### NEW components (Phase 14)
@@ -2059,9 +2059,9 @@ This section lists every primitive / component the planner needs to know about f
 
 | File | What changes | Owner plan |
 |------|--------------|-----------|
-| `Frontend2/lib/audit-event-mapper.ts` | Add 12 new SemanticEventType union members | 14-10 |
-| `Frontend2/lib/activity/event-meta.ts` | Add verb formatters consuming enriched metadata for 12 new types | 14-10 |
-| `Frontend2/components/activity/activity-row.tsx` | Add new conditional render branches for 12 new types; preserves existing branches via `default:` fallback | 14-10 |
+| `Frontend2/lib/audit-event-mapper.ts` | Add 13 new SemanticEventType union members | 14-10 |
+| `Frontend2/lib/activity/event-meta.ts` | Add verb formatters consuming enriched metadata for 13 new types | 14-10 |
+| `Frontend2/components/activity/activity-row.tsx` | Add new conditional render branches for 13 new types; preserves existing branches via `default:` fallback | 14-10 |
 | `Frontend2/components/primitives/index.ts` | Add `<DisabledToggle/>` (if hoisted to primitives) — likely stays in `components/admin/permissions/` | 14-04 |
 | `Frontend2/components/header.tsx` | NO CHANGE — admin "Rapor al" + "Denetim günlüğü" buttons live in admin/layout.tsx page header, NOT global header | n/a |
 | `Frontend2/app/globals.css` | Add admin-tabs-wrap, .activity-mobile, modal animation, MoreH popover, user-row stacked-card mobile classes | 14-09-09 (cross-cutting CSS) |
@@ -2109,7 +2109,7 @@ This section lists every primitive / component the planner needs to know about f
 - [ ] Dimension 1 Copywriting: PASS — every TR/EN string declared, every `[IMPROVEMENT]` flagged with justification, every RBAC-deferred copy rewritten per D-A2..A5
 - [ ] Dimension 2 Visuals: PASS — all dimensions cited from prototype line numbers or flagged as improvement with justification (mobile / a11y / RBAC reality / Detay Jira-render)
 - [ ] Dimension 3 Color: PASS — 60/30/10 enforced, accent reserved-for list explicit (10 items), zero new tokens, destructive flow uses red-text-on-menu-item pattern (no destructive button bg per prototype)
-- [ ] Dimension 4 Typography: PASS — 11 roles total (Display 24 / Heading 13 / Card title-Roller 15 / Card title-Şablonlar 14 / Body 12.5 / Body-small 12 / Label 11.5 / Label-uppercase 11 / Caption mono 11 / Big number 20 / Tiny mono 10.5), all reused from existing scale; weights stay at 2 (400/600) at design-system level (primitive-internal 500 invisible to contract)
+- [ ] Dimension 4 Typography: PASS — 13 roles spanning 10 distinct font sizes (Display 24 / Heading 13 / Card title-Roller 15 / Card title-Şablonlar 14 / Body 12.5 / Body-small 12 / Label 11.5 / Label-uppercase 11 / Caption mono 11 / Big number 20 / Stats trend 13 / Tiny mono 10.5 / Subtitle 13), all reused from existing Phase 8 scale + prototype-shipped values; Phase 14 introduces 0 new sizes, weights, or line-heights; weights stay at 2 (400/600) at design-system level (primitive-internal 500 invisible to contract)
 - [ ] Dimension 5 Spacing: PASS — all distances multiples of 4 except documented typography half-steps (10.5/11.5/12.5) + 1 menu item padding (6×10) inherited from Phase 12 D-08 + Roller card padding 18 (prototype-locked design-system canonical) + Audit row 8×16 (prototype line 415, denser than other tables on purpose)
 - [ ] Dimension 6 Registry Safety: PASS — no shadcn, no third-party registry blocks
 
