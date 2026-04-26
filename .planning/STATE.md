@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
-stopped_at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
-last_updated: "2026-04-26T01:15:52.641Z"
+stopped_at: Phase 13 Plan 13-04 complete (canonical ActivityTab + 16 RTL tests + activity-stub-tab REPLACED)
+last_updated: "2026-04-26T01:33:23.700Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 47
-  percent: 87
+  completed_plans: 48
+  percent: 89
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 4 of 10
+Plan: 5 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 87%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -102,6 +102,7 @@ Progress: [█████████░] 87%
 | Phase 13 P01 | 16 | 2 tasks | 37 files |
 | Phase 13 P02 | 9 | 2 tasks | 7 files |
 | Phase 13 P03 | 7 | 2 tasks | 19 files |
+| Phase 13 P04 | 9 | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -355,6 +356,11 @@ Key constraints for v2.0:
 - [Phase ?]: [13-03] project-card.tsx forwards href via the AvatarStackUser shape (object property), not a JSX prop on AvatarStack — supports per-user hrefs in a stack with different link targets
 - [Phase ?]: [13-03] AvatarStack +N overflow chip stays a styled <div> by construction; no Avatar instance, no nav surface; T-13-03-04 mitigated without a special opt-out branch
 - [Phase ?]: [13-03] portfolio-table.tsx managerId is the canonical link target — Project type at services/project-service.ts already exposes managerId (snake_case→camelCase mapped at the service); no field-name guessing needed
+- [Phase ?]: [13-04] useTaskModal API = openTaskModal (NOT openCreate) — verified at task-modal-context.tsx; defensive try/catch around the hook so ActivityEmpty degrades outside provider tree
+- [Phase ?]: [13-04] Single 200-cap server fetch + client-side slice for D-B2 — Test 5 mocks 60 events and asserts 30→60 visible after 'Daha fazla yükle' click; v2.1 candidate to rewire as offset-paginated calls
+- [Phase ?]: [13-04] Status badge tone heuristic catches future status-name payloads via toLowerCase + includes('done|progress|review'); current column_id integers fall through to neutral (column-name lookup is future polish)
+- [Phase ?]: [13-04] Discriminated-union prop ({projectId} XOR {userId}) calls BOTH hooks every render — Rules of Hooks compliance; the enabled flag inside each hook decides actual fetch (Test 2 verifies userId routes through useUserActivity)
+- [Phase ?]: [13-04] localStorage key passed to useLocalStoragePref WITHOUT spms. prefix — the hook auto-prepends; on-disk key becomes spms.activity.filter.{id} matching D-B7. Verified by Test 4 reading the on-disk JSON directly
 
 ### Pending Todos
 
@@ -385,8 +391,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:15:52.627Z
-Stopped at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
+Last session: 2026-04-26T01:33:09.653Z
+Stopped at: Phase 13 Plan 13-04 complete (canonical ActivityTab + 16 RTL tests + activity-stub-tab REPLACED)
 Resume file: None
 
 **Current Phase:** 13
