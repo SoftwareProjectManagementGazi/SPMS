@@ -39,6 +39,7 @@ import { StatCard } from "@/components/dashboard/stat-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { ProfileTasksTab } from "@/components/profile/profile-tasks-tab"
 import { ProfileProjectsTab } from "@/components/profile/profile-projects-tab"
+import { ActivityTab } from "@/components/activity/activity-tab"
 import { useUserSummary } from "@/hooks/use-user-summary"
 import { useApp } from "@/context/app-context"
 import { useAuth } from "@/context/auth-context"
@@ -198,16 +199,7 @@ export default function UserProfilePage() {
       {activeTab === "tasks" && <ProfileTasksTab userId={userId} />}
       {activeTab === "projects" && <ProfileProjectsTab userId={userId} />}
       {activeTab === "activity" && (
-        // Plan 13-06 will replace this with <ActivityTab userId={userId} variant="full"/>
-        <div
-          style={{
-            padding: 40,
-            textAlign: "center",
-            color: "var(--fg-muted)",
-          }}
-        >
-          {T("Yükleniyor…", "Loading…")}
-        </div>
+        <ActivityTab userId={userId} variant="full" />
       )}
     </div>
   )
