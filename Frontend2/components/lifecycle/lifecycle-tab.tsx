@@ -166,6 +166,13 @@ function buildRFEdges(workflow: WorkflowConfig): RFEdge[] {
     id: e.id,
     source: e.source,
     target: e.target,
+    // Route through the visible right-source / left-target handles so the
+    // edge starts/ends at the node's edge dots instead of the default top
+    // handle (which would draw the curve over the node body). Persisted
+    // sourceHandle/targetHandle on the WorkflowEdge wins so user-drawn
+    // edges keep whichever handle they were dragged from.
+    sourceHandle: e.sourceHandle ?? "right-source",
+    targetHandle: e.targetHandle ?? "left-target",
     type: "phase",
     data: {
       type: e.type,
