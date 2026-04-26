@@ -3,8 +3,15 @@
 // Avatar: initials on colored bg using --av-* tokens
 // Ported from New_Frontend/src/primitives.jsx (lines 6-20) -- exact styling preserved.
 // Per D-01: no shadcn/ui. Per D-02: prototype token names used directly.
+//
+// Phase 13 Plan 13-01 Task 2 (D-D4): added optional `href` prop. When supplied
+// the avatar renders inside a Next.js <Link> with `e.stopPropagation()` on the
+// onClick so consumer row-click handlers (e.g. MTTaskRow → /tasks/[id]) keep
+// working for clicks NOT on the avatar. Backwards compatible — existing
+// 19 consumer call sites remain valid (RESEARCH §Pattern 3 enumeration).
 
 import * as React from "react"
+import Link from "next/link"
 
 export interface AvatarUser {
   initials: string
@@ -17,6 +24,11 @@ export interface AvatarProps {
   ring?: boolean
   className?: string
   style?: React.CSSProperties
+  /** Phase 13 D-D4 — when set, the avatar becomes a Next.js Link. */
+  href?: string
+  /** Optional click handler. When `href` is set, `e.stopPropagation()` is
+   *  called BEFORE the user handler so parent row clicks don't fire too. */
+  onClick?: (e: React.MouseEvent) => void
 }
 
 export function Avatar({
@@ -25,9 +37,12 @@ export function Avatar({
   ring = false,
   className,
   style,
+  href,
+  onClick,
 }: AvatarProps) {
   if (!user) return null
-  return (
+
+  const visual = (
     <div
       className={className}
       style={{
@@ -51,5 +66,36 @@ export function Avatar({
     >
       {user.initials}
     </div>
+  )
+
+  if (!href) {
+    if (!onClick) return visual
+    // No href but onClick supplied — emit a clickable wrapper that preserves
+    // visual styling. Rare path; existing consumers don't pass onClick.
+    return (
+      <div
+        onClick={onClick}
+        style={{ display: "inline-block", lineHeight: 0, cursor: "pointer" }}
+      >
+        {visual}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick?.(e)
+      }}
+      style={{
+        display: "inline-block",
+        borderRadius: "50%",
+        lineHeight: 0,
+      }}
+    >
+      {visual}
+    </Link>
   )
 }
