@@ -5,14 +5,14 @@ milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
 stopped_at: Completed 13-07-PLAN.md
-last_updated: "2026-04-26T02:14:30.701Z"
+last_updated: "2026-04-26T08:16:00.658Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 51
-  percent: 94
+  completed_plans: 53
+  percent: 98
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 8 of 10
+Plan: 9 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 94%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -106,6 +106,7 @@ Progress: [█████████░] 94%
 | Phase 13 P05 | 11min | 2 tasks | 8 files |
 | Phase 13 P07 | 22min | 2 tasks tasks | 10 files files |
 | Phase 13 P06 | 4min | 1 tasks | 3 files |
+| Phase 13 P09 | 4 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -377,6 +378,12 @@ Key constraints for v2.0:
 - [Phase ?]: [13-06] adaptSummaryProject in-file helper bridges UserSummaryProject to full Project interface for D-C5 ProjectCard reuse
 - [Phase ?]: [13-06] Activity tab on profile mounts Plan 13-04 ActivityTab in userId variant — viewer-privacy filter enforced server-side via /users/{id}/activity per Plan 13-01 D-X4 (no client-side filter)
 - [Phase ?]: [13-06] Inline grid + .profile-projects-grid className together — inline 3-col is v2.0 baseline (works TODAY); className is the Plan 13-09 mobile responsive hook (will need !important due to inline-style specificity)
+- [Phase ?]: [13-09] Pure CSS responsive — extends Phase 11 D-54 with @media class rules in globals.css for all Phase 13 surfaces (Reports/Profile grids, Activity timeline, Avatar dropdown, chart heights). No useMediaQuery.
+- [Phase ?]: [13-09] !important on grid-template-columns + chart heights — JSX inline-style specificity outranks plain class selectors; the @media class must use !important. Removing inline grids would break v2.0 baseline.
+- [Phase ?]: [13-09] Chart aria-label via wrapper div role=img — Recharts SVG has no semantic axes; role=img + a data-summary aria-label makes assistive tech announce metric. Localized TR/EN via useApp.
+- [Phase ?]: [13-09] AvatarDropdown ArrowDown/Up/Home/End added as a SECOND useEffect (not merged with Esc handler). ArrowDown wraps last→first; ArrowUp wraps first→last; preventDefault blocks page scroll while menu open. Test 13 added.
+- [Phase ?]: [13-09] StatCard aria-label via wrapper div, NOT primitive extension — wrapping is smallest possible surgery (no API change to a shared primitive used in many places). 3 wrappers in one file is cheaper than forking the primitive.
+- [Phase ?]: [13-09] .faz-rapor-row className ADDED in this plan — Plan 13-08 had a CSS-hook gap. Without the className, the @media (max-width: 640px) row collapse would have no DOM target. Rule 3 fix in Task 1 commit.
 
 ### Pending Todos
 
@@ -407,7 +414,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T02:14:19.751Z
+Last session: 2026-04-26T08:15:13.067Z
 Stopped at: Completed 13-07-PLAN.md
 Resume file: None
 
