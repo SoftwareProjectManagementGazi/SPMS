@@ -57,3 +57,11 @@ export type { ToggleSize, ToggleProps } from "./toggle"
 // Phase 13 Plan 13-01 Task 2 — DataState 3-state primitive (D-F2).
 export { DataState } from "./data-state"
 export type { DataStateProps } from "./data-state"
+
+// Phase 14 Plan 14-01 — NavTabs Link-based tab strip primitive (D-C4).
+export { NavTabs } from "./nav-tabs"
+export type { NavTabItem, NavTabsProps } from "./nav-tabs"
+
+// Phase 14 Plan 14-01 — Modal primitive (overlay + panel + slots).
+export { Modal, ModalHeader, ModalBody, ModalFooter } from "./modal"
+export type { ModalProps } from "./modal"
