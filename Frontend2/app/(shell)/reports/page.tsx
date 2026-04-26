@@ -46,6 +46,7 @@ import {
 import { CFDChart } from "@/components/reports/cfd-chart"
 import { LeadCycleChart } from "@/components/reports/lead-cycle-chart"
 import { IterationChart } from "@/components/reports/iteration-chart"
+import { PhaseReportsSection } from "@/components/reports/phase-reports-section"
 import { chartApplicabilityFor } from "@/lib/charts/applicability"
 import type { Methodology } from "@/lib/methodology-matrix"
 
@@ -251,7 +252,14 @@ export default function ReportsPage() {
         applicable={applicable?.iteration ?? null}
       />
 
-      {/* Plan 13-08 Task 2 mounts <PhaseReportsSection/> here. */}
+      {/* Faz Raporları section — 2-tab outer Tabs (Aktif+Tamamlanan /
+          Arşivlenmiş) + cascading project/phase pickers + inline
+          EvaluationReportCard expand (Phase 12 reuse, read-only per D-E2).
+          Independent of the page's selectedProjectId / chartRange — the
+          section maintains its own picker state because users may want to
+          look at a different project's reports than the one they're viewing
+          charts for (D-E1). */}
+      <PhaseReportsSection />
     </div>
   )
 }

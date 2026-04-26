@@ -62,6 +62,15 @@ export interface EvaluationReportCardProps {
   project: EvaluationReportCardProject
   phase: WorkflowNode
   onClose?: () => void
+  /**
+   * Phase 13 Plan 13-08 D-E2 — when true, force read-only rendering even if
+   * the viewer would otherwise pass useTransitionAuthority. The Reports page
+   * mounts this component for cross-project quick access and must NEVER
+   * expose write paths there (T-13-08-04 Tampering mitigation). Default
+   * `false` preserves the Phase 12 Lifecycle > Geçmiş edit-when-authorized
+   * behavior unchanged.
+   */
+  readOnly?: boolean
 }
 
 // ----------------------------------------------------------------------------
@@ -72,6 +81,7 @@ export function EvaluationReportCard({
   project,
   phase,
   onClose,
+  readOnly = false,
 }: EvaluationReportCardProps) {
   const { language } = useApp()
   const T = React.useCallback(
@@ -85,9 +95,14 @@ export function EvaluationReportCard({
   const update = useUpdatePhaseReport(project.id)
   const create = useCreatePhaseReport(project.id)
   const downloadPdf = useDownloadPhaseReportPdf()
-  const canEdit = useTransitionAuthority(
+  const canEditAuthority = useTransitionAuthority(
     project as { id: number; managerId?: number | null; manager_id?: number | null },
   )
+  // D-E2 — readOnly forces canEdit=false (Save button hidden + textareas
+  // disabled) even when the viewer has transition authority on the project.
+  // The Reports page passes readOnly=true so the inline expand can never
+  // mutate state from outside the Lifecycle context.
+  const canEdit = canEditAuthority && !readOnly
 
   // Find the report for this phase. May be null on first open — Save will
   // create it lazily.
