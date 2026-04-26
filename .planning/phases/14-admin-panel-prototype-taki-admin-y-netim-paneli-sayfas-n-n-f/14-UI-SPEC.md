@@ -106,7 +106,7 @@ created: 2026-04-26
 
 The Frontend2 type scale is locked at the primitive layer (Phase 8 D-02). Phase 14 adds **zero** new font sizes; every value below is reused.
 
-**Inheritance claim — for the dimension-4 checker:** the table below enumerates **11 type roles** that Phase 14 surfaces consume. All 11 sizes are pre-existing values from the Phase 8 primitive scale + the prototype `New_Frontend/src/pages/admin.jsx` already-shipped values. Phase 14 introduces NO new font size, NO new weight, NO new line-height value — this is a complete inventory of what Phase 14 USES, not a declaration of a new 11-size scale. Where the generic UI-SPEC checker rule says "≤ 4 font sizes," that rule applies to NEWLY-INTRODUCED sizes; Phase 14 introduces 0, so the rule is satisfied. The 11 entries below are the full set of inherited sizes the prototype already employs across an admin console with 8 distinct surface types — collapsing them would require redesigning the prototype, which D-00 forbids.
+**Inheritance claim — for the dimension-4 checker:** the table below enumerates **13 type roles** spanning **10 distinct font sizes** (24 / 20 / 15 / 14 / 13 / 12.5 / 12 / 11.5 / 11 / 10.5 px) that Phase 14 surfaces consume. All 10 sizes are pre-existing values from the Phase 8 primitive scale + the prototype `New_Frontend/src/pages/admin.jsx` already-shipped values. Phase 14 introduces NO new font size, NO new weight, NO new line-height value — this is a complete inventory of what Phase 14 USES, not a declaration of a new scale. Where the generic UI-SPEC checker rule says "≤ 4 font sizes," that rule applies to NEWLY-INTRODUCED sizes; Phase 14 introduces 0, so the rule is satisfied. The 13 role entries below cover the full set of inherited sizes the prototype already employs across an admin console with 8 distinct surface types (3 share size 13 px with different weight/family — Heading 600/sans, Stats trend per-primitive, Subtitle 400/sans; 2 share 11 px — Label-uppercase 600/sans-uppercase, Caption mono 400/mono) — collapsing them would require redesigning the prototype, which D-00 forbids.
 
 | Role | Size | Weight | Line Height | Family | Usage in Phase 14 |
 |------|------|--------|-------------|--------|---------|
@@ -156,7 +156,7 @@ Phase 14 inherits the **Terracotta** light preset + **Midnight** dark preset alr
 2. Active SegmentedControl raised pill (Users role-filter active option, prototype line 160)
 3. Page header `<Icons.Shield>` icon color (verbatim prototype line 13)
 4. Pending Requests "Onayla" Button (variant="primary", prototype line 93)
-5. Active Tab badge `tone="primary"` (Phase 8 Tabs primitive when `isActive` — count badges on Kullanıcılar/Projeler tabs per prototype lines 26, 29)
+5. Active NavTab badge `tone="primary"` when `isActive` — count badges on Kullanıcılar/Projeler nav items per prototype lines 26, 29 (NavTabs `badge` prop renders a Phase 8 `Badge` primitive internally; same `tone="primary"` token usage as the original Tabs primitive)
 6. Velocity mini-bar last bar (prototype line 471: `i === 6 ? "var(--primary)" : "var(--border-strong)"`)
 7. Permission Matrix toggle ON-state (`var(--primary)` per prototype line 300) — in Phase 14 every toggle is **disabled** so the ON-state fill is decorative-only
 8. Recent admin events bullet dot (verbatim prototype line 130)
@@ -250,17 +250,18 @@ interface ConfirmDialogProps {
 
 Implementation contract:
 - `tone="primary"` (default) — confirm Button stays `variant="primary"`. Existing call sites unchanged.
-- `tone="danger"` — confirm Button switches to `variant="danger"` (red bg). Title gets a small `Icons.AlertTriangle size={14} color="var(--priority-critical)"` prefix.
+- `tone="danger"` — confirm Button switches to `variant="danger"`. Title gets a small `Icons.AlertTriangle size={14} color="var(--priority-critical)"` prefix.
 - `tone="warning"` — confirm Button stays `variant="primary"` (amber tone is reserved for AlertBanner only — destructive button background is always red OR ghost per prototype). Title gets a `Icons.AlertCircle size={14} color="var(--status-review)"` prefix.
 
-The `Button` primitive must verify `variant="danger"` is supported. If not (executor must check `Frontend2/components/primitives/button.tsx`), Plan 14-01 also extends Button with the `danger` variant: red background `var(--priority-critical)`, white text, hover slightly darker, focus-visible ring `var(--priority-critical)`.
+**Pre-verified during this UI-SPEC pass (no further executor doubt):**
+- `Frontend2/components/primitives/button.tsx` line 3 confirms 5 variants ship: `primary | secondary | ghost | subtle | danger`. Lines 39-65 implement `danger` with `var(--priority-critical)` background + `var(--primary-fg)` text + matching shadow. **Button extension is NOT required.**
+- `Frontend2/components/projects/confirm-dialog.tsx` lines 5-13 confirm the existing interface lacks `tone`. **ConfirmDialog extension IS required.**
 
-**Executor verification step (Plan 14-01 Task 1):**
-Before writing any other Phase 14 code, the executor MUST:
-1. Read `Frontend2/components/projects/confirm-dialog.tsx` and confirm the current interface (lines 5-13).
-2. Read `Frontend2/components/primitives/button.tsx` and verify whether `variant="danger"` exists.
-3. If `tone` prop or `variant="danger"` are missing, extend BOTH primitives in Plan 14-01 BEFORE any consumer code references them.
-4. Audit existing call sites (`Frontend2/components/projects/`, `Frontend2/components/lifecycle/`, `Frontend2/components/admin/`) — verify default `tone="primary"` keeps them unchanged.
+**Executor steps (Plan 14-01 Task 1, in order):**
+1. Extend `ConfirmDialog` interface to add `tone?: "primary" | "danger" | "warning"` (default `"primary"` for backward compat).
+2. Wire the title-icon prefix logic via a small inline switch on `tone` inside the existing render — no new file.
+3. Update the body Button render to read `variant={tone === "danger" ? "danger" : "primary"}`.
+4. Audit existing call sites (`Frontend2/components/projects/`, `Frontend2/components/lifecycle/`, `Frontend2/components/admin/` — once Plan 14-01 lands components there) — confirm zero `tone` prop usage at the time of Plan 14-01 land = zero behavior change for Phase 10/11/12 consumers.
 
 **Tests (Plan 14-01 Wave 0 RTL):**
 - `tone="primary"` (default) renders confirm Button as `variant="primary"` (existing behavior, no regression).
@@ -635,7 +636,7 @@ AdminLayout (flex column gap:20 height:100%)
 | Title H1 | 24 px | 600 | sans, letterSpacing -0.6 | Verbatim line 14 |
 | Subtitle | 13 px | 400 | sans, --fg-muted | Verbatim line 16 |
 | Toolbar Button label | 12.5 px (Button size="sm") | 500 | sans (Button primitive) | Reuse |
-| Tab label | 13 px (Tabs size="md") | 600 active / 500 default | sans (Tabs primitive) | Reuse |
+| Tab label | 13 px (NavTabs size="md", visual parity with Tabs size="md") | 600 active / 500 default | sans (NavTabs internally renders the same `PAD_MAP`/`FONT_MAP` as Tabs) | Reuse |
 
 #### A.3 Color
 
@@ -645,8 +646,8 @@ AdminLayout (flex column gap:20 height:100%)
 | Title icon | `var(--primary)` |
 | Title text | `var(--fg)` |
 | Subtitle | `var(--fg-muted)` |
-| Active tab | `var(--fg)` text + `var(--primary)` 2px bottom border (Tabs primitive) |
-| Tab active badge | tone="primary" (Tabs primitive Badge) |
+| Active tab | `var(--fg)` text + `var(--primary)` 2px bottom border (NavTabs mirrors Tabs visual contract) |
+| Tab active badge | tone="primary" (NavTabs `badge` prop renders Phase 8 `Badge` primitive internally) |
 | Tab inactive | `var(--fg-muted)` text + transparent border |
 
 #### A.4 Interaction
@@ -717,21 +718,25 @@ interface NavTabsProps {
 }
 ```
 
-**NavTabs keyboard navigation (executor must implement, ARIA tabs-pattern adapted for nav-links):**
+**NavTabs keyboard navigation (executor must implement):**
 
-Native `<a>` elements give Tab/Shift+Tab focus traversal for free. Arrow-key cycling between tabs requires explicit `onKeyDown` wiring on each `<Link/>`. Implementation contract:
+Native `<a>` elements give Tab/Shift+Tab focus traversal for free. Arrow-key cycling between tabs requires explicit `onKeyDown` wiring on the nav container. Implementation contract:
 
 | Key | Behavior |
 |---|---|
-| `Tab` | Browser default — moves focus into the NavTabs region landing on the currently-active tab; subsequent Tab moves focus OUT of NavTabs to the next page region. Non-active tabs are NOT in the Tab order (use `tabIndex={-1}` on non-active items, `tabIndex={0}` on active item — "roving tabindex" pattern). |
-| `Shift+Tab` | Browser default — moves focus to the previous focusable element OUTSIDE the NavTabs region. |
-| `ArrowRight` / `ArrowDown` | Move focus to the NEXT tab (visually right). On the last tab, wrap to the first. Roving tabindex updates: previously focused tab gets `tabIndex={-1}`, newly focused gets `tabIndex={0}`. Does NOT activate the link (no navigation) — focus only. |
-| `ArrowLeft` / `ArrowUp` | Move focus to the PREVIOUS tab (visually left). Wrap from first to last. Same roving-tabindex update. |
-| `Home` | Move focus to the FIRST tab. |
-| `End` | Move focus to the LAST tab. |
-| `Enter` or `Space` | Browser default — navigate to focused tab's `href`. Space prevents page scroll on `<a>` (`event.preventDefault()` then `router.push(href)`). |
+| `Tab` | Browser default — moves focus from outside NavTabs to the FIRST `<Link>`, then through each tab in order, then OUT to the next page region. Every link is `tabIndex={0}` (all focusable), matching the existing in-repo `AvatarDropdown` pattern (`Frontend2/components/shell/avatar-dropdown.tsx` lines 298+: `tabIndex={open ? 0 : -1}`). Justification: 8 tabs is small enough that Tab-cycling through all of them is acceptable; matches GitHub/Linear nav-tab convention; consistent with the in-repo AvatarDropdown precedent shipped in Phase 13. |
+| `Shift+Tab` | Browser default — reverse Tab traversal. |
+| `ArrowRight` | Move focus to the NEXT tab (visually right). On the last tab, wrap to the first. Calls `nextLink.focus()` directly (matches AvatarDropdown line 128 `items[nextIdx]?.focus()`). Does NOT activate the link (no navigation) — focus only. `event.preventDefault()` to suppress page scroll. |
+| `ArrowLeft` | Move focus to the PREVIOUS tab (visually left). Wrap from first to last. |
+| `ArrowDown` / `ArrowUp` | NOT bound (avoid conflicting with vertical scroll on the page). NavTabs is a horizontal nav; only horizontal arrows cycle. |
+| `Home` | Move focus to the FIRST tab. `event.preventDefault()`. |
+| `End` | Move focus to the LAST tab. `event.preventDefault()`. |
+| `Enter` | Browser default on `<a>` — navigate to focused link's `href`. |
+| `Space` | `event.preventDefault()` (suppress scroll), then trigger `router.push(href)`. |
 
-**Roving tabindex implementation note:** maintain a single `focusedIndex` state inside `NavTabs`; render each `<Link tabIndex={focusedIndex === i ? 0 : -1}/>`; update on every Arrow/Home/End keydown; reset to active-tab index when `usePathname()` changes (route navigation re-anchors focus).
+**Implementation note:** keyboard handler attached on the `<ul>` container (delegated). On keydown, find the currently-focused `<Link>` via `document.activeElement`, compute `nextIndex` (with wrap), call `links[nextIndex]?.focus()`. Mirrors `AvatarDropdown` lines 97-128 verbatim — same handler shape, only key set differs (Left/Right instead of Up/Down).
+
+**Differences from W3C tablist roving-tabindex pattern (informational):** WAI-ARIA Authoring Practices recommend roving tabindex (only active tab = 0, others = -1) for `role="tablist"`. NavTabs uses `role="navigation"` instead, where common convention is all-links-focusable. The all-focusable choice here is deliberate and matches the in-repo AvatarDropdown precedent — do NOT switch to roving tabindex during planning/execution without an explicit user decision.
 
 **Focus-visible ring (REQUIRED, dimension 6):**
 ```css
@@ -745,23 +750,34 @@ Apply on each `<Link/>` element inside NavTabs. Use `:focus-visible` (not `:focu
 
 **ARIA structure:**
 ```html
-<nav role="navigation" aria-label={ariaLabel}>
+<nav role="navigation" aria-label={ariaLabel} onKeyDown={handleKeyDown}>
   <ul role="list" style={{display: "flex", ...}}>
-    <li><Link href={tab.href} aria-current={isActive ? "page" : undefined} tabIndex={...}>...</Link></li>
+    <li>
+      <Link
+        href={tab.href}
+        aria-current={isActive ? "page" : undefined}
+        tabIndex={0}
+        className="nav-tab"
+      >
+        {tab.icon}{tab.label}{tab.badge && <Badge tone={isActive ? "primary" : "neutral"}>{tab.badge}</Badge>}
+      </Link>
+    </li>
     ...
   </ul>
 </nav>
 ```
-`aria-current="page"` on the active link is the correct nav-link active indicator (NOT `aria-selected` — that's for `role="tab"`).
+Every `<Link>` gets `tabIndex={0}` (all focusable, per the keyboard table above). `aria-current="page"` on the active link is the correct nav-link active indicator (NOT `aria-selected` — that's for `role="tab"`).
 
-**Phase 13 D-G2 a11y pattern reused:** existing `<AvatarDropdown/>` keyboard nav (Frontend2/components/header/avatar-dropdown.tsx) is the in-repo precedent for ArrowDown/ArrowUp focus cycling. NavTabs mirrors the same handler shape (single `focusedIndex` state, `useCallback` keydown handler, no third-party dependency).
+**In-repo precedent:** existing `<AvatarDropdown/>` keyboard nav (`Frontend2/components/shell/avatar-dropdown.tsx` lines 97-128, shipped in Phase 13) is the in-repo a11y handler precedent. NavTabs mirrors the same handler shape (delegated `onKeyDown` on container, `document.activeElement`-based current-index lookup, `links[nextIdx]?.focus()` direct call, no third-party dependency, no React state for focus tracking).
 
 **Test requirements (RTL — Plan 14-01 Wave 0):**
-- ArrowRight on last tab wraps to first (and vice versa for ArrowLeft on first).
-- Home jumps to first; End jumps to last; both update `tabIndex` correctly.
-- Tab from outside NavTabs lands on active tab; Tab again leaves NavTabs.
-- `:focus-visible` ring renders on keyboard focus, NOT on mouse click.
-- `aria-current="page"` on the link whose `href` matches `usePathname()`.
+- ArrowRight on last tab wraps focus to first (and vice versa for ArrowLeft on first).
+- Home moves focus to first tab; End moves focus to last tab; both `event.preventDefault()` to suppress page scroll.
+- Tab from outside NavTabs lands on the FIRST link; subsequent Tab presses cycle through all 8 links, then leave NavTabs (all-focusable pattern).
+- `:focus-visible` ring renders on keyboard focus, NOT on mouse click (verify by `userEvent.click()` showing no ring vs `userEvent.tab()` showing ring).
+- `aria-current="page"` on the link whose `href` matches `usePathname()`; absent on all others.
+- Enter on a focused non-active link navigates to that link's `href` (verifies via `mockRouter.push` spy).
+- Space on a focused link calls `event.preventDefault()` then `router.push(href)` (verifies no page scroll + navigation).
 
 **Improvements over prototype:**
 1. `[IMPROVEMENT]` Sub-routes (NOT `?tab=` query) — D-C1. Justification documented in CONTEXT.
