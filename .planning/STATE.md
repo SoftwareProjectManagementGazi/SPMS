@@ -5,14 +5,14 @@ milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 13
 status: executing
 stopped_at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
-last_updated: "2026-04-26T01:00:26.247Z"
+last_updated: "2026-04-26T01:15:52.641Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 46
-  percent: 85
+  completed_plans: 47
+  percent: 87
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: 3 of 10
+Plan: 4 of 10
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 87%
 
 ## Performance Metrics
 
@@ -101,6 +101,7 @@ Progress: [█████████░] 85%
 | Phase 12 P10 | 30min | 3 tasks (2 done + 1 UAT-deferred) | 7 files |
 | Phase 13 P01 | 16 | 2 tasks | 37 files |
 | Phase 13 P02 | 9 | 2 tasks | 7 files |
+| Phase 13 P03 | 7 | 2 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -348,6 +349,12 @@ Key constraints for v2.0:
 - [Phase 13]: [13-02] Dil submenu in-place expand keeps main menu open; selecting language closes only Dil sub via setDilOpen(false), parent menu stays so user sees the switch take effect
 - [Phase 13]: [13-02] Sidebar drops 5 unused imports after SidebarUserMenu removal (useAuth, useRouter, ChevronUp, LogOut, Avatar, LangCode); footer wrapper removed entirely so flex layout flows naturally to bottom (CONTEXT D-D1)
 - [Phase 13]: [13-02] Acceptance-grep precision drove a comment rewrite — original docstring contained literal router-events which tripped the must-NOT-contain check; reworded preserves intent without matching the token
+- [Phase ?]: [13-03] artifact-inline-expand.tsx — only the trigger-button Avatar (current-assignee chip) gets href; option Avatars stay non-linked (RESEARCH §Pattern 3 picker rule)
+- [Phase ?]: [13-03] Dashboard ActivityFeed gains user_id on ActivityItem interface AND in the normalizer at app/(shell)/dashboard/page.tsx (Rule 2 wire-up — without the normalizer plumbing the new Avatar href would always evaluate to undefined)
+- [Phase ?]: [13-03] history-section.tsx uses e.user_id (audit-log actor) for href, NOT u.id — keeps the link valid when projectMembers cannot resolve a UserLite (defensive against partial member data)
+- [Phase ?]: [13-03] project-card.tsx forwards href via the AvatarStackUser shape (object property), not a JSX prop on AvatarStack — supports per-user hrefs in a stack with different link targets
+- [Phase ?]: [13-03] AvatarStack +N overflow chip stays a styled <div> by construction; no Avatar instance, no nav surface; T-13-03-04 mitigated without a special opt-out branch
+- [Phase ?]: [13-03] portfolio-table.tsx managerId is the canonical link target — Project type at services/project-service.ts already exposes managerId (snake_case→camelCase mapped at the service); no field-name guessing needed
 
 ### Pending Todos
 
@@ -378,7 +385,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:00:26.236Z
+Last session: 2026-04-26T01:15:52.627Z
 Stopped at: Phase 13 Plan 13-02 complete (header AvatarDropdown shipped, SidebarUserMenu removed)
 Resume file: None
 
