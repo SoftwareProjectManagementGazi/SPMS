@@ -34,6 +34,12 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 import {
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Edge as RFEdge,
+  type Node as RFNode,
+} from "@xyflow/react"
+import {
   ArrowLeft,
   Save,
   Undo2,
@@ -424,133 +430,219 @@ export function EditorPage({ project }: EditorPageProps) {
   )
 
   // ---------------------- workflow → RFNode/RFEdge ----------------------
+  //
+  // React Flow controlled-state pattern (https://reactflow.dev/learn/concepts/core-concepts).
+  // We keep `rfNodes` / `rfEdges` as React state so RF can apply its own
+  // change events (dimensions, position, select, …) via `applyNodeChanges`
+  // without us re-deriving the entire array on every drag frame. The
+  // workflow object stays as the save-side source of truth; we sync it
+  // back from rfNodes only at well-defined boundaries (drag-stop, remove,
+  // commit). This eliminates the "node not initialized" warning that fires
+  // when RF re-adopts mid-drag and momentarily loses `measured` data.
 
-  const rfNodes = React.useMemo(() => {
-    const groupChildren = new Map<string, string[]>()
-    for (const g of workflow.groups ?? []) {
-      groupChildren.set(g.id, g.children ?? [])
-    }
-    const nodePositions = new Map<string, Point>()
-    for (const n of workflow.nodes) {
-      nodePositions.set(n.id, { x: n.x, y: n.y })
-    }
-    const out: Array<{
-      id: string
-      type: string
-      position: { x: number; y: number }
-      data: Record<string, unknown>
-      selected?: boolean
-      parentId?: string
-    }> = []
+  // Latest-callback refs — projectRfNodes/projectRfEdges read from these so
+  // their identity stays empty-deps stable. Otherwise the projection effects
+  // would refire on every render because renameNode/relabelEdge close over
+  // workflow + commitWorkflow which churn each render.
+  const renameNodeRef = React.useRef(renameNode)
+  renameNodeRef.current = renameNode
+  const relabelEdgeRef = React.useRef(relabelEdge)
+  relabelEdgeRef.current = relabelEdge
 
-    // Group nodes first so React Flow renders them as backdrops.
-    for (const g of workflow.groups ?? []) {
-      const childPositions: Point[] = (g.children ?? [])
-        .map((id) => nodePositions.get(id))
-        .filter((p): p is Point => p != null)
-      if (childPositions.length === 0) continue
-      const minX = Math.min(...childPositions.map((p) => p.x))
-      const minY = Math.min(...childPositions.map((p) => p.y))
-      out.push({
-        id: g.id,
-        type: "group",
-        position: { x: minX - 32, y: minY - 32 },
-        data: {
-          childPositions,
-          hullPath: computeHull(childPositions, 16),
-          name: g.name,
-          color: g.color,
-          selected: selected?.type === "group" && selected.id === g.id,
-        },
-      })
-    }
-    for (const n of workflow.nodes) {
-      const isSel = selected?.type === "node" && selected.id === n.id
-      const state = nodeStates.get(n.id) ?? "default"
-      out.push({
-        id: n.id,
-        type: "phase",
-        position: { x: n.x, y: n.y },
-        parentId: n.parentId,
-        selected: isSel,
-        data: {
-          name: n.name,
-          description: n.description,
-          color: n.color,
-          isInitial: n.isInitial,
-          isFinal: n.isFinal,
-          isArchived: n.isArchived,
-          wipLimit: n.wipLimit,
-          state,
-          cycleCount: cycleMap.get(n.id) ?? 0,
-          editMode: canEdit,
-          onNameChange: (next: string) => renameNode(n.id, next),
-        },
-      })
-    }
-    return out
-    // groupChildren omitted from deps — only used inside the loop above
-    // and reflects workflow.groups directly.
-  }, [
-    workflow.nodes,
-    workflow.groups,
-    nodeStates,
-    cycleMap,
-    canEdit,
-    selected,
-    renameNode,
-  ])
+  const projectRfNodes = React.useCallback(
+    (
+      wf: WorkflowConfig,
+      sel: typeof selected,
+      states: Map<string, string>,
+      cycles: Map<string, number>,
+      edit: boolean,
+    ): RFNode[] => {
+      const nodePositions = new Map<string, Point>()
+      for (const n of wf.nodes) nodePositions.set(n.id, { x: n.x, y: n.y })
+      const out: RFNode[] = []
+      for (const g of wf.groups ?? []) {
+        const childPositions: Point[] = (g.children ?? [])
+          .map((id) => nodePositions.get(id))
+          .filter((p): p is Point => p != null)
+        if (childPositions.length === 0) continue
+        const minX = Math.min(...childPositions.map((p) => p.x))
+        const minY = Math.min(...childPositions.map((p) => p.y))
+        out.push({
+          id: g.id,
+          type: "group",
+          position: { x: minX - 32, y: minY - 32 },
+          data: {
+            childPositions,
+            hullPath: computeHull(childPositions, 16),
+            name: g.name,
+            color: g.color,
+            selected: sel?.type === "group" && sel.id === g.id,
+          },
+        } as RFNode)
+      }
+      for (const n of wf.nodes) {
+        const isSel = sel?.type === "node" && sel.id === n.id
+        const state = states.get(n.id) ?? "default"
+        out.push({
+          id: n.id,
+          type: "phase",
+          position: { x: n.x, y: n.y },
+          parentId: n.parentId,
+          selected: isSel,
+          data: {
+            name: n.name,
+            description: n.description,
+            color: n.color,
+            isInitial: n.isInitial,
+            isFinal: n.isFinal,
+            isArchived: n.isArchived,
+            wipLimit: n.wipLimit,
+            state,
+            cycleCount: cycles.get(n.id) ?? 0,
+            editMode: edit,
+            onNameChange: (next: string) => renameNodeRef.current(n.id, next),
+          },
+        } as RFNode)
+      }
+      return out
+    },
+    [],
+  )
 
-  const rfEdges = React.useMemo(() => {
-    return workflow.edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      // Wire each edge into the visible handles so the curve starts at the
-      // right-source dot and ends at the left-target dot instead of the
-      // first (top) handle. Persisted on the WorkflowEdge so handle-aware
-      // edges (e.g., user-created via drag) keep their endpoint choice.
-      sourceHandle: e.sourceHandle ?? "right-source",
-      targetHandle: e.targetHandle ?? "left-target",
-      type: "phase",
-      selected: selected?.type === "edge" && selected.id === e.id,
-      data: {
-        type: e.type,
-        label: e.label,
-        bidirectional: e.bidirectional,
-        isAllGate: e.isAllGate,
-        editMode: canEdit,
-        onLabelChange: (next: string) => relabelEdge(e.id, next),
-      },
-    }))
-  }, [workflow.edges, selected, canEdit, relabelEdge])
+  const projectRfEdges = React.useCallback(
+    (wf: WorkflowConfig, sel: typeof selected, edit: boolean): RFEdge[] =>
+      wf.edges.map(
+        (e) =>
+          ({
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            sourceHandle: e.sourceHandle ?? "right-source",
+            targetHandle: e.targetHandle ?? "left-target",
+            type: "phase",
+            selected: sel?.type === "edge" && sel.id === e.id,
+            data: {
+              type: e.type,
+              label: e.label,
+              bidirectional: e.bidirectional,
+              isAllGate: e.isAllGate,
+              editMode: edit,
+              onLabelChange: (next: string) => relabelEdgeRef.current(e.id, next),
+            },
+          }) as RFEdge,
+      ),
+    [],
+  )
+
+  const [rfNodes, setRfNodes] = React.useState<RFNode[]>(() =>
+    projectRfNodes(initialLifecycle, null, new Map(), new Map(), canEdit),
+  )
+  const [rfEdges, setRfEdges] = React.useState<RFEdge[]>(() =>
+    projectRfEdges(initialLifecycle, null, canEdit),
+  )
+
+  // When this ref is true, the next workflow→rfNodes projection is skipped
+  // because rfNodes already reflects the change (e.g., drag-stop wrote
+  // positions back from rfNodes to workflow). Skipping prevents a one-frame
+  // visual blip from re-adoption with the same data.
+  const skipNextProjectRef = React.useRef(false)
+
+  // External-source projection effects. Re-run whenever workflow itself
+  // (preset apply, undo, mode switch, structural commit) or visual deps
+  // change — but never as a side effect of a per-frame drag.
+  React.useEffect(() => {
+    if (skipNextProjectRef.current) {
+      skipNextProjectRef.current = false
+      return
+    }
+    setRfNodes(projectRfNodes(workflow, selected, nodeStates, cycleMap, canEdit))
+  }, [workflow, selected, nodeStates, cycleMap, canEdit, projectRfNodes])
+
+  React.useEffect(() => {
+    setRfEdges(projectRfEdges(workflow, selected, canEdit))
+  }, [workflow, selected, canEdit, projectRfEdges])
 
   // -------------------- Editable React Flow callbacks --------------------
 
-  // onNodesChange/onEdgesChange — accept React Flow's deltas and apply them.
-  // We translate position changes into workflow.nodes mutations; selection
-  // changes into selected state. Add/remove changes are forwarded through.
-  //
-  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — coalesce per-frame drag positions
-  // into a single history entry. While `isDraggingRef.current === true`,
-  // position changes update local state via setWorkflow directly (no
-  // history push). The single push happens in onNodeDragStop using the
-  // snapshot captured by onNodeDragStart. Non-position changes (e.g.,
-  // remove) still flow through commitWorkflow to keep their history entry.
+  // True when at least one position change came through during the active
+  // drag. Used at drag-stop to decide whether to push a history snapshot.
+  const movedDuringDragRef = React.useRef(false)
+
+  // onNodesChange — apply RF's deltas to local rfNodes via applyNodeChanges
+  // so RF can update its measurements / selection / position bookkeeping.
+  // We translate "remove" changes into a workflow commit immediately.
+  // "position" changes are NOT propagated to workflow during drag — that
+  // sync happens once at drag-stop via handleNodeDragStop. Outside a drag
+  // (e.g., position changes from align actions), workflow is committed
+  // here so the change becomes part of the undo stack.
   const handleNodesChange = React.useCallback(
-    (changes: Array<Record<string, unknown>>) => {
-      let positionOnly = true
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (changes: any[]) => {
+      // 1. Apply RF deltas to local state (always).
+      setRfNodes((prev) => {
+        let next = applyNodeChanges(changes, prev)
+        // Live cloud morph: when phase node positions move, recompute the
+        // hull on each affected group node so the cloud follows in real time.
+        const movedIds = new Set<string>()
+        for (const ch of changes) {
+          if (ch.type === "position" && ch.position) {
+            movedIds.add(String(ch.id))
+          }
+        }
+        if (movedIds.size > 0) {
+          const positions = new Map<string, Point>()
+          for (const n of next) {
+            if (n.type === "phase") {
+              positions.set(n.id, { x: n.position.x, y: n.position.y })
+            }
+          }
+          const groups = workflow.groups ?? []
+          next = next.map((n) => {
+            if (n.type !== "group") return n
+            const g = groups.find((gg) => gg.id === n.id)
+            if (!g) return n
+            if (!g.children.some((cid) => movedIds.has(cid))) return n
+            const childPositions: Point[] = g.children
+              .map((cid) => positions.get(cid))
+              .filter((p): p is Point => p != null)
+            if (childPositions.length === 0) return n
+            return {
+              ...n,
+              data: {
+                ...(n.data ?? {}),
+                childPositions,
+                hullPath: computeHull(childPositions, 16),
+              },
+            } as RFNode
+          })
+        }
+        return next
+      })
+
+      // 2. Track drag movement for history.
+      if (isDraggingRef.current) {
+        for (const ch of changes) {
+          if (ch.type === "position" && ch.position) {
+            movedDuringDragRef.current = true
+            break
+          }
+        }
+      }
+
+      // 3. Outside a drag, propagate position changes to workflow via
+      //    commitWorkflow (so undo captures them). Inside a drag, defer.
       let nextWorkflow: WorkflowConfig | null = null
+      let needsCommit = false
       for (const ch of changes) {
-        if (ch.type === "position" && ch.position) {
+        if (ch.type === "position" && ch.position && !isDraggingRef.current) {
           const id = String(ch.id ?? "")
           const pos = ch.position as { x: number; y: number }
           if (!nextWorkflow) nextWorkflow = { ...workflow }
           nextWorkflow.nodes = nextWorkflow.nodes.map((n) =>
             n.id === id ? { ...n, x: pos.x, y: pos.y } : n,
           )
+          needsCommit = true
         } else if (ch.type === "remove") {
-          positionOnly = false
           const id = String(ch.id ?? "")
           if (!nextWorkflow) nextWorkflow = { ...workflow }
           nextWorkflow.nodes = nextWorkflow.nodes.filter((n) => n.id !== id)
@@ -561,25 +653,23 @@ export function EditorPage({ project }: EditorPageProps) {
             ...g,
             children: g.children.filter((cid) => cid !== id),
           }))
+          needsCommit = true
         }
       }
-      if (!nextWorkflow) return
-      // While a drag is in progress AND every change in this batch is a
-      // pure position delta, bypass history.push by writing local state
-      // directly. The `setDirty(true)` is preserved so the toolbar Badge
-      // and dirty-save guard still see uncommitted work.
-      if (isDraggingRef.current && positionOnly) {
-        setWorkflow(nextWorkflow)
-        setDirty(true)
-        return
+      if (needsCommit && nextWorkflow) {
+        // Skip the next projection because rfNodes already reflects the
+        // change via applyNodeChanges above.
+        skipNextProjectRef.current = true
+        commitWorkflow(nextWorkflow)
       }
-      commitWorkflow(nextWorkflow)
     },
     [workflow, commitWorkflow],
   )
 
   const handleEdgesChange = React.useCallback(
-    (changes: Array<Record<string, unknown>>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (changes: any[]) => {
+      setRfEdges((prev) => applyEdgeChanges(changes, prev))
       let nextWorkflow: WorkflowConfig | null = null
       for (const ch of changes) {
         if (ch.type === "remove") {
@@ -588,7 +678,10 @@ export function EditorPage({ project }: EditorPageProps) {
           nextWorkflow.edges = nextWorkflow.edges.filter((e) => e.id !== id)
         }
       }
-      if (nextWorkflow) commitWorkflow(nextWorkflow)
+      if (nextWorkflow) {
+        skipNextProjectRef.current = true
+        commitWorkflow(nextWorkflow)
+      }
     },
     [workflow, commitWorkflow],
   )
@@ -634,105 +727,99 @@ export function EditorPage({ project }: EditorPageProps) {
     [workflow],
   )
 
-  // Live cloud morph during drag — kept as a no-op now: handleNodesChange
-  // already commits per-frame position changes during the drag, so a second
-  // setWorkflow here only causes redundant re-renders and triggers React
-  // Flow's "node not initialized" warning when adoption races with our
-  // updates. The hull still morphs because the rfNodes useMemo recomputes
-  // hullPath from the updated child positions.
-  const handleNodeDrag = React.useCallback(
-    (_e: React.MouseEvent, _node: { id: string; position: { x: number; y: number } }) => {
-      // intentionally empty
-    },
-    [],
-  )
 
   // Drop-association policy: if the dragged node was in a parent group and
-  // ended outside the group's hull, drop the parentId association.
-  //
-  // Phase 12 Plan 12-10 (Bug 2 UAT fix) — also responsible for committing
-  // the SINGLE history entry for the entire drag using the snapshot taken
-  // by handleNodeDragStart. The drop-association branch may further
-  // mutate the workflow; in that case we run history.push BEFORE the
-  // mutation so the snapshot points to the original pre-drag state.
+  // ended outside the group's hull, drop the parentId association. Also
+  // commits the (single) history entry for the drag and syncs the final
+  // positions from rfNodes into workflow — workflow is left untouched
+  // during the drag itself, so this is the one and only sync point.
   const handleNodeDragStop = React.useCallback(
     (_e: React.MouseEvent, node: { id: string; position: { x: number; y: number } }) => {
       const snapshot = dragStartSnapshotRef.current
+      const moved = movedDuringDragRef.current
       // Reset drag refs FIRST so any state mutations below take the
-      // non-drag (commitWorkflow → history.push) path.
+      // non-drag path.
       dragStartSnapshotRef.current = null
       isDraggingRef.current = false
+      movedDuringDragRef.current = false
 
-      // Push the single history entry for the whole drag, only when the
-      // node actually moved (skips no-op clicks / cancel-drags).
-      if (snapshot) {
-        const beforeNode = snapshot.nodes.find((n) => n.id === node.id)
-        const afterNode = workflow.nodes.find((n) => n.id === node.id)
-        const moved =
-          beforeNode &&
-          afterNode &&
-          (beforeNode.x !== afterNode.x || beforeNode.y !== afterNode.y)
-        if (moved) {
-          history.push(snapshot)
-          setDirty(true)
+      if (!moved) return
+
+      // Read final positions from rfNodes (RF has been mutating them via
+      // applyNodeChanges throughout the drag). Multi-select drag may have
+      // moved more than one node, so we sync every phase position.
+      const finalPositions = new Map<string, { x: number; y: number }>()
+      for (const n of rfNodes) {
+        if (n.type === "phase") {
+          finalPositions.set(n.id, { x: n.position.x, y: n.position.y })
         }
       }
 
-      const movedNode = workflow.nodes.find((n) => n.id === node.id)
-      if (!movedNode || !movedNode.parentId) return
-      const parentGroup = (workflow.groups ?? []).find(
-        (g) => g.id === movedNode.parentId,
-      )
-      if (!parentGroup) return
-      const childPositions = parentGroup.children
-        .filter((cid) => cid !== node.id)
-        .map((cid) => {
-          const n = workflow.nodes.find((m) => m.id === cid)
-          return n ? { x: n.x, y: n.y } : null
-        })
-        .filter((p): p is Point => p != null)
-      // If hull would be empty (single child), drop the association too.
-      if (childPositions.length < 2) {
-        // We just pushed the move-only snapshot to history above; for the
-        // additional drop-association mutation, write directly to state so
-        // a *single* drag still produces *one* undo entry.
-        setWorkflow({
-          ...workflow,
-          nodes: workflow.nodes.map((n) =>
-            n.id === node.id ? { ...n, parentId: undefined } : n,
-          ),
-        })
-        setDirty(true)
-        return
+      // Drop-association — does the dragged node still sit inside its
+      // parent group's hull polygon?
+      let dropParentId: string | undefined
+      let strippedFromGroupId: string | undefined
+      const dragged = workflow.nodes.find((n) => n.id === node.id)
+      if (dragged?.parentId) {
+        const parentGroup = (workflow.groups ?? []).find(
+          (g) => g.id === dragged.parentId,
+        )
+        if (parentGroup) {
+          const otherChildPositions = parentGroup.children
+            .filter((cid) => cid !== node.id)
+            .map((cid) => {
+              const p = finalPositions.get(cid)
+              if (p) return p
+              const m = workflow.nodes.find((mm) => mm.id === cid)
+              return m ? { x: m.x, y: m.y } : null
+            })
+            .filter((p): p is Point => p != null)
+          if (otherChildPositions.length < 2) {
+            dropParentId = parentGroup.id
+          } else {
+            const hullPath = computeHull(otherChildPositions, 16)
+            const polygon = pathToPolygon(hullPath)
+            const inside = pointInPolygon(node.position, polygon)
+            if (!inside) {
+              dropParentId = parentGroup.id
+              strippedFromGroupId = parentGroup.id
+            }
+          }
+        }
       }
-      // Triage #18 — drop association when the dropped point falls outside
-      // the parent group's hull polygon. Computed off the same `computeHull`
-      // SVG path used to render the cloud, then walked through pointInPolygon
-      // (workflow-canvas-inner). We keep a small padding fudge so a node
-      // dropped right on the hull edge still counts as inside.
-      const HULL_PADDING_PX = 16
-      const hullPath = computeHull(childPositions, HULL_PADDING_PX)
-      const polygon = pathToPolygon(hullPath)
-      const inside = pointInPolygon(
-        { x: node.position.x, y: node.position.y },
-        polygon,
-      )
-      if (!inside) {
-        setWorkflow({
-          ...workflow,
-          nodes: workflow.nodes.map((n) =>
-            n.id === node.id ? { ...n, parentId: undefined } : n,
-          ),
-          groups: (workflow.groups ?? []).map((g) =>
-            g.id === parentGroup.id
-              ? { ...g, children: g.children.filter((cid) => cid !== node.id) }
+
+      // Compose the next workflow: positions + (optional) drop-association.
+      const nextNodes = workflow.nodes.map((n) => {
+        const p = finalPositions.get(n.id)
+        let updated = n
+        if (p && (p.x !== n.x || p.y !== n.y)) {
+          updated = { ...updated, x: p.x, y: p.y }
+        }
+        if (dropParentId && updated.id === node.id) {
+          updated = { ...updated, parentId: undefined }
+        }
+        return updated
+      })
+      const nextGroups = strippedFromGroupId
+        ? (workflow.groups ?? []).map((g) =>
+            g.id === strippedFromGroupId
+              ? {
+                  ...g,
+                  children: g.children.filter((cid) => cid !== node.id),
+                }
               : g,
-          ),
-        })
-        setDirty(true)
-      }
+          )
+        : workflow.groups
+
+      // Push the BEFORE snapshot to history first so undo restores it.
+      if (snapshot) history.push(snapshot)
+      // rfNodes already reflects the final positions — skip the next
+      // workflow→rfNodes projection so we don't churn the array identity.
+      skipNextProjectRef.current = true
+      setWorkflow({ ...workflow, nodes: nextNodes, groups: nextGroups })
+      setDirty(true)
     },
-    [workflow, history],
+    [workflow, history, rfNodes],
   )
 
   // -------------------- Context menu open helpers ----------------------
@@ -1587,7 +1674,6 @@ export function EditorPage({ project }: EditorPageProps) {
             onEdgesChange={handleEdgesChange as never}
             onConnect={handleConnect as never}
             onNodeDragStart={handleNodeDragStart as never}
-            onNodeDrag={handleNodeDrag as never}
             onNodeDragStop={handleNodeDragStop as never}
             onPaneContextMenu={handlePaneContextMenu as never}
             onNodeContextMenu={handleNodeContextMenu as never}
