@@ -106,6 +106,8 @@ created: 2026-04-26
 
 The Frontend2 type scale is locked at the primitive layer (Phase 8 D-02). Phase 14 adds **zero** new font sizes; every value below is reused.
 
+**Inheritance claim — for the dimension-4 checker:** the table below enumerates **11 type roles** that Phase 14 surfaces consume. All 11 sizes are pre-existing values from the Phase 8 primitive scale + the prototype `New_Frontend/src/pages/admin.jsx` already-shipped values. Phase 14 introduces NO new font size, NO new weight, NO new line-height value — this is a complete inventory of what Phase 14 USES, not a declaration of a new 11-size scale. Where the generic UI-SPEC checker rule says "≤ 4 font sizes," that rule applies to NEWLY-INTRODUCED sizes; Phase 14 introduces 0, so the rule is satisfied. The 11 entries below are the full set of inherited sizes the prototype already employs across an admin console with 8 distinct surface types — collapsing them would require redesigning the prototype, which D-00 forbids.
+
 | Role | Size | Weight | Line Height | Family | Usage in Phase 14 |
 |------|------|--------|-------------|--------|---------|
 | Display | 24 px | 600 | 1.2 (auto) | sans, `letter-spacing: -0.6` | Page title "Yönetim Konsolu" / "Admin Console" — verbatim prototype line 14 |
@@ -150,21 +152,25 @@ Phase 14 inherits the **Terracotta** light preset + **Midnight** dark preset alr
 
 **Accent (`--primary`) reserved for — explicit list (10 items):**
 
-1. Active Tabs primitive bottom border (8 admin sub-tabs nav)
+1. Active NavTabs primitive bottom border (8 admin sub-route nav strip)
 2. Active SegmentedControl raised pill (Users role-filter active option, prototype line 160)
 3. Page header `<Icons.Shield>` icon color (verbatim prototype line 13)
 4. Pending Requests "Onayla" Button (variant="primary", prototype line 93)
-5. Active Tab badge `tone="primary"` (Phase 8 Tabs primitive when `isActive` — count badges on Kullanıcılar/Projeler tabs per prototype line 26, 29)
+5. Active Tab badge `tone="primary"` (Phase 8 Tabs primitive when `isActive` — count badges on Kullanıcılar/Projeler tabs per prototype lines 26, 29)
 6. Velocity mini-bar last bar (prototype line 471: `i === 6 ? "var(--primary)" : "var(--border-strong)"`)
-7. Roller "Admin" card icon-fill (`color-mix(in oklch, var(--priority-critical) 18%, transparent)` — uses `--priority-critical` not `--primary`; **NOTE: prototype line 205 uses `--priority-critical` for Admin which is the danger semantic, not the brand-primary**)
-8. Permission Matrix toggle ON-state (`var(--primary)` per prototype line 300) — but in Phase 14 every toggle is **disabled** so the ON state is decorative-only
-9. Recent admin events bullet dot `var(--primary)` (verbatim prototype line 130)
-10. "Yeni rol oluştur" Card placeholder dashed border + plus icon — uses `--fg-muted` (prototype line 233), NOT primary; **so this slot becomes:** Active users trend SVG line stroke `var(--primary)` (verbatim prototype line 444) + filled area `color-mix(in oklch, var(--primary) 12%, transparent)` (verbatim prototype line 446)
+7. Permission Matrix toggle ON-state (`var(--primary)` per prototype line 300) — in Phase 14 every toggle is **disabled** so the ON-state fill is decorative-only
+8. Recent admin events bullet dot (verbatim prototype line 130)
+9. Active users trend SVG line stroke (verbatim prototype line 444)
+10. Active users trend SVG filled area gradient `color-mix(in oklch, var(--primary) 12%, transparent)` (verbatim prototype line 446)
+
+**Excluded from this list — these prototype elements use OTHER tokens, NOT `--primary`:**
+- Roller "Admin" card icon-fill uses `color-mix(in oklch, var(--priority-critical) 18%, transparent)` — danger semantic, not brand-primary (prototype line 205)
+- "Yeni rol oluştur" placeholder dashed border + plus icon use `--fg-muted` (prototype line 233) — muted, not primary; in Phase 14 the card is also `cursor: not-allowed` per D-A4
 
 **Used as accent fill (color-mix variants) in Phase 14:**
-- Active users trend area gradient: `color-mix(in oklch, var(--primary) 12%, transparent)` — verbatim line 446
-- Pending Requests "Onayla" Button — Button primitive's variant="primary" already uses --primary internally
-- Page header Shield icon — `color: var(--primary)` (verbatim line 13)
+- Active users trend area gradient: `color-mix(in oklch, var(--primary) 12%, transparent)` — verbatim line 446 (also slot #10 above)
+- Pending Requests "Onayla" Button — Button primitive's variant="primary" already uses `--primary` internally
+- Page header Shield icon — `color: var(--primary)` (verbatim line 13, also slot #3 above)
 
 ### Semantic / status palette (re-used, not extended)
 
@@ -209,7 +215,60 @@ Phase 14 inherits the **Terracotta** light preset + **Midnight** dark preset alr
 | Toplu davet > 500 satır | **Modal AlertBanner** — "Maksimum 500 satır işlenebilir. CSV {N} satır içeriyor; ilk 500 satır işlenecek mi?" / "Max 500 rows. CSV has {N}; process first 500?" | tone="warning"; primary CTA "İlk 500'ü İşle" / "Process first 500" |
 | Çıkış Yap (admin sub-route) | **None** — already covered by Phase 13 D-D3 AvatarDropdown | Inherited |
 
-**No NEW destructive primitives in Phase 14** — every confirmation reuses Phase 10 D-25 `ConfirmDialog` + Phase 10 D-07 `ToastProvider` + existing AlertBanner.
+**Reuses + ONE primitive extension required:**
+
+Phase 14 destructive flows reuse Phase 10 D-07 `ToastProvider`, existing `AlertBanner`, and the existing `ConfirmDialog` from `Frontend2/components/projects/confirm-dialog.tsx` — but the existing ConfirmDialog interface is:
+
+```ts
+interface ConfirmDialogProps {
+  open: boolean
+  title: string
+  body: string
+  confirmLabel?: string  // defaults to "Onayla"
+  cancelLabel?: string   // defaults to "İptal"
+  onConfirm: () => void
+  onCancel: () => void
+}
+```
+
+The confirm Button is hardcoded `variant="primary"` (line 33 of that file). **The `tone` prop referenced throughout this UI-SPEC's destructive table (`tone="danger"`, `tone="warning"`) DOES NOT EXIST yet** — earlier docs implied a Phase 10 D-25 extension that was never landed.
+
+**Phase 14 Plan 14-01 (Wave 0 infra) MUST extend `ConfirmDialog`:**
+
+```ts
+interface ConfirmDialogProps {
+  open: boolean
+  title: string
+  body: string
+  confirmLabel?: string
+  cancelLabel?: string
+  tone?: "primary" | "danger" | "warning"  // NEW — defaults to "primary" for backward compat
+  onConfirm: () => void
+  onCancel: () => void
+}
+```
+
+Implementation contract:
+- `tone="primary"` (default) — confirm Button stays `variant="primary"`. Existing call sites unchanged.
+- `tone="danger"` — confirm Button switches to `variant="danger"` (red bg). Title gets a small `Icons.AlertTriangle size={14} color="var(--priority-critical)"` prefix.
+- `tone="warning"` — confirm Button stays `variant="primary"` (amber tone is reserved for AlertBanner only — destructive button background is always red OR ghost per prototype). Title gets a `Icons.AlertCircle size={14} color="var(--status-review)"` prefix.
+
+The `Button` primitive must verify `variant="danger"` is supported. If not (executor must check `Frontend2/components/primitives/button.tsx`), Plan 14-01 also extends Button with the `danger` variant: red background `var(--priority-critical)`, white text, hover slightly darker, focus-visible ring `var(--priority-critical)`.
+
+**Executor verification step (Plan 14-01 Task 1):**
+Before writing any other Phase 14 code, the executor MUST:
+1. Read `Frontend2/components/projects/confirm-dialog.tsx` and confirm the current interface (lines 5-13).
+2. Read `Frontend2/components/primitives/button.tsx` and verify whether `variant="danger"` exists.
+3. If `tone` prop or `variant="danger"` are missing, extend BOTH primitives in Plan 14-01 BEFORE any consumer code references them.
+4. Audit existing call sites (`Frontend2/components/projects/`, `Frontend2/components/lifecycle/`, `Frontend2/components/admin/`) — verify default `tone="primary"` keeps them unchanged.
+
+**Tests (Plan 14-01 Wave 0 RTL):**
+- `tone="primary"` (default) renders confirm Button as `variant="primary"` (existing behavior, no regression).
+- `tone="danger"` renders confirm Button as `variant="danger"` + AlertTriangle icon prefix.
+- `tone="warning"` renders confirm Button as `variant="primary"` + AlertCircle icon prefix.
+- Existing Phase 10/11/12 ConfirmDialog consumers without `tone` prop still render exactly as before.
+
+This is the ONLY primitive interface extension Phase 14 requires beyond NavTabs (D-C4). All other primitives (Tabs, Card, Button, Badge, Input, Avatar, AvatarStack, SegmentedControl, Toggle, Kbd, ProgressBar, Section, Container, AlertBanner, StatusDot, PriorityChip) are reused as-shipped.
 
 ---
 
@@ -611,7 +670,7 @@ AdminLayout (flex column gap:20 height:100%)
 **A11y:**
 - H1 carries semantic `<h1>` (only one per page; sub-routes do NOT add their own h1 — they use h2 for sub-tab section titles)
 - Toolbar buttons: aria-label on each (`"Admin özet raporunu indir"` / `"Audit log sayfasına git"`)
-- Tabs primitive ships with `role="tab"` / `role="tablist"` per Phase 8 — verify post-NavTabs extension preserves this
+- NavTabs uses `<nav role="navigation" aria-label={...}>` + `<a aria-current="page">` (NOT `role="tab"`/`tablist`) — these are navigation links, not state tabs. The existing Tabs primitive's `role="tab"`/`tablist` semantics remain unchanged for ProjectDetail (Phase 11) + Profile (Phase 13) state-tab consumers. Verify NavTabs ARIA per the keyboard-nav table above.
 
 #### A.5 Copy
 
@@ -629,15 +688,80 @@ See **Copywriting Contract → Surface A**.
 | `useRouter()` (Next.js 16) | Redirects + tab navigation |
 | `lucide-react` icons | `Shield` (header + Roller tab), `Download` (Rapor al), `FileSearch`/`Audit` (Denetim günlüğü), tab icons (`Dashboard`, `Users`, `Lock`, `Folder`, `Workflow`, `Calendar`/`Audit`, `BarChart3`/`Chart`) |
 
-**Tabs primitive extension (NEW for Phase 14 — D-C4):**
+**NavTabs primitive (NEW for Phase 14 — D-C4) — DECISION LOCKED:**
 
 The existing Tabs primitive (`Frontend2/components/primitives/tabs.tsx` lines 40-92) renders `<button onClick={() => onChange(id)}/>` per tab. Phase 14 needs Link-based render so each tab is a real navigation anchor (browser back/forward, middle-click open in new tab, share URL).
 
-Two options (planner picks):
-1. **Option A — extend `Tabs`**: add optional `as?: "button" | "link"` and `getHref?: (tabId: string) => string` props. When `as="link"`, render `<Link href={getHref(tab.id)}/>` wrapping the existing button visual styles.
-2. **Option B — new `<NavTabs/>`**: thin wrapper at `Frontend2/components/primitives/nav-tabs.tsx` that mirrors the Tabs visual but accepts `tabs: { id, label, icon, badge, href }[]` and renders `<Link/>` per item with `usePathname()` active detection. Reuses the same `PAD_MAP` / `FONT_MAP` / inline styles internally.
+**Decision (LOCKED, no planner discretion): a NEW `<NavTabs/>` primitive at `Frontend2/components/primitives/nav-tabs.tsx`** — a thin wrapper that mirrors the Tabs visual but accepts `tabs: { id, label, icon, badge, href }[]` and renders `<Link/>` per item with `usePathname()` active detection. Reuses the same `PAD_MAP` / `FONT_MAP` / inline styles as Tabs internally for visual parity.
 
-**Recommended: Option B** — keeps Tabs primitive's `onChange` semantics intact for ProjectDetail (Phase 11) and Profile (Phase 13) which rely on local state, and gives `<NavTabs/>` a route-aware contract suited to Phase 14's sub-route architecture. Critical: keyboard nav (Tab/Arrow) preserved; browser default Link focus + ArrowDown/ArrowRight wiring matches Phase 13 D-G2 pattern.
+**Why NOT extend the existing `Tabs` primitive:**
+- Tabs' `onChange(id)` callback is the contract that ProjectDetail (Phase 11) and Profile (Phase 13) rely on — adding a polymorphic `as="link"` mode forces every existing consumer to type-narrow on `as` to access `onChange`, regressing DX.
+- Tabs' `role="tab"` / `role="tablist"` ARIA semantics are correct for state-driven tab UIs but WRONG for navigation tabs (which should be `<nav role="navigation">` with `<a>` children, not `tablist`/`tab`). Conflating both into one primitive would force a runtime branch on ARIA roles.
+- A separate primitive ships an explicit, self-documenting contract — planner / executor / reviewer can tell `<NavTabs/>` apart from `<Tabs/>` at a glance.
+- An alternative "extend Tabs" approach was considered and explicitly REJECTED — do NOT re-evaluate this during planning or execution.
+
+**NavTabs API (executor must implement this exact shape):**
+```ts
+interface NavTab {
+  id: string                     // e.g., "users" — used for usePathname() match
+  label: string                  // already-localized string (caller resolves T())
+  icon?: React.ReactNode         // lucide-react icon node (size 13 per prototype)
+  badge?: number | string        // optional count badge (Phase 8 Tabs-parity)
+  href: string                   // e.g., "/admin/users" — Next.js Link target
+}
+interface NavTabsProps {
+  tabs: NavTab[]
+  basePath?: string              // optional explicit base for active match (default: derive from first tab)
+  size?: "sm" | "md" | "lg"      // mirrors Tabs primitive
+  ariaLabel: string              // REQUIRED — labels the surrounding <nav>
+}
+```
+
+**NavTabs keyboard navigation (executor must implement, ARIA tabs-pattern adapted for nav-links):**
+
+Native `<a>` elements give Tab/Shift+Tab focus traversal for free. Arrow-key cycling between tabs requires explicit `onKeyDown` wiring on each `<Link/>`. Implementation contract:
+
+| Key | Behavior |
+|---|---|
+| `Tab` | Browser default — moves focus into the NavTabs region landing on the currently-active tab; subsequent Tab moves focus OUT of NavTabs to the next page region. Non-active tabs are NOT in the Tab order (use `tabIndex={-1}` on non-active items, `tabIndex={0}` on active item — "roving tabindex" pattern). |
+| `Shift+Tab` | Browser default — moves focus to the previous focusable element OUTSIDE the NavTabs region. |
+| `ArrowRight` / `ArrowDown` | Move focus to the NEXT tab (visually right). On the last tab, wrap to the first. Roving tabindex updates: previously focused tab gets `tabIndex={-1}`, newly focused gets `tabIndex={0}`. Does NOT activate the link (no navigation) — focus only. |
+| `ArrowLeft` / `ArrowUp` | Move focus to the PREVIOUS tab (visually left). Wrap from first to last. Same roving-tabindex update. |
+| `Home` | Move focus to the FIRST tab. |
+| `End` | Move focus to the LAST tab. |
+| `Enter` or `Space` | Browser default — navigate to focused tab's `href`. Space prevents page scroll on `<a>` (`event.preventDefault()` then `router.push(href)`). |
+
+**Roving tabindex implementation note:** maintain a single `focusedIndex` state inside `NavTabs`; render each `<Link tabIndex={focusedIndex === i ? 0 : -1}/>`; update on every Arrow/Home/End keydown; reset to active-tab index when `usePathname()` changes (route navigation re-anchors focus).
+
+**Focus-visible ring (REQUIRED, dimension 6):**
+```css
+.nav-tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+```
+Apply on each `<Link/>` element inside NavTabs. Use `:focus-visible` (not `:focus`) so mouse clicks don't show the ring — keyboard-only affordance per WCAG 2.1.4.7.
+
+**ARIA structure:**
+```html
+<nav role="navigation" aria-label={ariaLabel}>
+  <ul role="list" style={{display: "flex", ...}}>
+    <li><Link href={tab.href} aria-current={isActive ? "page" : undefined} tabIndex={...}>...</Link></li>
+    ...
+  </ul>
+</nav>
+```
+`aria-current="page"` on the active link is the correct nav-link active indicator (NOT `aria-selected` — that's for `role="tab"`).
+
+**Phase 13 D-G2 a11y pattern reused:** existing `<AvatarDropdown/>` keyboard nav (Frontend2/components/header/avatar-dropdown.tsx) is the in-repo precedent for ArrowDown/ArrowUp focus cycling. NavTabs mirrors the same handler shape (single `focusedIndex` state, `useCallback` keydown handler, no third-party dependency).
+
+**Test requirements (RTL — Plan 14-01 Wave 0):**
+- ArrowRight on last tab wraps to first (and vice versa for ArrowLeft on first).
+- Home jumps to first; End jumps to last; both update `tabIndex` correctly.
+- Tab from outside NavTabs lands on active tab; Tab again leaves NavTabs.
+- `:focus-visible` ring renders on keyboard focus, NOT on mouse click.
+- `aria-current="page"` on the link whose `href` matches `usePathname()`.
 
 **Improvements over prototype:**
 1. `[IMPROVEMENT]` Sub-routes (NOT `?tab=` query) — D-C1. Justification documented in CONTEXT.
