@@ -9,7 +9,9 @@
 //   - list                          — ListTab (Plan 11-07) — TanStack Table
 //   - timeline                      — TimelineTab (Plan 11-07) — custom SVG Gantt
 //   - calendar                      — CalendarTab (Plan 11-07) — 6×7 grid + scroll-zoom
-//   - activity                      — Faz 13 stub (ActivityStubTab)
+//   - activity                      — ActivityStubTab re-exports the
+//                                     canonical <ActivityTab projectId={id}
+//                                     variant="full"/> (Phase 13 Plan 13-04)
 //   - lifecycle                     — LifecycleTab (Phase 12 Plan 12-02)
 //   - members                       — Manager card (Plan 11-04)
 //   - settings                      — 4 sub-tabs (Plan 11-04)
@@ -284,7 +286,7 @@ export function ProjectDetailShell({
                 <TimelineTab project={project} milestones={milestones} />
               )}
               {tab === "calendar" && <CalendarTab project={project} />}
-              {tab === "activity" && <ActivityStubTab />}
+              {tab === "activity" && <ActivityStubTab projectId={project.id} />}
               {tab === "lifecycle" && <LifecycleTab project={project} />}
               {tab === "members" && <MembersTab project={project} />}
               {tab === "settings" && (

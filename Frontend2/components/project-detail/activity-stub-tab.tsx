@@ -1,20 +1,18 @@
 "use client"
 
-// Activity tab stub per D-10 — real content lands in Phase 13 (PROF-01).
-// Uses the AlertBanner info tone for a friendly "coming soon" treatment.
+// Phase 13 Plan 13-04 — REPLACES the Phase 11 placeholder. Mounts the
+// canonical vertical-timeline ActivityTab with projectId scoping.
+//
+// The stub file kept its name so existing project-detail-shell.tsx imports
+// still resolve. Future cleanup may rename this re-export to
+// `activity-tab-mount.tsx` if a wider refactor lands.
 
-import { AlertBanner } from "@/components/primitives"
-import { useApp } from "@/context/app-context"
+import { ActivityTab } from "@/components/activity/activity-tab"
 
-export function ActivityStubTab() {
-  const { language: lang } = useApp()
-  return (
-    <div style={{ padding: 20 }}>
-      <AlertBanner tone="info">
-        {lang === "tr"
-          ? "Bu sekme Faz 13'te aktive edilecek."
-          : "This tab will be activated in Phase 13."}
-      </AlertBanner>
-    </div>
-  )
+export interface ActivityStubTabProps {
+  projectId: number
+}
+
+export function ActivityStubTab({ projectId }: ActivityStubTabProps) {
+  return <ActivityTab projectId={projectId} variant="full" />
 }

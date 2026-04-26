@@ -63,12 +63,23 @@ describe("ProjectDetailShell", () => {
     expect(getByText("Detaylı")).toBeInTheDocument()
   })
 
-  it("shows the Faz 13 stub on the Aktivite tab", () => {
-    const { getByText } = renderWithProviders(
+  it("mounts the canonical ActivityTab on the Aktivite tab (Plan 13-04)", () => {
+    // Plan 13-04 replaced the Phase 11 stub copy ("Bu sekme Faz 13'te aktive
+    // edilecek.") with the real <ActivityTab projectId={id} variant="full"/>.
+    // The activity hook fires GET /projects/{id}/activity which the api-client
+    // mock answers with []; while in the loading state the timeline renders
+    // ActivityTimelineSkeleton (aria-busy=true). Asserting on the skeleton is
+    // synchronous and avoids racing the async query resolution.
+    const { container, getByText, getAllByText } = renderWithProviders(
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("Aktivite"))
-    expect(getByText(/Faz 13'te aktive edilecek/)).toBeInTheDocument()
+    // SegmentedControl has 6 chips — at least the "Tümü" chip must mount.
+    // The unique label is enough to confirm ActivityTab took over.
+    expect(getAllByText("Tümü").length).toBeGreaterThan(0)
+    // ActivityTimelineSkeleton wraps the loading view in a [aria-busy=true]
+    // div — match it directly so we don't depend on async resolution.
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
   })
 
   it("mounts the real LifecycleTab on the Yaşam Döngüsü tab (Plan 12-02 + 12-04)", () => {
