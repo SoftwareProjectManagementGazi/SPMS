@@ -55,6 +55,14 @@ export default function DashboardPage() {
       typeof v === "string" ? v : ""
     const asStringOrNumber = (v: unknown, fallback: string | number): string | number =>
       typeof v === "string" || typeof v === "number" ? v : fallback
+    // Phase 13 Plan 13-03 — surface user_id so the activity row Avatar can
+    // forward Plan 13-01's optional `href` to /users/{id} (D-D4 click-to-profile).
+    const asNumberOrNull = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v)
+        ? v
+        : typeof v === "string" && /^\d+$/.test(v)
+          ? Number(v)
+          : null
 
     return raw.map((item: Record<string, unknown>, idx: number) => ({
       id: asStringOrNumber(item.id, idx),
@@ -63,6 +71,9 @@ export default function DashboardPage() {
         asString(item.user_name) ||
         asString(item.actor_name) ||
         "Unknown",
+      user_id:
+        asNumberOrNull(item.user_id) ??
+        asNumberOrNull(item.actor_id),
       user_avatar: typeof item.user_avatar === "string" ? item.user_avatar : null,
       timestamp: asString(item.timestamp) || asString(item.created_at),
       entity_type: asString(item.entity_type),

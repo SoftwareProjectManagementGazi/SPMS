@@ -129,9 +129,15 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               </Badge>
             </div>
 
-            {/* Lead: avatar + first name */}
+            {/* Lead: avatar + first name. Phase 13 Plan 13-03 (D-D4) — Avatar
+                forwards href when project.managerId is in scope so the manager
+                badge becomes click-to-profile site-wide. */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-              <Avatar user={leadUser} size={20} />
+              <Avatar
+                user={leadUser}
+                size={20}
+                href={project.managerId ? `/users/${project.managerId}` : undefined}
+              />
               <span style={{
                 fontSize: 12,
                 color: "var(--fg-muted)",

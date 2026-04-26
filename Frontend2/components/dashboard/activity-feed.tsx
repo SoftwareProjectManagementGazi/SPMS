@@ -1,6 +1,6 @@
 "use client"
 import * as React from "react"
-import { Card, Avatar } from "@/components/primitives"
+import { Card, Avatar, DataState } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 // Phase 13 Plan 13-02 — getInitials lifted into the shared lib for the third
 // consumer (AvatarDropdown mini-profile header). activity-feed.tsx now
@@ -11,6 +11,9 @@ export interface ActivityItem {
   id: string | number
   action: string
   user_name: string
+  /** Phase 13 Plan 13-03 (D-D4) — when present the actor avatar becomes a
+   *  click-to-profile Link via the Avatar primitive's optional `href`. */
+  user_id?: number | null
   user_avatar?: string | null
   timestamp: string
   entity_type?: string
@@ -65,17 +68,22 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
         {language === "tr" ? "Son aktivite" : "Recent activity"}
       </div>
 
-      {/* Content */}
-      {items.length === 0 ? (
-        <div style={{
-          padding: "40px 16px",
-          textAlign: "center",
-          fontSize: 12.5,
-          color: "var(--fg-subtle)",
-        }}>
-          {language === "tr" ? "Henüz aktivite yok." : "No activity yet."}
-        </div>
-      ) : (
+      {/* Content — Phase 13 Plan 13-03 D-F2 retro-adoption: empty branch
+          flows through the DataState primitive so the dashboard widget shares
+          the same 3-state shape as Phase 13's chart cards / activity tabs. */}
+      <DataState
+        empty={items.length === 0}
+        emptyFallback={
+          <div style={{
+            padding: "40px 16px",
+            textAlign: "center",
+            fontSize: 12.5,
+            color: "var(--fg-subtle)",
+          }}>
+            {language === "tr" ? "Henüz aktivite yok." : "No activity yet."}
+          </div>
+        }
+      >
         <div
           style={{
             maxHeight: 360,
@@ -100,7 +108,11 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
                   alignItems: "center",
                 }}
               >
-                <Avatar user={avatarUser} size={22} />
+                <Avatar
+                  user={avatarUser}
+                  size={22}
+                  href={item.user_id ? `/users/${item.user_id}` : undefined}
+                />
                 <div style={{ flex: 1, fontSize: 12.5, minWidth: 0 }}>
                   <span style={{ fontWeight: 600 }}>{firstName}</span>
                   <span style={{ color: "var(--fg-muted)" }}> {item.action}</span>
@@ -119,7 +131,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
             )
           })}
         </div>
-      )}
+      </DataState>
     </Card>
   )
 }
