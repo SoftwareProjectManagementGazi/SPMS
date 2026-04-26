@@ -270,3 +270,70 @@ svg { display: block; }
 .activity-timeline-line { /* selector hook */ }
 .activity-event-row { /* selector hook */ }
 .activity-event-avatar { /* selector hook */ }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Phase 13 D-F1 — Mobile breakpoints
+ * - 1024px tier: collapses multi-column grids to fewer columns or stack
+ * - 640px tier: tighter chart heights, profile header column-stack,
+ *               activity timeline denser, avatar dropdown adapts to viewport
+ *
+ * Pure CSS — no useMediaQuery, no hydration mismatch (Phase 11 D-54 pattern).
+ * Class hooks for Phase 13 surfaces are already on the JSX from
+ * Plans 13-04/05/06/07/08 (.reports-stat-grid, .profile-statcards-grid, etc.)
+ *
+ * !important is required for grid-template-columns rules because the JSX
+ * passes inline `gridTemplateColumns: "repeat(N, 1fr)"` as the v2.0 baseline
+ * and inline-style specificity would otherwise outrank class selectors.
+ * For chart SVG heights, !important overrides the inline `style={{ height: N }}`
+ * that Recharts ResponsiveContainer requires per RESEARCH §Pitfall 12.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .reports-stat-grid       { grid-template-columns: repeat(2, 1fr) !important; }
+  .reports-burndown-grid   { grid-template-columns: 1fr !important; }
+  .reports-leadcycle-grid  { grid-template-columns: 1fr !important; }
+  .profile-statcards-grid  { grid-template-columns: repeat(2, 1fr) !important; }
+  .profile-projects-grid   { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 640px) {
+  /* Reports + Profile grids → 1 column */
+  .reports-stat-grid       { grid-template-columns: 1fr !important; }
+  .profile-statcards-grid  { grid-template-columns: 1fr !important; }
+  .profile-projects-grid   { grid-template-columns: 1fr !important; }
+
+  /* Profile header stacks (avatar above name+stats) */
+  .profile-header-card > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .profile-header-edit-button { align-self: flex-start !important; }
+
+  /* Activity timeline mobile-tighter */
+  .activity-timeline       { padding-left: 16px !important; }
+  .activity-timeline-line  { left: 11px !important; }
+  .activity-event-row      { padding: 10px 12px !important; gap: 8px !important; }
+  .activity-event-avatar   { width: 22px !important; height: 22px !important; font-size: 9px !important; }
+
+  /* Chart heights tighten — overrides inline ResponsiveContainer parent height */
+  .chart-card-cfd-svg       { height: 160px !important; }
+  .chart-card-leadcycle-svg { height: 100px !important; }
+  .chart-card-iteration-svg { height: 140px !important; }
+
+  /* Faz Raporları row (Plan 13-08) collapses */
+  .faz-rapor-row {
+    grid-template-columns: 1fr 80px !important;
+    grid-template-rows: auto auto;
+    row-gap: 4px;
+  }
+
+  /* Avatar dropdown full-viewport-minus-margin width on narrow viewports.
+     #avatar-dropdown-menu id selector matches the dropdown's id attribute
+     set by Plan 13-02 in components/shell/avatar-dropdown.tsx. */
+  #avatar-dropdown-menu {
+    width: calc(100vw - 32px) !important;
+    right: 16px !important;
+    left: auto !important;
+  }
+}

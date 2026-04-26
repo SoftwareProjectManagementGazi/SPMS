@@ -357,6 +357,7 @@ export function PhaseReportsSection() {
               key={row.reportId}
               type="button"
               data-testid="phase-report-row"
+              className="faz-rapor-row"
               onClick={() => {
                 setPickerProject(row.projectId)
                 setPickerPhase(row.phaseId)
