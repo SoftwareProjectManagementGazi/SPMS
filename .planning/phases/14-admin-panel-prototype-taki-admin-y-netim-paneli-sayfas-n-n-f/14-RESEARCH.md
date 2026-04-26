@@ -827,7 +827,7 @@ async def export_admin_audit_json(
 | Tab state preservation across sub-routes | URL state machine library (xstate) | URL search params + localStorage per Phase 11 D-21 pattern | Existing Frontend2 pattern; shipping a state machine for 8 tabs is overkill. |
 | Modal accessibility (focus trap, escape, click-outside) | Custom focus-trap implementation | Build the Modal primitive (Pattern 2) with `<dialog>` semantics OR consume existing primitives' patterns | The 4-modal admin needs a unified shape. Avoid a per-modal trap loop. |
 | PDF generation (Rapor al) | Client-side jspdf assembly | Phase 12 fpdf2 service + new use case | Phase 12 D-58 already shipped fpdf2 with rate limiting; reuse the same pattern. Server-side PDF is consistent with Audit JSON / Users CSV exports. |
-| MoreH dropdown menu (per-row actions) | Building a fresh dropdown each plan | Build `Frontend2/components/admin/more-menu.tsx` once, reuse 5 places (Users row, Projects row, Templates card, Pending request, Audit row if added) | Pattern reference: `Frontend2/components/projects/project-card.tsx:175-196`. Existing pattern can be lifted into a shared component to avoid drift. |
+| MoreH dropdown menu (per-row actions) | Building a fresh dropdown each plan | Build `Frontend2/components/admin/shared/more-menu.tsx` once in Plan 14-01 Wave 0, reuse 5 places (Users row, Projects row, Templates card, Pending request, Audit row if added) | Pattern reference: `Frontend2/components/projects/project-card.tsx:175-196`. Realized as shared primitive in Plan 14-01 Task 1 Step 6.5. |
 | Bulk invite per-row validation | Inline if/elif in handler | Pydantic validators on `BulkInviteRowDTO` | DRY with single-user invite. Reuse `EmailStr` from existing User entity. |
 | Bulk action transaction semantics | Inline try/except per user | Use case method `execute_per_user` returns `[(user_id, status, error?)]` | Per-user transaction acceptable per researcher recommendation in canonical_refs. |
 
@@ -1200,37 +1200,37 @@ export function semanticToFilterChip(t: SemanticEventType): ActivityFilterChip {
 
 **Note on A5 discrepancy:** D-B7 says atomic; canonical_refs §Research Items says "per-user with status reporting". Researcher's instinct is per-user (better DoS posture, partial-success reporting), but D-B7 is locked. **Planner: defer to D-B7 (atomic) unless user re-opens.**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Bulk action atomicity contradiction (D-B7 vs canonical_refs research item)**
    - What we know: D-B7 says atomic ("all-or-none transaction; audit log writes one entry per user"). canonical_refs says per-user with status reporting.
    - What's unclear: Which wins?
-   - Recommendation: Default to D-B7 (atomic). If a UAT tester reports "I bulk-deactivated 50 users; one failed; all 50 reverted" as a frustration, re-open in v2.1.
+   - **RESOLVED:** Per CONTEXT D-B7 (atomic) — bulk endpoints take whole-batch transactions; per-row failure rolls back the wave. Plan 14-01 Task 3 + Plan 14-03 Task 1 enforce this. If a UAT tester reports "I bulk-deactivated 50 users; one failed; all 50 reverted" as a frustration, re-open in v2.1.
 
 2. **Admin route guard placement — middleware vs server component vs client layout**
    - What we know: Phase 13 used client-side check; D-C3 says client redirect; canonical_refs says "researcher to evaluate middleware". Researcher's recommendation: all three (middleware + client + backend `Depends`).
    - What's unclear: If middleware is added, does the layout's client check become redundant?
-   - Recommendation: Keep both. Middleware redirects unauthenticated users (cookie missing) BEFORE SSR. Client layout handles role check after auth hydration (admin-only sub-set). Backend `Depends(require_admin)` is the only authoritative defense.
+   - **RESOLVED:** Three-layer guard adopted — middleware matcher (Plan 14-02 T1) + client `useAuth().role` race-safe with `isLoading` (Plan 14-02 T1) + backend `Depends(require_admin)` on every admin endpoint (Plan 14-01 Tasks 2/3 + Plan 14-09 T1/T2). Middleware redirects unauthenticated users (cookie missing) BEFORE SSR. Client layout handles role check after auth hydration (admin-only sub-set). Backend `Depends(require_admin)` is the only authoritative defense.
 
 3. **Active users daily snapshot threshold**
    - What we know: D-X2 says ~10k events/day breaks query perf. Untested.
    - What's unclear: Real threshold — could be 50k/day with the right index.
-   - Recommendation: Plan 14-09 Task includes an EXPLAIN ANALYZE on the GROUP BY day query against seeded 10k/50k/100k event datasets. Document threshold. Defer snapshot table to v2.1 unless performance demands it sooner.
+   - **RESOLVED:** Plan 14-08 Task 1 implements 30-day window query; Plan 14-12 E2E adds load test against 10k+ event seed to validate v2.1 cliff. No snapshot materialization in v2.0. Plan 14-09 Task includes an EXPLAIN ANALYZE on the GROUP BY day query against seeded 10k/50k/100k event datasets to document the threshold. Snapshot table deferred to v2.1 unless performance demands it sooner.
 
 4. **Email invite link expiry — 7 days vs 24h**
    - What we know: D-W3 / Discretion says 7 days for invite, 24h for reset. Auth0 / Clerk / Okta defaults vary.
    - What's unclear: Whether 7d is too long (security) or too short (recipient delays).
-   - Recommendation: 7 days is industry norm for invite (matches Auth0 default). Config-driven (`INVITE_TOKEN_TTL_DAYS=7` in `.env`) so customers can tune.
+   - **RESOLVED:** 7 days (Auth0 default), config-driven via Backend `INVITE_TTL_DAYS` env var. Plan 14-01 Task 3 sets default; Plan 14-05 Task 1 surfaces in invite UI. 7 days is industry norm for invite (matches Auth0 default). Config-driven (`INVITE_TOKEN_TTL_DAYS=7` in `.env`) so customers can tune.
 
 5. **NavTabs primitive — extend Tabs vs new wrapper**
    - What we know: D-C4 says "planner picks based on Tabs API surface".
    - What's unclear: Whether the Tabs extension would force breaking changes for Phase 11/12/13 callers.
-   - Recommendation: NEW NavTabs wrapper (Pattern 1). Researcher's call. Cleaner; no breaking.
+   - **RESOLVED:** New wrapper primitive (Link-based), built in Plan 14-01 Task 1. Cleaner separation, no breaking changes to existing Tabs.
 
 6. **Bulk invite max-row cap (500)**
    - What we know: D-B4 says 500 row max.
    - What's unclear: Whether 500 is the right number for v2.0 (could be too low for org imports).
-   - Recommendation: 500 is fine for v2.0 (typical org has < 200 users). Config-driven if expansion needed.
+   - **RESOLVED:** 500-row cap retained for v2.0 (CSV import via papaparse), config-driven via Backend `BULK_INVITE_MAX_ROWS` env var. Plan 14-01 Task 3 enforces server-side; Plan 14-05 Task 1 enforces client-side. 500 is fine for v2.0 (typical org has < 200 users). Config-driven if expansion needed.
 
 ## Environment Availability
 

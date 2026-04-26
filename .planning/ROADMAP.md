@@ -203,14 +203,25 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
-| 14. Admin Panel | v2.0 | 0/0 | Not planned | - |
+| 14. Admin Panel | v2.0 | 0/12 | Planned | - |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** /admin route + 8 sub-tabs (Genel/Kullanıcılar/Roller/İzin Matrisi/Projeler/Şablonlar/Audit/İstatistik) ported verbatim from prototype into Frontend2 with full backend wiring (ProjectJoinRequest entity + admin user CRUD + admin audit/stats/summary endpoints + cross-cutting Jira-style audit detail uplift). RBAC tabs are visual placeholders deferred to v3.0.
+**Requirements**: D-A1, D-A2, D-A3, D-A4, D-A5, D-A6, D-A7, D-A8, D-B1, D-B2, D-B3, D-B4, D-B5, D-B6, D-B7, D-B8, D-C1, D-C2, D-C3, D-C4, D-C5, D-C6, D-D1, D-D2, D-D3, D-D4, D-D5, D-D6, D-W1, D-W2, D-W3, D-X1, D-X2, D-X3, D-X4, D-Y1, D-Z1, D-Z2 (CONTEXT.md <decisions>)
 **Depends on:** Phase 13
-**Plans:** 0 plans
+**Plans:** 12 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 14 to break down)
+- [ ] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 14 hooks)
+- [ ] 14-02-PLAN.md — Admin layout (route guard + middleware matcher + NavTabs strip) + /admin Overview tab (5 StatCards + Pending Requests + Role distribution + Recent admin events)
+- [ ] 14-03-PLAN.md — /admin/users (Kullanıcılar) — UsersTable + bulk-action toolbar + AddUserModal + BulkInviteModal (CSV with 500-row cap) + shared more-menu.tsx
+- [ ] 14-04-PLAN.md — /admin/roles + /admin/permissions visual placeholders (RBAC defer per D-A2..A5; multiple defenses against v3.0 reactivation)
+- [ ] 14-05-PLAN.md — /admin/projects (Projeler) — 8-col table including archived + EXACTLY 2 MoreH (Arşivle + Sil two-step key-typing confirm)
+- [ ] 14-06-PLAN.md — /admin/workflows (Şablonlar) — template card grid + impact-aware Sil with "Yine de sil" secondary checkbox
+- [ ] 14-07-PLAN.md — /admin/audit (Audit) — URL-driven filters + 50k cap warning + AuditFilterModal + Detay column variant stub
+- [ ] 14-08-PLAN.md — /admin/stats (İstatistik) — 3 charts lazy-loaded (recharts LineChart + pure CSS Methodology bars + Velocity top-30 grid)
+- [ ] 14-09-PLAN.md — Backend audit-log enrichment cross-cutting (task_repo + project_repo + 4 use cases populate extra_metadata per D-D2; comment_excerpt 160-char PII guardrail)
+- [ ] 14-10-PLAN.md — Frontend audit-event-mapper extension cross-cutting (10→23 SemanticEventTypes + activity-row variant=admin-table + 5 new render branches; affects 4 surfaces)
+- [ ] 14-11-PLAN.md — AdminLayout button wiring (Rapor al PDF + Denetim günlüğü push) + AvatarDropdown verification
+- [ ] 14-12-PLAN.md — 5 Playwright e2e specs (skip-guarded) + 14-UAT-CHECKLIST.md (25-30 rows) + VALIDATION.md per-task table populated + nyquist_compliant flip
