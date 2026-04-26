@@ -237,3 +237,36 @@ svg { display: block; }
     transform: none;
   }
 }
+
+/* Phase 13 D-F3 — chart + activity skeleton shimmer.
+   Reused by ActivityTimelineSkeleton (Plan 13-04) and the chart-shape
+   skeletons that Plans 13-07 / 13-08 ship for CFD / Lead-Cycle / Iteration.
+   prefers-reduced-motion disables the animation so users with motion
+   sensitivity see a static muted block instead of the moving gradient. */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    color-mix(in oklch, var(--surface-2) 70%, var(--border)) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: var(--radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Phase 13 D-F1 — activity timeline mobile (≤640px) selector hooks.
+   Plan 13-04 only declares the bare classes so the JSX has stable selectors;
+   the actual @media body that compresses padding / avatar size lives in Plan
+   13-09 globals.css extension. Empty rules are intentional. */
+.activity-timeline { /* selector hook for Plan 13-09 mobile rules */ }
+.activity-timeline-line { /* selector hook */ }
+.activity-event-row { /* selector hook */ }
+.activity-event-avatar { /* selector hook */ }
