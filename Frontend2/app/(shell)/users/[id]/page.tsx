@@ -1,13 +1,16 @@
 "use client"
 
 // Phase 13 Plan 13-05 Task 2 — User profile route /users/[id].
+// Phase 13 Plan 13-06 Task 1 — Activity tab branch wired to ActivityTab,
+// ProfileProjectsTab stub replaced with full ProjectCard grid impl.
 //
 // Page layout (D-C2..D-C8 + UI-SPEC §Surface D):
 //   1. ProfileHeader (Avatar 64 + name/role/Sen + email + 3 inline metrics + Düzenle)
 //   2. 3 StatCards row (Atanan Görevler / Tamamlanan / Projeler)
 //   3. Tabs primitive (Görevler / Projeler / Aktivite) with badges
-//   4. Active tab content — ProfileTasksTab (this plan), ProfileProjectsTab
-//      (Plan 13-06 fills), Activity placeholder (Plan 13-06 mounts ActivityTab)
+//   4. Active tab content — ProfileTasksTab + ProfileProjectsTab (3-col
+//      ProjectCard grid) + ActivityTab (userId variant; Plan 13-04 component
+//      with viewer-privacy filter applied server-side per Plan 13-01 D-X4)
 //
 // Data sources:
 //   - useUserSummary(id) → /users/{id}/summary (Plan 13-01) — stats + projects
