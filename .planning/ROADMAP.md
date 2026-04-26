@@ -170,7 +170,7 @@ Plans:
   5. Header avatar dropdown shows Profilim/Ayarlar/Cikis Yap menu linking to correct pages
 **Plans**: 10 plans
 Plans:
-- [ ] 13-01-PLAN.md — Wave 1 shared infra: 3 chart endpoints + /users/{id}/activity (privacy-filtered) + project-activity SQL broadening + chart_applicability strategy + 4 use cases + chart DTOs + recharts@3.8.1 install + audit-event-mapper + activity-date-format LIFT + DataState primitive + Avatar href extension + 8 services/hooks files (REPT-01..04 + PROF-01..02 backend infra)
+- [x] 13-01-PLAN.md — Wave 1 shared infra: 3 chart endpoints + /users/{id}/activity (privacy-filtered) + project-activity SQL broadening + chart_applicability strategy + 4 use cases + chart DTOs + recharts@3.8.1 install + audit-event-mapper + activity-date-format LIFT + DataState primitive + Avatar href extension + 8 services/hooks files (REPT-01..04 + PROF-01..02 backend infra)
 - [ ] 13-02-PLAN.md — Wave 2: Header AvatarDropdown component (5-item menu + admin gating + Dil submenu + 3-way dismiss) replaces Phase 8 SidebarUserMenu; lib/initials lift; activity-feed import switch (PROF-03)
 - [ ] 13-03-PLAN.md — Wave 2: Cross-site Avatar href propagation across 14 consumers (board card, list, backlog, members, project card, comments, properties, attachments, sub-tasks, history, lifecycle artifacts) + AvatarStack href forwarding + dashboard ActivityFeed DataState retro-adoption + Avatar RTL test (PROF-03)
 - [ ] 13-04-PLAN.md — Wave 3: ProjectDetail Activity tab full impl — vertical timeline with 10 event types via audit-event-mapper, filter SegmentedControl + user-avatar row + localStorage persistence + Daha fazla yükle + date-aware grouping + comment 160-char preview + replaces activity-stub-tab.tsx (PROF-01)
@@ -201,4 +201,4 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 10. Shell Pages & Project Features | v2.0 | 10/10 | Complete    | 2026-04-21 |
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
-| 13. Reporting, Activity & User Profile | v2.0 | 0/10 | Plans drafted (awaiting /gsd-execute-phase 13) | - |
+| 13. Reporting, Activity & User Profile | v2.0 | 1/10 | In Progress|  |

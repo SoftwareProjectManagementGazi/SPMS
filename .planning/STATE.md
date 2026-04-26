@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-current_phase: 12 — code-complete
+current_phase: 13
 status: executing
 stopped_at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
-last_updated: "2026-04-26T00:16:38.684Z"
-last_activity: 2026-04-26 -- Phase 13 planning complete
+last_updated: "2026-04-26T00:42:25.831Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 54
-  completed_plans: 44
-  percent: 81
+  completed_plans: 45
+  percent: 83
 ---
 
 # Project State
@@ -22,16 +22,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 12 — lifecycle-phase-gate-workflow-editor
+**Current focus:** Phase 13 — reporting-activity-user-profile
 
 ## Current Position
 
-Phase: 12 (lifecycle-phase-gate-workflow-editor) — PLANS COMPLETE / UAT DEFERRED
-Plan: 10 of 10 (12-10 plans complete; manual UAT sign-off deferred)
+Phase: 13 (reporting-activity-user-profile) — EXECUTING
+Plan: 2 of 10
 Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 13 planning complete
+Last activity: 2026-04-26
 
-Progress: [██████████] 100%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -99,6 +99,7 @@ Progress: [██████████] 100%
 | Phase 12 P08 | 14min | 2 tasks | 10 files |
 | Phase 12 P09 | 14min | 2 tasks | 12 files |
 | Phase 12 P10 | 30min | 3 tasks (2 done + 1 UAT-deferred) | 7 files |
+| Phase 13 P01 | 16 | 2 tasks | 37 files |
 
 ## Accumulated Context
 
@@ -333,6 +334,13 @@ Key constraints for v2.0:
 - [12-10] PresetMenu's dirty branch fires ConfirmDialog ('Mevcut değişiklikler kaybolacak…') with confirmTone='danger'; dirty=false skips the dialog and applies directly. Matches the dirty-save dialog UX from Plan 12-09.
 - [12-10] Manual UAT sign-off (Task 3 human-verify checkpoint) DEFERRED per user. Phase 12 is code-complete; the 15-row UAT artifact (12-UAT-CHECKLIST.md) is ready to sign but moves to the global deferred queue.
 - [12-10] Post-checkpoint polish (~35 commits between Tasks 1+2 and the finalization) was driven by in-session UAT feedback across 15 rounds: my-tasks 1:1 prototype rebuild, task-detail header + sidebar + activity + comments + attachments, primitives 4-bar PriorityChip + interactive StatusDot, hydration safety, backend AttributeError on PATCH (dto.status_id → dto.column_id), task_key/due_date field-mapping at API boundary, searchable assignee picker. All polish remained inside Phase 12 surface; nothing introduced a new requirement.
+- [Phase ?]: [13-01] _BUCKET_LABELS hard-coded inside get_project_lead_cycle.py — repo dict has b1..b5 numeric keys, use case maps them in canonical order so FE LEAD_CYCLE_BUCKETS labels stay the single source of truth
+- [Phase ?]: [13-01] Project activity broadening implemented at SQL layer (UNION via or_/and_) NOT in Python post-filter — keeps pagination + total-count semantics correct
+- [Phase ?]: [13-01] audit-event-mapper.ts inlines its ActivityItem interface (NOT imported from activity-service) so the mapper stays standalone-testable and free of circular deps
+- [Phase ?]: [13-01] InvalidMethodologyError inherits from ValueError (not DomainError) so single-except catch in routers handles both range-gate and methodology-gate failures with one block
+- [Phase ?]: [13-01] activity-service uses manual paramsSerializer (buildActivityQuery) for type[] alias — Phase 9 D-46 manual-pair pattern, immune to axios version drift
+- [Phase ?]: [13-01] DataState primitive uses Fragment-only render (no wrapper DOM box) — primitive is layout-neutral so chart cards / activity timelines control their own padding/border
+- [Phase ?]: [13-01] Avatar href onClick chain calls e.stopPropagation() FIRST then user-supplied onClick — guarantees row-click handlers on parents never fire when the avatar is the click target (D-D4 backwards compat)
 
 ### Pending Todos
 
@@ -363,11 +371,11 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-25T23:35:00Z
+Last session: 2026-04-26T00:41:45.938Z
 Stopped at: Phase 12 Plan 12-10 plans complete (UAT sign-off deferred)
-Resume file: --resume-file
+Resume file: None
 
-**Current Phase:** 12 — code-complete
+**Current Phase:** 13
 
 **Next Plan:** None within Phase 12. Awaiting `/gsd-verify-work 12` to consume the deferred 12-UAT-CHECKLIST.md sign-off; otherwise the milestone has no scoped follow-up.
 

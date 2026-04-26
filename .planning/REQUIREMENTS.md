@@ -106,15 +106,15 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 
 ### Reporting & Charts
 
-- [ ] **REPT-01**: CFD (Kumulatif Akis Diyagrami) eklenir — Kanban projelerde burndown yerine, SVG stacked area, 7/30/90 gun filtresi
-- [ ] **REPT-02**: Lead/Cycle Time grafikleri eklenir — SVG histogram, P50/P85/P95 metrikleri
-- [ ] **REPT-03**: Iterasyon Karsilastirma grafigi eklenir — Scrum/Iterative icin grouped bar chart, planlanan/tamamlanan/tasinan
-- [ ] **REPT-04**: Reports sayfasina "Faz Raporlari" Section eklenir — proje + faz secimi ile kayitli raporlara erisim
+- [x] **REPT-01**: CFD (Kumulatif Akis Diyagrami) eklenir — Kanban projelerde burndown yerine, SVG stacked area, 7/30/90 gun filtresi
+- [x] **REPT-02**: Lead/Cycle Time grafikleri eklenir — SVG histogram, P50/P85/P95 metrikleri
+- [x] **REPT-03**: Iterasyon Karsilastirma grafigi eklenir — Scrum/Iterative icin grouped bar chart, planlanan/tamamlanan/tasinan
+- [x] **REPT-04**: Reports sayfasina "Faz Raporlari" Section eklenir — proje + faz secimi ile kayitli raporlara erisim
 
 ### Activity & User Profile
 
-- [ ] **PROF-01**: Activity Tab yapilir — proje detayda yeni sekme, dikey timeline, olay ikonlari, tarih gruplari, filtre, sayfalama
-- [ ] **PROF-02**: Kullanici Profil sayfasi yapilir — profil header, 3 StatCard, Gorevler/Projeler/Aktivite sekmeleri
+- [x] **PROF-01**: Activity Tab yapilir — proje detayda yeni sekme, dikey timeline, olay ikonlari, tarih gruplari, filtre, sayfalama
+- [x] **PROF-02**: Kullanici Profil sayfasi yapilir — profil header, 3 StatCard, Gorevler/Projeler/Aktivite sekmeleri
 - [ ] **PROF-03**: Header avatar dropdown'i yapilir — Profilim/Ayarlar/Cikis Yap menusu
 - [ ] **PROF-04**: Profil gorev listesinde MTTaskRow bileseninden yeniden kullanilir [E15]
 
@@ -224,12 +224,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EDIT-05 | Phase 12 | Completed (12-08 verified via parallel-actives test in workflow-canvas.test.tsx) |
 | EDIT-06 | Phase 12 | Completed (12-01 useCycleCounters hook + 12-08 PhaseNode rfNodes data.cycleCount wiring) |
 | EDIT-07 | Phase 12 | Completed (12-10 — 9 presets in lib/lifecycle/presets.ts including 3 NEW Incremental/Evolutionary/RAD; PresetMenu dropdown + ConfirmDialog flow; EditorPage applyPreset with history.push for non-destructive Cmd+Z) |
-| REPT-01 | Phase 13 | Pending |
-| REPT-02 | Phase 13 | Pending |
-| REPT-03 | Phase 13 | Pending |
-| REPT-04 | Phase 13 | Pending |
-| PROF-01 | Phase 13 | Pending |
-| PROF-02 | Phase 13 | Pending |
+| REPT-01 | Phase 13 | Complete |
+| REPT-02 | Phase 13 | Complete |
+| REPT-03 | Phase 13 | Complete |
+| REPT-04 | Phase 13 | Complete |
+| PROF-01 | Phase 13 | Complete |
+| PROF-02 | Phase 13 | Complete |
 | PROF-03 | Phase 13 | Pending |
 | PROF-04 | Phase 13 | Pending |
 
