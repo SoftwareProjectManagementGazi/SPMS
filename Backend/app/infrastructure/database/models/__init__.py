@@ -20,3 +20,8 @@ from app.infrastructure.database.models.task_watcher import TaskWatcherModel
 from app.infrastructure.database.models.milestone import MilestoneModel  # noqa: F401
 from app.infrastructure.database.models.artifact import ArtifactModel  # noqa: F401
 from app.infrastructure.database.models.phase_report import PhaseReportModel  # noqa: F401
+
+# Phase 14 Plan 14-01 — admin panel additions
+from app.infrastructure.database.models.project_join_request import (  # noqa: F401
+    ProjectJoinRequestModel,
+)

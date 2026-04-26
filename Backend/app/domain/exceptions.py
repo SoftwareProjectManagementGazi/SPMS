@@ -179,3 +179,33 @@ class InvalidMethodologyError(ValueError):
         super().__init__(f"Methodology '{methodology}' not in required set: {required}")
         self.methodology = methodology
         self.required = required
+
+
+# ---------------------------------------------------------------------------
+# Phase 14 — admin panel domain exceptions (D-A1 ProjectJoinRequest)
+# ---------------------------------------------------------------------------
+
+
+class JoinRequestNotFoundError(DomainError):
+    """Raised when ApproveJoinRequestUseCase / RejectJoinRequestUseCase cannot
+    find the requested join-request row (Plan 14-01 D-A1).
+
+    Router maps to HTTP 404 Not Found.
+    """
+    def __init__(self, request_id: int):
+        self.request_id = request_id
+        super().__init__(f"Join request {request_id} not found")
+
+
+class JoinRequestInvalidStateError(DomainError):
+    """Raised when the join-request state machine is violated — e.g. trying
+    to approve a request that is already approved/rejected/cancelled (Plan 14-01).
+
+    Router maps to HTTP 409 Conflict.
+    """
+    def __init__(self, request_id: int, current_status: str):
+        self.request_id = request_id
+        self.current_status = current_status
+        super().__init__(
+            f"Join request {request_id} is in state '{current_status}'; only 'pending' requests can be transitioned"
+        )

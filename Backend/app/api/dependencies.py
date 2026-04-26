@@ -39,3 +39,4 @@ from app.api.deps.user import get_user_repo  # noqa: F401
 from app.api.deps.security import get_security_service  # noqa: F401
 from app.api.deps.artifact import get_artifact_repo  # noqa: F401
 from app.api.deps.phase_report import get_phase_report_repo  # noqa: F401
+from app.api.deps.project_join_request import get_project_join_request_repo  # noqa: F401
