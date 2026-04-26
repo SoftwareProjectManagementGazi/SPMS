@@ -9,7 +9,7 @@
 // render with the same primitives as the rest of the app.
 
 import { apiClient } from "@/lib/api-client"
-import type { Task } from "@/services/task-service"
+import { taskService, type Task } from "@/services/task-service"
 
 // ---------------------------------------------------------------------------
 // User Summary (PROF-02 D-C8) — feeds 3 StatCards on profile header
@@ -132,13 +132,11 @@ export const profileService = {
     userId: number,
     _filter: UserTaskStatusFilter = "all",
   ): Promise<UserTasksResponse> => {
-    const resp = await apiClient.get<Task[]>("/tasks", {
-      params: { assignee_id: userId },
-    })
-    // The backend returns a Task[] for /tasks listing endpoints. Wrap in an
-    // envelope so future schema changes (pagination total, etc.) don't break
-    // the caller signature.
-    return { tasks: Array.isArray(resp.data) ? resp.data : [] }
+    // Delegate to taskService so the snake_case → camelCase mapTask runs
+    // (without it, t.projectId is undefined and ProfileTasksTab collapses
+    // every task into a single group keyed by undefined → React key warning).
+    const tasks = await taskService.getByAssignee(userId)
+    return { tasks }
   },
 
   /**

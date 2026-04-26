@@ -165,6 +165,12 @@ export const taskService = {
     const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/my-tasks`)
     return resp.data.map(mapTask)
   },
+  getByAssignee: async (assigneeId: number): Promise<Task[]> => {
+    const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/`, {
+      params: { assignee_id: assigneeId },
+    })
+    return Array.isArray(resp.data) ? resp.data.map(mapTask) : []
+  },
   search: async (q: string): Promise<Task[]> => {
     const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/search`, { params: { q } })
     return resp.data.map(mapTask)
