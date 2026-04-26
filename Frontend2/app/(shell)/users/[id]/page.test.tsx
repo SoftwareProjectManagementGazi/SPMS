@@ -28,6 +28,11 @@ vi.mock("@/context/app-context", () => ({
   useApp: () => ({ language: "tr" }),
 }))
 
+const useAuthMock = vi.fn(() => ({ user: { id: "99", role: { name: "Member" } } }))
+vi.mock("@/context/auth-context", () => ({
+  useAuth: () => useAuthMock(),
+}))
+
 const useUserSummaryMock = vi.fn()
 vi.mock("@/hooks/use-user-summary", () => ({
   useUserSummary: (id: number | null | undefined) => useUserSummaryMock(id),
@@ -105,6 +110,7 @@ beforeEach(() => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams())
   useUserSummaryMock.mockReset()
   useQueryMock.mockReset()
+  useAuthMock.mockReturnValue({ user: { id: "99", role: { name: "Member" } } })
   // Default user-fetch query returns the user
   useQueryMock.mockReturnValue({
     data: mockUser,

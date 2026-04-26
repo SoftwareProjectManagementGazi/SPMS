@@ -81,6 +81,35 @@ export interface UserTasksResponse {
 }
 
 // ---------------------------------------------------------------------------
+// User profile lookup (Plan 13-05 — header data source)
+// ---------------------------------------------------------------------------
+//
+// The backend `/users/{id}/summary` endpoint (Phase 9 D-48) returns stats +
+// projects + recent_activity but NOT the user's own name/email/avatar. The
+// profile header needs that data, so getUser() pulls from `/auth/users` (the
+// existing UserListDTO endpoint — id/email/username/avatar_url) and finds
+// the matching id. Role is NOT in UserListDTO (backend limitation) — for
+// non-self profile views the role badge gracefully omits. Self-profile
+// callers should layer in useAuth().user.role when richer role data is
+// needed (Phase 13 plan 13-05 ProfileHeader handles both branches).
+
+export interface ProfileUser {
+  id: number
+  full_name: string
+  email: string
+  role?: string | { name: string } | null
+  avatar_url?: string | null
+}
+
+interface UserListEntryDTO {
+  id: number
+  email: string
+  /** Backend ships full_name under the `username` key on UserListDTO. */
+  username: string
+  avatar_url?: string | null
+}
+
+// ---------------------------------------------------------------------------
 // Public service object
 // ---------------------------------------------------------------------------
 
@@ -110,5 +139,31 @@ export const profileService = {
     // envelope so future schema changes (pagination total, etc.) don't break
     // the caller signature.
     return { tasks: Array.isArray(resp.data) ? resp.data : [] }
+  },
+
+  /**
+   * Resolve a single user's display info (name + email + avatar) from the
+   * existing /auth/users list endpoint. Returns null when the user id is
+   * not found (drives the 404 path on the profile route).
+   *
+   * Trade-off: pulls the full user list every call (no per-id endpoint).
+   * Acceptable for v2.0 — TanStack Query caches the lookup, and the user
+   * list size is bounded by org seat count. v2.1 candidate: add a dedicated
+   * GET /users/{id}/profile that returns name + email + avatar + role in a
+   * single call so the profile route avoids the list scan.
+   */
+  getUser: async (userId: number): Promise<ProfileUser | null> => {
+    const resp = await apiClient.get<UserListEntryDTO[]>("/auth/users")
+    const entry = (resp.data ?? []).find((u) => u.id === userId)
+    if (!entry) return null
+    return {
+      id: entry.id,
+      full_name: entry.username,
+      email: entry.email,
+      avatar_url: entry.avatar_url ?? null,
+      // Role not in UserListDTO; the consumer layers in useAuth().user.role
+      // for the self branch (Plan 13-05 page.tsx).
+      role: null,
+    }
   },
 }
