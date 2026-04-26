@@ -163,27 +163,38 @@ export default function UserProfilePage() {
           gap: 12,
         }}
       >
-        <StatCard
-          label={T("Atanan Görevler", "Assigned Tasks")}
-          value={stats.activeTasks}
-          delta={`${stats.activeTasks + stats.completedLast30d} ${T("toplam", "total")}`}
-          tone="primary"
-          icon={<CheckSquare size={14} />}
-        />
-        <StatCard
-          label={T("Tamamlanan", "Completed")}
-          value={stats.completedLast30d}
-          delta={`%${completionRate} ${T("oran", "rate")}`}
-          tone="success"
-          icon={<CircleCheck size={14} />}
-        />
-        <StatCard
-          label={T("Projeler", "Projects")}
-          value={stats.projectCount}
-          delta={`${projects.length} ${T("üye", "member")}`}
-          tone="info"
-          icon={<Folder size={14} />}
-        />
+        {/* aria-label wrappers (Plan 13-09 D-G2 a11y) — StatCard primitive
+            doesn't accept aria-label directly; the wrapper announces the
+            full "{label}: {value}" string to screen readers. */}
+        <div
+          aria-label={`${T("Atanan Görevler", "Assigned Tasks")}: ${stats.activeTasks}`}
+        >
+          <StatCard
+            label={T("Atanan Görevler", "Assigned Tasks")}
+            value={stats.activeTasks}
+            delta={`${stats.activeTasks + stats.completedLast30d} ${T("toplam", "total")}`}
+            tone="primary"
+            icon={<CheckSquare size={14} />}
+          />
+        </div>
+        <div aria-label={`${T("Tamamlanan", "Completed")}: ${stats.completedLast30d}`}>
+          <StatCard
+            label={T("Tamamlanan", "Completed")}
+            value={stats.completedLast30d}
+            delta={`%${completionRate} ${T("oran", "rate")}`}
+            tone="success"
+            icon={<CircleCheck size={14} />}
+          />
+        </div>
+        <div aria-label={`${T("Projeler", "Projects")}: ${stats.projectCount}`}>
+          <StatCard
+            label={T("Projeler", "Projects")}
+            value={stats.projectCount}
+            delta={`${projects.length} ${T("üye", "member")}`}
+            tone="info"
+            icon={<Folder size={14} />}
+          />
+        </div>
       </div>
       <Tabs
         size="md"

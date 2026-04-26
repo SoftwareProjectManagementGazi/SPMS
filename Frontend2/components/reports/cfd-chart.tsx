@@ -212,6 +212,18 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
     >
       <div
         className="chart-card-cfd-svg"
+        role="img"
+        aria-label={
+          query.data
+            ? T(
+                `Kümülatif akış diyagramı, ${range} gün, ortalama WIP ${query.data.avgWip}, günlük ${query.data.avgCompletionPerDay} tamamlanma`,
+                `Cumulative flow diagram, ${range} days, avg WIP ${query.data.avgWip}, ${query.data.avgCompletionPerDay} per day completion`,
+              )
+            : T(
+                `Kümülatif akış diyagramı, veri yükleniyor`,
+                `Cumulative flow diagram, loading`,
+              )
+        }
         style={{ width: "100%", height: 200 }}
       >
         <ResponsiveContainer width="100%" height="100%">

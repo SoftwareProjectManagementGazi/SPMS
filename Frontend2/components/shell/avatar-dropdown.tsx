@@ -94,6 +94,44 @@ export function AvatarDropdown() {
     return () => document.removeEventListener("keydown", escHandler)
   }, [open])
 
+  // 2b. ArrowDown / ArrowUp / Home / End keyboard navigation between menu items
+  //     (Plan 13-09 D-G2 a11y polish — UI-SPEC §A.4 dropdown keyboard nav).
+  //     Walks role="menuitem" + role="menuitemradio" elements in DOM order;
+  //     wraps from last → first on ArrowDown and first → last on ArrowUp.
+  //     Home / End jump to the first / last item respectively. preventDefault
+  //     on the matched key so page scroll doesn't fire while the menu is open.
+  React.useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (
+        e.key !== "ArrowDown" &&
+        e.key !== "ArrowUp" &&
+        e.key !== "Home" &&
+        e.key !== "End"
+      ) {
+        return
+      }
+      if (!ref.current) return
+      const items = Array.from(
+        ref.current.querySelectorAll<HTMLElement>(
+          '[role="menuitem"], [role="menuitemradio"]',
+        ),
+      )
+      if (items.length === 0) return
+      const active = document.activeElement as HTMLElement | null
+      const idx = active ? items.indexOf(active) : -1
+      let nextIdx = idx
+      if (e.key === "ArrowDown") nextIdx = idx >= items.length - 1 ? 0 : idx + 1
+      else if (e.key === "ArrowUp") nextIdx = idx <= 0 ? items.length - 1 : idx - 1
+      else if (e.key === "Home") nextIdx = 0
+      else if (e.key === "End") nextIdx = items.length - 1
+      items[nextIdx]?.focus()
+      e.preventDefault()
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [open])
+
   // 3. Pathname change (Next.js 16 — RESEARCH §Pitfall 6 — usePathname effect;
   //    the legacy useRouter route-events API was removed in Next 16, so the
   //    pathname dependency is the canonical replacement). Closes the menu

@@ -199,6 +199,15 @@ export function IterationChart({ projectId, applicable }: IterationChartProps) {
     >
       <div
         className="chart-card-iteration-svg"
+        role="img"
+        aria-label={
+          query.data?.sprints?.length
+            ? T(
+                `İterasyon karşılaştırma, ${query.data.sprints.length} iterasyon`,
+                `Iteration comparison, ${query.data.sprints.length} iterations`,
+              )
+            : T(`İterasyon karşılaştırma`, `Iteration comparison`)
+        }
         style={{ width: "100%", height: 180 }}
       >
         <ResponsiveContainer width="100%" height="100%">

@@ -225,4 +225,31 @@ describe("AvatarDropdown", () => {
     // Main menu container still rendered (Dil sub closes but parent menu stays open)
     expect(screen.queryByRole("menu")).toBeTruthy()
   })
+
+  // Test 13 — ArrowDown/ArrowUp keyboard navigation between menu items
+  // (Plan 13-09 D-G2 a11y polish — UI-SPEC §A.4 dropdown keyboard nav).
+  it("moves focus between menuitems on ArrowDown / ArrowUp", async () => {
+    const user = userEvent.setup()
+    render(<AvatarDropdown />)
+    await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
+    const items = screen.getAllByRole("menuitem")
+    expect(items.length).toBeGreaterThan(1)
+    // Focus first item, then ArrowDown moves focus to the next.
+    items[0].focus()
+    expect(document.activeElement).toBe(items[0])
+    fireEvent.keyDown(document, { key: "ArrowDown" })
+    expect(document.activeElement).toBe(items[1])
+    // ArrowUp returns to the previous item.
+    fireEvent.keyDown(document, { key: "ArrowUp" })
+    expect(document.activeElement).toBe(items[0])
+    // ArrowUp from the first wraps to the last menuitem.
+    fireEvent.keyDown(document, { key: "ArrowUp" })
+    expect(document.activeElement).toBe(items[items.length - 1])
+    // Home jumps back to the first.
+    fireEvent.keyDown(document, { key: "Home" })
+    expect(document.activeElement).toBe(items[0])
+    // End jumps to the last.
+    fireEvent.keyDown(document, { key: "End" })
+    expect(document.activeElement).toBe(items[items.length - 1])
+  })
 })

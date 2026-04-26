@@ -130,6 +130,15 @@ export function LeadCycleChart({
     >
       <div
         className="chart-card-leadcycle-svg"
+        role="img"
+        aria-label={
+          data
+            ? T(
+                `${title}, P50 ${data.p50.toFixed(1)} gün, P85 ${data.p85.toFixed(1)} gün, P95 ${data.p95.toFixed(1)} gün`,
+                `${title}, P50 ${data.p50.toFixed(1)}d, P85 ${data.p85.toFixed(1)}d, P95 ${data.p95.toFixed(1)}d`,
+              )
+            : `${title}`
+        }
         style={{ width: "100%", height: 120 }}
       >
         <ResponsiveContainer width="100%" height="100%">
