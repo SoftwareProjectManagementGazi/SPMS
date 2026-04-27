@@ -19,5 +19,6 @@ export const config = {
     '/my-tasks/:path*',
     '/reports/:path*',
     '/teams/:path*',
+    '/admin/:path*',  // Phase 14 Plan 14-02 — admin route guard at edge (Pitfall 10)
   ],
 }
