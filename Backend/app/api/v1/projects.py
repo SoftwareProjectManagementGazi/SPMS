@@ -146,7 +146,23 @@ async def list_projects(
     if _is_admin(current_user):
         statuses = [status] if status is not None else ["ACTIVE", "COMPLETED", "ON_HOLD", "ARCHIVED"]
         results = await project_repo.list_by_status(statuses)
-        return [_sanitize_process_config(r) for r in results]
+        # Plan 14-05 follow-up — populate task_count + task_done_count for the
+        # /admin/projects table progress bar. Single aggregate query against
+        # tasks LEFT JOIN board_columns; admin-only path so non-admin consumers
+        # keep their existing 0/0 defaults on ProjectResponseDTO.
+        agg = await project_repo.task_counts_by_project_ids([r.id for r in results])
+        enriched = []
+        for r in results:
+            sanitized = _sanitize_process_config(r)
+            counts = agg.get(r.id, {"total": 0, "done": 0})
+            try:
+                setattr(sanitized, "task_count", int(counts["total"]))
+                setattr(sanitized, "task_done_count", int(counts["done"]))
+            except Exception:
+                # Defensive: never block the list call on aggregation failure.
+                pass
+            enriched.append(sanitized)
+        return enriched
 
     # API-04: if status param provided, delegate to list_by_status
     if status is not None:

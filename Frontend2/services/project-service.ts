@@ -26,6 +26,13 @@ export interface Project {
   boardColumns: BoardColumnLite[];
   processConfig: Record<string, unknown> | null;
   createdAt: string;
+  /** Plan 14-05 follow-up — task aggregates; populated by the admin-bypass in
+   *  GET /projects (used by /admin/projects table). Non-admin paths leave
+   *  these at 0 because the backend default applies. The /admin/projects row
+   *  derives its progress bar from `taskDoneCount / taskCount` since
+   *  `progress` is not (yet) computed server-side. */
+  taskCount: number;
+  taskDoneCount: number;
 }
 
 export interface CreateProjectDTO {
@@ -56,6 +63,10 @@ interface ProjectResponseDTO {
   columns?: Array<{ id: number; name: string } | string>;
   process_config?: Record<string, unknown>;
   created_at: string;
+  /** Plan 14-05 follow-up — admin-bypass populates these for /admin/projects.
+   *  Non-admin paths leave them at 0 (default in the backend DTO). */
+  task_count?: number;
+  task_done_count?: number;
 }
 
 function mapProject(data: ProjectResponseDTO): Project {
@@ -84,6 +95,8 @@ function mapProject(data: ProjectResponseDTO): Project {
     ),
     processConfig: data.process_config ?? null,
     createdAt: data.created_at,
+    taskCount: data.task_count ?? 0,
+    taskDoneCount: data.task_done_count ?? 0,
   };
 }
 

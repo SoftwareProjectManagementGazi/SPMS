@@ -22,6 +22,8 @@ export const mockProjects: Project[] = [
       { id: 3, name: "review" },
       { id: 4, name: "done" },
     ],
+    taskCount: 0,
+    taskDoneCount: 0,
     processConfig: {
       schema_version: 1,
       workflow: {
@@ -61,6 +63,8 @@ export const mockProjects: Project[] = [
       { id: 7, name: "progress" },
       { id: 8, name: "done" },
     ],
+    taskCount: 0,
+    taskDoneCount: 0,
     processConfig: {
       schema_version: 1,
       workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },

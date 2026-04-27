@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Dict, List, Optional
 from app.domain.entities.project import Project
 from app.domain.entities.user import User
 
@@ -92,3 +92,15 @@ class IProjectRepository(ABC):
         empty list so test fakes can override.
         """
         return []
+
+    async def task_counts_by_project_ids(
+        self, project_ids: List[int]
+    ) -> Dict[int, Dict[str, int]]:
+        """Plan 14-05 follow-up — task aggregates for the admin /admin/projects table.
+
+        Returns ``{project_id: {"total": N, "done": M}}`` for each requested project.
+        A task is "done" when its ``board_columns.name`` (case-insensitive) matches a
+        terminal-state label such as ``done``/``completed``/``closed``/``tamamlandi``/``bitti``.
+        Default returns empty dict so test fakes can override.
+        """
+        return {}

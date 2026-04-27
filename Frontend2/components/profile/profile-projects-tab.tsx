@@ -64,6 +64,8 @@ function adaptSummaryProject(p: UserSummaryProject): Project {
     boardColumns: [],
     processConfig: null,
     createdAt: "",
+    taskCount: 0,
+    taskDoneCount: 0,
   }
 }
 

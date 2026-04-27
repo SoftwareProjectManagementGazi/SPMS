@@ -58,4 +58,12 @@ class ProjectResponseDTO(BaseModel):
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None
 
+    # Plan 14-05 follow-up — admin /admin/projects table reads task aggregates
+    # to render the per-row progress bar. Defaults to 0 so non-admin paths
+    # (which don't compute the aggregate) keep their existing behavior; the
+    # admin bypass in /projects (projects.py:list_projects) populates them via
+    # IProjectRepository.task_counts_by_project_ids.
+    task_count: int = 0
+    task_done_count: int = 0
+
     model_config = ConfigDict(from_attributes=True)

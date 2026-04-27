@@ -21,6 +21,7 @@
 // Arşivle + Sil — D-B5; NO transfer-ownership).
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 
 import {
   Avatar,
@@ -37,6 +38,8 @@ import { AdminProjectRowActions } from "./admin-project-row-actions"
 
 export interface AdminProjectRowProps {
   project: Project
+  /** Optional overrides for tests; production reads project.taskCount /
+   *  project.taskDoneCount populated by the admin-bypass in the backend. */
   taskCount?: number
   taskDoneCount?: number
   isLast: boolean
@@ -66,15 +69,27 @@ function formatCreatedAt(iso: string, lang: "tr" | "en"): string {
 
 export function AdminProjectRow({
   project,
-  taskCount = 0,
-  taskDoneCount = 0,
+  taskCount,
+  taskDoneCount,
   isLast,
 }: AdminProjectRowProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
+  const router = useRouter()
 
   const isArchived = project.status === "ARCHIVED"
-  const progressPct = Math.round((project.progress ?? 0) * 100)
+
+  // Real task counts: prop overrides take precedence (test usage); production
+  // reads project.taskCount / project.taskDoneCount which the backend admin
+  // bypass populates via task_counts_by_project_ids (Plan 14-05 follow-up).
+  const totalTasks = taskCount ?? project.taskCount ?? 0
+  const doneTasks = taskDoneCount ?? project.taskDoneCount ?? 0
+
+  // Progress = doneTasks / totalTasks. project.progress is never sent by the
+  // backend so the previous `(project.progress ?? 0) * 100` always yielded 0%.
+  // 0-task projects render 0% (rather than NaN).
+  const progressPct =
+    totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
   // Lead avatar — derived from manager fields.
   const leadName = project.managerName ?? ""
@@ -95,8 +110,32 @@ export function AdminProjectRow({
     lang,
   )
 
+  // Row-level navigation: clicking anywhere on the row (except the MoreH cell
+  // and the lead avatar's inner Link) routes to /projects/{id}. Built as a
+  // button role on the wrapper rather than wrapping the grid in <Link> because
+  // the row already contains nested anchors (Avatar.href -> /users/{managerId})
+  // and nested <a> inside <a> is invalid HTML.
+  const goToDetail = React.useCallback(() => {
+    router.push(`/projects/${project.id}`)
+  }, [router, project.id])
+
+  const onRowKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        goToDetail()
+      }
+    },
+    [goToDetail],
+  )
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={goToDetail}
+      onKeyDown={onRowKeyDown}
+      aria-label={`${project.key} ${project.name}`}
       style={{
         display: "grid",
         gridTemplateColumns: ROW_GRID_TEMPLATE,
@@ -109,7 +148,14 @@ export function AdminProjectRow({
         // The MoreH actions remain interactive (a11y: arşivden çıkarma + sil
         // need to stay reachable on archived rows).
         opacity: isArchived ? 0.6 : 1,
-        transition: "opacity 0.12s",
+        transition: "opacity 0.12s, background 0.12s",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--surface-2)"
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent"
       }}
     >
       {/* 1) Key chip — mono font 10.5px per UI-SPEC §Typography line 124 */}
@@ -162,7 +208,9 @@ export function AdminProjectRow({
         </Badge>
       </div>
 
-      {/* 4) Lead — Avatar + first name */}
+      {/* 4) Lead — Avatar + first name. Avatar.href is an internal Link to
+           /users/{managerId}; we stopPropagation so clicking the avatar
+           navigates to the user profile rather than the row's project detail. */}
       <div
         style={{
           display: "flex",
@@ -170,6 +218,7 @@ export function AdminProjectRow({
           gap: 6,
           minWidth: 0,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <Avatar
           user={avUser}
@@ -196,7 +245,7 @@ export function AdminProjectRow({
         className="mono"
         style={{ fontSize: 11, color: "var(--fg-muted)" }}
       >
-        {taskCount} · {taskDoneCount} {tasksDoneSuffix}
+        {totalTasks} · {doneTasks} {tasksDoneSuffix}
       </div>
 
       {/* 6) Progress bar + percent */}
@@ -232,8 +281,14 @@ export function AdminProjectRow({
         {formatCreatedAt(project.createdAt, lang)}
       </div>
 
-      {/* 8) MoreH — EXACTLY 2 actions (Arşivle + Sil), D-B5 NO transfer */}
-      <div style={{ position: "relative" }}>
+      {/* 8) MoreH — EXACTLY 2 actions (Arşivle + Sil), D-B5 NO transfer.
+           stopPropagation so opening the menu / picking an action doesn't
+           also route the row to /projects/{id}. */}
+      <div
+        style={{ position: "relative" }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         <AdminProjectRowActions
           project={{
             id: project.id,

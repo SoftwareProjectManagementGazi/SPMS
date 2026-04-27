@@ -344,3 +344,67 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         )
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
+
+    async def task_counts_by_project_ids(self, project_ids):
+        """Plan 14-05 follow-up — task aggregates for the admin /admin/projects table.
+
+        One query: SELECT project_id, COUNT(*) total, SUM(...) done
+        FROM tasks LEFT JOIN board_columns ON tasks.column_id = board_columns.id
+        WHERE project_id IN (...) GROUP BY project_id.
+
+        A task is "done" when its board column name (case-insensitive) is one of
+        the terminal-state labels also used by manage_tasks (manage_tasks.py:242).
+        The set is duplicated here intentionally — the repo layer cannot import
+        from application use_cases (DIP — CLAUDE.md §4.1.D).
+        """
+        if not project_ids:
+            return {}
+
+        from sqlalchemy import case, func as sqlfunc
+        from app.infrastructure.database.models.task import TaskModel
+
+        DONE_NAMES = (
+            "done",
+            "completed",
+            "closed",
+            "tamamlandı",
+            "tamamlandi",
+            "bitti",
+            "bitirildi",
+        )
+
+        stmt = (
+            select(
+                TaskModel.project_id,
+                sqlfunc.count(TaskModel.id).label("total"),
+                sqlfunc.coalesce(
+                    sqlfunc.sum(
+                        case(
+                            (
+                                sqlfunc.lower(BoardColumnModel.name).in_(DONE_NAMES),
+                                1,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("done"),
+            )
+            .select_from(TaskModel)
+            .join(
+                BoardColumnModel,
+                TaskModel.column_id == BoardColumnModel.id,
+                isouter=True,
+            )
+            .where(TaskModel.project_id.in_(project_ids))
+            .group_by(TaskModel.project_id)
+        )
+
+        result = await self.session.execute(stmt)
+        out = {}
+        for row in result.all():
+            out[row.project_id] = {
+                "total": int(row.total or 0),
+                "done": int(row.done or 0),
+            }
+        return out

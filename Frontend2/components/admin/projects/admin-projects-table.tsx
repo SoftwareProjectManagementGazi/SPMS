@@ -122,13 +122,9 @@ export function AdminProjectsTable({ filter }: AdminProjectsTableProps) {
             <AdminProjectRow
               key={p.id}
               project={p}
-              // taskCount + taskDoneCount derived data is not available from
-              // GET /projects without an extra round-trip to /tasks/project/{id}.
-              // For v2.0 we display 0 · 0; the prototype's mock task counts are
-              // not surfaced. v2.1 candidate: add backend aggregate to
-              // ProjectResponseDTO so the table shows real counts.
-              taskCount={0}
-              taskDoneCount={0}
+              // Task counts now flow through project.taskCount / project.taskDoneCount,
+              // populated by the backend admin-bypass aggregate
+              // (project_repo.task_counts_by_project_ids — Plan 14-05 follow-up).
               isLast={i === filtered.length - 1}
             />
           ))}
