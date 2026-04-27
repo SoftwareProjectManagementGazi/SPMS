@@ -9,19 +9,37 @@
 //   4. user.role.name="Admin" → renders 'Yönetim Konsolu' heading AND NavTabs
 //      with all 8 hrefs.
 //
+// Plan 14-11 added 2 cases (5+6) for header-button wiring (D-B6):
+//   5. Rapor al click → downloadCsv("/api/v1/admin/summary.pdf",
+//      "admin-summary.pdf") — admin overview PDF download via Plan 14-01
+//      endpoint (server-side rate-limit @limiter.limit("1/30seconds")).
+//   6. Denetim günlüğü click → router.push("/admin/audit") — pure client-side
+//      next-router push, no API call.
+//
 // Pitfall 3 reminder: the layout MUST check isLoading FIRST before evaluating
 // user.role — otherwise a legitimate admin gets bounced during the auth
 // context's initial render. Test 1 locks that order.
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 
 // ---- next/navigation mock ----
 const replaceMock = vi.fn()
+const pushMock = vi.fn()
 const usePathnameMock = vi.fn<[], string>(() => "/admin")
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: replaceMock, push: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ replace: replaceMock, push: pushMock, back: vi.fn() }),
   usePathname: () => usePathnameMock(),
+}))
+
+// ---- csv-export mock — Plan 14-11 wires downloadCsv() into the Rapor al
+// button so the click triggers a server-side PDF download. Mocking the module
+// keeps the test from creating a real <a> + .click() in jsdom (which would
+// noop here without a real browser anyway). The assertion proves the click
+// hands the canonical URL + filename to the export helper.
+const downloadCsvMock = vi.fn()
+vi.mock("@/lib/admin/csv-export", () => ({
+  downloadCsv: (...args: unknown[]) => downloadCsvMock(...args),
 }))
 
 // ---- next/link mock — plain anchor (mirrors nav-tabs.test.tsx pattern) ----
@@ -70,6 +88,8 @@ import AdminLayout from "./layout"
 describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
   beforeEach(() => {
     replaceMock.mockReset()
+    pushMock.mockReset()
+    downloadCsvMock.mockReset()
     showToastMock.mockReset()
     usePathnameMock.mockReset()
     usePathnameMock.mockReturnValue("/admin")
@@ -165,5 +185,61 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
     expect(screen.getByTestId("children")).toBeInTheDocument()
     // No redirect fired for the admin
     expect(replaceMock).not.toHaveBeenCalled()
+  })
+
+  // ---- Plan 14-11 — header-button wiring (D-B6) ----
+
+  it("Case 5 — Rapor al click → downloadCsv('/api/v1/admin/summary.pdf', 'admin-summary.pdf') (D-B6)", () => {
+    authStateRef.current = {
+      user: {
+        id: 1,
+        email: "[email protected]",
+        name: "Ayşe Admin",
+        role: { id: 1, name: "Admin" },
+      },
+      isLoading: false,
+    }
+    render(
+      <AdminLayout>
+        <div>child</div>
+      </AdminLayout>,
+    )
+    // The button label comes from admin-keys.ts — TR mock locale renders
+    // "Rapor al". Match either locale defensively in case the mock changes.
+    const raporButton = screen.getByRole("button", { name: /Rapor al|Export/i })
+    fireEvent.click(raporButton)
+    // Plan 14-01 endpoint contract: server-rendered PDF + Content-Disposition
+    // attachment. Filename overrides the server-suggested value (browsers
+    // honor the anchor's `download` attribute when same-origin).
+    expect(downloadCsvMock).toHaveBeenCalledTimes(1)
+    expect(downloadCsvMock).toHaveBeenCalledWith(
+      "/api/v1/admin/summary.pdf",
+      "admin-summary.pdf",
+    )
+    // Rapor al MUST NOT navigate — only the Audit log button does.
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
+  it("Case 6 — Denetim günlüğü click → router.push('/admin/audit') (D-B6)", () => {
+    authStateRef.current = {
+      user: {
+        id: 1,
+        email: "[email protected]",
+        name: "Ayşe Admin",
+        role: { id: 1, name: "Admin" },
+      },
+      isLoading: false,
+    }
+    render(
+      <AdminLayout>
+        <div>child</div>
+      </AdminLayout>,
+    )
+    const auditButton = screen.getByRole("button", { name: /Denetim günlüğü|Audit log/i })
+    fireEvent.click(auditButton)
+    // Pure client-side push — NO PDF download triggered.
+    expect(pushMock).toHaveBeenCalledTimes(1)
+    expect(pushMock).toHaveBeenCalledWith("/admin/audit")
+    expect(downloadCsvMock).not.toHaveBeenCalled()
   })
 })

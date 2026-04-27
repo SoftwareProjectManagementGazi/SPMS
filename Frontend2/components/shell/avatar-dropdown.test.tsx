@@ -1,6 +1,6 @@
 // Unit tests for components/shell/avatar-dropdown.tsx (Phase 13 Plan 13-02).
 //
-// Per Plan 13-02 Task 1 <behavior> Tests 1-12 covering:
+// Per Plan 13-02 Task 1 <behavior> Tests 1-13 covering:
 //   1. Trigger renders with initials + aria-label
 //   2. Click trigger opens menu (aria-expanded → true)
 //   3. Admin role → "Yönetim Paneli" item present
@@ -13,6 +13,14 @@
 //  10. Profilim navigates to /users/{id}
 //  11. Dil submenu opens with TR/EN radios; main menu still rendered
 //  12. Language switch keeps main menu open (only Dil sub closes)
+//  13. ArrowDown/ArrowUp/Home/End keyboard navigation between menuitems (D-G2 a11y)
+//
+// Plan 14-11 added Test 14: clicking the Admin Paneli item for an admin user
+// invokes router.push("/admin") — verifies the Phase 13 D-D2 cross-phase
+// destination (Plan 14-02) is wired and reachable post-implementation. Phase 13
+// originally pointed the link at /admin but the destination was 404; Plan 14-02
+// shipped the AdminLayout, and Plan 14-11 locks the routing contract with a test
+// that fails loudly if a future refactor changes the href.
 //
 // Mock pattern verbatim from Frontend2/components/lifecycle/evaluation-report-card.test.tsx
 // (Phase 12 D-04 RTL+vi.mock pattern). next/navigation is mocked so useRouter().push
@@ -251,5 +259,27 @@ describe("AvatarDropdown", () => {
     // End jumps to the last.
     fireEvent.keyDown(document, { key: "End" })
     expect(document.activeElement).toBe(items[items.length - 1])
+  })
+
+  // Test 14 — Plan 14-11 D-D2 cross-phase contract verification.
+  // Admin Paneli for an admin user must invoke router.push("/admin"); the
+  // Phase 14 admin layout (Plan 14-02) is now reachable, so the destination
+  // resolves. Implementation note: the menu items are <button> elements that
+  // call router.push() via handleNav(href) — NOT <Link href>. Asserting on
+  // pushMock(args[0] === "/admin") is the right contract; getAttribute("href")
+  // would be wrong because the element is a button, not an anchor.
+  it("Admin Paneli click routes to /admin for admin users (Plan 14-11 — D-D2 verification)", async () => {
+    mockUser = {
+      id: "1",
+      name: "Ayşe Admin",
+      email: "[email protected]",
+      role: { name: "Admin" },
+    }
+    const user = userEvent.setup()
+    render(<AvatarDropdown />)
+    await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
+    const adminItem = screen.getByRole("menuitem", { name: /Yönetim Paneli|Admin Panel/i })
+    await user.click(adminItem)
+    expect(pushMock).toHaveBeenCalledWith("/admin")
   })
 })
