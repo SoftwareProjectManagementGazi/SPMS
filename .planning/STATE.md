@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-09 complete (backend audit_log enrichment cross-cutting — 13 emission sites enriched with D-D2 extra_metadata across task_repo + project_repo + 4 use cases; comment_excerpt 160-char PII guardrail enforced; D-D6 backward compat verified via test_pre_phase14_rows_graceful_fallback; NO migration / NO new endpoints / NO schema change)
-last_updated: "2026-04-27T08:38:33Z"
+stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
+last_updated: "2026-04-27T09:02:54.740Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 63
-  percent: 95
+  completed_plans: 64
+  percent: 97
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [█████████░] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -118,6 +118,7 @@ Progress: [█████████░] 95%
 | Phase 14 P07 | 13 | 2 tasks | 10 files |
 | Phase 14 P08 | 9min | 2 tasks | 7 files (2 atomic commits, 5 RTL tests green; D-A7 composite endpoint single-round-trip + D-C6 3 dynamic chart imports + D-X3 pure-CSS bars + D-X4 client-side defensive cap) |
 | Phase 14 P09 | 14min | 2 tasks | 12 files (2 atomic commits + new test_audit_log_enrichment.py 3/3 + 21/21 baseline regression green; 13 audit emission sites enriched with D-D2 metadata across task_repo + project_repo + manage_comments + manage_milestones + manage_artifacts + manage_phase_reports; 160-char comment_excerpt PII guardrail; D-D6 backward compat — pre-Phase-14 rows survive get_global_audit; NO migration / NO new endpoints) |
+| Phase 14 P10 | 25 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -450,6 +451,9 @@ Key constraints for v2.0:
 - [Phase ?]: Plan 14-08 — Bundled page.tsx into Task 2 commit for buildability (precedent: Plan 14-07 admin-audit-keys pattern). Each commit individually buildable; net file count unchanged.
 - [Phase ?]: Plan 14-08 — Pure-CSS bars where simple proportions suffice; recharts only for time-series. MethodologyBars + VelocityMiniBar use flex/grid + width-as-percentage divs (~30KB recharts saved). Rule of thumb: recharts for time-series + tooltips; pure CSS for static proportions + fixed-N bars.
 - [Phase ?]: Plan 14-08 — First-non-zero baseline for delta-percent computation in ActiveUsersTrendChart. Naive (last/first - 1) divides by zero on leading-zero windows; uses trend.find(p => p.count > 0)?.count ?? 0 baseline. RTL Case 5 covers it.
+- [Phase ?]: Phase 14 Plan 14-10 — chose direct snake_case reads in activity-row.tsx (Pitfall 2 option b) over a metadata-shape mapper; consistent with Phase 13 line 74-76 pattern
+- [Phase ?]: Phase 14 Plan 14-10 — admin chip routing catches 10 admin-side types; status chip catches 3 field-change types; preserves Phase 13 mental model and SegmentedControl chip-row width
+- [Phase ?]: Phase 14 Plan 14-10 — task_field_updated catch-all guarded by f != null && f !== '' to reject null/empty field_name; cross-phase regression test asserts column_id and assignee_id resolutions survive
 
 ### Pending Todos
 
@@ -480,7 +484,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T08:19:28.048Z
+Last session: 2026-04-27T09:02:22.947Z
 Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
 Resume file: None
 
