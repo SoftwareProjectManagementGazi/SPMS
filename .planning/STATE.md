@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-04 complete (Roles + Permissions placeholder tabs — RBAC deferred to v3.0)
-last_updated: "2026-04-27T06:55:00.000Z"
-last_activity: 2026-04-27 -- Phase 14 Plan 14-04 complete (RBAC placeholder tabs, multi-defense matrix, 3 RTL tests green)
+stopped_at: Phase 14 Plan 14-05 complete (/admin/projects tab — 8-col table + EXACTLY 2 MoreH (Arşivle + Sil), D-B5 enforced)
+last_updated: "2026-04-27T07:15:23.000Z"
+last_activity: 2026-04-27 -- Phase 14 Plan 14-05 complete (/admin/projects tab, two-step Sil typing confirm, 4 RTL tests green; existing GET /projects admin-bypass reused — zero backend changes)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 58
-  percent: 88
+  completed_plans: 59
+  percent: 89
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 5 of 12
-Status: Executing Phase 14 — Plan 14-04 (/admin/roles + /admin/permissions placeholder tabs) complete; ready for Plan 14-05
-Last activity: 2026-04-27 -- Phase 14 Plan 14-04 complete (~12 min, 2 atomic commits, 3 RTL tests green, build green; 7-layer defense matrix for Permissions; 4-layer for Roles)
+Plan: 6 of 12
+Status: Executing Phase 14 — Plan 14-05 (/admin/projects tab) complete; ready for Plan 14-06
+Last activity: 2026-04-27 -- Phase 14 Plan 14-05 complete (~10 min, 1 atomic commit, 4 RTL tests green, build green; D-B5 menu absence enforced via test; two-step typing confirm on Sil; existing GET /projects admin-bypass + DELETE /projects/{id} reused — zero backend changes)
 
-Progress: [████████▊░] 88%
+Progress: [████████▉░] 89%
 
 ## Performance Metrics
 
@@ -53,8 +53,8 @@ Progress: [████████▊░] 88%
 
 **Recent Trend:**
 
-- Last 5 plans: 08-01 (6 min, 2 tasks, 9 files), 08-02 (2 min, 2 tasks, 8 files), 08-03 (3 min, 2 tasks, 9 files), 08-04 (17 min, 3 tasks incl. blocking checkpoint, 12 files)
-- Trend: Phase 8 complete; 08-04 took longer than the rest because Task 3 is a blocking human-verify checkpoint with a post-checkpoint fix round
+- Last 5 plans: 14-01 (90 min, 4 tasks, 60 files — Wave 0 fat infra), 14-02 (12 min, 2 tasks, 11 files), 14-03 (22 min, 2 tasks, 14 files — Users tab + Backend GET /admin/users), 14-04 (12 min, 2 tasks, 8 files — RBAC placeholders), 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test)
+- Trend: Phase 14 Wave 2 surface plans (14-03, 14-04, 14-05) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-05 came in the fastest (~10 min) because no backend changes were needed — existing GET /projects admin-bypass + DELETE /projects/{id} from Phase 9-10 covered both Archive + Sil flows.
 
 *Updated after each plan completion*
 | Phase 08 P02 | 2min  | 2 tasks | 8 files  |
@@ -113,6 +113,7 @@ Progress: [████████▊░] 88%
 | Phase 14 P02 | 12min | 2 tasks | 11 files (2 atomic commits, 4 RTL tests green) |
 | Phase 14 P03 | 22min | 2 tasks | 14 files (2 atomic commits, 11 RTL tests green; backend GET /admin/users handler — Rule 2 deviation resolves Plan 14-02 role gap) |
 | Phase 14 P04 | 12min | 2 tasks | 8 files (2 atomic commits, 3 RTL tests green; 7-layer defense matrix for Permissions + 4-layer for Roles; NO backend RBAC migration per D-A2 defer) |
+| Phase 14 P05 | 10min | 1 task | 8 files (1 atomic commit, 4 RTL tests green; D-B5 NO transfer-ownership enforced via menu absence test; two-step typing confirm on Sil via Modal; reused existing GET /projects admin-bypass + DELETE /projects/{id} — zero backend changes) |
 
 ## Accumulated Context
 

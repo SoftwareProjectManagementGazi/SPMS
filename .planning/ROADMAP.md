@@ -203,7 +203,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
-| 14. Admin Panel | v2.0 | 4/12 | Executing (Wave 2 surface plans 14-03 + 14-04 complete) | - |
+| 14. Admin Panel | v2.0 | 5/12 | Executing (Wave 2 surface plans 14-03 + 14-04 + 14-05 complete) | - |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
@@ -217,7 +217,7 @@ Plans:
 - [x] 14-02-PLAN.md — Admin layout (route guard + middleware matcher + NavTabs strip) + /admin Overview tab (5 StatCards + Pending Requests + Role distribution + Recent admin events) — **complete 2026-04-27** (2 atomic commits, 4 RTL tests green, build green)
 - [x] 14-03-PLAN.md — /admin/users (Kullanıcılar) — UsersTable + bulk-action toolbar + AddUserModal + BulkInviteModal (CSV with 500-row cap) + consumed shared more-menu.tsx — **complete 2026-04-27** (2 atomic commits, 11 RTL tests green, build green; backend GET /admin/users handler added — Rule 2 deviation resolves Plan 14-02 role-distribution gap)
 - [x] 14-04-PLAN.md — /admin/roles + /admin/permissions visual placeholders (RBAC defer per D-A2..A5; multiple defenses against v3.0 reactivation) — **complete 2026-04-27** (2 atomic commits, 3 RTL tests green, build green; 8 files added across 2 sub-routes; 7-layer defense for Permissions matrix + 4-layer for Roles tab)
-- [ ] 14-05-PLAN.md — /admin/projects (Projeler) — 8-col table including archived + EXACTLY 2 MoreH (Arşivle + Sil two-step key-typing confirm)
+- [x] 14-05-PLAN.md — /admin/projects (Projeler) — 8-col table including archived + EXACTLY 2 MoreH (Arşivle + Sil two-step key-typing confirm) — **complete 2026-04-27** (1 atomic commit, 4 RTL tests green, build green; D-B5 menu absence enforced via test; existing GET /projects admin-bypass + DELETE /projects/{id} reused — zero backend changes)
 - [ ] 14-06-PLAN.md — /admin/workflows (Şablonlar) — template card grid + impact-aware Sil with "Yine de sil" secondary checkbox
 - [ ] 14-07-PLAN.md — /admin/audit (Audit) — URL-driven filters + 50k cap warning + AuditFilterModal + Detay column variant stub
 - [ ] 14-08-PLAN.md — /admin/stats (İstatistik) — 3 charts lazy-loaded (recharts LineChart + pure CSS Methodology bars + Velocity top-30 grid)
