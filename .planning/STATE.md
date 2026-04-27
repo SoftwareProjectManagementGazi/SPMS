@@ -5,14 +5,14 @@ milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
 stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
-last_updated: "2026-04-27T07:40:02.610Z"
+last_updated: "2026-04-27T08:02:37.598Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 60
-  percent: 91
+  completed_plans: 61
+  percent: 92
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -115,6 +115,7 @@ Progress: [█████████░] 91%
 | Phase 14 P04 | 12min | 2 tasks | 8 files (2 atomic commits, 3 RTL tests green; 7-layer defense matrix for Permissions + 4-layer for Roles; NO backend RBAC migration per D-A2 defer) |
 | Phase 14 P05 | 10min | 1 task | 8 files (1 atomic commit, 4 RTL tests green; D-B5 NO transfer-ownership enforced via menu absence test; two-step typing confirm on Sil via Modal; reused existing GET /projects admin-bypass + DELETE /projects/{id} — zero backend changes) |
 | Phase 14 P06 | 8min | 1 task tasks | 7 files (1 atomic commit, 6 RTL tests green; client-side composed clone via existing GET + POST endpoints, impact-aware Sil with Yine de sil checkbox gate when usage > 0, mode tone 'info' for continuous per UI-SPEC §G.3; zero backend changes) files |
+| Phase 14 P07 | 13 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -432,6 +433,10 @@ Key constraints for v2.0:
 - [Phase 14]: [14-04] No "Düzenle" button on system-role cards (D-A5 explicit removal vs prototype line 228) — RBAC editing is deferred to v3.0 so the UI affordance is removed entirely. The card is information-only; a v3.0 contributor adding the button back must also wire the Role entity + Permission junction backend work first.
 - [Phase 14]: [14-04] admin-rbac-keys.ts ships BOTH Surface D (Roller) AND Surface E (İzin Matrisi) keys upfront — same precedent as Plan 14-02 shipping Surface A + B in one Task 1 commit. 40 TR/EN parity keys total (14 roles + 26 permissions). Avoids a 2nd commit re-touching the same i18n file when Task 2 ships.
 - [Phase ?]: Plan 14-06: client-side composed clone via existing GET + POST endpoints (no backend /clone route per Plan critical_constraints); impact-aware Sil dual-branch (ConfirmDialog when usage=0, Modal+Yine de sil checkbox when usage>0); active_project_count computed client-side from useProjects() cache; mode tone 'info' for continuous per UI-SPEC §G.3 (NOT 'success' from PLAN.md sample — UI-SPEC takes precedence per CONTEXT D-00)
+- [Phase 14]: [14-07] /admin/audit ships URL-driven filter state via useSearchParams + router.replace (D-C5 bookmarklenebilir); two filter mutators (updateFilter merge / replaceFilter replace) distinguish chip clears + pagination from modal Apply/Clear semantics
+- [Phase 14]: [14-07] AdminAuditTable lazy-loaded via next/dynamic ssr:false + DataState loading fallback (D-C6); page wrapped in React.Suspense to allow useSearchParams in Next.js 16 static prerender (workflow-editor pattern)
+- [Phase 14]: [14-07] D-Z1 enforced — 6-column audit table (90px/160px/180px/1fr/1fr/28px), NO risk column; Detay column wraps existing ActivityRow variant=admin-table slot (Plan 14-10 fills render branch — graceful degradation)
+- [Phase 14]: [14-07] Pitfall 6 mitigated — AlertBanner tone=warning rendered above table when truncated=true with toLocaleString-formatted total; pagination math caps at HARD_CAP (50_000) regardless of true total
 
 ### Pending Todos
 
@@ -462,9 +467,9 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T07:39:52.012Z
+Last session: 2026-04-27T08:01:07.048Z
 Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
-Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-07-PLAN.md
+Resume file: None
 
 **Current Phase:** 14
 
