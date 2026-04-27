@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
-last_updated: "2026-04-27T09:02:54.740Z"
+stopped_at: Phase 14 Plan 14-11 complete (AdminLayout Rapor al + Denetim günlüğü buttons wired; avatar-dropdown Admin Paneli D-D2 cross-phase contract locked with regression test)
+last_updated: "2026-04-27T09:11:05Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 64
-  percent: 97
+  completed_plans: 65
+  percent: 98
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -53,8 +53,8 @@ Progress: [██████████] 97%
 
 **Recent Trend:**
 
-- Last 5 plans: 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test), 14-06 (8 min, 1 task, 7 files — Workflows tab + impact-aware Sil), 14-07 (13 min, 2 tasks, 10 files — Audit tab + URL-driven filters + 50k cap), 14-08 (9 min, 2 tasks, 7 files — Stats tab + 3 lazy-loaded charts + D-X4 cap), 14-09 (14 min, 2 tasks, 12 files — backend audit_log D-D2 enrichment cross-cutting; 13 emission sites + 1 new test + D-D6 backward compat)
-- Trend: Phase 14 Wave 2 surface plans (14-03..14-08) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-09 (Wave 3 cross-cutting) came in at 14 min — single-day backend cross-cut touching 11 files (6 enrichment + 3 router wires + 1 test + 1 deferred-items log) thanks to (a) audit_repo.create_with_metadata helper already shipped by Plan 14-01, (b) extra_metadata JSONB column already shipped by Phase 9 D-08 migration 005, (c) Phase 12 D-09 in-memory fake-repo pattern already established for tests/integration/test_user_activity.py — directly reused for test_audit_log_enrichment.py without needing live DB. Net: NO migration / NO new endpoints / NO schema change.
+- Last 5 plans: 14-07 (13 min, 2 tasks, 10 files — Audit tab + URL-driven filters + 50k cap), 14-08 (9 min, 2 tasks, 7 files — Stats tab + 3 lazy-loaded charts + D-X4 cap), 14-09 (14 min, 2 tasks, 12 files — backend audit_log D-D2 enrichment cross-cutting; 13 emission sites + 1 new test + D-D6 backward compat), 14-10 (25 min, 2 tasks, 5 files — frontend audit-event-mapper 10→23 SemanticEventTypes + activity-row variant=admin-table + 5 new render branches; cross-cutting affects 4 surfaces), 14-11 (5 min, 1 task, 3 files — AdminLayout button wiring + Phase 13 D-D2 cross-phase contract regression guard)
+- Trend: Phase 14 Wave 2 surface plans (14-03..14-08) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-09 (Wave 3 cross-cutting) came in at 14 min — single-day backend cross-cut touching 11 files (6 enrichment + 3 router wires + 1 test + 1 deferred-items log) thanks to (a) audit_repo.create_with_metadata helper already shipped by Plan 14-01, (b) extra_metadata JSONB column already shipped by Phase 9 D-08 migration 005, (c) Phase 12 D-09 in-memory fake-repo pattern already established for tests/integration/test_user_activity.py — directly reused for test_audit_log_enrichment.py without needing live DB. Net: NO migration / NO new endpoints / NO schema change. Plan 14-10 (Wave 3 frontend cross-cut) shipped 4 commits (RED+GREEN for each task) in 25 min thanks to the Phase 13 audit-event-mapper + activity-row already being in shape. Plan 14-11 (Wave 3 final integration) shipped in 5 min — single-task, single-task plan; only 3 files touched (1 production + 2 tests) thanks to (a) Plan 14-01's csv-export helper being content-type-agnostic (PDF works through the same anchor-trigger pattern as CSV), (b) Plan 14-02's stub buttons leaving clean TODO(14-11) markers, (c) Phase 13 avatar-dropdown wiring being correct on first inspection — verified-by-test rather than verified-by-eyeball.
 
 *Updated after each plan completion*
 | Phase 08 P02 | 2min  | 2 tasks | 8 files  |
@@ -119,6 +119,7 @@ Progress: [██████████] 97%
 | Phase 14 P08 | 9min | 2 tasks | 7 files (2 atomic commits, 5 RTL tests green; D-A7 composite endpoint single-round-trip + D-C6 3 dynamic chart imports + D-X3 pure-CSS bars + D-X4 client-side defensive cap) |
 | Phase 14 P09 | 14min | 2 tasks | 12 files (2 atomic commits + new test_audit_log_enrichment.py 3/3 + 21/21 baseline regression green; 13 audit emission sites enriched with D-D2 metadata across task_repo + project_repo + manage_comments + manage_milestones + manage_artifacts + manage_phase_reports; 160-char comment_excerpt PII guardrail; D-D6 backward compat — pre-Phase-14 rows survive get_global_audit; NO migration / NO new endpoints) |
 | Phase 14 P10 | 25 min | 2 tasks | 5 files |
+| Phase 14 P11 | 5min | 1 task | 3 files (2 atomic commits — RED/GREEN; layout.tsx + 2 test files; 6/6 layout RTL + 14/14 avatar-dropdown RTL green; build green; D-B6 button wiring + D-D2 cross-phase contract verification) |
 
 ## Accumulated Context
 
@@ -454,6 +455,12 @@ Key constraints for v2.0:
 - [Phase ?]: Phase 14 Plan 14-10 — chose direct snake_case reads in activity-row.tsx (Pitfall 2 option b) over a metadata-shape mapper; consistent with Phase 13 line 74-76 pattern
 - [Phase ?]: Phase 14 Plan 14-10 — admin chip routing catches 10 admin-side types; status chip catches 3 field-change types; preserves Phase 13 mental model and SegmentedControl chip-row width
 - [Phase ?]: Phase 14 Plan 14-10 — task_field_updated catch-all guarded by f != null && f !== '' to reject null/empty field_name; cross-phase regression test asserts column_id and assignee_id resolutions survive
+- [Phase 14]: [14-11] avatar-dropdown.tsx left UNCHANGED — Phase 13 D-D2 wiring already correct (handleNav("/admin") → router.push("/admin")). Plan 14-11 ships verification only via Test 14 in avatar-dropdown.test.tsx — locks the contract so a future refactor that drops the role check or changes the href fails loudly.
+- [Phase 14]: [14-11] Test 14 asserts `pushMock-called-with('/admin')` rather than `getAttribute("href")` — the Admin Paneli menuitem is a `<button onClick>`, NOT a `<Link href>`. The PLAN.md draft suggested the href assertion which would have been a false failure; the implementation has been button-based since Phase 13 and Test 14 matches that shape.
+- [Phase 14]: [14-11] Module-level `vi.mock("@/lib/admin/csv-export")` in layout.test.tsx — keeps jsdom from constructing a real anchor + click. Pattern is reusable for any future test verifying a CSV/PDF download dispatch without exercising browser-only download primitives.
+- [Phase 14]: [14-11] Server-side rate-limit reuse for Rapor al — Plan 14-01 admin-summary endpoint already enforces `@limiter.limit("1/30seconds")`; Plan 14-11 client just fires the download and lets the backend reject 429 on rapid double-clicks. Avoided duplicate client-side cooldown that would break when an admin has multiple browser tabs open.
+- [Phase 14]: [14-11] Single-task plan still split into 2 commits (RED `bc0cc5d3` + GREEN `0eb76c41`) — TDD gate sequence visible in `git log --oneline`; mirrors Plan 14-10 two-phase discipline.
+- [Phase 14]: [14-11] csv-export helper (Plan 14-01) is content-type-agnostic — reused for PDF download via the same anchor-trigger pattern. Misleadingly CSV-named but the body works for any same-origin Content-Disposition: attachment response. Future plans needing JSON / TXT / XLSX should reuse it; rename to `triggerDownload` is a v2.1 candidate.
 
 ### Pending Todos
 
