@@ -42,6 +42,15 @@ export interface ActivityRowProps {
   event: ActivityItem
   /** When set, taskKey/phase reference clicks route under that project. */
   projectId?: number
+  /**
+   * Phase 14 Plan 14-02 — variant slot, STUB for Plan 14-10.
+   * Plan 14-10 will add the "admin-table" branch (compact single-line render
+   * for the /admin/audit table cell + Recent Admin Events list). For Plan
+   * 14-02 the prop is accepted but the renderer falls through to the default
+   * branch — callers can pass it today and the visual upgrade lands when
+   * Plan 14-10 ships.
+   */
+  variant?: "default" | "admin-table"
 }
 
 /** Audit log column_id values are integers; we don't have a column-name lookup
