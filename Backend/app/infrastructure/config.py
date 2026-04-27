@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     # Notification polling interval for frontend SSE (Phase 5)
     NOTIFICATION_POLL_INTERVAL_MS: int = 30000
 
+    # Phase 14 Plan 14-01 — admin invite-flow token TTL (D-B2 + Discretion).
+    # 7 days for invites vs 24h for password resets — invites typically need
+    # more leeway because the user may not check email immediately.
+    INVITE_TOKEN_TTL_DAYS: int = 7
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

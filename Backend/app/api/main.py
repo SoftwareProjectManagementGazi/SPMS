@@ -176,6 +176,16 @@ app.include_router(milestones_router.router, prefix="/api/v1", tags=["milestones
 app.include_router(artifacts_router.router, prefix="/api/v1", tags=["artifacts"])
 app.include_router(phase_reports_router.router, prefix="/api/v1", tags=["phase_reports"])
 
+# Phase 14 Plan 14-01 — admin panel routers (5 NEW, all under /api/v1 with
+# Depends(require_admin) gate; PM-side join-request create endpoint uses
+# require_project_transition_authority).
+from app.api.v1 import admin_join_requests, admin_users, admin_audit, admin_stats, admin_summary
+app.include_router(admin_join_requests.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(admin_users.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(admin_audit.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(admin_stats.router, prefix="/api/v1", tags=["Admin"])
+app.include_router(admin_summary.router, prefix="/api/v1", tags=["Admin"])
+
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"
 _static_dir.mkdir(parents=True, exist_ok=True)

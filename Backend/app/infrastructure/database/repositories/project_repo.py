@@ -273,3 +273,45 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             )
         )
         return (await self.session.execute(stmt)).scalar() or 0
+
+    # ------------------------------------------------------------------
+    # Phase 14 Plan 14-01 — admin stats aggregation (D-X3 / D-X4)
+    # ------------------------------------------------------------------
+
+    async def methodology_distribution(self) -> dict:
+        """D-X3 — count of non-archived projects per methodology.
+
+        Cheap GROUP BY query — no caching needed in v2.0.
+        Returns {"scrum": N, "kanban": N, "waterfall": N, "iterative": N}.
+        """
+        from sqlalchemy import func as sqlfunc
+        stmt = (
+            select(ProjectModel.methodology, sqlfunc.count(ProjectModel.id))
+            .where(
+                ProjectModel.is_deleted == False,  # noqa: E712
+                ProjectModel.status != "ARCHIVED",
+            )
+            .group_by(ProjectModel.methodology)
+        )
+        result = await self.session.execute(stmt)
+        out: dict = {}
+        for methodology, count in result.all():
+            # Normalize enum-vs-string and lowercase the key for the chart axis.
+            key = methodology.value if hasattr(methodology, "value") else str(methodology)
+            out[key.lower()] = int(count or 0)
+        return out
+
+    async def list_recent_projects(self, limit: int = 30) -> list:
+        """D-X4 — top N most-recently-updated non-archived projects (DoS cap).
+
+        Uses .unique() because _get_base_query eager-loads ProjectModel.columns
+        (a collection); without it SQLAlchemy raises InvalidRequestError.
+        """
+        stmt = (
+            self._get_base_query()
+            .where(ProjectModel.status != "ARCHIVED")
+            .order_by(ProjectModel.updated_at.desc().nulls_last())
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]

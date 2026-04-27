@@ -254,6 +254,143 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         ]
         return items, total
 
+    # ------------------------------------------------------------------
+    # Phase 14 Plan 14-01 — admin-wide audit retrieval (D-A8 / D-Z2)
+    # ------------------------------------------------------------------
+
+    async def get_global_audit(
+        self,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        actor_id: Optional[int] = None,
+        action_prefix: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int, bool]:
+        """D-A8 admin-wide audit — Pitfall 6 truncated flag for >50k rows.
+
+        Mirrors get_global_activity projection block; adds dynamic WHERE clauses
+        for the four admin filters (date range, actor, action prefix). 50k row
+        hard cap (D-Z2) enforced inside this method so use case + router don't
+        need to know the magic number.
+        """
+        from app.infrastructure.database.models.user import UserModel
+
+        conditions = []
+        if date_from is not None:
+            conditions.append(AuditLogModel.timestamp >= date_from)
+        if date_to is not None:
+            conditions.append(AuditLogModel.timestamp <= date_to)
+        if actor_id is not None:
+            conditions.append(AuditLogModel.user_id == actor_id)
+        if action_prefix:
+            # Pitfall 7: action is plain text — like prefix benefits from a
+            # btree if one exists (none in v2.0; future candidate).
+            conditions.append(AuditLogModel.action.like(f"{action_prefix}%"))
+
+        # Total count with same filters (used for pagination math + truncated
+        # flag computation per D-Z2 / Pitfall 6).
+        count_stmt = select(sqlfunc.count(AuditLogModel.id))
+        if conditions:
+            count_stmt = count_stmt.where(*conditions)
+        actual_count = (await self.session.execute(count_stmt)).scalar() or 0
+
+        HARD_CAP = 50000
+        truncated = actual_count > HARD_CAP
+        capped_total = min(actual_count, HARD_CAP)
+
+        effective_offset = min(offset, capped_total)
+        effective_limit = max(0, min(limit, capped_total - effective_offset))
+
+        items_stmt = (
+            select(
+                AuditLogModel.id,
+                AuditLogModel.action,
+                AuditLogModel.entity_type,
+                AuditLogModel.entity_id,
+                AuditLogModel.field_name,
+                AuditLogModel.old_value,
+                AuditLogModel.new_value,
+                AuditLogModel.user_id,
+                UserModel.full_name.label("user_name"),
+                UserModel.avatar.label("user_avatar"),
+                AuditLogModel.timestamp,
+                AuditLogModel.extra_metadata,
+            )
+            .select_from(AuditLogModel)
+            .join(UserModel, UserModel.id == AuditLogModel.user_id, isouter=True)
+        )
+        if conditions:
+            items_stmt = items_stmt.where(*conditions)
+        items_stmt = (
+            items_stmt
+            .order_by(AuditLogModel.timestamp.desc())
+            .limit(effective_limit)
+            .offset(effective_offset)
+        )
+
+        result = await self.session.execute(items_stmt)
+        rows = result.mappings().all()
+        items = [
+            {
+                "id": row["id"],
+                "action": row["action"],
+                "entity_type": row["entity_type"],
+                "entity_id": row["entity_id"],
+                "entity_label": None,
+                "field_name": row["field_name"],
+                "old_value": row["old_value"],
+                "new_value": row["new_value"],
+                "user_id": row["user_id"],
+                "user_name": row["user_name"],
+                "user_avatar": row["user_avatar"],
+                "timestamp": row["timestamp"],
+                "metadata": row["extra_metadata"],
+            }
+            for row in rows
+        ]
+        return items, capped_total, truncated
+
+    async def active_users_trend(self, days: int = 30) -> List[dict]:
+        """D-X2 daily active users — on-the-fly audit_log compute.
+
+        Returns one {date, count} dict per day in the last ``days`` window.
+        Days with zero events still appear (count=0) thanks to generate_series
+        so the chart never has visual gaps. v2.1 candidate: daily snapshot
+        table + cron when audit_log exceeds ~10k events/day (scaling cliff).
+        """
+        # asyncpg requires :days to be cast explicitly — string concat with
+        # ' days' suffix needs the int cast to text first. Using arithmetic
+        # interval is cleaner: NOW() - (:days * INTERVAL '1 day').
+        sql = text(
+            """
+            WITH days AS (
+              SELECT generate_series(
+                (NOW() - (:days * INTERVAL '1 day'))::date,
+                NOW()::date,
+                INTERVAL '1 day'
+              )::date AS day
+            )
+            SELECT
+              d.day::text AS date,
+              COALESCE(c.cnt, 0) AS count
+            FROM days d
+            LEFT JOIN (
+              SELECT date_trunc('day', timestamp)::date AS day,
+                     COUNT(DISTINCT user_id) AS cnt
+              FROM audit_log
+              WHERE timestamp >= NOW() - (:days * INTERVAL '1 day')
+              GROUP BY date_trunc('day', timestamp)::date
+            ) c ON c.day = d.day
+            ORDER BY d.day
+            """
+        )
+        result = await self.session.execute(sql, {"days": days})
+        return [
+            {"date": row._mapping["date"], "count": int(row._mapping["count"] or 0)}
+            for row in result.all()
+        ]
+
     async def get_recent_by_user(self, user_id: int, limit: int = 5) -> List[dict]:
         """D-48: recent activity for a user (any entity)."""
         stmt = (

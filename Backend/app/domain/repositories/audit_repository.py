@@ -143,3 +143,48 @@ class IAuditRepository(ABC):
         Returns ``(items, total)``.
         """
         pass
+
+    # ------------------------------------------------------------------
+    # Phase 14 Plan 14-01 — admin-wide audit retrieval (D-A8 / D-Z2)
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    async def get_global_audit(
+        self,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        actor_id: Optional[int] = None,
+        action_prefix: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[dict], int, bool]:
+        """D-A8 admin-wide audit retrieval. NO project-membership privacy filter
+        (admin sees everything).
+
+        Returns (items, capped_total, truncated):
+        - items: audit_log rows enriched with user_name + user_avatar via JOIN
+        - capped_total: min(actual_count, 50000) per D-Z2 50k hard cap
+        - truncated: True when actual_count > 50000 — Pitfall 6 signals the
+          frontend to render an AlertBanner above the table
+
+        Filters:
+        - date_from / date_to: timestamp range
+        - actor_id: AuditLogModel.user_id == actor_id
+        - action_prefix: AuditLogModel.action.like(f"{prefix}%")  (e.g. "task.")
+        """
+        pass
+
+    @abstractmethod
+    async def active_users_trend(self, days: int = 30) -> List[dict]:
+        """D-X2 daily active user count over the last N days, on-the-fly compute.
+
+        SQL: SELECT date_trunc('day', timestamp) AS day,
+                    COUNT(DISTINCT user_id) AS count
+             FROM audit_log
+             WHERE timestamp >= NOW() - INTERVAL ':days days'
+             GROUP BY day ORDER BY day
+
+        Returns list of {date: ISO date string, count: int}. Daily snapshot
+        cron is a v2.1 candidate (scaling cliff at ~10k events/day).
+        """
+        pass

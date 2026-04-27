@@ -70,3 +70,25 @@ class IProjectRepository(ABC):
     async def count_by_member(self, user_id: int) -> int:
         """Count distinct projects where user is a team member (any non-deleted status)."""
         pass
+
+    # ------------------------------------------------------------------
+    # Phase 14 Plan 14-01 — admin stats aggregation (D-A7 / D-X3 / D-X4)
+    # ------------------------------------------------------------------
+
+    async def methodology_distribution(self) -> dict:
+        """D-X3 — count of non-archived projects per methodology.
+
+        Returns {methodology_lower: count}. Default implementation returns
+        empty dict so test fakes can override; production impl issues a single
+        SELECT methodology, COUNT(*) FROM projects WHERE status != 'ARCHIVED'
+        GROUP BY methodology query.
+        """
+        return {}
+
+    async def list_recent_projects(self, limit: int = 30) -> list:
+        """D-X4 — top N most-recently-updated non-archived projects (DoS cap).
+
+        Returns Project entities ordered by updated_at DESC. Default returns
+        empty list so test fakes can override.
+        """
+        return []
