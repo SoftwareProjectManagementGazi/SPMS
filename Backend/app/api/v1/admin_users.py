@@ -27,6 +27,8 @@ from app.api.deps.security import get_security_service
 from app.api.deps.user import get_user_repo
 from app.application.dtos.admin_user_dtos import (
     AdminRole,
+    AdminUserListItemDTO,
+    AdminUserListResponseDTO,
     BulkActionRequestDTO,
     BulkActionResponseDTO,
     BulkInviteRequestDTO,
@@ -92,6 +94,75 @@ def _make_update_role(session: AsyncSession):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/admin/users",
+    response_model=AdminUserListResponseDTO,
+)
+async def list_admin_users(
+    role: Optional[AdminRole] = Query(default=None),
+    status: Optional[str] = Query(default=None),  # "active" | "inactive"
+    q: Optional[str] = Query(default=None),
+    limit: Optional[int] = Query(default=None, ge=1, le=500),
+    offset: Optional[int] = Query(default=0, ge=0),
+    admin: User = Depends(require_admin),
+    user_repo=Depends(get_user_repo),
+):
+    """Phase 14 Plan 14-03 — admin-scoped user list.
+
+    Richer than `/auth/users` (UserListDTO lacks role + is_active). Returns
+    `{items: [{id, email, full_name, role, is_active, ...}], total}` so the
+    Users tab can render role badges and status dots directly.
+
+    Filters:
+    - `role`     — exact role-name match (Admin / Project Manager / Member).
+    - `status`   — "active" / "inactive".
+    - `q`        — case-insensitive match on email or full_name.
+    - `limit` / `offset` — optional pagination.
+    """
+    users = await user_repo.get_all()
+
+    # Filter — role / status / q.
+    filtered = []
+    q_lower = (q or "").strip().lower()
+    for u in users:
+        if role is not None:
+            user_role = u.role.name if u.role else None
+            if user_role != role:
+                continue
+        if status == "active" and not u.is_active:
+            continue
+        if status == "inactive" and u.is_active:
+            continue
+        if q_lower:
+            if (
+                q_lower not in (u.email or "").lower()
+                and q_lower not in (u.full_name or "").lower()
+            ):
+                continue
+        filtered.append(u)
+
+    total = len(filtered)
+    # Optional pagination.
+    if offset:
+        filtered = filtered[offset:]
+    if limit:
+        filtered = filtered[:limit]
+
+    items = [
+        AdminUserListItemDTO(
+            id=u.id,
+            email=u.email,
+            full_name=u.full_name,
+            avatar=u.avatar,
+            is_active=u.is_active,
+            role=(u.role.name if u.role else None),
+            created_at=u.created_at,
+        )
+        for u in filtered
+    ]
+    return AdminUserListResponseDTO(items=items, total=total)
 
 
 @router.post(

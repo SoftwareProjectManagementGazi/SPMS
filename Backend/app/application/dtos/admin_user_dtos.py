@@ -97,3 +97,29 @@ class BulkActionResponseDTO(BaseModel):
     failed_count: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdminUserListItemDTO(BaseModel):
+    """Phase 14 Plan 14-03 — admin-scoped user list row.
+
+    Richer than UserListDTO (which lacks role + is_active) — surfaces the
+    role name and active state directly so the Frontend2 admin Users tab
+    can render role badges and status dots without a second lookup.
+    """
+    id: int
+    email: str
+    full_name: str
+    avatar: Optional[str] = None
+    is_active: bool = True
+    role: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminUserListResponseDTO(BaseModel):
+    """{items, total} paged shape — Plan 14-03 frontend consumes this."""
+    items: List[AdminUserListItemDTO]
+    total: int
+
+    model_config = ConfigDict(from_attributes=True)

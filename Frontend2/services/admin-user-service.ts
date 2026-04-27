@@ -110,9 +110,11 @@ export const adminUserService = {
   },
 
   list: async (filter?: AdminUserListFilter) => {
-    // Plan 14-03 will fully wire the list endpoint; for Wave 0 we expose the
-    // method shape and reuse the existing /auth/users endpoint as the source.
-    const resp = await apiClient.get("/auth/users", { params: filter })
+    // Phase 14 Plan 14-03 — /admin/users returns {items: AdminUserListItem[],
+    // total: number}. Items carry role + is_active (richer than /auth/users
+    // UserListDTO) so the Users tab can render role badges + status dots
+    // without a second lookup.
+    const resp = await apiClient.get("/admin/users", { params: filter })
     return resp.data
   },
 
