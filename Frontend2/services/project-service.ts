@@ -149,6 +149,13 @@ export const projectService = {
     return mapProject(response.data);
   },
 
+  // Phase 14 Plan 14-05 — admin-tab project delete. Backend DELETE /projects/{id}
+  // already exists (Phase 9-10) and returns 204. The /admin/projects MoreH "Sil"
+  // flow uses this with a two-step typing confirm in the UI.
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete(`/projects/${id}`);
+  },
+
   // Phase 11 Plan 04: Settings > Genel sub-tab patches arbitrary project fields
   // (name, description, start_date, end_date, process_config, status). The backend
   // PATCH /projects/{id} accepts ProjectUpdateDTO with all these keys.

@@ -57,6 +57,24 @@ export function useUpdateProjectStatus() {
   });
 }
 
+// Phase 14 Plan 14-05 — admin-tab project delete mutation.
+//
+// Backend DELETE /projects/{id} returns 204 (Phase 9-10). On success we
+// invalidate the projects list cache so the row disappears from the admin
+// table after the two-step typing confirm. Errors surface via the call site
+// (admin-project-row-actions.tsx wires the toast).
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (projectId: number) => projectService.delete(projectId),
+    onSettled: () => {
+      // Refetch on success AND error — same rationale as useUpdateProjectStatus:
+      // a stale list after a permission/state change should not linger.
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+}
+
 // Create wizard mutation (PROJ-01)
 export function useCreateProject() {
   const queryClient = useQueryClient();
