@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps.auth import get_current_user, _is_admin
 from app.api.deps.milestone import get_milestone_repo
 from app.api.deps.project import get_project_repo
+from app.api.deps.audit import get_audit_repo
 from app.application.use_cases.manage_milestones import (
     CreateMilestoneUseCase,
     UpdateMilestoneUseCase,
@@ -92,9 +93,10 @@ async def create_milestone(
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     await _authorize_transition(user, dto.project_id, project_repo, milestone_repo)
-    uc = CreateMilestoneUseCase(milestone_repo, project_repo)
+    uc = CreateMilestoneUseCase(milestone_repo, project_repo, audit_repo=audit_repo)
     try:
         return await uc.execute(dto, user.id)
     except Exception as e:
@@ -108,12 +110,13 @@ async def update_milestone(
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     existing = await milestone_repo.get_by_id(milestone_id)
     if existing is None:
         raise HTTPException(404, f"Milestone {milestone_id} not found")
     await _authorize_transition(user, existing.project_id, project_repo, milestone_repo)
-    uc = UpdateMilestoneUseCase(milestone_repo, project_repo)
+    uc = UpdateMilestoneUseCase(milestone_repo, project_repo, audit_repo=audit_repo)
     try:
         return await uc.execute(milestone_id, dto, user.id)
     except Exception as e:
@@ -126,11 +129,12 @@ async def delete_milestone(
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     existing = await milestone_repo.get_by_id(milestone_id)
     if existing is None:
         raise HTTPException(404, f"Milestone {milestone_id} not found")
     await _authorize_transition(user, existing.project_id, project_repo, milestone_repo)
-    uc = DeleteMilestoneUseCase(milestone_repo)
+    uc = DeleteMilestoneUseCase(milestone_repo, audit_repo=audit_repo, project_repo=project_repo)
     await uc.execute(milestone_id)
     return None

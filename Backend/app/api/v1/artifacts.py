@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps.auth import get_current_user, _is_admin
 from app.api.deps.artifact import get_artifact_repo
 from app.api.deps.project import get_project_repo
+from app.api.deps.audit import get_audit_repo
 from app.application.use_cases.manage_artifacts import (
     CreateArtifactUseCase,
     UpdateArtifactByAssigneeUseCase,
@@ -90,9 +91,10 @@ async def create_artifact(
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     await _authorize_transition(user, dto.project_id, project_repo, artifact_repo)
-    uc = CreateArtifactUseCase(artifact_repo, project_repo)
+    uc = CreateArtifactUseCase(artifact_repo, project_repo, audit_repo=audit_repo)
     try:
         return await uc.execute(dto, user.id)
     except Exception as e:
@@ -105,9 +107,11 @@ async def update_artifact_as_assignee(
     dto: ArtifactUpdateByAssigneeDTO,
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
+    project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     """D-36: assignee can update status/note/file_id on own artifact only."""
-    uc = UpdateArtifactByAssigneeUseCase(artifact_repo)
+    uc = UpdateArtifactByAssigneeUseCase(artifact_repo, audit_repo=audit_repo, project_repo=project_repo)
     try:
         return await uc.execute(artifact_id, dto, user.id)
     except Exception as e:
@@ -121,13 +125,14 @@ async def update_artifact_as_manager(
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     """D-36: Admin/PM/TL can update all fields including assignee_id."""
     existing = await artifact_repo.get_by_id(artifact_id)
     if existing is None:
         raise HTTPException(404, "Artifact not found")
     await _authorize_transition(user, existing.project_id, project_repo, artifact_repo)
-    uc = UpdateArtifactByManagerUseCase(artifact_repo, project_repo)
+    uc = UpdateArtifactByManagerUseCase(artifact_repo, project_repo, audit_repo=audit_repo)
     try:
         return await uc.execute(artifact_id, dto, user.id)
     except Exception as e:
@@ -140,11 +145,12 @@ async def delete_artifact(
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
 ):
     existing = await artifact_repo.get_by_id(artifact_id)
     if existing is None:
         raise HTTPException(404, "Artifact not found")
     await _authorize_transition(user, existing.project_id, project_repo, artifact_repo)
-    uc = DeleteArtifactUseCase(artifact_repo)
+    uc = DeleteArtifactUseCase(artifact_repo, audit_repo=audit_repo, project_repo=project_repo)
     await uc.execute(artifact_id)
     return None

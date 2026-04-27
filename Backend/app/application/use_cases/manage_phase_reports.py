@@ -1,4 +1,10 @@
-"""BACK-06 / D-25 PhaseReport use cases."""
+"""BACK-06 / D-25 PhaseReport use cases.
+
+Plan 14-09 additions: D-D2 enriched audit metadata on create. The phase_id
+is resolved to a human-readable `source_phase_name` via the project's
+process_config workflow nodes at write time (D-D2 — frontend mapper consumes
+the resolved name).
+"""
 from typing import List, Optional
 from app.domain.entities.phase_report import PhaseReport
 from app.domain.repositories.phase_report_repository import IPhaseReportRepository
@@ -22,6 +28,42 @@ async def _validate_phase_in_workflow(
         raise ArchivedNodeReferenceError(node_id=phase_id, reason="non-existent in project workflow")
     if node.get("is_archived"):
         raise ArchivedNodeReferenceError(node_id=phase_id, reason="archived")
+
+
+async def _resolve_phase_name(
+    phase_id: str, project_id: int, project_repo: IProjectRepository
+) -> Optional[str]:
+    """Plan 14-09 D-D2: resolve phase_id → workflow node.name via project lookup.
+
+    Falls back to None if the project or node disappeared (D-D6 graceful).
+    Mirrors the BoardColumn.name resolver pattern from task_repo.py.
+    """
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        return None
+    nodes = (project.process_config or {}).get("workflow", {}).get("nodes", [])
+    node = next((n for n in nodes if n.get("id") == phase_id), None)
+    if node is None:
+        return None
+    return node.get("name") or phase_id
+
+
+async def _build_phase_report_audit_metadata(
+    report: PhaseReport, project_repo: IProjectRepository
+) -> dict:
+    """Plan 14-09 D-D2: compose the audit metadata envelope for a phase_report event."""
+    project = await project_repo.get_by_id(report.project_id)
+    project_key = project.key if project is not None else None
+    source_phase_name = await _resolve_phase_name(
+        report.phase_id, report.project_id, project_repo
+    )
+    return {
+        "report_id": report.id,
+        "project_id": report.project_id,
+        "project_key": project_key,
+        "source_phase_id": report.phase_id,
+        "source_phase_name": source_phase_name,
+    }
 
 
 class CreatePhaseReportUseCase:
@@ -59,6 +101,16 @@ class CreatePhaseReportUseCase:
             created_by=user_id,
         )
         created = await self.report_repo.create(report)
+        # Plan 14-09 D-D2: enriched audit metadata on report create.
+        metadata = await _build_phase_report_audit_metadata(created, self.project_repo)
+        await self.audit_repo.create_with_metadata(
+            entity_type="phase_report",
+            entity_id=created.id or 0,
+            action="created",
+            user_id=user_id,
+            metadata=metadata,
+            field_name="phase_report",
+        )
         return PhaseReportResponseDTO.model_validate(created)
 
 

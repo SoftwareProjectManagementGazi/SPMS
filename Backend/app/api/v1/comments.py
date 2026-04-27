@@ -16,6 +16,8 @@ from app.api.dependencies import (
     get_notification_preference_repo,
     _is_admin,
 )
+from app.api.deps.audit import get_audit_repo
+from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
 from app.infrastructure.email.email_service import send_notification_email
@@ -64,6 +66,7 @@ async def create_comment(
     session: AsyncSession = Depends(get_db),
     user_repo: IUserRepository = Depends(get_user_repo),
     pref_repo: INotificationPreferenceRepository = Depends(get_notification_preference_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
 ):
     # Enforce project membership: task_id comes from body (not path param)
     task = await task_repo.get_by_id(dto.task_id)
@@ -79,7 +82,8 @@ async def create_comment(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this project",
             )
-    use_case = CreateCommentUseCase(comment_repo)
+    # Plan 14-09: pass audit + task repos so Comment events emit D-D2 metadata.
+    use_case = CreateCommentUseCase(comment_repo, audit_repo=audit_repo, task_repo=task_repo)
     comment = await use_case.execute(dto, author_id=current_user.id)
 
     # Notification: notify task assignee about new comment (if not the commenter)
@@ -137,8 +141,10 @@ async def update_comment(
     dto: CommentUpdateDTO,
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
 ):
-    use_case = UpdateCommentUseCase(comment_repo)
+    use_case = UpdateCommentUseCase(comment_repo, audit_repo=audit_repo, task_repo=task_repo)
     try:
         return await use_case.execute(comment_id, dto, current_user.id, current_user)
     except CommentNotFoundError as e:
@@ -150,8 +156,10 @@ async def delete_comment(
     comment_id: int,
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
 ):
-    use_case = DeleteCommentUseCase(comment_repo)
+    use_case = DeleteCommentUseCase(comment_repo, audit_repo=audit_repo, task_repo=task_repo)
     try:
         await use_case.execute(comment_id, current_user.id, current_user)
     except CommentNotFoundError as e:
