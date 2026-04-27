@@ -213,6 +213,73 @@ export const projectService = {
     return response.data;
   },
 
+  // Phase 14 Plan 14-06 — admin Workflows tab. Reads a single template so we
+  // can compose a client-side clone (no backend /clone route per CONTEXT D-B1
+  // "use existing endpoints"). Uses GET /process-templates/{id} via the list
+  // endpoint and a client-side filter — the existing router exposes only a
+  // list endpoint at /process-templates/, so we filter here.
+  getProcessTemplateById: async (
+    id: number,
+  ): Promise<{
+    id: number
+    name: string
+    is_builtin: boolean
+    columns: unknown[]
+    recurring_tasks: unknown[]
+    behavioral_flags: Record<string, unknown>
+    description: string | null
+  } | null> => {
+    const response = await apiClient.get<
+      Array<{
+        id: number
+        name: string
+        is_builtin: boolean
+        columns: unknown[]
+        recurring_tasks: unknown[]
+        behavioral_flags: Record<string, unknown>
+        description: string | null
+      }>
+    >('/process-templates')
+    const found = response.data.find((t) => t.id === id)
+    return found ?? null
+  },
+
+  // Phase 14 Plan 14-06 — admin Workflows tab Klonla flow.
+  // No backend /clone endpoint exists; per Plan 14-06 critical_constraints we
+  // must NOT add one. Implementation: read the source template, then POST a
+  // new one with the same payload + a "(Kopya)" / "(Copy)" suffix on name.
+  // Returns the new template object so the call site can refetch / toast.
+  cloneProcessTemplate: async (
+    id: number,
+    nameSuffix: string,
+  ): Promise<unknown> => {
+    const source = await projectService.getProcessTemplateById(id)
+    if (!source) {
+      throw new Error(`Process template ${id} not found`)
+    }
+    const newName = `${source.name}${nameSuffix}`
+    // POST /process-templates expects ProcessTemplateCreateDTO — name +
+    // columns + recurring_tasks + behavioral_flags + description. is_builtin
+    // is server-forced to false (manage_process_templates.CreateProcessTemplate).
+    const response = await apiClient.post('/process-templates', {
+      name: newName,
+      columns: source.columns,
+      recurring_tasks: source.recurring_tasks,
+      behavioral_flags: source.behavioral_flags,
+      description: source.description,
+    })
+    return response.data
+  },
+
+  // Phase 14 Plan 14-06 — admin Workflows tab Sil flow.
+  // Backend DELETE /process-templates/{id} exists (manage_process_templates
+  // DeleteProcessTemplateUseCase); returns 204. Built-in templates raise
+  // PermissionError → 403; the UI gates the Sil action behind the
+  // ConfirmDialog so an admin can't accidentally trigger it.
+  deleteProcessTemplate: async (id: number): Promise<void> => {
+    await apiClient.delete(`/process-templates/${id}`)
+  },
+
   // D-26: task statistics for Dashboard StatCard 4 (open/in-progress/done task counts)
   // Uses /tasks/my-tasks — the only task-list endpoint with no path param. Backend has no
   // global GET /tasks route (405 Method Not Allowed); project-scoped lists live at

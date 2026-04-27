@@ -136,6 +136,46 @@ export function useProcessTemplates() {
   });
 }
 
+// Phase 14 Plan 14-06 — admin Workflows tab Klonla mutation.
+//
+// Clone is implemented client-side (GET source + POST new with "(Kopya)" /
+// "(Copy)" name suffix) because no backend /clone endpoint exists and Plan
+// 14-06 critical_constraints forbid adding one. Cache invalidation rolls
+// the new clone into the existing list immediately.
+export function useCloneTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, nameSuffix }: { id: number; nameSuffix: string }) =>
+      projectService.cloneProcessTemplate(id, nameSuffix),
+    onSettled: () => {
+      // Refetch on success AND error — clone may partially succeed (POST
+      // landed but local state is stale) and a forced refetch keeps the UI
+      // honest.
+      queryClient.invalidateQueries({ queryKey: ['process-templates'] });
+    },
+  });
+}
+
+// Phase 14 Plan 14-06 — admin Workflows tab Sil mutation.
+//
+// Backend DELETE /process-templates/{id} returns 204; built-in templates
+// raise 403 PermissionError. The admin UI gates this action via an
+// impact-aware Modal (warns when the template is in use by N active
+// projects + requires a "Yine de sil" secondary checkbox before the
+// danger CTA enables) so an accidental Sil click can't trigger the call.
+export function useDeleteTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (templateId: number) =>
+      projectService.deleteProcessTemplate(templateId),
+    onSettled: () => {
+      // Same rationale as useDeleteProject — invalidate even on error so a
+      // stale list after a permission/state change cannot linger.
+      queryClient.invalidateQueries({ queryKey: ['process-templates'] });
+    },
+  });
+}
+
 // D-26: task statistics for Dashboard StatCard 4 (W6 fix)
 export function useTaskStats() {
   return useQuery({
