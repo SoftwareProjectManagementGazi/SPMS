@@ -1,4 +1,5 @@
-// Phase 13 Plan 13-04 Task 1 — eventMeta map for the 10 SemanticEventType values.
+// Phase 13 Plan 13-04 Task 1 — eventMeta map for the original 10 types.
+// Phase 14 Plan 14-10 Task 1 — extended with 13 NEW entries per D-D3 + D-D4.
 //
 // Single source of truth for icon + color + locale-aware verb per event type.
 // Consumed by ActivityRow (and any future activity surface) via:
@@ -25,6 +26,15 @@ import {
   Pencil,
   FileBarChart,
   FileText,
+  Edit3,
+  Archive,
+  RefreshCw,
+  UserX,
+  UserCheck,
+  ShieldCheck,
+  KeyRound,
+  Check,
+  X,
   type LucideIcon,
 } from "lucide-react"
 
@@ -40,6 +50,9 @@ export interface EventMeta {
 }
 
 export const eventMeta: Record<SemanticEventType, EventMeta> = {
+  // -------------------------------------------------------------------------
+  // Original 10 (Phase 13 D-B1).
+  // -------------------------------------------------------------------------
   task_created: {
     Icon: Plus,
     color: "var(--status-done)",
@@ -93,5 +106,93 @@ export const eventMeta: Record<SemanticEventType, EventMeta> = {
       l === "tr"
         ? "değerlendirme raporu oluşturdu"
         : "created evaluation report",
+  },
+
+  // -------------------------------------------------------------------------
+  // Phase 14 (D-D3 + D-D4) — 13 new entries.
+  //
+  // Each entry follows the same Icon + color + verb shape. Icon choice
+  // mirrors UI-SPEC §Color line 195 conventions:
+  //  - status-progress for non-destructive updates
+  //  - status-done for additive lifecycle events
+  //  - priority-critical for destructive events (delete / deactivate / reject)
+  //  - fg-muted for archive (neutral terminal state)
+  // -------------------------------------------------------------------------
+
+  task_field_updated: {
+    Icon: Edit3,
+    color: "var(--status-progress)",
+    verb: (l) => (l === "tr" ? "değiştirdi" : "updated"),
+  },
+  project_archived: {
+    Icon: Archive,
+    color: "var(--fg-muted)",
+    verb: (l) => (l === "tr" ? "arşivledi" : "archived"),
+  },
+  project_status_changed: {
+    Icon: RefreshCw,
+    color: "var(--status-progress)",
+    verb: (l) =>
+      l === "tr" ? "proje durumunu değiştirdi" : "changed project status",
+  },
+  comment_edited: {
+    Icon: MessageSquare,
+    color: "var(--status-progress)",
+    verb: (l) => (l === "tr" ? "düzenledi yorumunu" : "edited comment on"),
+  },
+  comment_deleted: {
+    Icon: Trash2,
+    color: "var(--priority-critical)",
+    verb: (l) => (l === "tr" ? "sildi yorumunu" : "deleted comment on"),
+  },
+  user_invited: {
+    Icon: UserPlus,
+    color: "var(--status-done)",
+    verb: (l) => (l === "tr" ? "davet etti" : "invited"),
+  },
+  user_deactivated: {
+    Icon: UserX,
+    color: "var(--priority-critical)",
+    verb: (l) => (l === "tr" ? "devre dışı bıraktı" : "deactivated"),
+  },
+  user_activated: {
+    Icon: UserCheck,
+    color: "var(--status-done)",
+    verb: (l) => (l === "tr" ? "etkinleştirdi" : "activated"),
+  },
+  user_role_changed: {
+    Icon: ShieldCheck,
+    color: "var(--status-progress)",
+    verb: (l) =>
+      l === "tr" ? "rolünü değiştirdi" : "changed role of",
+  },
+  user_password_reset_requested: {
+    Icon: KeyRound,
+    color: "var(--status-progress)",
+    verb: (l) =>
+      l === "tr"
+        ? "şifre sıfırlama gönderdi"
+        : "sent password reset to",
+  },
+  project_join_request_created: {
+    Icon: UserPlus,
+    color: "var(--status-progress)",
+    verb: (l) => (l === "tr" ? "talep etti" : "requested"),
+  },
+  project_join_request_approved: {
+    Icon: Check,
+    color: "var(--status-done)",
+    verb: (l) =>
+      l === "tr"
+        ? "katılım talebini onayladı"
+        : "approved join request for",
+  },
+  project_join_request_rejected: {
+    Icon: X,
+    color: "var(--priority-critical)",
+    verb: (l) =>
+      l === "tr"
+        ? "katılım talebini reddetti"
+        : "rejected join request for",
   },
 }
