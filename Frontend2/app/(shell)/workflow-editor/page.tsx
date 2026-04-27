@@ -28,6 +28,14 @@ import { EditorPage } from "@/components/workflow-editor/editor-page"
 const VIEWPORT_MIN = 1024
 
 export default function WorkflowEditorRoute() {
+  return (
+    <React.Suspense fallback={null}>
+      <WorkflowEditorRouteInner />
+    </React.Suspense>
+  )
+}
+
+function WorkflowEditorRouteInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { language } = useApp()

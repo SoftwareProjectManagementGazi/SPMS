@@ -155,7 +155,7 @@ export default function ReportsPage() {
         <StatCard
           label={T("Engeller", "Blockers")}
           value="—"
-          tone="warning"
+          tone="danger"
           icon={<AlertOctagon size={14} />}
         />
       </div>

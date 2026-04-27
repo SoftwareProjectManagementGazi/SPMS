@@ -10,7 +10,7 @@ export interface SectionProps {
   title: string
   subtitle?: string
   action?: React.ReactNode
-  children: React.ReactNode
+  children?: React.ReactNode
   className?: string
   style?: React.CSSProperties
 }

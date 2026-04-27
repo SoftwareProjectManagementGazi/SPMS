@@ -16,6 +16,12 @@ export const mockProjects: Project[] = [
     managerAvatar: null,
     progress: 40,
     columns: ["todo", "progress", "review", "done"],
+    boardColumns: [
+      { id: 1, name: "todo" },
+      { id: 2, name: "progress" },
+      { id: 3, name: "review" },
+      { id: 4, name: "done" },
+    ],
     processConfig: {
       schema_version: 1,
       workflow: {
@@ -49,6 +55,12 @@ export const mockProjects: Project[] = [
     managerAvatar: null,
     progress: 20,
     columns: ["backlog", "todo", "progress", "done"],
+    boardColumns: [
+      { id: 5, name: "backlog" },
+      { id: 6, name: "todo" },
+      { id: 7, name: "progress" },
+      { id: 8, name: "done" },
+    ],
     processConfig: {
       schema_version: 1,
       workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },

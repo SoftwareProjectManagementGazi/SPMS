@@ -64,8 +64,8 @@ export function AvatarDropdown() {
   // a plain string fallback if a future seed regresses to a string role.
   const roleName =
     (typeof (user as { role?: unknown })?.role === "string"
-      ? ((user as { role: string }).role)
-      : (user as { role?: { name?: string } } | null)?.role?.name) || ""
+      ? ((user as unknown as { role: string }).role)
+      : (user as unknown as { role?: { name?: string } } | null)?.role?.name) || ""
   const isAdmin = roleName.toLowerCase() === "admin"
 
   // 1. Click-outside (mousedown) — Phase 8 D-04 verbatim.

@@ -99,7 +99,7 @@ const HANDLE_VISIBLE: React.CSSProperties = {
 }
 
 function PhaseNodeImpl({ data, selected }: NodeProps) {
-  const d = (data ?? {}) as PhaseNodeData
+  const d = (data ?? {}) as unknown as PhaseNodeData
   const state: PhaseNodeState = d.state ?? "default"
   const stateStyle = STATE_STYLES[state] ?? STATE_STYLES.default
   const tokenColor = d.color ?? "status-todo"

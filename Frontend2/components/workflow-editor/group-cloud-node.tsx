@@ -36,7 +36,7 @@ export interface GroupCloudNodeData {
 }
 
 function GroupCloudNodeImpl({ data }: NodeProps) {
-  const d = (data ?? {}) as GroupCloudNodeData
+  const d = (data ?? {}) as unknown as GroupCloudNodeData
   const childPositions = d.childPositions ?? []
   const tokenColor = d.color ?? "primary"
   const fill = `color-mix(in oklch, var(--${tokenColor}) 8%, transparent)`
