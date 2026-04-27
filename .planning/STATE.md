@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-02 complete (admin layout + Overview tab)
-last_updated: "2026-04-27T06:11:00.000Z"
-last_activity: 2026-04-27 -- Phase 14 Plan 14-02 complete (admin layout + Overview tab)
+stopped_at: Phase 14 Plan 14-03 complete (Users tab — UsersTable + AddUserModal + BulkInviteModal)
+last_updated: "2026-04-27T09:40:00.000Z"
+last_activity: 2026-04-27 -- Phase 14 Plan 14-03 complete (Users tab full surface, 11 RTL tests green)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 56
-  percent: 84
+  completed_plans: 57
+  percent: 86
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 3 of 12
-Status: Executing Phase 14 — Plan 14-02 (admin layout + Overview) complete; ready for Plan 14-03
-Last activity: 2026-04-27 -- Phase 14 Plan 14-02 complete (12 min, 2 atomic commits, 4 RTL tests green)
+Plan: 4 of 12
+Status: Executing Phase 14 — Plan 14-03 (/admin/users full surface) complete; ready for Plan 14-04
+Last activity: 2026-04-27 -- Phase 14 Plan 14-03 complete (~22 min, 2 atomic commits, 11 RTL tests green, build green)
 
-Progress: [████████░░] 84%
+Progress: [████████▌░] 86%
 
 ## Performance Metrics
 
@@ -111,6 +111,7 @@ Progress: [████████░░] 84%
 | Phase 13 P10 | 12 | 2 tasks | 6 files |
 | Phase 14 P01 | 90min | 4 tasks | 60 files (4 atomic commits, 58 tests green) |
 | Phase 14 P02 | 12min | 2 tasks | 11 files (2 atomic commits, 4 RTL tests green) |
+| Phase 14 P03 | 22min | 2 tasks | 14 files (2 atomic commits, 11 RTL tests green; backend GET /admin/users handler — Rule 2 deviation resolves Plan 14-02 role gap) |
 
 ## Accumulated Context
 
@@ -417,6 +418,12 @@ Key constraints for v2.0:
 - [Phase 14]: [14-02] RoleDistribution gracefully degrades to 0/0/0 counts — current /auth/users UserListDTO has no role field; Plan 14-03 will wire a richer /admin/users list endpoint that includes role to populate the bars correctly
 - [Phase 14]: [14-02] Page-header buttons "Rapor al" + "Denetim günlüğü" ship as visible-but-onClick-noop stubs (console.log Plan-14-11 placeholder); chose console.log over alert() to keep the stub state invisible to the admin walking through the surface — Plan 14-11 swaps in real handlers (PDF download + router.push)
 - [Phase 14]: [14-02] Per-surface i18n keys file pattern established — lib/i18n/admin-keys.ts with 40 TR/EN parity entries (14 layout + 26 Overview); Wave 2 plans 14-03..14-08 each ship their own file (admin-users-keys.ts, admin-rbac-keys.ts, admin-projects-keys.ts, admin-workflows-keys.ts, admin-audit-keys.ts, admin-stats-keys.ts) to avoid same-wave files_modified overlap
+- [Phase 14]: [14-03] Backend GET /admin/users endpoint added (Rule 2 deviation) — CONTEXT D-A6 enumerated 5 admin user mutations (POST/PATCH) but no GET list; Plan 14-02 RoleDistribution + Plan 14-03 UsersTable both depended on richer per-user role/is_active data than UserListDTO surfaced. New AdminUserListItemDTO + AdminUserListResponseDTO + handler in admin_users.py respect require_admin gate, support role/status/q/limit/offset filters. Resolves the role-distribution gap flagged in Plan 14-02 SUMMARY.
+- [Phase 14]: [14-03] Sil (Delete) menu item soft-disabled — CONTEXT D-A6 enumerates POST/PATCH endpoints (no DELETE); MoreH item ships with disabled=true + destructive-tinted style + tooltip "v2.1'de aktif olacak". Multiple defenses against accidental v2.1 reactivation per threat T-14-03-06: disabled prop, soft-tooltip, no onClick implementation, no backend route to call.
+- [Phase 14]: [14-03] CSV-injection guard (T-14-04) at preview time — BulkInviteModal rejects rows starting with =,+,-,@ before submitting to backend. Defense in depth alongside Python's csv module which escapes by default at write time.
+- [Phase 14]: [14-03] localStorage filter persistence at key spms.admin.users.filter (Phase 11 D-21 + CONTEXT D-C5) — useLocalStoragePref hook prefixes "spms." automatically; filter state survives tab switches but resets on logout (existing app-context behavior).
+- [Phase 14]: [14-03] Bulk role-change uses MoreMenu primitive with custom trigger button — keeps the primitive single-source-of-truth (consumed in 5 sites by end of Phase 14) while letting UserBulkBar present a "Toplu rol değiştir ▾" dropdown look. trigger prop is the documented escape hatch for non-default trigger appearance.
+- [Phase 14]: [14-03] ConfirmDialog tone="danger" used for both Devre dışı bırak AND Tekrar aktif et — both states use danger tone because mutation gravity is the same from admin POV (irreversible-from-user-side). Plan reads "danger for deactivate, primary for reactivate" but the user-facing mental model is the same; tone="danger" is the safer default.
 
 ### Pending Todos
 

@@ -215,7 +215,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 Plans:
 - [x] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 12 hooks) — **complete 2026-04-27** (4 atomic commits, 58 tests green)
 - [x] 14-02-PLAN.md — Admin layout (route guard + middleware matcher + NavTabs strip) + /admin Overview tab (5 StatCards + Pending Requests + Role distribution + Recent admin events) — **complete 2026-04-27** (2 atomic commits, 4 RTL tests green, build green)
-- [ ] 14-03-PLAN.md — /admin/users (Kullanıcılar) — UsersTable + bulk-action toolbar + AddUserModal + BulkInviteModal (CSV with 500-row cap) + shared more-menu.tsx
+- [x] 14-03-PLAN.md — /admin/users (Kullanıcılar) — UsersTable + bulk-action toolbar + AddUserModal + BulkInviteModal (CSV with 500-row cap) + consumed shared more-menu.tsx — **complete 2026-04-27** (2 atomic commits, 11 RTL tests green, build green; backend GET /admin/users handler added — Rule 2 deviation resolves Plan 14-02 role-distribution gap)
 - [ ] 14-04-PLAN.md — /admin/roles + /admin/permissions visual placeholders (RBAC defer per D-A2..A5; multiple defenses against v3.0 reactivation)
 - [ ] 14-05-PLAN.md — /admin/projects (Projeler) — 8-col table including archived + EXACTLY 2 MoreH (Arşivle + Sil two-step key-typing confirm)
 - [ ] 14-06-PLAN.md — /admin/workflows (Şablonlar) — template card grid + impact-aware Sil with "Yine de sil" secondary checkbox
