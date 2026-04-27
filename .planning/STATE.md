@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
-last_updated: "2026-04-27T08:02:37.598Z"
+stopped_at: Phase 14 Plan 14-08 complete (/admin/stats tab — 3 charts: recharts AreaChart 30-day active users + pure-CSS methodology bars + 6-col velocity grid with top-30 defensive cap; all D-C6 lazy-loaded via next/dynamic; D-A7 single composite endpoint enforced)
+last_updated: "2026-04-27T08:20:08.205Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 61
-  percent: 92
+  completed_plans: 62
+  percent: 94
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -53,8 +53,8 @@ Progress: [█████████░] 92%
 
 **Recent Trend:**
 
-- Last 5 plans: 14-01 (90 min, 4 tasks, 60 files — Wave 0 fat infra), 14-02 (12 min, 2 tasks, 11 files), 14-03 (22 min, 2 tasks, 14 files — Users tab + Backend GET /admin/users), 14-04 (12 min, 2 tasks, 8 files — RBAC placeholders), 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test)
-- Trend: Phase 14 Wave 2 surface plans (14-03, 14-04, 14-05) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-05 came in the fastest (~10 min) because no backend changes were needed — existing GET /projects admin-bypass + DELETE /projects/{id} from Phase 9-10 covered both Archive + Sil flows.
+- Last 5 plans: 14-04 (12 min, 2 tasks, 8 files — RBAC placeholders), 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test), 14-06 (8 min, 1 task, 7 files — Workflows tab + impact-aware Sil), 14-07 (13 min, 2 tasks, 10 files — Audit tab + URL-driven filters + 50k cap), 14-08 (9 min, 2 tasks, 7 files — Stats tab + 3 lazy-loaded charts + D-X4 cap)
+- Trend: Phase 14 Wave 2 surface plans (14-03..14-08) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-08 came in at 9 min thanks to D-A7 (single composite endpoint already shipped by 14-01) + recharts already installed Phase 13 (D-A2). Pure-CSS bars where simple proportions suffice (UI-SPEC §Spacing line 38) saved ~30KB recharts geometry on /admin/stats bundle.
 
 *Updated after each plan completion*
 | Phase 08 P02 | 2min  | 2 tasks | 8 files  |
@@ -116,6 +116,7 @@ Progress: [█████████░] 92%
 | Phase 14 P05 | 10min | 1 task | 8 files (1 atomic commit, 4 RTL tests green; D-B5 NO transfer-ownership enforced via menu absence test; two-step typing confirm on Sil via Modal; reused existing GET /projects admin-bypass + DELETE /projects/{id} — zero backend changes) |
 | Phase 14 P06 | 8min | 1 task tasks | 7 files (1 atomic commit, 6 RTL tests green; client-side composed clone via existing GET + POST endpoints, impact-aware Sil with Yine de sil checkbox gate when usage > 0, mode tone 'info' for continuous per UI-SPEC §G.3; zero backend changes) files |
 | Phase 14 P07 | 13 | 2 tasks | 10 files |
+| Phase 14 P08 | 9min | 2 tasks | 7 files (2 atomic commits, 5 RTL tests green; D-A7 composite endpoint single-round-trip + D-C6 3 dynamic chart imports + D-X3 pure-CSS bars + D-X4 client-side defensive cap) |
 
 ## Accumulated Context
 
@@ -437,6 +438,9 @@ Key constraints for v2.0:
 - [Phase 14]: [14-07] AdminAuditTable lazy-loaded via next/dynamic ssr:false + DataState loading fallback (D-C6); page wrapped in React.Suspense to allow useSearchParams in Next.js 16 static prerender (workflow-editor pattern)
 - [Phase 14]: [14-07] D-Z1 enforced — 6-column audit table (90px/160px/180px/1fr/1fr/28px), NO risk column; Detay column wraps existing ActivityRow variant=admin-table slot (Plan 14-10 fills render branch — graceful degradation)
 - [Phase 14]: [14-07] Pitfall 6 mitigated — AlertBanner tone=warning rendered above table when truncated=true with toLocaleString-formatted total; pagination math caps at HARD_CAP (50_000) regardless of true total
+- [Phase ?]: Plan 14-08 — Bundled page.tsx into Task 2 commit for buildability (precedent: Plan 14-07 admin-audit-keys pattern). Each commit individually buildable; net file count unchanged.
+- [Phase ?]: Plan 14-08 — Pure-CSS bars where simple proportions suffice; recharts only for time-series. MethodologyBars + VelocityMiniBar use flex/grid + width-as-percentage divs (~30KB recharts saved). Rule of thumb: recharts for time-series + tooltips; pure CSS for static proportions + fixed-N bars.
+- [Phase ?]: Plan 14-08 — First-non-zero baseline for delta-percent computation in ActiveUsersTrendChart. Naive (last/first - 1) divides by zero on leading-zero windows; uses trend.find(p => p.count > 0)?.count ?? 0 baseline. RTL Case 5 covers it.
 
 ### Pending Todos
 
@@ -467,7 +471,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T08:01:07.048Z
+Last session: 2026-04-27T08:19:28.048Z
 Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
 Resume file: None
 
