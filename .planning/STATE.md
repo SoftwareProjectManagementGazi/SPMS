@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-01 complete (Wave 0 fat infra)
-last_updated: "2026-04-27T03:15:00.000Z"
-last_activity: 2026-04-27 -- Phase 14 Plan 14-01 complete (Wave 0 fat infra)
+stopped_at: Phase 14 Plan 14-02 complete (admin layout + Overview tab)
+last_updated: "2026-04-27T06:11:00.000Z"
+last_activity: 2026-04-27 -- Phase 14 Plan 14-02 complete (admin layout + Overview tab)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 55
-  percent: 83
+  completed_plans: 56
+  percent: 84
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 2 of 12
-Status: Executing Phase 14 — Plan 14-01 (Wave 0) complete; ready for Plan 14-02
-Last activity: 2026-04-27 -- Phase 14 Plan 14-01 complete (90 min, 4 atomic commits, 58 tests green)
+Plan: 3 of 12
+Status: Executing Phase 14 — Plan 14-02 (admin layout + Overview) complete; ready for Plan 14-03
+Last activity: 2026-04-27 -- Phase 14 Plan 14-02 complete (12 min, 2 atomic commits, 4 RTL tests green)
 
-Progress: [█████████░] 83%
+Progress: [████████░░] 84%
 
 ## Performance Metrics
 
@@ -110,6 +110,7 @@ Progress: [█████████░] 83%
 | Phase 13 P09 | 4 | 2 tasks | 8 files |
 | Phase 13 P10 | 12 | 2 tasks | 6 files |
 | Phase 14 P01 | 90min | 4 tasks | 60 files (4 atomic commits, 58 tests green) |
+| Phase 14 P02 | 12min | 2 tasks | 11 files (2 atomic commits, 4 RTL tests green) |
 
 ## Accumulated Context
 
@@ -407,6 +408,15 @@ Key constraints for v2.0:
 - [Phase 14]: [14-01] Plan 14-01 ships 12 hooks (frontmatter says "14"); the files_modified list and key_links enumerate 12 entries matching the 12 endpoint surfaces. Wave 2 plans own any additional hook deltas
 - [Phase 14]: [14-01] Test email literals in test_admin_users_crud.py originally contained markdown obfuscation pattern '[email protected]' (with embedded U+0020 space) that EmailStr rejected — replaced 15 occurrences with realistic *@testexample.com per CLAUDE.md convention (Rule 1 fix during execution)
 - [Phase 14]: [14-01] Pre-existing TypeScript build error in app/(shell)/reports/page.tsx (StatCard tone="warning" not in narrowed enum, origin Phase 13 Plan 13-08) logged in deferred-items.md — out of scope per Rule 1 scope boundary; Plan 14-01 unit + integration tests pass cleanly
+- [Phase 14]: [14-02] Race-safe admin guard (Pitfall 3 mitigation): app/(shell)/admin/layout.tsx checks useAuth().isLoading FIRST in both the effect and the render gate, then evaluates user.role?.name?.toLowerCase() !== "admin" — prevents legitimate admins from being bounced during auth-context's initial-render hydration window
+- [Phase 14]: [14-02] Middleware matcher append (Pitfall 10): Frontend2/middleware.ts matcher gains '/admin/:path*' as the LAST element, preserving the existing 6 paths — unauthenticated /admin/* requests now redirect at the edge before any SSR/hydration flicker
+- [Phase 14]: [14-02] admin-keys.ts shipped with all 27 admin.overview.* keys in Task 1 (commit dc7f2a8f) instead of appending in Task 2 — the layout test required Surface A keys at Task 1 boundary, so bundling Surface B at the same time avoided a second touch of the same file (deviation from PLAN.md ordering, no behavioral impact)
+- [Phase 14]: [14-02] Toast contract on the non-admin redirect uses variant: 'error' (NOT tone: 'danger') — Frontend2/components/toast/index.tsx variant enum is the canonical contract per Plan 14-01 Pitfall 2 (plan pseudocode used tone:'danger' which was a planning artifact)
+- [Phase 14]: [14-02] StatCard tone="warning" mapped to "info" for Onay Bekleyen — StatCard tone enum is "primary"|"info"|"success"|"danger"|"neutral" (narrowed by Phase 13 Plan 13-08, tracked in Plan 14-01 deferred-items.md); chose closest amber-ish surface available without forking the primitive
+- [Phase 14]: [14-02] ActivityRowProps gained optional variant?: "default" | "admin-table" prop — forward-declare for Plan 14-10's render branches; existing 19 callers untouched (RecentAdminEvents passes variant="admin-table" today, render falls through to default branch until Plan 14-10 lands)
+- [Phase 14]: [14-02] RoleDistribution gracefully degrades to 0/0/0 counts — current /auth/users UserListDTO has no role field; Plan 14-03 will wire a richer /admin/users list endpoint that includes role to populate the bars correctly
+- [Phase 14]: [14-02] Page-header buttons "Rapor al" + "Denetim günlüğü" ship as visible-but-onClick-noop stubs (console.log Plan-14-11 placeholder); chose console.log over alert() to keep the stub state invisible to the admin walking through the surface — Plan 14-11 swaps in real handlers (PDF download + router.push)
+- [Phase 14]: [14-02] Per-surface i18n keys file pattern established — lib/i18n/admin-keys.ts with 40 TR/EN parity entries (14 layout + 26 Overview); Wave 2 plans 14-03..14-08 each ship their own file (admin-users-keys.ts, admin-rbac-keys.ts, admin-projects-keys.ts, admin-workflows-keys.ts, admin-audit-keys.ts, admin-stats-keys.ts) to avoid same-wave files_modified overlap
 
 ### Pending Todos
 
@@ -437,12 +447,12 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T03:15:00.000Z
-Stopped at: Phase 14 Plan 14-01 complete — Wave 0 fat infra (4 atomic commits, 58 tests green)
-Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-02-PLAN.md
+Last session: 2026-04-27T06:11:00.000Z
+Stopped at: Phase 14 Plan 14-02 complete — admin layout + Overview tab (2 atomic commits, 4 RTL tests green, build green)
+Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-03-PLAN.md
 
 **Current Phase:** 14
 
-**Next Plan:** 14-02 (Admin layout + Overview tab — Wave 1). Consumes Wave 0 NavTabs + Modal + usePendingJoinRequests + use(Approve|Reject)JoinRequest hooks. Owns middleware matcher edit + admin layout race-safe guard (Pitfalls 3 + 10).
+**Next Plan:** 14-03 (`/admin/users` Kullanıcılar tab — Wave 2). Owns the user table + search + role filter + bulk-select + Add User modal + Bulk Invite modal + per-row MoreH (Deactivate / Reset password / Role change / Delete). NOTE: should also extend `/auth/users` response or add a richer `/admin/users` list endpoint with `role` field — Plan 14-02's RoleDistribution depends on it for accurate role counts. Wraps inside the AdminLayout from Plan 14-02 (guard + tabs strip inherited automatically).
 
-**Planned Phase:** 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — 12 plans — Plan 14-01 complete; Plans 14-02..14-12 ahead
+**Planned Phase:** 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — 12 plans — Plans 14-01 + 14-02 complete; Plans 14-03..14-12 ahead
