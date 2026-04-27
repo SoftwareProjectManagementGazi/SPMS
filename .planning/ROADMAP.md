@@ -42,7 +42,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 11: Task Features & Board Enhancements** - Backlog panel, task create modal, phase assignment, board/list enhancements, remaining page conversions (completed 2026-04-23)
 - [x] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements (plans complete 2026-04-25; manual UAT sign-off deferred to a later /gsd-verify-work pass — see STATE.md "Deferred Items")
 - [x] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page (completed 2026-04-26)
-- [ ] **Phase 14: Admin Panel** - Prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
+- [x] **Phase 14: Admin Panel** - Prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/) (completed 2026-04-27)
 
 ## Phase Details
 
@@ -203,14 +203,14 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
-| 14. Admin Panel | v2.0 | 11/12 | In Progress|  |
+| 14. Admin Panel | v2.0 | 12/12 | Complete   | 2026-04-27 |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
 **Goal:** /admin route + 8 sub-tabs (Genel/Kullanıcılar/Roller/İzin Matrisi/Projeler/Şablonlar/Audit/İstatistik) ported verbatim from prototype into Frontend2 with full backend wiring (ProjectJoinRequest entity + admin user CRUD + admin audit/stats/summary endpoints + cross-cutting Jira-style audit detail uplift). RBAC tabs are visual placeholders deferred to v3.0.
 **Requirements**: D-A1, D-A2, D-A3, D-A4, D-A5, D-A6, D-A7, D-A8, D-B1, D-B2, D-B3, D-B4, D-B5, D-B6, D-B7, D-B8, D-C1, D-C2, D-C3, D-C4, D-C5, D-C6, D-D1, D-D2, D-D3, D-D4, D-D5, D-D6, D-W1, D-W2, D-W3, D-X1, D-X2, D-X3, D-X4, D-Y1, D-Z1, D-Z2 (CONTEXT.md <decisions>)
 **Depends on:** Phase 13
-**Plans:** 11/12 plans executed
+**Plans:** 12/12 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 12 hooks) — **complete 2026-04-27** (4 atomic commits, 58 tests green)
@@ -224,4 +224,4 @@ Plans:
 - [x] 14-09-PLAN.md — Backend audit-log enrichment cross-cutting (task_repo + project_repo + 4 use cases populate extra_metadata per D-D2; comment_excerpt 160-char PII guardrail) — **complete 2026-04-27** (2 atomic commits + new test_audit_log_enrichment.py 3/3 green + 21/21 baseline regression green; 13 audit emission sites enriched with snake_case D-D2 metadata; D-D6 backward compat verified; NO migration / NO new endpoints)
 - [x] 14-10-PLAN.md — Frontend audit-event-mapper extension cross-cutting (10→23 SemanticEventTypes + activity-row variant=admin-table + 5 new render branches; affects 4 surfaces)
 - [x] 14-11-PLAN.md — AdminLayout button wiring (Rapor al PDF + Denetim günlüğü push) + AvatarDropdown D-D2 verification — **complete 2026-04-27** (1 task, 2 atomic commits — RED `bc0cc5d3` + GREEN `0eb76c41`; 6/6 layout RTL + 14/14 avatar-dropdown RTL green; build green; verified Phase 13 D-D2 cross-phase contract; avatar-dropdown.tsx required NO code change — verify-only via new Test 14)
-- [ ] 14-12-PLAN.md — 5 Playwright e2e specs (skip-guarded) + 14-UAT-CHECKLIST.md (25-30 rows) + VALIDATION.md per-task table populated + nyquist_compliant flip
+- [x] 14-12-PLAN.md — 5 Playwright e2e specs (skip-guarded) + 14-UAT-CHECKLIST.md (25-30 rows) + VALIDATION.md per-task table populated + nyquist_compliant flip

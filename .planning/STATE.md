@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
-status: executing
-stopped_at: Phase 14 Plan 14-11 complete (AdminLayout Rapor al + Denetim günlüğü buttons wired; avatar-dropdown Admin Paneli D-D2 cross-phase contract locked with regression test)
-last_updated: "2026-04-27T09:11:05Z"
+status: verifying
+stopped_at: Phase 14 Plan 14-12 complete (phase gate — 5 Playwright e2e specs + 33-row UAT checklist + VALIDATION.md flipped to nyquist_compliant: true; ready for /gsd-verify-work)
+last_updated: "2026-04-27T09:36:16.633Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 66
-  completed_plans: 65
-  percent: 98
+  completed_plans: 66
+  percent: 100
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
+Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — VERIFYING
 Plan: 12 of 12
-Status: Ready to execute
+Status: Phase complete — ready for /gsd-verify-work
 Last activity: 2026-04-27
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -120,6 +120,7 @@ Progress: [██████████] 98%
 | Phase 14 P09 | 14min | 2 tasks | 12 files (2 atomic commits + new test_audit_log_enrichment.py 3/3 + 21/21 baseline regression green; 13 audit emission sites enriched with D-D2 metadata across task_repo + project_repo + manage_comments + manage_milestones + manage_artifacts + manage_phase_reports; 160-char comment_excerpt PII guardrail; D-D6 backward compat — pre-Phase-14 rows survive get_global_audit; NO migration / NO new endpoints) |
 | Phase 14 P10 | 25 min | 2 tasks | 5 files |
 | Phase 14 P11 | 5min | 1 task | 3 files (2 atomic commits — RED/GREEN; layout.tsx + 2 test files; 6/6 layout RTL + 14/14 avatar-dropdown RTL green; build green; D-B6 button wiring + D-D2 cross-phase contract verification) |
+| Phase 14 P12 | 759 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -461,6 +462,9 @@ Key constraints for v2.0:
 - [Phase 14]: [14-11] Server-side rate-limit reuse for Rapor al — Plan 14-01 admin-summary endpoint already enforces `@limiter.limit("1/30seconds")`; Plan 14-11 client just fires the download and lets the backend reject 429 on rapid double-clicks. Avoided duplicate client-side cooldown that would break when an admin has multiple browser tabs open.
 - [Phase 14]: [14-11] Single-task plan still split into 2 commits (RED `bc0cc5d3` + GREEN `0eb76c41`) — TDD gate sequence visible in `git log --oneline`; mirrors Plan 14-10 two-phase discipline.
 - [Phase 14]: [14-11] csv-export helper (Plan 14-01) is content-type-agnostic — reused for PDF download via the same anchor-trigger pattern. Misleadingly CSV-named but the body works for any same-origin Content-Disposition: attachment response. Future plans needing JSON / TXT / XLSX should reuse it; rename to `triggerDownload` is a v2.1 candidate.
+- [Phase ?]: Plan 14-12: Used Phase 13 health-check skip-guard pattern (beforeEach + fetch /api/v1/health) instead of GSD_E2E_DB_SEEDED env-var pattern — deviation rule 1, matches actual prior-spec implementation
+- [Phase ?]: Plan 14-12: VALIDATION.md status enum is 'complete' (not 'approved' per PLAN draft) to match in-progress→complete lifecycle in STATE.md / ROADMAP.md; sign-off pedigree captured in approved_at + approved_by fields
+- [Phase ?]: Plan 14-12: Backend integration suite is the contract for /admin/* (162/165 pass, 3 pre-existing test_project_workflow_patch failures); full pytest exposed 11 additional pre-existing unit failures verified via git stash and logged in deferred-items.md
 
 ### Pending Todos
 
@@ -491,7 +495,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T09:02:22.947Z
+Last session: 2026-04-27T09:35:45.344Z
 Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
 Resume file: None
 
