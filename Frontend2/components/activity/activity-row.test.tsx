@@ -231,6 +231,210 @@ describe("ActivityRow", () => {
     expect(container.firstChild).toBeNull()
   })
 
+  // ---------------------------------------------------------------------------
+  // Phase 14 Plan 14-10 Task 2 — 5 NEW render branches per D-D4 + admin-table
+  // variant per D-D5 + cross-phase regression for Pitfall 1.
+  // ---------------------------------------------------------------------------
+
+  it("P14-T1: task_field_updated renders title + localized field name + old/new labels", () => {
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "due_date",
+      metadata: {
+        task_key: "MOBIL-12",
+        task_title: "Login akışını düzelt",
+        field_name: "due_date",
+        old_value_label: "2026-04-25",
+        new_value_label: "2026-05-01",
+      },
+    })
+    render(<ActivityRow event={ev} projectId={42} />)
+    expect(
+      screen.getByText(/Login akışını düzelt/i, { exact: false }),
+    ).toBeInTheDocument()
+    // TR localization for due_date → "son tarih" (audit-field-labels.ts)
+    expect(
+      screen.getByText(/son tarih/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("2026-04-25")).toBeInTheDocument()
+    expect(screen.getByText("2026-05-01")).toBeInTheDocument()
+  })
+
+  it("P14-T1b: task_field_updated falls back gracefully when task_title missing (D-D6)", () => {
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "priority",
+      // No task_title — backward-compat case for old audit rows.
+      metadata: {
+        field_name: "priority",
+        old_value_label: "Düşük",
+        new_value_label: "Yüksek",
+      },
+    })
+    const { container } = render(<ActivityRow event={ev} />)
+    // Render must NOT crash + must show the verb + one of the label values.
+    expect(container.firstChild).not.toBeNull()
+    expect(
+      screen.getByText(/değiştirdi/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Düşük")).toBeInTheDocument()
+    expect(screen.getByText("Yüksek")).toBeInTheDocument()
+  })
+
+  it("P14-T2: project_archived renders project name + archive verb", () => {
+    const ev = makeEvent({
+      entity_type: "project",
+      action: "archived",
+      metadata: { project_name: "Bankacılık Modülü" },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(screen.getByText(/arşivledi/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Bankacılık Modülü/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it("P14-T3: project_status_changed renders project name + old/new status", () => {
+    const ev = makeEvent({
+      entity_type: "project",
+      action: "updated",
+      field_name: "status",
+      metadata: {
+        project_name: "Mobil Uygulama",
+        old_value_label: "ACTIVE",
+        new_value_label: "ARCHIVED",
+      },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(
+      screen.getByText(/Mobil Uygulama/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("ACTIVE")).toBeInTheDocument()
+    expect(screen.getByText("ARCHIVED")).toBeInTheDocument()
+  })
+
+  it("P14-T4: comment_edited renders task title + comment_excerpt", () => {
+    const ev = makeEvent({
+      entity_type: "comment",
+      action: "updated",
+      metadata: {
+        task_key: "MOBIL-7",
+        task_title: "API hata mesajı düzelt",
+        comment_excerpt: "Önemli düzeltme notu",
+      },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(
+      screen.getByText(/API hata mesajı düzelt/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Önemli düzeltme notu/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it("P14-T5: user_role_changed renders target user + source/target role", () => {
+    const ev = makeEvent({
+      entity_type: "user",
+      action: "role_changed",
+      user_id: 1,
+      user_name: "Admin Ayşe",
+      metadata: {
+        target_user_name: "kullanici_adi",
+        source_role: "Member",
+        target_role: "Project Manager",
+      },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(
+      screen.getByText(/rolünü değiştirdi/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("kullanici_adi")).toBeInTheDocument()
+    expect(screen.getByText("Member")).toBeInTheDocument()
+    expect(screen.getByText("Project Manager")).toBeInTheDocument()
+  })
+
+  it("P14-T5b: user_invited renders invited email", () => {
+    const ev = makeEvent({
+      entity_type: "user",
+      action: "invited",
+      user_name: "Admin Ayşe",
+      metadata: {
+        user_email: "mehmet@example.com",
+      },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(screen.getByText(/davet etti/i)).toBeInTheDocument()
+    expect(screen.getByText("mehmet@example.com")).toBeInTheDocument()
+  })
+
+  it("P14-T6: project_join_request_created renders target user + project name", () => {
+    const ev = makeEvent({
+      entity_type: "project_join_request",
+      action: "created",
+      user_name: "Ayşe (PM)",
+      metadata: {
+        target_user_name: "yeni_uye",
+        project_name: "Bankacılık",
+      },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(screen.getByText("yeni_uye")).toBeInTheDocument()
+    expect(
+      screen.getByText(/Bankacılık/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/talep etti/i)).toBeInTheDocument()
+  })
+
+  it("P14-T7: variant=admin-table renders compactly without an Avatar Link", () => {
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "due_date",
+      user_id: 99,
+      metadata: {
+        task_title: "Compact row",
+        field_name: "due_date",
+        old_value_label: "2026-04-25",
+        new_value_label: "2026-05-01",
+      },
+    })
+    const { container } = render(
+      <ActivityRow event={ev} variant="admin-table" />,
+    )
+    // The default variant wraps the Avatar in <Link href="/users/{id}">.
+    // The admin-table variant must NOT render that anchor.
+    expect(container.querySelector('a[href="/users/99"]')).toBeNull()
+    // The line content (verb / labels) is still present.
+    expect(
+      screen.getByText(/değiştirdi/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("2026-04-25")).toBeInTheDocument()
+    expect(screen.getByText("2026-05-01")).toBeInTheDocument()
+  })
+
+  it("P14-T8: Pitfall 1 cross-phase regression — task_status_changed render path still works (non-extended payload)", () => {
+    // EXACTLY the Phase 13-shaped payload — no Phase 14 extra metadata keys.
+    // Plan 14-10 must not break the existing render path.
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "column_id",
+      old_value: "1",
+      new_value: "3",
+      entity_label: "MOBIL-12",
+      metadata: { task_key: "MOBIL-12" },
+    })
+    render(<ActivityRow event={ev} projectId={42} />)
+    // Existing badge pair still renders (Phase 13 D-B5 contract).
+    expect(screen.getByText("1")).toBeInTheDocument()
+    expect(screen.getByText("3")).toBeInTheDocument()
+    expect(
+      screen.getByText(/durumunu değiştirdi/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
   // Sanity: within() helper imported but not used elsewhere — silence linter
   void within
 })
