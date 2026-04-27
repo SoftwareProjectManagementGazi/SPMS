@@ -1,9 +1,9 @@
 ---
 phase: 14
 slug: admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f
-status: draft
+status: in-progress
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-27
 last_updated: 2026-04-27
 ---
@@ -51,10 +51,10 @@ last_updated: 2026-04-27
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 14-01-T1 | 14-01 | 0 | D-A6, D-B4, D-C4, D-W3 | T-14-01-05 | papaparse install + ConfirmDialog tone + NavTabs + Modal + shared MoreMenu + admin lib utilities | RTL | `cd Frontend2 && node -e "require('papaparse')" && npm run test -- --run nav-tabs.test.tsx confirm-dialog.test.tsx more-menu.test.tsx` | Frontend2/components/primitives/nav-tabs.test.tsx + Frontend2/components/admin/shared/more-menu.test.tsx | ⬜ |
-| 14-01-T2 | 14-01 | 0 | D-A1, D-A2, D-A8 | T-14-01-08, T-14-01-10 | ProjectJoinRequest vertical slice + DIP enforcement + atomic approve rollback | pytest | `cd Backend && python -m pytest -q tests/integration/test_create_join_request.py tests/integration/test_approve_join_request.py` | Backend/tests/integration/test_create_join_request.py | ⬜ |
-| 14-01-T3 | 14-01 | 0 | D-A6, D-A7, D-A8, D-B2-B8, D-W3, D-X1-X4, D-Z2 | T-14-01-01, T-14-01-03, T-14-01-04, T-14-01-06, T-14-01-09 | Admin user/audit/stats/summary slices + alembic upgrade + 50k cap + Pitfall 6 + 7 | pytest | `cd Backend && alembic upgrade head && python -m pytest -q tests/integration/test_admin_users_crud.py tests/integration/test_admin_audit_get_global.py tests/integration/test_admin_stats.py tests/integration/test_generate_admin_summary_pdf.py` | Backend/tests/integration/test_admin_users_crud.py | ⬜ |
-| 14-01-T4 | 14-01 | 0 | D-W1, D-W2 | T-14-01-04 | 4 admin services + 14 hooks + optimistic update on approve/reject | RTL | `cd Frontend2 && npm run test -- --run admin-join-request-service.test.ts use-approve-join-request.test.tsx` | Frontend2/services/admin-join-request-service.test.ts | ⬜ |
+| 14-01-T1 | 14-01 | 0 | D-A6, D-B4, D-C4, D-W3 | T-14-01-05 | papaparse install + ConfirmDialog tone + NavTabs + Modal + shared MoreMenu + admin lib utilities | RTL | `cd Frontend2 && node -e "require('papaparse')" && npm run test -- --run nav-tabs.test.tsx confirm-dialog.test.tsx more-menu.test.tsx` | Frontend2/components/primitives/nav-tabs.test.tsx + Frontend2/components/admin/shared/more-menu.test.tsx | ✅ |
+| 14-01-T2 | 14-01 | 0 | D-A1, D-A2, D-A8 | T-14-01-08, T-14-01-10 | ProjectJoinRequest vertical slice + DIP enforcement + atomic approve rollback | pytest | `cd Backend && python -m pytest -q tests/integration/test_create_join_request.py tests/integration/test_approve_join_request.py` | Backend/tests/integration/test_create_join_request.py | ✅ |
+| 14-01-T3 | 14-01 | 0 | D-A6, D-A7, D-A8, D-B2-B8, D-W3, D-X1-X4, D-Z2 | T-14-01-01, T-14-01-03, T-14-01-04, T-14-01-06, T-14-01-09 | Admin user/audit/stats/summary slices + alembic upgrade + 50k cap + Pitfall 6 + 7 | pytest | `cd Backend && alembic upgrade head && python -m pytest -q tests/integration/test_admin_users_crud.py tests/integration/test_admin_audit_get_global.py tests/integration/test_admin_stats.py tests/integration/test_generate_admin_summary_pdf.py` | Backend/tests/integration/test_admin_users_crud.py | ✅ |
+| 14-01-T4 | 14-01 | 0 | D-W1, D-W2 | T-14-01-04 | 4 admin services + 12 hooks + optimistic update on approve/reject | RTL | `cd Frontend2 && npm run test -- --run admin-join-request-service.test.ts use-approve-join-request.test.tsx` | Frontend2/services/admin-join-request-service.test.ts | ✅ |
 | 14-02-T1 | 14-02 | 1 | D-C2, D-C3, D-C4 | T-14-02-01, T-14-02-02, T-14-02-03 | Middleware matcher + admin layout race-safe guard + NavTabs strip | RTL | `cd Frontend2 && npm run test -- --run "app/(shell)/admin/layout.test.tsx"` | Frontend2/app/(shell)/admin/layout.test.tsx | ⬜ |
 | 14-02-T2 | 14-02 | 1 | D-W1, D-W2, D-Y1 | T-14-02-04, T-14-02-05 | Overview tab — 5 StatCards + Pending Requests + Role distribution + Recent admin events | build | `cd Frontend2 && npm run build` | Frontend2/app/(shell)/admin/page.tsx | ⬜ |
 | 14-03-T1 | 14-03 | 2 | D-A6, D-B7, D-C5, D-W3 | T-14-03-02, T-14-03-04, T-14-03-05 | Consume shared more-menu (from Plan 14-01) + UsersTable + bulk-action toolbar + filter persistence | RTL | `cd Frontend2 && npm run test -- --run users-table.test.tsx` | Frontend2/components/admin/users/users-table.test.tsx | ⬜ |
@@ -85,16 +85,16 @@ last_updated: 2026-04-27
 
 > Captured from RESEARCH.md § "Validation Architecture" and § "Implementation Strategy". Plan 14-01 (Wave 0 fat infra) MUST satisfy all of the following before W2 surface plans run.
 
-- [ ] `cd Frontend2 && npm install [email protected] @types/[email protected] --save` (and `--save-dev` for types)
-- [ ] `Frontend2/vitest.config.ts` — verified exists (jsdom env, alias `@/*`)
-- [ ] `Frontend2/components/primitives/nav-tabs.tsx` — new primitive (Link-based, copies `Tabs` styling)
-- [ ] `Frontend2/components/primitives/modal.tsx` — new primitive (overlay + panel + slots)
-- [ ] `Frontend2/components/primitives/confirm-dialog.tsx` — extended with `tone?: "primary" | "danger" | "warning"` (default "primary", backward-compatible)
-- [ ] `Frontend2/components/admin/shared/more-menu.tsx` — shared MoreH dropdown consumed by users/projects/workflows tables (Plans 14-03 / 14-05 / 14-06) plus Plans 14-02 (Pending requests) and 14-07 (Audit)
-- [ ] `Frontend2/services/admin-{join-request,user,audit,stats}-service.ts` — 4 service modules built
-- [ ] `Backend/alembic/versions/006_phase14_admin_panel.py` — migration created AND `alembic upgrade head` executed
-- [ ] `Backend/app/domain/entities/project_join_request.py` — Pydantic entity built
-- [ ] `Backend/app/domain/repositories/project_join_request_repository.py` — `IProjectJoinRequestRepository` ABC built
+- [x] `cd Frontend2 && npm install [email protected] @types/[email protected] --save` (and `--save-dev` for types) — installed papaparse@5.5.3 + @types/papaparse@5.5.2 (satisfies ^5.3.16)
+- [x] `Frontend2/vitest.config.ts` — verified exists (jsdom env, alias `@/*`)
+- [x] `Frontend2/components/primitives/nav-tabs.tsx` — new primitive (Link-based, copies `Tabs` styling)
+- [x] `Frontend2/components/primitives/modal.tsx` — new primitive (overlay + panel + slots)
+- [x] `Frontend2/components/primitives/confirm-dialog.tsx` — extended with `tone?: "primary" | "danger" | "warning"` (default "primary", backward-compatible) — actual location is Frontend2/components/projects/confirm-dialog.tsx
+- [x] `Frontend2/components/admin/shared/more-menu.tsx` — shared MoreH dropdown consumed by users/projects/workflows tables (Plans 14-03 / 14-05 / 14-06) plus Plans 14-02 (Pending requests) and 14-07 (Audit)
+- [x] `Frontend2/services/admin-{join-request,user,audit,stats}-service.ts` — 4 service modules built
+- [x] `Backend/alembic/versions/006_phase14_admin_panel.py` — migration created AND `alembic upgrade head` executed (verified: project_join_requests table present in dev DB)
+- [x] `Backend/app/domain/entities/project_join_request.py` — Pydantic entity built
+- [x] `Backend/app/domain/repositories/project_join_request_repository.py` — `IProjectJoinRequestRepository` ABC built
 
 *Wave 0 also writes the FIRST round of unit/integration test stubs for the primitives and the join-request repo so downstream plans have green-field test files to extend.*
 

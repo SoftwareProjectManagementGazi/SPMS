@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-current_phase: 13
+current_phase: 14
 status: executing
-stopped_at: Phase 14 UI-SPEC approved
-last_updated: "2026-04-26T23:24:01.859Z"
-last_activity: 2026-04-26 -- Phase 14 planning complete
+stopped_at: Phase 14 Plan 14-01 complete (Wave 0 fat infra)
+last_updated: "2026-04-27T03:15:00.000Z"
+last_activity: 2026-04-27 -- Phase 14 Plan 14-01 complete (Wave 0 fat infra)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 54
-  percent: 82
+  completed_plans: 55
+  percent: 83
 ---
 
 # Project State
@@ -22,16 +22,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 13 — reporting-activity-user-profile
+**Current focus:** Phase 14 — admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f
 
 ## Current Position
 
-Phase: 13 (reporting-activity-user-profile) — EXECUTING
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 14 planning complete
+Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
+Plan: 2 of 12
+Status: Executing Phase 14 — Plan 14-01 (Wave 0) complete; ready for Plan 14-02
+Last activity: 2026-04-27 -- Phase 14 Plan 14-01 complete (90 min, 4 atomic commits, 58 tests green)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 83%
 
 ## Performance Metrics
 
@@ -109,6 +109,7 @@ Progress: [██████████] 100%
 | Phase 13 P06 | 4min | 1 tasks | 3 files |
 | Phase 13 P09 | 4 | 2 tasks | 8 files |
 | Phase 13 P10 | 12 | 2 tasks | 6 files |
+| Phase 14 P01 | 90min | 4 tasks | 60 files (4 atomic commits, 58 tests green) |
 
 ## Accumulated Context
 
@@ -394,6 +395,18 @@ Key constraints for v2.0:
 - [Phase ?]: [13-10] OR-locator pattern (locator.or(otherLocator)) for multi-state UI assertions — handles both 'data present' and 'empty state' branches in a single .toBeVisible() check. Used for CFD chart vs methodology AlertBanner (D-A4 gate), profile projects grid vs empty, activity timeline vs empty.
 - [Phase ?]: [13-10] Specs prefer getByRole over CSS class selectors wherever a primitive exposes a semantic role (h1/h3 by level, tab/combobox/menuitem). i18n regex (TR|EN) catches both languages. Class-name selectors only used as stable hooks from earlier plans (.activity-timeline, .profile-projects-grid, .chart-card-cfd-svg).
 - [Phase ?]: [13-10] UAT checklist uses 28 single-line table rows (116 file lines) — denser + easier to scan/tick than multi-line rows. Substantive acceptance gate (15+ rows, 8 IDs, viewport, a11y, sign-off) cleanly met (28 rows, 35 ID mentions, 2 viewport, 3 a11y). Phase 12 D-50 deferred-UAT precedent reused.
+- [Phase 14]: [14-01] Wave 0 fat infra delivers full Backend ProjectJoinRequest vertical slice + 9 admin use cases + 4 routers + 12 frontend hooks in one heavy plan so Wave 2 surface plans (14-02..14-08) consume pre-built scaffolding (Phase 12 D-02 / Phase 13 D-01 reuse)
+- [Phase 14]: [14-01] INVITE_TOKEN_TTL_DAYS=7 placed in app/infrastructure/config.py (NOT app/core/config.py — actual project layout has no app/core/ directory; plan referenced an idealized path)
+- [Phase 14]: [14-01] Snake_case discipline — admin-* services apply snake → camel ONLY at top-level boundary; nested user objects keep snake (full_name, avatar_url) matching profile-service.ts; audit_log.metadata stays snake ALL THE WAY through activity-row.tsx (Pitfall 2 — DO NOT add camelCase mapper for audit metadata anywhere)
+- [Phase 14]: [14-01] Toast contract uses variant: 'success'|'error'|'warning'|'info' (NOT tone:); plan pseudocode used tone:'danger' which was a planning artifact — Frontend2/components/toast/index.tsx is the canonical contract
+- [Phase 14]: [14-01] ApproveJoinRequestUseCase atomic-rollback: status flip → team_repo.add_member → audit emit; on team_repo non-IntegrityError exception, repo.update_status('pending', reviewed_by=None) clears the reviewer fields so admin can retry. test_approve_join_request.py asserts the rollback semantics
+- [Phase 14]: [14-01] Audit 50k cap (D-Z2 / Pitfall 6) enforced inside audit_repo.get_global_audit; returns (items, capped_total, truncated) tuple. Use case wraps in AdminAuditResponseDTO(truncated=bool); frontend renders AlertBanner above table when true
+- [Phase 14]: [14-01] active_users_trend SQL uses arithmetic interval (:days * INTERVAL '1 day') instead of string-concat — asyncpg type-binding requires int param matching the placeholder type (Rule 1 fix during execution)
+- [Phase 14]: [14-01] list_recent_projects requires .unique() before .scalars().all() because _get_base_query() eager-loads ProjectModel.columns (a collection) per SQLAlchemy 2.0 contract (Rule 1 fix during execution)
+- [Phase 14]: [14-01] Helper closures (_make_role_id_resolver, _make_toggle_active, _make_update_role) live at the router boundary in admin_users.py so use cases stay free of Role table coupling — preserves CLAUDE.md §4.2 DI strategy without extending IUserRepository ABC
+- [Phase 14]: [14-01] Plan 14-01 ships 12 hooks (frontmatter says "14"); the files_modified list and key_links enumerate 12 entries matching the 12 endpoint surfaces. Wave 2 plans own any additional hook deltas
+- [Phase 14]: [14-01] Test email literals in test_admin_users_crud.py originally contained markdown obfuscation pattern '[email protected]' (with embedded U+0020 space) that EmailStr rejected — replaced 15 occurrences with realistic *@testexample.com per CLAUDE.md convention (Rule 1 fix during execution)
+- [Phase 14]: [14-01] Pre-existing TypeScript build error in app/(shell)/reports/page.tsx (StatCard tone="warning" not in narrowed enum, origin Phase 13 Plan 13-08) logged in deferred-items.md — out of scope per Rule 1 scope boundary; Plan 14-01 unit + integration tests pass cleanly
 
 ### Pending Todos
 
@@ -424,12 +437,12 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-26T21:16:43.474Z
-Stopped at: Phase 14 UI-SPEC approved
-Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-UI-SPEC.md
+Last session: 2026-04-27T03:15:00.000Z
+Stopped at: Phase 14 Plan 14-01 complete — Wave 0 fat infra (4 atomic commits, 58 tests green)
+Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-02-PLAN.md
 
-**Current Phase:** 13
+**Current Phase:** 14
 
-**Next Plan:** None within Phase 12. Awaiting `/gsd-verify-work 12` to consume the deferred 12-UAT-CHECKLIST.md sign-off; otherwise the milestone has no scoped follow-up.
+**Next Plan:** 14-02 (Admin layout + Overview tab — Wave 1). Consumes Wave 0 NavTabs + Modal + usePendingJoinRequests + use(Approve|Reject)JoinRequest hooks. Owns middleware matcher edit + admin layout race-safe guard (Pitfalls 3 + 10).
 
-**Planned Phase:** 12 (lifecycle-phase-gate-workflow-editor) — 10 plans — 2026-04-25 (all plans complete)
+**Planned Phase:** 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — 12 plans — Plan 14-01 complete; Plans 14-02..14-12 ahead

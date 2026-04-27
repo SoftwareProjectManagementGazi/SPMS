@@ -203,7 +203,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
-| 14. Admin Panel | v2.0 | 0/12 | Planned | - |
+| 14. Admin Panel | v2.0 | 1/12 | Executing (Wave 0 complete) | - |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
@@ -213,7 +213,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 **Plans:** 12 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 14 hooks)
+- [x] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 12 hooks) — **complete 2026-04-27** (4 atomic commits, 58 tests green)
 - [ ] 14-02-PLAN.md — Admin layout (route guard + middleware matcher + NavTabs strip) + /admin Overview tab (5 StatCards + Pending Requests + Role distribution + Recent admin events)
 - [ ] 14-03-PLAN.md — /admin/users (Kullanıcılar) — UsersTable + bulk-action toolbar + AddUserModal + BulkInviteModal (CSV with 500-row cap) + shared more-menu.tsx
 - [ ] 14-04-PLAN.md — /admin/roles + /admin/permissions visual placeholders (RBAC defer per D-A2..A5; multiple defenses against v3.0 reactivation)
