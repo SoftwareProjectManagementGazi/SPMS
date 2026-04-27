@@ -13,6 +13,25 @@ from app.infrastructure.database.models.project import ProjectModel
 from app.infrastructure.database.models.board_column import BoardColumnModel
 
 
+async def _resolve_column_name(session: AsyncSession, column_id: Optional[int]) -> Optional[str]:
+    """D-D2: resolve column_id → column.name for old/new value label.
+
+    Falls back to str(column_id) if column deleted (graceful degradation per D-D6).
+    Returns None when column_id itself is None (e.g. initial assignment from null).
+    """
+    if column_id is None:
+        return None
+    try:
+        cid = int(column_id)
+    except (TypeError, ValueError):
+        return str(column_id)
+    result = await session.execute(
+        select(BoardColumnModel).where(BoardColumnModel.id == cid)
+    )
+    col = result.scalar_one_or_none()
+    return col.name if col is not None else str(cid)
+
+
 class SqlAlchemyTaskRepository(ITaskRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -228,12 +247,48 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         if not model:
             raise Exception(f"Task with id {task_id} not found")
 
+        # Plan 14-09 D-D2: load project context once for enriched audit metadata.
+        # Avoids N+1 — single SELECT for the project even if multiple fields change.
+        project_stmt = select(ProjectModel).where(ProjectModel.id == model.project_id)
+        project_result = await self.session.execute(project_stmt)
+        project_model = project_result.scalar_one_or_none()
+        project_key = project_model.key if project_model is not None else None
+        project_name = project_model.name if project_model is not None else None
+
+        # Snapshot identity fields BEFORE mutation so the audit row carries the
+        # current task_key + title regardless of which field was changed.
+        task_key_snapshot = model.task_key
+        task_title_snapshot = model.title
+
         # Compute audit diff — one AuditLogModel row per changed field
         audit_entries = []
         for key, new_val in update_data.items():
             if hasattr(model, key):
                 old_val = getattr(model, key)
                 if old_val != new_val:
+                    # D-D2: build label resolution for human-readable old/new values.
+                    # column_id changes need BoardColumn.name lookup at write time
+                    # so the audit row carries the column label, not just an id.
+                    if key == "column_id":
+                        old_label = await _resolve_column_name(self.session, old_val)
+                        new_label = await _resolve_column_name(self.session, new_val)
+                    else:
+                        # Default label = stringified value (e.g. priority enum, due_date ISO).
+                        old_label = str(old_val) if old_val is not None else None
+                        new_label = str(new_val) if new_val is not None else None
+
+                    enriched_metadata = {
+                        "task_id": model.id,
+                        "task_key": task_key_snapshot,
+                        "task_title": task_title_snapshot,
+                        "project_id": model.project_id,
+                        "project_key": project_key,
+                        "project_name": project_name,
+                        "field_name": key,
+                        "old_value_label": old_label,
+                        "new_value_label": new_label,
+                    }
+
                     audit_entries.append(
                         AuditLogModel(
                             entity_type="task",
@@ -243,6 +298,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                             new_value=str(new_val) if new_val is not None else None,
                             user_id=user_id,
                             action="updated",
+                            extra_metadata=enriched_metadata,
                         )
                     )
                     setattr(model, key, new_val)

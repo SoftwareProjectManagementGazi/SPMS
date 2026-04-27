@@ -135,6 +135,16 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         # accepting status the repo would silently drop it.
         updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config", "status"]
 
+        # Plan 14-09 D-D2: snapshot identity fields BEFORE mutation so the
+        # audit row carries the current project_key + name even when the name
+        # field is the one being changed.
+        project_key_snapshot = model.key
+        project_name_snapshot = model.name
+        # methodology may change in this update; capture the *old* value for
+        # context. Audit metadata always carries the project's methodology
+        # (post-Phase-9 enums use .value) so the frontend can group by it.
+        methodology_value = model.methodology.value if hasattr(model.methodology, "value") else str(model.methodology)
+
         audit_entries = []
         for field in updatable_fields:
             # FL-06 fix: if caller supplied an authoritative key set, skip fields
@@ -154,6 +164,24 @@ class SqlAlchemyProjectRepository(IProjectRepository):
 
             if new_val != old_val:
                 if user_id is not None:
+                    # D-D2: enum values get .value when present, else stringify.
+                    old_label = (
+                        old_val.value if hasattr(old_val, "value")
+                        else (str(old_val) if old_val is not None else None)
+                    )
+                    new_label = (
+                        new_val.value if hasattr(new_val, "value")
+                        else (str(new_val) if new_val is not None else None)
+                    )
+                    enriched_metadata = {
+                        "project_id": project.id,
+                        "project_key": project_key_snapshot,
+                        "project_name": project_name_snapshot,
+                        "methodology": methodology_value,
+                        "field_name": field,
+                        "old_value_label": old_label,
+                        "new_value_label": new_label,
+                    }
                     audit_entries.append(
                         AuditLogModel(
                             entity_type="project",
@@ -163,6 +191,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
                             new_value=str(new_val) if new_val is not None else None,
                             user_id=user_id,
                             action="updated",
+                            extra_metadata=enriched_metadata,
                         )
                     )
                 setattr(model, field, new_val)
