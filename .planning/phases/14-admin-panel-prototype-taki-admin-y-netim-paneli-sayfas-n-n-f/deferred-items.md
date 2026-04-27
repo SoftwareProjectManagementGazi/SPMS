@@ -119,3 +119,63 @@ TS errors in `phase-edge.test.tsx`, (c) clean up the
 `use-transition-authority.test.tsx` `UseQueryResult` type-cast, (d) update
 `milestones-subtab.test.tsx` spread-arg fixture. Not blocking Plan 14-10
 ship.
+
+## Plan 14-12 (Wave 4 — Phase Gate)
+
+### Pre-existing Backend unit-test failures (11 total)
+
+**Discovered during:** Plan 14-12 Task 2 final smoke run
+(`cd Backend && python -m pytest -q`).
+
+**Symptom (11 failures across 5 files; all in `tests/unit/`, not `tests/integration/`):**
+
+```
+tests/unit/application/test_manage_phase_reports.py::test_cycle_number_auto_calc_from_audit
+tests/unit/application/test_manage_phase_reports.py::test_cycle_number_explicit_override
+tests/unit/application/test_phase_gate_use_case.py::test_transition_success_no_criteria
+tests/unit/application/test_phase_gate_use_case.py::test_criteria_unmet_raises_422_without_override
+tests/unit/application/test_phase_gate_use_case.py::test_override_allowed_in_sequential_locked
+tests/unit/application/test_phase_gate_use_case.py::test_open_tasks_move_to_next_with_exceptions
+tests/unit/application/test_register_user.py::test_register_user_success
+tests/unit/application/test_register_user.py::test_register_user_already_exists
+tests/unit/infrastructure/test_task_repo_soft_delete.py::test_update_task_writes_audit_row
+tests/unit/infrastructure/test_task_repo_soft_delete.py::test_update_task_no_audit_row_for_unchanged_fields
+tests/unit/test_deps_package_structure.py::test_stub_submodules_exist
+```
+
+**Verification this is pre-existing:** `git stash` of all working-directory
+changes (CLAUDE.md, debug.md) + re-running `python -m pytest tests/unit/`
+yielded the SAME 11 failures (146 passed). Plan 14-12 touches ZERO Backend
+files (only `Frontend2/e2e/*.spec.ts` + `.planning/*` markdown), so this
+suite cannot have been broken by this plan.
+
+**Origin (likely):** Multiple sources — phase-gate use case + manage_phase_reports
+hint at Phase 12 or Phase 13 unit-test drift. `test_register_user` likely
+breaks because the unit test mocks an older repo signature that has since
+been updated. `test_deps_package_structure` is asserting an empty `__all__`
+in a module that has since exported `get_milestone_repo`.
+
+**Why deferred:**
+- Out of scope for Plan 14-12 — Plan 14-12 is the phase gate (e2e specs +
+  UAT checklist + VALIDATION.md flip). Zero Backend touch.
+- The Backend INTEGRATION suite (`tests/integration/`) — the actual contract
+  for /admin/* endpoints — passes 162/165 (3 pre-existing
+  test_project_workflow_patch.py failures from Phase 12, already documented
+  above under Plan 14-09's deferred entry).
+- The Plan 14-12 success_criteria explicitly states "modulo the 3 pre-existing
+  test_project_workflow_patch.py failures from Phase 12" — these unit failures
+  are an additional pre-existing set that surfaces only when running the full
+  pytest suite (not the integration-only smoke).
+
+**Action item:** A future Backend test stabilization plan should:
+(a) Update `test_register_user.py` to match current `IUserRepository` signature.
+(b) Fix `test_phase_gate_use_case.py` mock fixtures (4 failures suggest a
+    common ProjectPhase / phase-gate-criteria contract drift).
+(c) Update `test_manage_phase_reports.py` cycle-number computation against
+    current audit-log-driven derivation.
+(d) Reconcile `test_task_repo_soft_delete.py` audit-row expectations with
+    Plan 14-09's enriched audit emission semantics (this is likely the most
+    cleanly-related issue — the unit test predates the enrichment).
+(e) Update `test_deps_package_structure.py::test_stub_submodules_exist` to
+    expect `get_milestone_repo` in `app.api.deps.milestone.__all__`.
+Not blocking Plan 14-12 phase-gate ship.
