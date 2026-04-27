@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-08 complete (/admin/stats tab — 3 charts: recharts AreaChart 30-day active users + pure-CSS methodology bars + 6-col velocity grid with top-30 defensive cap; all D-C6 lazy-loaded via next/dynamic; D-A7 single composite endpoint enforced)
-last_updated: "2026-04-27T08:20:08.205Z"
+stopped_at: Phase 14 Plan 14-09 complete (backend audit_log enrichment cross-cutting — 13 emission sites enriched with D-D2 extra_metadata across task_repo + project_repo + 4 use cases; comment_excerpt 160-char PII guardrail enforced; D-D6 backward compat verified via test_pre_phase14_rows_graceful_fallback; NO migration / NO new endpoints / NO schema change)
+last_updated: "2026-04-27T08:38:33Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 62
-  percent: 94
+  completed_plans: 63
+  percent: 95
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 9 of 12
+Plan: 10 of 12
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [█████████░] 94%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -53,8 +53,8 @@ Progress: [█████████░] 94%
 
 **Recent Trend:**
 
-- Last 5 plans: 14-04 (12 min, 2 tasks, 8 files — RBAC placeholders), 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test), 14-06 (8 min, 1 task, 7 files — Workflows tab + impact-aware Sil), 14-07 (13 min, 2 tasks, 10 files — Audit tab + URL-driven filters + 50k cap), 14-08 (9 min, 2 tasks, 7 files — Stats tab + 3 lazy-loaded charts + D-X4 cap)
-- Trend: Phase 14 Wave 2 surface plans (14-03..14-08) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-08 came in at 9 min thanks to D-A7 (single composite endpoint already shipped by 14-01) + recharts already installed Phase 13 (D-A2). Pure-CSS bars where simple proportions suffice (UI-SPEC §Spacing line 38) saved ~30KB recharts geometry on /admin/stats bundle.
+- Last 5 plans: 14-05 (10 min, 1 task, 8 files — Projects tab + D-B5 menu absence test), 14-06 (8 min, 1 task, 7 files — Workflows tab + impact-aware Sil), 14-07 (13 min, 2 tasks, 10 files — Audit tab + URL-driven filters + 50k cap), 14-08 (9 min, 2 tasks, 7 files — Stats tab + 3 lazy-loaded charts + D-X4 cap), 14-09 (14 min, 2 tasks, 12 files — backend audit_log D-D2 enrichment cross-cutting; 13 emission sites + 1 new test + D-D6 backward compat)
+- Trend: Phase 14 Wave 2 surface plans (14-03..14-08) all 1-2 commit, single-task or two-task efforts thanks to Plan 14-01's fat-infra Wave 0 (shared MoreMenu / Modal / ConfirmDialog tone / admin libs / 12 hooks). Plan 14-09 (Wave 3 cross-cutting) came in at 14 min — single-day backend cross-cut touching 11 files (6 enrichment + 3 router wires + 1 test + 1 deferred-items log) thanks to (a) audit_repo.create_with_metadata helper already shipped by Plan 14-01, (b) extra_metadata JSONB column already shipped by Phase 9 D-08 migration 005, (c) Phase 12 D-09 in-memory fake-repo pattern already established for tests/integration/test_user_activity.py — directly reused for test_audit_log_enrichment.py without needing live DB. Net: NO migration / NO new endpoints / NO schema change.
 
 *Updated after each plan completion*
 | Phase 08 P02 | 2min  | 2 tasks | 8 files  |
@@ -117,6 +117,7 @@ Progress: [█████████░] 94%
 | Phase 14 P06 | 8min | 1 task tasks | 7 files (1 atomic commit, 6 RTL tests green; client-side composed clone via existing GET + POST endpoints, impact-aware Sil with Yine de sil checkbox gate when usage > 0, mode tone 'info' for continuous per UI-SPEC §G.3; zero backend changes) files |
 | Phase 14 P07 | 13 | 2 tasks | 10 files |
 | Phase 14 P08 | 9min | 2 tasks | 7 files (2 atomic commits, 5 RTL tests green; D-A7 composite endpoint single-round-trip + D-C6 3 dynamic chart imports + D-X3 pure-CSS bars + D-X4 client-side defensive cap) |
+| Phase 14 P09 | 14min | 2 tasks | 12 files (2 atomic commits + new test_audit_log_enrichment.py 3/3 + 21/21 baseline regression green; 13 audit emission sites enriched with D-D2 metadata across task_repo + project_repo + manage_comments + manage_milestones + manage_artifacts + manage_phase_reports; 160-char comment_excerpt PII guardrail; D-D6 backward compat — pre-Phase-14 rows survive get_global_audit; NO migration / NO new endpoints) |
 
 ## Accumulated Context
 
@@ -192,6 +193,14 @@ Key constraints for v2.0:
 - user_summary no own-profile gate in v2.0 (T-09-09-02 accepted); hardening deferred
 - Inline RPTA authorization: POST endpoints with body project_id use _authorize_transition inline helper (4-line) instead of require_project_transition_authority Depends() — avoids path-param DI mismatch. Refactor candidate Phase 10+
 - Artifact PATCH split URLs: /artifacts/{id}/mine (assignee) vs /artifacts/{id} (manager). URL encodes permission scope. Frontend selects based on user.id == artifact.assignee_id
+- [14-09]: Direct AuditLogModel(...) construction preserved in task_repo + project_repo (pre-Phase-14 pattern); enrichment via extra_metadata=enriched_metadata kwarg added to existing emission sites. Use cases (manage_comments / manage_milestones / manage_artifacts / manage_phase_reports) inject IAuditRepository ABC and call create_with_metadata — DIP discipline. Two patterns coexist; same payload shape; no circular repo→repo dependency.
+- [14-09]: Optional audit_repo + task_repo injection on use cases (default None). Legacy callers and pytest fakes keep working unchanged; live API path always wires audit_repo via Depends(get_audit_repo). Avoids cascading test-file rewrites across the suite.
+- [14-09]: 160-char hard cap on comment_excerpt (D-D2 PII guardrail) — full body NEVER persisted in audit_log. _build_comment_excerpt helper exposes COMMENT_EXCERPT_MAX_CHARS constant for unit testability; test asserts ≤161 chars + email past cap NOT in excerpt.
+- [14-09]: Snapshot-before-mutate identity fields (task_repo + project_repo) — task_key + task_title + project_key + project_name read into local variables BEFORE the mutation loop so renaming the entity in the same PATCH still records the prior label in the audit row.
+- [14-09]: Resolve-at-write-time foreign labels — _resolve_column_name (BoardColumn.name) + _resolve_phase_name (workflow node.name) take the foreign id at mutation time, do a single SELECT, record the human-readable label in extra_metadata. Falls back to str(foreign_id) if foreign entity deleted (D-D6 graceful degradation).
+- [14-09]: Status-delta-only metadata keys (manage_milestones + manage_artifacts) — status_old / status_new appear ONLY when the status field actually changed. Avoids spurious `<None> → <None>` renders in the frontend Detay column.
+- [14-09]: NO backfill of pre-Phase-14 audit rows (D-D6 backward compat) — old rows pass through with extra_metadata=NULL; frontend Plan 14-10 mapper renders graceful 'Detay yok' fallback. test_pre_phase14_rows_graceful_fallback documents the contract via in-memory FakeAuditRepo seeding both shapes.
+- [14-09]: Pre-existing TypeError in test_project_workflow_patch.py 422-path tests (3 failures) — verified pre-existing via `git stash` of all Plan 14-09 edits and re-run; logged in deferred-items.md. Phase 12 Plan 12-10 WorkflowConfig validator bubbles a Pydantic ValueError into JSONResponse without translation. NOT in scope for Plan 14-09.
 - PDF rate limit isolation: _pdf_last_request dict in phase_reports.py separate from idempotency_cache. 30s per-user window per D-51
 - AUTH_TOKEN_KEY='auth_token' matches legacy Frontend/lib/constants.ts exactly (D-02)
 - AuthProvider placed INSIDE AppProvider in root layout — auth context available to all app contexts

@@ -210,7 +210,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 **Goal:** /admin route + 8 sub-tabs (Genel/Kullanıcılar/Roller/İzin Matrisi/Projeler/Şablonlar/Audit/İstatistik) ported verbatim from prototype into Frontend2 with full backend wiring (ProjectJoinRequest entity + admin user CRUD + admin audit/stats/summary endpoints + cross-cutting Jira-style audit detail uplift). RBAC tabs are visual placeholders deferred to v3.0.
 **Requirements**: D-A1, D-A2, D-A3, D-A4, D-A5, D-A6, D-A7, D-A8, D-B1, D-B2, D-B3, D-B4, D-B5, D-B6, D-B7, D-B8, D-C1, D-C2, D-C3, D-C4, D-C5, D-C6, D-D1, D-D2, D-D3, D-D4, D-D5, D-D6, D-W1, D-W2, D-W3, D-X1, D-X2, D-X3, D-X4, D-Y1, D-Z1, D-Z2 (CONTEXT.md <decisions>)
 **Depends on:** Phase 13
-**Plans:** 8/12 plans executed
+**Plans:** 9/12 plans executed
 
 Plans:
 - [x] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 12 hooks) — **complete 2026-04-27** (4 atomic commits, 58 tests green)
@@ -221,7 +221,7 @@ Plans:
 - [x] 14-06-PLAN.md — /admin/workflows (Şablonlar) — template card grid + impact-aware Sil with "Yine de sil" secondary checkbox
 - [x] 14-07-PLAN.md — /admin/audit (Audit) — URL-driven filters + 50k cap warning + AuditFilterModal + Detay column variant stub
 - [x] 14-08-PLAN.md — /admin/stats (İstatistik) — 3 charts lazy-loaded (recharts LineChart + pure CSS Methodology bars + Velocity top-30 grid)
-- [ ] 14-09-PLAN.md — Backend audit-log enrichment cross-cutting (task_repo + project_repo + 4 use cases populate extra_metadata per D-D2; comment_excerpt 160-char PII guardrail)
+- [x] 14-09-PLAN.md — Backend audit-log enrichment cross-cutting (task_repo + project_repo + 4 use cases populate extra_metadata per D-D2; comment_excerpt 160-char PII guardrail) — **complete 2026-04-27** (2 atomic commits + new test_audit_log_enrichment.py 3/3 green + 21/21 baseline regression green; 13 audit emission sites enriched with snake_case D-D2 metadata; D-D6 backward compat verified; NO migration / NO new endpoints)
 - [ ] 14-10-PLAN.md — Frontend audit-event-mapper extension cross-cutting (10→23 SemanticEventTypes + activity-row variant=admin-table + 5 new render branches; affects 4 surfaces)
 - [ ] 14-11-PLAN.md — AdminLayout button wiring (Rapor al PDF + Denetim günlüğü push) + AvatarDropdown verification
 - [ ] 14-12-PLAN.md — 5 Playwright e2e specs (skip-guarded) + 14-UAT-CHECKLIST.md (25-30 rows) + VALIDATION.md per-task table populated + nyquist_compliant flip
