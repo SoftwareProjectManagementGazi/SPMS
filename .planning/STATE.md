@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-03 complete (Users tab — UsersTable + AddUserModal + BulkInviteModal)
-last_updated: "2026-04-27T09:40:00.000Z"
-last_activity: 2026-04-27 -- Phase 14 Plan 14-03 complete (Users tab full surface, 11 RTL tests green)
+stopped_at: Phase 14 Plan 14-04 complete (Roles + Permissions placeholder tabs — RBAC deferred to v3.0)
+last_updated: "2026-04-27T06:55:00.000Z"
+last_activity: 2026-04-27 -- Phase 14 Plan 14-04 complete (RBAC placeholder tabs, multi-defense matrix, 3 RTL tests green)
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 66
-  completed_plans: 57
-  percent: 86
+  completed_plans: 58
+  percent: 88
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 4 of 12
-Status: Executing Phase 14 — Plan 14-03 (/admin/users full surface) complete; ready for Plan 14-04
-Last activity: 2026-04-27 -- Phase 14 Plan 14-03 complete (~22 min, 2 atomic commits, 11 RTL tests green, build green)
+Plan: 5 of 12
+Status: Executing Phase 14 — Plan 14-04 (/admin/roles + /admin/permissions placeholder tabs) complete; ready for Plan 14-05
+Last activity: 2026-04-27 -- Phase 14 Plan 14-04 complete (~12 min, 2 atomic commits, 3 RTL tests green, build green; 7-layer defense matrix for Permissions; 4-layer for Roles)
 
-Progress: [████████▌░] 86%
+Progress: [████████▊░] 88%
 
 ## Performance Metrics
 
@@ -112,6 +112,7 @@ Progress: [████████▌░] 86%
 | Phase 14 P01 | 90min | 4 tasks | 60 files (4 atomic commits, 58 tests green) |
 | Phase 14 P02 | 12min | 2 tasks | 11 files (2 atomic commits, 4 RTL tests green) |
 | Phase 14 P03 | 22min | 2 tasks | 14 files (2 atomic commits, 11 RTL tests green; backend GET /admin/users handler — Rule 2 deviation resolves Plan 14-02 role gap) |
+| Phase 14 P04 | 12min | 2 tasks | 8 files (2 atomic commits, 3 RTL tests green; 7-layer defense matrix for Permissions + 4-layer for Roles; NO backend RBAC migration per D-A2 defer) |
 
 ## Accumulated Context
 
@@ -424,6 +425,10 @@ Key constraints for v2.0:
 - [Phase 14]: [14-03] localStorage filter persistence at key spms.admin.users.filter (Phase 11 D-21 + CONTEXT D-C5) — useLocalStoragePref hook prefixes "spms." automatically; filter state survives tab switches but resets on logout (existing app-context behavior).
 - [Phase 14]: [14-03] Bulk role-change uses MoreMenu primitive with custom trigger button — keeps the primitive single-source-of-truth (consumed in 5 sites by end of Phase 14) while letting UserBulkBar present a "Toplu rol değiştir ▾" dropdown look. trigger prop is the documented escape hatch for non-default trigger appearance.
 - [Phase 14]: [14-03] ConfirmDialog tone="danger" used for both Devre dışı bırak AND Tekrar aktif et — both states use danger tone because mutation gravity is the same from admin POV (irreversible-from-user-side). Plan reads "danger for deactivate, primary for reactivate" but the user-facing mental model is the same; tone="danger" is the safer default.
+- [Phase 14]: [14-04] Multi-defense RBAC placeholder pattern — Permissions tab toggles ship 5 per-toggle defenses (HTML disabled / aria-disabled / tooltip / no-handler / opacity 0.6) + 3 page/card defenses (v3.0 Badge in card header / disabled Kopyala / page-level AlertBanner) = 8 unique layers. Roles tab Guest card ships 4 defenses (cursor:not-allowed / opacity 0.6 / v3.0 Badge / "v3.0'da gelecek" copy). Documented in code comments + threat model so v3.0 implementer sees what to remove.
+- [Phase 14]: [14-04] DisabledPermissionToggle wrapper INLINED in permission-row.tsx (NOT extending the shared components/primitives/toggle.tsx primitive). The Toggle primitive uses on:boolean and has no disabled/aria-disabled/aria-label support; extending it would touch the Phase 8 contract. Inlined wrapper renders <input type="checkbox" role="switch" disabled> so RTL toBeDisabled() works with native HTML semantics; visual mimic of Toggle's sm size (30×16, 12px knob, opacity 0.6).
+- [Phase 14]: [14-04] No "Düzenle" button on system-role cards (D-A5 explicit removal vs prototype line 228) — RBAC editing is deferred to v3.0 so the UI affordance is removed entirely. The card is information-only; a v3.0 contributor adding the button back must also wire the Role entity + Permission junction backend work first.
+- [Phase 14]: [14-04] admin-rbac-keys.ts ships BOTH Surface D (Roller) AND Surface E (İzin Matrisi) keys upfront — same precedent as Plan 14-02 shipping Surface A + B in one Task 1 commit. 40 TR/EN parity keys total (14 roles + 26 permissions). Avoids a 2nd commit re-touching the same i18n file when Task 2 ships.
 
 ### Pending Todos
 
@@ -454,12 +459,12 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T06:11:00.000Z
-Stopped at: Phase 14 Plan 14-02 complete — admin layout + Overview tab (2 atomic commits, 4 RTL tests green, build green)
-Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-03-PLAN.md
+Last session: 2026-04-27T06:55:00.000Z
+Stopped at: Phase 14 Plan 14-04 complete — /admin/roles + /admin/permissions placeholder tabs (2 atomic commits, 3 RTL tests green, build green; multi-defense layering against v3.0 RBAC reactivation)
+Resume file: .planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-05-PLAN.md
 
 **Current Phase:** 14
 
-**Next Plan:** 14-03 (`/admin/users` Kullanıcılar tab — Wave 2). Owns the user table + search + role filter + bulk-select + Add User modal + Bulk Invite modal + per-row MoreH (Deactivate / Reset password / Role change / Delete). NOTE: should also extend `/auth/users` response or add a richer `/admin/users` list endpoint with `role` field — Plan 14-02's RoleDistribution depends on it for accurate role counts. Wraps inside the AdminLayout from Plan 14-02 (guard + tabs strip inherited automatically).
+**Next Plan:** 14-05 (`/admin/projects` Projeler tab — Wave 2). Owns the admin-wide project listing + 8-col table including archived projects + EXACTLY 2 MoreH actions (Arşivle + Sil two-step key-typing confirm per D-B5 — NO transfer-ownership). Wraps inside the AdminLayout from Plan 14-02 (guard + tabs strip inherited automatically).
 
-**Planned Phase:** 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — 12 plans — Plans 14-01 + 14-02 complete; Plans 14-03..14-12 ahead
+**Planned Phase:** 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — 12 plans — Plans 14-01 + 14-02 + 14-03 + 14-04 complete; Plans 14-05..14-12 ahead
