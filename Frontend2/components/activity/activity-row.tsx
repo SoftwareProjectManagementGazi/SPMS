@@ -1,6 +1,9 @@
 "use client"
 
 // Phase 13 Plan 13-04 Task 2 — ActivityRow per-event renderer.
+// Phase 14 Plan 14-10 Task 2 — extended with `variant?: "default" | "admin-table"`
+// + 5 new conditional render branches per CONTEXT D-D4 (D-D5 admin-table /
+// D-D6 graceful fallback).
 //
 // Per UI-SPEC §C.1 EventRow anatomy: Avatar(28) + bottom-right event badge,
 // content column with primary line / secondary task title / status pair (for
@@ -22,6 +25,15 @@
 //      semantic type — the JSX is intentionally inline so a reader can see the
 //      full row anatomy in one place (matches prototype activity-tab.jsx
 //      lines 135–177 verbatim).
+//   5. Phase 14 Pitfall 2 — extra_metadata keys are read directly in
+//      snake_case (md.task_key, md.task_title, md.project_name, md.field_name,
+//      md.old_value_label, md.new_value_label, md.comment_excerpt,
+//      md.user_email, md.target_role, md.source_role, md.target_user_name).
+//      Every read is `as | undefined` so Phase 14 D-D6 backward compat with
+//      pre-Phase-14 audit rows (extra_metadata=null) is graceful.
+//   6. Phase 14 D-D5 — when `variant === "admin-table"`, the row renders as a
+//      compact grid (1fr auto), single-line, NO Avatar bubble, time on the
+//      right. Used by /admin/audit (Plan 14-07 already passes the prop).
 
 import * as React from "react"
 
@@ -31,8 +43,12 @@ import { ArrowRight } from "lucide-react"
 import { Avatar, Badge } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { eventMeta } from "@/lib/activity/event-meta"
-import { mapAuditToSemantic } from "@/lib/audit-event-mapper"
+import {
+  mapAuditToSemantic,
+  type SemanticEventType,
+} from "@/lib/audit-event-mapper"
 import { formatRelativeTime } from "@/lib/activity-date-format"
+import { getFieldLabel } from "@/lib/admin/audit-field-labels"
 import { getInitials } from "@/lib/initials"
 import type { ActivityItem } from "@/services/activity-service"
 
@@ -43,12 +59,11 @@ export interface ActivityRowProps {
   /** When set, taskKey/phase reference clicks route under that project. */
   projectId?: number
   /**
-   * Phase 14 Plan 14-02 — variant slot, STUB for Plan 14-10.
-   * Plan 14-10 will add the "admin-table" branch (compact single-line render
-   * for the /admin/audit table cell + Recent Admin Events list). For Plan
-   * 14-02 the prop is accepted but the renderer falls through to the default
-   * branch — callers can pass it today and the visual upgrade lands when
-   * Plan 14-10 ships.
+   * Phase 14 Plan 14-10 — variant slot.
+   * - "default" (legacy): full anatomy — Avatar + content column with
+   *   secondary title row + status pair + assign target + comment block.
+   * - "admin-table" (D-D5): compact single-line grid — NO Avatar bubble,
+   *   time pinned right. Used by /admin/audit Detay column (Plan 14-07).
    */
   variant?: "default" | "admin-table"
 }
@@ -60,7 +75,11 @@ function statusLabel(value: string | null | undefined): string | null {
   return value
 }
 
-export function ActivityRow({ event, projectId }: ActivityRowProps) {
+export function ActivityRow({
+  event,
+  projectId,
+  variant = "default",
+}: ActivityRowProps) {
   const { language } = useApp()
   const router = useRouter()
 
@@ -77,12 +96,43 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
   const firstName = userName.split(" ")[0] || ""
 
   // Optional metadata fields — backend's audit_log payload may carry these in
-  // the JSONB metadata column (Phase 9 D-46). We read defensively because not
-  // every audit entry will populate them.
+  // the JSONB metadata column (Phase 9 D-46, enriched in Phase 14 Plan 14-09
+  // per D-D2). We read defensively because not every audit entry will populate
+  // them — D-D6 graceful fallback for pre-Phase-14 rows where metadata=null.
+  // Pitfall 2: snake_case keys read DIRECTLY — no camelCase mapper.
   const md = (event.metadata ?? {}) as Record<string, unknown>
   const taskKey = typeof md.task_key === "string" ? md.task_key : undefined
-  const taskTitle = typeof md.task_title === "string" ? md.task_title : undefined
+  const taskTitle =
+    typeof md.task_title === "string" ? md.task_title : undefined
   const phaseId = typeof md.phase_id === "string" ? md.phase_id : undefined
+  const projectName =
+    typeof md.project_name === "string" ? md.project_name : undefined
+  const fieldName =
+    typeof md.field_name === "string" ? md.field_name : undefined
+  const oldLabel =
+    typeof md.old_value_label === "string" ? md.old_value_label : undefined
+  const newLabel =
+    typeof md.new_value_label === "string" ? md.new_value_label : undefined
+  const commentExcerpt =
+    typeof md.comment_excerpt === "string" ? md.comment_excerpt : undefined
+  const userEmail =
+    typeof md.user_email === "string" ? md.user_email : undefined
+  const targetRole =
+    typeof md.target_role === "string" ? md.target_role : undefined
+  const sourceRole =
+    typeof md.source_role === "string" ? md.source_role : undefined
+  const targetUserName =
+    typeof md.target_user_name === "string"
+      ? md.target_user_name
+      : undefined
+  const milestoneTitle =
+    typeof md.milestone_title === "string" ? md.milestone_title : undefined
+  const artifactName =
+    typeof md.artifact_name === "string" ? md.artifact_name : undefined
+  const sourcePhaseName =
+    typeof md.source_phase_name === "string"
+      ? md.source_phase_name
+      : undefined
 
   const refLabel = event.entity_label || taskKey || null
 
@@ -110,6 +160,427 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
     if (v.includes("review") || v === "3") return "warning" as const
     return "neutral" as const
   }
+
+  // ---------------------------------------------------------------------------
+  // Phase 14 — render the primary line via a switch over SemanticEventType.
+  // The legacy render path (firstName + verb + refLabel) is the default branch
+  // — that preserves the existing behavior for the 10 Phase 13 event types
+  // unchanged, including the secondary taskTitle line, status pair, assign
+  // target, and comment block which render below the primary line.
+  //
+  // 5 NEW Phase 14 branches per CONTEXT D-D4 — they replace the primary line
+  // with metadata-driven Jira-style content for the 13 new SemanticEventType
+  // members. The shared "secondary rows" (status pair etc.) below remain
+  // attached only to the existing Phase 13 semantic types.
+  // ---------------------------------------------------------------------------
+
+  type Phase14NewSemantic =
+    | "task_field_updated"
+    | "project_archived"
+    | "project_status_changed"
+    | "comment_edited"
+    | "comment_deleted"
+    | "user_invited"
+    | "user_deactivated"
+    | "user_activated"
+    | "user_role_changed"
+    | "user_password_reset_requested"
+    | "project_join_request_created"
+    | "project_join_request_approved"
+    | "project_join_request_rejected"
+
+  const isPhase14New = (s: SemanticEventType): s is Phase14NewSemantic =>
+    s === "task_field_updated" ||
+    s === "project_archived" ||
+    s === "project_status_changed" ||
+    s === "comment_edited" ||
+    s === "comment_deleted" ||
+    s === "user_invited" ||
+    s === "user_deactivated" ||
+    s === "user_activated" ||
+    s === "user_role_changed" ||
+    s === "user_password_reset_requested" ||
+    s === "project_join_request_created" ||
+    s === "project_join_request_approved" ||
+    s === "project_join_request_rejected"
+
+  const muted = { color: "var(--fg-muted)" } as const
+
+  function renderPhase14Primary(): React.ReactNode {
+    switch (semantic) {
+      case "task_field_updated":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>
+            {taskTitle ? (
+              <>
+                {" "}
+                {language === "tr" ? "" : "on "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${taskTitle}'`}
+                </span>
+              </>
+            ) : (
+              <>
+                {" "}
+                <span style={muted}>
+                  {language === "tr" ? "bir görev alanını" : "a task field"}
+                </span>
+              </>
+            )}
+            {fieldName ? (
+              <>
+                {" — "}
+                <span style={muted}>
+                  {getFieldLabel(fieldName, language)}:
+                </span>
+              </>
+            ) : null}
+            {oldLabel || newLabel ? (
+              <>
+                {" "}
+                {oldLabel ? <span>{oldLabel}</span> : null}
+                {oldLabel && newLabel ? (
+                  <>
+                    {" "}
+                    <ArrowRight
+                      size={11}
+                      style={{
+                        color: "var(--fg-subtle)",
+                        verticalAlign: "middle",
+                      }}
+                    />{" "}
+                  </>
+                ) : null}
+                {newLabel ? (
+                  <span style={{ fontWeight: 600 }}>{newLabel}</span>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        )
+
+      case "project_archived":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>
+            {projectName ? (
+              <>
+                {" "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${projectName}'`}
+                </span>
+                {language === "tr" ? " projesini" : ""}
+              </>
+            ) : (
+              <>
+                {" "}
+                <span style={muted}>
+                  {language === "tr" ? "bir projeyi" : "a project"}
+                </span>
+              </>
+            )}
+          </>
+        )
+
+      case "project_status_changed":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>
+            {projectName ? (
+              <>
+                {" "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${projectName}'`}
+                </span>
+                {language === "tr" ? "" : ""}
+              </>
+            ) : null}
+            {oldLabel || newLabel ? (
+              <>
+                {": "}
+                {oldLabel ? <span>{oldLabel}</span> : null}
+                {oldLabel && newLabel ? (
+                  <>
+                    {" "}
+                    <ArrowRight
+                      size={11}
+                      style={{
+                        color: "var(--fg-subtle)",
+                        verticalAlign: "middle",
+                      }}
+                    />{" "}
+                  </>
+                ) : null}
+                {newLabel ? (
+                  <span style={{ fontWeight: 600 }}>{newLabel}</span>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        )
+
+      case "comment_edited":
+      case "comment_deleted":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>
+            {taskTitle ? (
+              <>
+                {" "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${taskTitle}'`}
+                </span>{" "}
+                <span style={muted}>
+                  {language === "tr" ? "üzerinde" : ""}
+                </span>
+              </>
+            ) : null}
+          </>
+        )
+
+      case "user_invited":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>
+              {targetUserName ?? userEmail ?? ""}
+            </span>
+          </>
+        )
+
+      case "user_deactivated":
+      case "user_activated":
+      case "user_password_reset_requested":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>
+              {targetUserName ?? userEmail ?? ""}
+            </span>
+          </>
+        )
+
+      case "user_role_changed":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>
+              {targetUserName ?? userEmail ?? ""}
+            </span>
+            {sourceRole || targetRole ? (
+              <>
+                {": "}
+                {sourceRole ? <span>{sourceRole}</span> : null}
+                {sourceRole && targetRole ? (
+                  <>
+                    {" "}
+                    <ArrowRight
+                      size={11}
+                      style={{
+                        color: "var(--fg-subtle)",
+                        verticalAlign: "middle",
+                      }}
+                    />{" "}
+                  </>
+                ) : null}
+                {targetRole ? (
+                  <span style={{ fontWeight: 600 }}>{targetRole}</span>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        )
+
+      case "project_join_request_created":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>
+              {targetUserName ?? userEmail ?? ""}
+            </span>
+            {projectName ? (
+              <>
+                {" "}
+                <span style={muted}>
+                  {language === "tr" ? "→" : "→"}
+                </span>{" "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${projectName}'`}
+                </span>
+              </>
+            ) : null}
+          </>
+        )
+
+      case "project_join_request_approved":
+      case "project_join_request_rejected":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>
+              {targetUserName ?? userEmail ?? ""}
+            </span>
+            {projectName ? (
+              <>
+                {" "}
+                <span style={muted}>
+                  {language === "tr" ? "→" : "→"}
+                </span>{" "}
+                <span style={{ fontWeight: 600 }}>
+                  {`'${projectName}'`}
+                </span>
+              </>
+            ) : null}
+          </>
+        )
+
+      default:
+        // unreachable — switch is exhaustive over Phase14NewSemantic.
+        return null
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Variant: admin-table (D-D5) — compact single-line grid for /admin/audit.
+  // No Avatar bubble. Time pinned right. Backward-compat fallback for old
+  // rows still works because the inner primary line gracefully handles
+  // missing metadata via the same `?? undefined` reads.
+  // ---------------------------------------------------------------------------
+  if (variant === "admin-table") {
+    const primary = isPhase14New(semantic) ? (
+      renderPhase14Primary()
+    ) : (
+      // Legacy compact rendering — verb + refLabel only (one line).
+      <>
+        <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+        <span style={muted}>{meta.verb(language)}</span>
+        {refLabel ? (
+          <>
+            {" "}
+            <span style={{ color: "var(--primary)", fontWeight: 500 }}>
+              {refLabel}
+            </span>
+          </>
+        ) : null}
+        {/* Inline status pair for the legacy task_status_changed when both
+            old/new values are present — keeps Detay column meaningful for
+            pre-Phase-14 rows. */}
+        {semantic === "task_status_changed" &&
+        event.old_value &&
+        event.new_value ? (
+          <>
+            {": "}
+            <span>{statusLabel(event.old_value)}</span>{" "}
+            <ArrowRight
+              size={11}
+              style={{ color: "var(--fg-subtle)", verticalAlign: "middle" }}
+            />{" "}
+            <span style={{ fontWeight: 600 }}>
+              {statusLabel(event.new_value)}
+            </span>
+          </>
+        ) : null}
+        {/* Backward-compat: when extra_metadata carries milestone/artifact
+            titles, surface them so the Detay column isn't blank for legacy
+            lifecycle rows. */}
+        {milestoneTitle ? (
+          <>
+            {" "}
+            <span style={{ fontWeight: 600 }}>{`'${milestoneTitle}'`}</span>
+          </>
+        ) : null}
+        {artifactName ? (
+          <>
+            {" "}
+            <span style={{ fontWeight: 600 }}>{`'${artifactName}'`}</span>
+          </>
+        ) : null}
+        {sourcePhaseName ? (
+          <>
+            {" "}
+            <span style={muted}>{`(${sourcePhaseName})`}</span>
+          </>
+        ) : null}
+      </>
+    )
+
+    return (
+      <div
+        role="article"
+        aria-label={ariaLabel}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          alignItems: "center",
+          gap: 12,
+          padding: "0",
+          fontSize: 12.5,
+          minWidth: 0,
+        }}
+      >
+        <div
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+        >
+          {primary}
+        </div>
+        <div
+          className="mono"
+          style={{
+            fontSize: 11,
+            color: "var(--fg-muted)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {event.timestamp
+            ? formatRelativeTime(event.timestamp, language)
+            : ""}
+        </div>
+      </div>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // Variant: default (existing Phase 13 layout — Avatar + content column).
+  //
+  // For Phase 14 NEW semantic types, the primary line is replaced by
+  // renderPhase14Primary(). For the existing 10 Phase 13 types, the legacy
+  // primary line + secondary rows below it remain untouched.
+  // ---------------------------------------------------------------------------
+  const primaryLine: React.ReactNode = isPhase14New(semantic) ? (
+    renderPhase14Primary()
+  ) : (
+    <>
+      <span style={{ fontWeight: 600 }}>{firstName}</span>
+      <span style={{ color: "var(--fg-muted)" }}> {meta.verb(language)} </span>
+      {refLabel && (
+        <span
+          style={{
+            color: "var(--primary)",
+            cursor: projectId != null ? "pointer" : "default",
+            fontWeight: 500,
+          }}
+          onClick={onRefClick}
+        >
+          {refLabel}
+        </span>
+      )}
+    </>
+  )
 
   return (
     <div
@@ -153,24 +624,12 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
 
       {/* Content column */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5 }}>
-          <span style={{ fontWeight: 600 }}>{firstName}</span>
-          <span style={{ color: "var(--fg-muted)" }}> {meta.verb(language)} </span>
-          {refLabel && (
-            <span
-              style={{
-                color: "var(--primary)",
-                cursor: projectId != null ? "pointer" : "default",
-                fontWeight: 500,
-              }}
-              onClick={onRefClick}
-            >
-              {refLabel}
-            </span>
-          )}
-        </div>
+        <div style={{ fontSize: 12.5 }}>{primaryLine}</div>
 
-        {taskTitle && (
+        {/* Secondary task-title row — Phase 13 layout only renders this for the
+            existing 10 semantic types; Phase 14 new types embed the title in
+            the primary line so the secondary row stays empty. */}
+        {!isPhase14New(semantic) && taskTitle && (
           <div
             style={{
               fontSize: 12,
@@ -182,7 +641,7 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
           </div>
         )}
 
-        {/* Status pair (task_status_changed) */}
+        {/* Status pair (task_status_changed — Phase 13) */}
         {semantic === "task_status_changed" && (
           <div
             style={{
@@ -206,7 +665,7 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
           </div>
         )}
 
-        {/* Assign target row (task_assigned) */}
+        {/* Assign target row (task_assigned — Phase 13) */}
         {semantic === "task_assigned" && event.new_value && (
           <div
             style={{
@@ -224,7 +683,7 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
           </div>
         )}
 
-        {/* Comment block — D-B6 + T-13-04-01 XSS hardening */}
+        {/* Comment block — D-B6 + T-13-04-01 XSS hardening (Phase 13). */}
         {semantic === "comment_created" && event.new_value && (
           <div
             style={{
@@ -248,6 +707,27 @@ export function ActivityRow({ event, projectId }: ActivityRowProps) {
             })()}
           </div>
         )}
+
+        {/* Phase 14 — comment excerpt rendered for comment_edited /
+            comment_deleted when extra_metadata carries it (Plan 14-09 capped
+            at 161 chars including ellipsis). React's default text escaping
+            keeps this XSS-safe (T-14-10-03). */}
+        {(semantic === "comment_edited" || semantic === "comment_deleted") &&
+          commentExcerpt && (
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                color: "var(--fg-muted)",
+                fontStyle: "italic",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {`"${commentExcerpt}"`}
+            </div>
+          )}
 
         {/* Time row */}
         <div

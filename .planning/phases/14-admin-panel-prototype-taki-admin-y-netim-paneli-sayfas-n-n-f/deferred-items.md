@@ -76,3 +76,46 @@ edits as well — the failures persist after `git stash` of all Task 2 edits.
 or wire a global exception handler for `ValueError` raised inside Pydantic
 validators. Likely a 1-2 line fix in the project router. Belongs in a
 Phase 14-12 cleanup plan or a separate bug-fix plan.
+
+## Plan 14-10 (Wave 3)
+
+### Pre-existing workflow-editor + selection-panel + workflow-canvas test failures
+
+**Discovered during:** Plan 14-10 full Frontend2 vitest regression run
+(`cd Frontend2 && npm run test -- --run`).
+
+**Symptom (19 failures across 3 files):**
+- `components/workflow-editor/editor-page.test.tsx` — 16 failures (Test 6 / 7 /
+  8 / 9 / 10 / 11 / 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 / 20 / 21).
+- `components/workflow-editor/selection-panel.test.tsx` — 1 failure (Test 5).
+- `components/workflow-editor/workflow-canvas.test.tsx` — 2 failures
+  (readOnly forwarding for ReactFlow lock props).
+
+**Verification this is pre-existing:** Confirmed by running the same suites
+on the parent of Plan 14-10's first commit (HEAD before `e2376bac`).
+`git stash` of all Plan 14-10 edits + re-running yielded the SAME 19
+failures. Plan 14-10 does NOT touch any workflow-editor / selection-panel
+/ workflow-canvas file.
+
+**Origin:** Likely Phase 12 / Phase 13 workflow-editor plans + ReactFlow
+upgrade drift. The same `Cannot find module 'reactflow'` / `ReactFlowProvider`
+hydration errors appear in the test transcript. Pre-existing TS errors
+(captured during Plan 14-10 `tsc --noEmit`) confirm separate root causes:
+`milestones-subtab.test.tsx`, `editor-page.test.tsx`, `phase-edge.test.tsx`,
+`use-transition-authority.test.tsx`, `lib/api-client.test.ts`.
+
+**Why deferred:**
+- Out of scope for Plan 14-10 — Plan 14-10 only touches
+  `Frontend2/lib/audit-event-mapper.ts`, `Frontend2/lib/activity/event-meta.ts`,
+  `Frontend2/components/activity/activity-row.tsx` and their `.test.ts(x)`
+  pairs. None of these files import from or are imported by the workflow-editor
+  surface. Plan 14-10 unit + RTL tests are green: 40/40 mapper + 18/18
+  activity-row = 58/58 green for files this plan owns.
+- `npm run build` exits 0 — production build green.
+
+**Action item:** A future workflow-editor stabilization plan should: (a) audit
+`reactflow` import paths and version pins, (b) fix the `Position` type-mismatch
+TS errors in `phase-edge.test.tsx`, (c) clean up the
+`use-transition-authority.test.tsx` `UseQueryResult` type-cast, (d) update
+`milestones-subtab.test.tsx` spread-arg fixture. Not blocking Plan 14-10
+ship.
