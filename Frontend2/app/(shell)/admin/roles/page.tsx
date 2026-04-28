@@ -18,6 +18,25 @@
 // endpoint; reuses Plan 14-01 Wave 0 hook). Guest count is 0 in v2.0
 // (no Guest role in the users.role enum yet).
 //
+// Plan 14-17 (Cluster E gap closure) — TWO concerns wired here:
+//
+//   A. Count source fix (Approach 1). The default useAdminUsers() returned
+//      the FIRST PAGE (~50 users), making per-role counts undercount past
+//      page 1. We now request `{limit: 1000}` so counts cover the full
+//      typical population. This is a defensive ceiling — past 1000 users
+//      counts truncate silently, which is why concern B is mandatory.
+//
+//   B. MANDATORY truncation AlertBanner (N-3). When the response's `total`
+//      field exceeds 1000, render an AlertBanner WARNING that the per-role
+//      counts are based on the first 1000 users. Without this banner the
+//      counts silently lie. v2.1 candidate: dedicated /admin/users/role-counts
+//      endpoint (Approach 2) bypasses the limit entirely.
+//
+//   C. Loading state propagated to RoleCard (em-dash fallback in
+//      role-card.tsx — null-safety guard via Number.isFinite). When
+//      useAdminUsers().isLoading is true, the cards render `userCount={undefined}`
+//      and the card itself draws an em-dash placeholder.
+//
 // AdminLayout (Plan 14-02) wraps this page automatically — page header +
 // NavTabs strip + admin-only route guard inherited via the layout segment.
 
@@ -40,7 +59,11 @@ interface AdminUserShape {
 
 export default function AdminRolesPage() {
   const { language } = useApp()
-  const usersQ = useAdminUsers()
+  // Plan 14-17 — limit=1000 defensive ceiling so per-role counts cover the
+  // full typical population (the default page size of ~50 was the gap that
+  // produced UAT Test 19's "Kullanıcı: 0 / Kullanıcı: ?" symptoms). Past
+  // 1000 users the truncation AlertBanner kicks in (N-3 below).
+  const usersQ = useAdminUsers({ limit: 1000 })
 
   // Defensive shape extraction — useAdminUsers may return either the legacy
   // /auth/users array shape OR the Plan 14-03 /admin/users {items, total}
@@ -52,19 +75,49 @@ export default function AdminRolesPage() {
     return (data as { items?: AdminUserShape[] } | undefined)?.items ?? []
   }, [usersQ.data])
 
+  // Plan 14-17 — N-3 truncation detection. The response shape is
+  // {items, total}; if total > 1000 the per-role counts (derived from the
+  // first 1000 items) are silently incomplete. Banner rendered below.
+  const totalUsers: number = React.useMemo(() => {
+    const data = usersQ.data as unknown
+    if (Array.isArray(data)) return (data as unknown[]).length
+    return (data as { total?: number } | undefined)?.total ?? 0
+  }, [usersQ.data])
+  const isCountTruncated = totalUsers > 1000
+
+  // Plan 14-17 — when isLoading we want RoleCard's em-dash fallback to
+  // render. Passing `undefined` (instead of 0) makes the loading state
+  // visually distinct from the legitimate "0 admins" case.
+  const isLoadingCounts = usersQ.isLoading
+
   // Per-role counts (case-insensitive match on role.name; tolerates
   // backend's "Project Manager" string and any future casing drift).
-  const adminCount = users.filter(
-    (u) => (u.role?.name ?? "").toLowerCase() === "admin",
-  ).length
-  const pmCount = users.filter(
-    (u) => (u.role?.name ?? "").toLowerCase() === "project manager",
-  ).length
-  const memberCount = users.filter(
-    (u) => (u.role?.name ?? "").toLowerCase() === "member",
-  ).length
-  // No Guest role in v2.0 enum — placeholder count for the v3.0 future role.
+  const adminCount = isLoadingCounts
+    ? undefined
+    : users.filter(
+        (u) => (u.role?.name ?? "").toLowerCase() === "admin",
+      ).length
+  const pmCount = isLoadingCounts
+    ? undefined
+    : users.filter(
+        (u) => (u.role?.name ?? "").toLowerCase() === "project manager",
+      ).length
+  const memberCount = isLoadingCounts
+    ? undefined
+    : users.filter(
+        (u) => (u.role?.name ?? "").toLowerCase() === "member",
+      ).length
+  // No Guest role in v2.0 enum — 0 always (NOT undefined; the empty count
+  // is meaningful, not a loading state).
   const guestCount = 0
+
+  // Banner body with {total} substitution. The i18n key value contains
+  // "{total}" as a literal placeholder string — replaced at render time so
+  // the admin sees the real magnitude (e.g., 1500) and not just "first 1000".
+  const truncationBody = adminRbacT(
+    "admin.roles.count_truncation_warning_body",
+    language,
+  ).replace("{total}", String(totalUsers))
 
   return (
     <div
@@ -80,6 +133,27 @@ export default function AdminRolesPage() {
       <AlertBanner tone="info">
         {adminRbacT("admin.roles.alert_banner_body", language)}
       </AlertBanner>
+
+      {/* Plan 14-17 — N-3 MANDATORY truncation banner. Only renders when
+          totalUsers > 1000 (Approach 1 ceiling). Without this banner the
+          per-role counts silently undercount; with it the admin knows
+          exactly how many users are missing from the slice. */}
+      {isCountTruncated && (
+        <AlertBanner
+          tone="warning"
+          role="alert"
+          data-testid="role-count-truncation-banner"
+        >
+          <strong>
+            {adminRbacT(
+              "admin.roles.count_truncation_warning_title",
+              language,
+            )}
+            :
+          </strong>{" "}
+          {truncationBody}
+        </AlertBanner>
+      )}
 
       {/* Role cards grid — auto-fill responsive (≥3 per row at desktop;
           gracefully wraps to 2 at tablet, 1 at mobile). gap 14 = verbatim

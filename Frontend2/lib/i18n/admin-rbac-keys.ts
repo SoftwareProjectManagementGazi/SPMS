@@ -63,6 +63,28 @@ export const ADMIN_RBAC_I18N_KEYS = {
     en: "Users",
   },
 
+  // Plan 14-17 (Cluster E gap closure) — D-A5 cross-tab navigation affordance.
+  // "Görüntüle" link in each non-disabled RoleCard navigates to
+  // /admin/users?role=<id> with the role filter pre-applied. Distinct from
+  // the prototype's removed "Düzenle" button (D-A4 RBAC defer) — this is a
+  // navigation aid, NOT a CRUD trigger.
+  "admin.roles.view_users_link_label": {
+    tr: "Görüntüle",
+    en: "View",
+  },
+
+  // Plan 14-17 (Cluster E / N-3) — MANDATORY AlertBanner copy when total
+  // user count > 1000 (Approach 1's defensive ceiling). Without this banner
+  // per-role counts silently lie past 1000 users.
+  "admin.roles.count_truncation_warning_title": {
+    tr: "Sayım sınırlı",
+    en: "Counts truncated",
+  },
+  "admin.roles.count_truncation_warning_body": {
+    tr: "Görüntülenen sayılar ilk 1000 kullanıcıdan ({total} toplam); tam liste için /admin/users tabına gidin.",
+    en: "Counts shown are based on the first 1000 users out of {total}; visit the Users tab for the full list.",
+  },
+
   // "Yeni rol oluştur" placeholder card per D-A4
   "admin.roles.new_role_title": {
     tr: "Yeni rol oluşturma",
