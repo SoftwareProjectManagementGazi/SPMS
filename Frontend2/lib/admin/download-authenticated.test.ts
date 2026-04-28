@@ -135,9 +135,24 @@ describe("downloadAuthenticated", () => {
     window.localStorage.clear()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Drain any pending setTimeout(() => URL.revokeObjectURL(...), 0) the
+    // helper scheduled — without this the deferred revoke fires AFTER we
+    // delete the URL.revokeObjectURL spy, producing an uncaught
+    // TypeError that vitest reports as a test-file error (despite all
+    // assertions passing).
+    //
+    // Strategy: if fake timers were installed by the test (Test 3), drain
+    // them and then switch to real timers BEFORE the macrotask yield —
+    // otherwise the await never resolves. If fake timers weren't installed,
+    // a single real-time macrotask yield is sufficient to flush the queued
+    // setTimeout(..., 0).
+    if (vi.isFakeTimers()) {
+      vi.runAllTimers()
+      vi.useRealTimers()
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
     uninstallDomSpies()
-    vi.useRealTimers()
   })
 
   it("Test 1 — sends Authorization: Bearer <token> read from AUTH_TOKEN_KEY constant", async () => {
