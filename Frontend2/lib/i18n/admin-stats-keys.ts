@@ -51,6 +51,17 @@ export const ADMIN_STATS_I18N_KEYS = {
     tr: "Metodoloji Kullanımı",
     en: "Methodology usage",
   },
+  // Plan 14-18 (Cluster F UAT Test 31 side-finding) — disambiguates the
+  // unit. Without the subtitle admins didn't know if the bars represented
+  // project counts, task counts, or seat licenses. Backend's
+  // methodology_distribution counts NON-archived projects per methodology
+  // (Backend/app/infrastructure/database/repositories/project_repo.py
+  // methodology_distribution() — see project_repo.py source). The subtitle
+  // calls that out explicitly.
+  "admin.stats.methodology_subtitle": {
+    tr: "Aktif proje sayısı (arşivlenmiş projeler hariç)",
+    en: "Active project count (archived projects excluded)",
+  },
   "admin.stats.methodology_row_scrum": {
     tr: "Scrum",
     en: "Scrum",
@@ -75,9 +86,18 @@ export const ADMIN_STATS_I18N_KEYS = {
   // ---------------------------------------------------------------------------
   // Velocity per project card (UI-SPEC §Surface I lines 505-508)
   // ---------------------------------------------------------------------------
+  // Plan 14-18 (Cluster F UAT Test 31 side-finding) — renamed from
+  // "velocity" / "Velocity" to a methodology-neutral term. "Velocity" is
+  // Scrum-specific (story points per sprint); Kanban/Waterfall users found
+  // it confusing because their methodologies don't use the concept. The
+  // chart actually shows completion-rate / throughput across recent
+  // iterations, which makes "Tamamlama hızı" / "Throughput" the right
+  // generic label. The KEY name is preserved (still
+  // admin.stats.velocity_title) so existing call sites keep working — only
+  // the rendered VALUE changed.
   "admin.stats.velocity_title": {
-    tr: "Proje başına velocity",
-    en: "Velocity per project",
+    tr: "Tamamlama hızı",
+    en: "Throughput",
   },
   "admin.stats.velocity_top30_note": {
     // {N} is the total count before the top-30 slice. Shown only when

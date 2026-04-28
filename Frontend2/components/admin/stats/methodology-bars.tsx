@@ -99,16 +99,38 @@ export function MethodologyBars({ distribution }: MethodologyBarsProps) {
 
   return (
     <Card padding={16}>
-      <h3
+      {/* Plan 14-18 (Cluster F UAT Test 31) — title + subtitle pair so
+          admins can see at a glance the unit being counted (project count,
+          archived excluded). The subtitle's typography is intentionally
+          smaller / muted so it doesn't visually compete with the chart bars. */}
+      <div
         style={{
-          fontSize: 13,
-          fontWeight: 600,
+          display: "flex",
+          flexDirection: "column",
           marginBottom: 14,
-          letterSpacing: -0.2,
         }}
       >
-        {adminStatsT("admin.stats.methodology_title", lang)}
-      </h3>
+        <h3
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            margin: 0,
+            letterSpacing: -0.2,
+          }}
+        >
+          {adminStatsT("admin.stats.methodology_title", lang)}
+        </h3>
+        <p
+          style={{
+            fontSize: 11,
+            color: "var(--fg-subtle)",
+            margin: "2px 0 0 0",
+            lineHeight: 1.4,
+          }}
+        >
+          {adminStatsT("admin.stats.methodology_subtitle", lang)}
+        </p>
+      </div>
       <div
         style={{
           display: "flex",

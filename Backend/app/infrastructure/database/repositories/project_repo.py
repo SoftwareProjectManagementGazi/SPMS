@@ -13,6 +13,66 @@ from app.infrastructure.database.models.audit_log import AuditLogModel
 from sqlalchemy.orm import joinedload
 
 
+# Phase 14 Plan 14-18 (Cluster F UAT Test 31 side-finding) — DONE_COLUMN_NAMES
+# whitelist hoisted to module level so:
+#   1. Tests can import it directly and assert the membership contract
+#      without spinning up a full DB.
+#   2. The set is shared between task_counts_by_project_ids (admin /admin/
+#      projects table progress bar) and any future helper that needs the
+#      same "is this column terminal?" semantics.
+#
+# The whitelist case-insensitively matches the lowercase board column name
+# against the names admins commonly use for terminal-state columns. Plan
+# 14-18 EXPANDS the original 7-name whitelist (done/completed/closed/
+# tamamlandı/tamamlandi/bitti/bitirildi) to cover variants caught in UAT
+# Test 31 — projects with non-default done column names like "Bitti ✓",
+# "Released", "Shipped", "Yayınlandı" were reporting 0% completion because
+# their column name was outside the original whitelist.
+#
+# A more correct (but more invasive) fix is Option B: add an
+# `is_terminal: Boolean` column to board_columns via alembic migration so
+# PMs flag their done column explicitly. That's a v2.1 candidate (would
+# need backend migration + UI edit affordance + Phase 9 process-template
+# preset updates). Until then, this expanded whitelist covers ~95% of
+# common variants without a schema change.
+#
+# DIP — manage_tasks.py:242 has its own duplicate of the smaller 3-name
+# tuple ("done","completed","closed") for the recurring-task next-instance
+# check. Application-layer cannot import from infrastructure (CLAUDE.md
+# §4.1.D), so the duplicate is intentional. We deliberately do NOT update
+# manage_tasks.py here — its semantic is "task became Done in user terms,
+# spawn the next recurring instance" which uses a smaller canonical set;
+# the admin/projects progress bar is a wider net (we want to count ANY
+# variation users might pick).
+DONE_COLUMN_NAMES = (
+    # Original 7-name whitelist (preserved for backward compat).
+    "done",
+    "completed",
+    "closed",
+    "tamamlandı",
+    "tamamlandi",
+    "bitti",
+    "bitirildi",
+    # Plan 14-18 additions — common variants caught by UAT Test 31.
+    "tamam",
+    "kapatıldı",
+    "kapatildi",
+    "bitti ✓",
+    "tamamlandı ✓",
+    "tamamlandi ✓",
+    "resolved",
+    "release",
+    "released",
+    "shipped",
+    "deployed",
+    "live",
+    "yayınlandı",
+    "yayinlandi",
+    "closed - released",
+    "closed - resolved",
+)
+
+
 class SqlAlchemyProjectRepository(IProjectRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -363,15 +423,11 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         from sqlalchemy import case, func as sqlfunc
         from app.infrastructure.database.models.task import TaskModel
 
-        DONE_NAMES = (
-            "done",
-            "completed",
-            "closed",
-            "tamamlandı",
-            "tamamlandi",
-            "bitti",
-            "bitirildi",
-        )
+        # Plan 14-18 — DONE_COLUMN_NAMES is now a module-level constant
+        # (declared above). The expanded whitelist covers UAT Test 31
+        # variants ("Bitti ✓", "Released", "Yayınlandı", etc.) that
+        # previously reported 0% completion because their column name
+        # didn't match the original 7-name set.
 
         stmt = (
             select(
@@ -381,7 +437,9 @@ class SqlAlchemyProjectRepository(IProjectRepository):
                     sqlfunc.sum(
                         case(
                             (
-                                sqlfunc.lower(BoardColumnModel.name).in_(DONE_NAMES),
+                                sqlfunc.lower(BoardColumnModel.name).in_(
+                                    DONE_COLUMN_NAMES
+                                ),
                                 1,
                             ),
                             else_=0,
