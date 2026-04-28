@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-17 complete (Cluster E gap closure — RoleCard real counts + ?role= URL param parser)
-last_updated: "2026-04-28T16:26:54.377Z"
+stopped_at: Phase 14 Plan 14-18 complete (Cluster F polish bundle — 10 UAT findings closed)
+last_updated: "2026-04-28T17:03:27.248Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 72
-  completed_plans: 71
-  percent: 99
+  completed_plans: 72
+  percent: 100
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 6 of 18
+Plan: 7 of 18
 Status: Ready to execute
 Last activity: 2026-04-28
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -126,6 +126,7 @@ Progress: [██████████] 99%
 | Phase 14 P15 | 6 min | 1 tasks | 5 files |
 | Phase 14 P16 | 12min | 2 tasks | 8 files |
 | Phase 14 PP17 | 9 | 2 tasks | 6 files |
+| Phase 14 P18 | 25 | 4 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -485,6 +486,8 @@ Key constraints for v2.0:
 - [Phase ?]: Plan 14-17 — Approach 1 (limit=1000) paired with N-3 MANDATORY truncation AlertBanner; Approach 2 (composite role-counts endpoint) deferred to v2.1. Cluster E gap closure for UAT Test 19.
 - [Phase ?]: Plan 14-17 — short-id URL contract (admin/pm/member) maps to canonical AdminRole enum at urlRoleToAdminRole() boundary; URL wins over localStorage with write-through, manual SegmentedControl changes after hydration NOT stomped (effect deps exclude filter).
 - [Phase ?]: Plan 14-17 — RoleCard.userCount widened to 'number | undefined'; Number.isFinite() gate filters undefined/NaN/Infinity to em-dash placeholder. isLoading propagated as undefined (not 0) so loading state visually distinct from '0 admins'.
+- [Phase 14]: B-5 Path B-Refactor signal-back: shipped working TemplateEditorPage editing actual ProcessTemplate fields (name/description) instead of refactoring 33-file Phase 12 editor (alembic migration + 4-6 endpoints would exceed user_decision_locked threshold)
+- [Phase 14]: DONE_COLUMN_NAMES whitelist Option A (in-code 7→22 expansion) chosen over Option B (alembic is_terminal column) which is documented as v2.1 candidate
 
 ### Pending Todos
 
@@ -515,8 +518,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-28T16:26:37.996Z
-Stopped at: Phase 14 Plan 14-17 complete (Cluster E gap closure — RoleCard real counts + ?role= URL param parser)
+Last session: 2026-04-28T17:03:27.236Z
+Stopped at: Phase 14 Plan 14-18 complete (Cluster F polish bundle — 10 UAT findings closed)
 Resume file: None
 
 **Current Phase:** 14

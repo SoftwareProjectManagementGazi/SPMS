@@ -203,14 +203,14 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 11. Task Features & Board Enhancements | v2.0 | 10/10 | Complete    | 2026-04-23 |
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
-| 14. Admin Panel | v2.0 | 17/18 | In Progress|  |
+| 14. Admin Panel | v2.0 | 18/18 | Complete   | 2026-04-28 |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
 **Goal:** /admin route + 8 sub-tabs (Genel/Kullanıcılar/Roller/İzin Matrisi/Projeler/Şablonlar/Audit/İstatistik) ported verbatim from prototype into Frontend2 with full backend wiring (ProjectJoinRequest entity + admin user CRUD + admin audit/stats/summary endpoints + cross-cutting Jira-style audit detail uplift). RBAC tabs are visual placeholders deferred to v3.0.
 **Requirements**: D-A1, D-A2, D-A3, D-A4, D-A5, D-A6, D-A7, D-A8, D-B1, D-B2, D-B3, D-B4, D-B5, D-B6, D-B7, D-B8, D-C1, D-C2, D-C3, D-C4, D-C5, D-C6, D-D1, D-D2, D-D3, D-D4, D-D5, D-D6, D-W1, D-W2, D-W3, D-X1, D-X2, D-X3, D-X4, D-Y1, D-Z1, D-Z2 (CONTEXT.md <decisions>)
 **Depends on:** Phase 13
-**Plans:** 17/18 plans executed
+**Plans:** 18/18 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — Wave 0 fat infra (papaparse + ConfirmDialog tone + NavTabs + Modal + admin lib utils + Backend ProjectJoinRequest vertical slice + admin user/audit/stats/summary endpoints + alembic 006 + 4 services + 12 hooks) — **complete 2026-04-27** (4 atomic commits, 58 tests green)
@@ -230,7 +230,7 @@ Plans:
 - [x] 14-15-PLAN.md — **Cluster C** (gap-closure) — Recent Events vs Detay column rendering parity + cell-overflow tooltip (closes UAT Tests 11 + 30); shape normalization + activity-row variant title attr
 - [x] 14-16-PLAN.md — **Cluster D** (gap-closure) — AuditTable 6-column schema fix (Hedef + IP populated; stray duplicate Zaman removed); backend entity_label resolver + IP column disposition (Path A migration 007 vs Path B defer); closes UAT Test 26
 - [x] 14-17-PLAN.md — **Cluster E** (gap-closure) — Roles tab per-card counts (real numbers, not '=' placeholder) + Görüntüle cross-link to /admin/users?role=<id> with URL-param parser (closes UAT Test 19)
-- [ ] 14-18-PLAN.md — **Cluster F** (gap-closure) — Polish + bug-fix sweep: logout 404 fix + /auth/set-password page + archived row opacity scope + Templates Düzenle route + Velocity card link + viewport overflow + UsersTable debounce + audit chip Aktör name + velocity terminology + done-column whitelist + Methodology subtitle (closes UAT Tests 4/13/22/24/27/31/32/34 + side-findings)
+- [x] 14-18-PLAN.md — **Cluster F** (gap-closure) — Polish + bug-fix sweep: logout 404 fix + /auth/set-password page + archived row opacity scope + Templates Düzenle route + Velocity card link + viewport overflow + UsersTable debounce + audit chip Aktör name + velocity terminology + done-column whitelist + Methodology subtitle (closes UAT Tests 4/13/22/24/27/31/32/34 + side-findings)
 
 ### Phase 15: RBAC altyapısını düzeltmek ve admin panelini düzgünce bağlamak (v3.0'dan şu anki milestone'a alınıyor)
 
