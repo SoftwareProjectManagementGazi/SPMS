@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-16 complete (Cluster D Path B — entity_label resolver + 5-col AuditTable + hideTimestamp prop)
-last_updated: "2026-04-28T16:11:31.118Z"
+stopped_at: Phase 14 Plan 14-17 complete (Cluster E gap closure — RoleCard real counts + ?role= URL param parser)
+last_updated: "2026-04-28T16:26:54.377Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 72
-  completed_plans: 70
-  percent: 97
+  completed_plans: 71
+  percent: 99
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 5 of 18
+Plan: 6 of 18
 Status: Ready to execute
 Last activity: 2026-04-28
 
-Progress: [██████████] 97%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -125,6 +125,7 @@ Progress: [██████████] 97%
 | Phase 14 P14 | 5min | 2 tasks | 3 files |
 | Phase 14 P15 | 6 min | 1 tasks | 5 files |
 | Phase 14 P16 | 12min | 2 tasks | 8 files |
+| Phase 14 PP17 | 9 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -481,6 +482,9 @@ Key constraints for v2.0:
 - [Phase 14-16]: audit_repo._resolve_entity_label cross-table helper — task_title>project_name>milestone_title>artifact_name>comment_excerpt(yorum: prefix)>f{ENTITY}-{id} legacy fallback (D-D6); Hedef never empty / never raw entity_id
 - [Phase 14-16]: hideTimestamp default=false on ActivityRow preserves Recent Events behavior (no outer Zaman cell); audit-table opts in to true (M-4 closure) — eliminates duplicate Zaman bug at cell level
 - [Phase 14-16]: role-based ARIA on grid tables (role=row + role=cell + role=columnheader) lets RTL tests assert column ORDER positionally — catches Hedef-renders-in-wrong-cell bugs text-search cannot
+- [Phase ?]: Plan 14-17 — Approach 1 (limit=1000) paired with N-3 MANDATORY truncation AlertBanner; Approach 2 (composite role-counts endpoint) deferred to v2.1. Cluster E gap closure for UAT Test 19.
+- [Phase ?]: Plan 14-17 — short-id URL contract (admin/pm/member) maps to canonical AdminRole enum at urlRoleToAdminRole() boundary; URL wins over localStorage with write-through, manual SegmentedControl changes after hydration NOT stomped (effect deps exclude filter).
+- [Phase ?]: Plan 14-17 — RoleCard.userCount widened to 'number | undefined'; Number.isFinite() gate filters undefined/NaN/Infinity to em-dash placeholder. isLoading propagated as undefined (not 0) so loading state visually distinct from '0 admins'.
 
 ### Pending Todos
 
@@ -511,8 +515,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-28T16:11:31.105Z
-Stopped at: Phase 14 Plan 14-16 complete (Cluster D Path B — entity_label resolver + 5-col AuditTable + hideTimestamp prop)
+Last session: 2026-04-28T16:26:37.996Z
+Stopped at: Phase 14 Plan 14-17 complete (Cluster E gap closure — RoleCard real counts + ?role= URL param parser)
 Resume file: None
 
 **Current Phase:** 14
