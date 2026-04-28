@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-15 complete (Cluster C — Recent Events Diagnosis-A normalizer + Detay N-2 line-wrap + M-3 structural-dispatch test)
-last_updated: "2026-04-28T15:51:32.463Z"
+stopped_at: Phase 14 Plan 14-16 complete (Cluster D Path B — entity_label resolver + 5-col AuditTable + hideTimestamp prop)
+last_updated: "2026-04-28T16:11:31.118Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 72
-  completed_plans: 69
-  percent: 96
+  completed_plans: 70
+  percent: 97
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 4 of 18
+Plan: 5 of 18
 Status: Ready to execute
 Last activity: 2026-04-28
 
-Progress: [██████████] 96%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -124,6 +124,7 @@ Progress: [██████████] 96%
 | Phase 14 P13 | 11 | 2 tasks | 9 files |
 | Phase 14 P14 | 5min | 2 tasks | 3 files |
 | Phase 14 P15 | 6 min | 1 tasks | 5 files |
+| Phase 14 P16 | 12min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -476,6 +477,10 @@ Key constraints for v2.0:
 - [Phase 14]: Plan 14-15 (Cluster C): explicit useMemo'd field-by-field DTO->ActivityItem normalizer in recent-admin-events.tsx replaces bald 'as ActivityItem[]' cast (Diagnosis A pre-committed by checker B-4) — Locks in correctness against future field drift; today the wire shapes overlap, but next time AdminAuditItem and ActivityItem diverge, the bald cast would silently route every row to the catch-all (Test 11 failure mode)
 - [Phase 14]: Plan 14-15 (D-D5/N-2): admin-table Detay variant defaults to multi-line wrap (whiteSpace:normal + WebkitLineClamp:3 + wordBreak:break-word); title attr is screen-reader complement, not primary affordance — Per N-2 user-stated quality bar (Frustrations directive — re-read user instructions before claiming a task is done), title-attr-only requires hover to read content; multi-line clamp lets the user READ the full primary line within the table cell
 - [Phase 14]: Plan 14-15 (M-3): structural-dispatch test (vi.spyOn + expect.objectContaining) asserts BOTH /admin Recent Events and /admin/audit Detay invoke mapAuditToSemantic with structurally-identical input — replaces brittle text-equality smoke — Structural assertion forces a real bug if the normalizer drops a field; text-equality could pass coincidentally if both consumers happened to coerce to the same fallback. Single-source-of-truth contract is now mechanically guarded.
+- [Phase 14-16]: Path B locked per user_decision_locked 2026-04-28 — 5-column AuditTable (Zaman/Aktör/İşlem/Hedef/Detay) ships permanently; IP column dropped not deferred per user verbatim 'IP kolonu sil, relevant bir kolon varsa onu koyalım'
+- [Phase 14-16]: audit_repo._resolve_entity_label cross-table helper — task_title>project_name>milestone_title>artifact_name>comment_excerpt(yorum: prefix)>f{ENTITY}-{id} legacy fallback (D-D6); Hedef never empty / never raw entity_id
+- [Phase 14-16]: hideTimestamp default=false on ActivityRow preserves Recent Events behavior (no outer Zaman cell); audit-table opts in to true (M-4 closure) — eliminates duplicate Zaman bug at cell level
+- [Phase 14-16]: role-based ARIA on grid tables (role=row + role=cell + role=columnheader) lets RTL tests assert column ORDER positionally — catches Hedef-renders-in-wrong-cell bugs text-search cannot
 
 ### Pending Todos
 
@@ -506,8 +511,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-28T15:51:32.452Z
-Stopped at: Phase 14 Plan 14-15 complete (Cluster C — Recent Events Diagnosis-A normalizer + Detay N-2 line-wrap + M-3 structural-dispatch test)
+Last session: 2026-04-28T16:11:31.105Z
+Stopped at: Phase 14 Plan 14-16 complete (Cluster D Path B — entity_label resolver + 5-col AuditTable + hideTimestamp prop)
 Resume file: None
 
 **Current Phase:** 14
