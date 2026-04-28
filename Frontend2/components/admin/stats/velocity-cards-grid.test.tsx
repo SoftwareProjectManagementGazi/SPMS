@@ -58,6 +58,25 @@ const FIXTURES: VelocityMiniBarData[] = [
   },
 ]
 
+describe("VelocityCardsGrid title — Plan 14-18 UAT Test 31 terminology", () => {
+  it("Test 0 — section title uses methodology-neutral terminology (NOT 'Velocity')", () => {
+    render(<VelocityCardsGrid velocities={FIXTURES} />)
+    // After Plan 14-18 the section title resolves to a methodology-neutral
+    // term ("Tamamlama hızı" TR / "Throughput" EN). The bug was that
+    // 'Velocity' is a Scrum-specific term — Kanban/Waterfall users found
+    // it confusing.
+    // Title MUST NOT contain "Velocity" (the previous bug copy).
+    expect(screen.queryByText(/^Velocity$/i)).toBeNull()
+    // Title MUST be a methodology-neutral term — accept either of the two
+    // canonical replacements. The exact value comes from the i18n key
+    // admin.stats.velocity_title (TR "Tamamlama hızı") so we match the
+    // forward edge of that phrase.
+    expect(
+      screen.queryByText(/Tamamlama hızı|Throughput/i),
+    ).not.toBeNull()
+  })
+})
+
 describe("VelocityCardsGrid project-name link (Plan 14-18 UAT Test 32)", () => {
   it("Test 1 — renders an <a href=\"/projects/{id}\"> wrapping each project name", () => {
     render(<VelocityCardsGrid velocities={FIXTURES} />)
