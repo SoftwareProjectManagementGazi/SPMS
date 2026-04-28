@@ -66,6 +66,24 @@ export interface ActivityRowProps {
    *   time pinned right. Used by /admin/audit Detay column (Plan 14-07).
    */
   variant?: "default" | "admin-table"
+  /**
+   * Phase 14 Plan 14-16 (Cluster D, Path B, M-4) — hideTimestamp prop.
+   *
+   * Default: false. When false (or omitted) the inner mono timestamp on the
+   * RIGHT side of the variant="admin-table" grid renders normally. This
+   * preserves the Recent Events card behavior — that card has no outer
+   * Zaman cell, so the inner timestamp is the only one the user sees.
+   *
+   * When true, the inner mono timestamp is suppressed. The AdminAuditTable
+   * passes this so the table doesn't render two timestamps per row (left
+   * Zaman cell + Detay cell inner timestamp). Plan 14-16 must_haves.truths
+   * #3 — no duplicate Zaman.
+   *
+   * The prop is admin-table-specific; setting it on variant="default" is
+   * a no-op (the default variant has a different anatomy and no inner
+   * mono cell).
+   */
+  hideTimestamp?: boolean
 }
 
 /** Audit log column_id values are integers; we don't have a column-name lookup
@@ -79,6 +97,7 @@ export function ActivityRow({
   event,
   projectId,
   variant = "default",
+  hideTimestamp = false,
 }: ActivityRowProps) {
   const { language } = useApp()
   const router = useRouter()
@@ -574,21 +593,28 @@ export function ActivityRow({
         >
           {primary}
         </div>
-        <div
-          className="mono"
-          style={{
-            fontSize: 11,
-            color: "var(--fg-muted)",
-            whiteSpace: "nowrap",
-            // Pin the timestamp to the top of the cell so a 3-line primary
-            // doesn't push the time vertically into the next row.
-            paddingTop: 1,
-          }}
-        >
-          {event.timestamp
-            ? formatRelativeTime(event.timestamp, language)
-            : ""}
-        </div>
+        {/* Plan 14-16 (M-4) — inner mono timestamp is hidden when the parent
+            consumer passes hideTimestamp={true}. The AdminAuditTable does
+            this because its leftmost Zaman cell already shows the timestamp
+            (must_haves.truths #3 — no duplicate Zaman). Recent Events leaves
+            the prop unset so the timestamp continues to render there. */}
+        {!hideTimestamp && (
+          <div
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--fg-muted)",
+              whiteSpace: "nowrap",
+              // Pin the timestamp to the top of the cell so a 3-line primary
+              // doesn't push the time vertically into the next row.
+              paddingTop: 1,
+            }}
+          >
+            {event.timestamp
+              ? formatRelativeTime(event.timestamp, language)
+              : ""}
+          </div>
+        )}
       </div>
     )
   }

@@ -241,3 +241,32 @@ components/activity/activity-row.test.tsx` reports 22/22 green; the broader
 admin + activity surface (`components/admin/audit/`, `components/activity/`)
 reports 34/34 green.
 
+## Plan 14-16 (Wave 1 — Cluster D, Path B)
+
+### Pre-existing workflow-editor test failures (still failing under 14-16)
+
+**Discovered during:** Plan 14-16 final `npx vitest run` full-suite regression
+check.
+
+**Symptom:** 19 tests failing in `components/workflow-editor/{editor-page,
+workflow-canvas,selection-panel}.test.tsx` — all related to `@xyflow/react`
+ReactFlowProvider not being mocked / wrapped at the harness level. Same family
+of failures already documented under Plan 14-15 (above).
+
+**Origin:** Phase 12 (workflow-editor plans 12-08 / 12-09 / 12-10). The test
+harness used QueryClientProvider but never wrapped `<ReactFlowProvider>`,
+which `@xyflow/react` 12.x now requires for `useReactFlow()` hook calls.
+
+**Why deferred:** Same scope-boundary rationale as Plan 14-15 — 14-16 is
+bounded to admin-audit table column schema + entity_label resolver; the
+workflow-editor harness is unrelated. Out of executor scope per Rule 3
+(only auto-fix issues caused by the current task's changes).
+
+**Verification (Plan 14-16 scope only):** `npx vitest run components/admin/audit
+components/activity` reports 39/39 green. Backend pytest scope:
+`Backend/tests/integration/test_admin_audit_serialization.py` reports 6/6 green;
+`Backend/tests/integration/test_audit_log_enrichment.py` reports 3/3 green; the
+HTTP integration tests in `test_admin_audit_get_global.py` skip-error on the
+absent dev Postgres (5 fixture errors are pre-existing infra; 3 in-memory
+tests pass).
+

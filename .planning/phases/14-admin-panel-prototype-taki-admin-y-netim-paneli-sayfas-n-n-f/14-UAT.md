@@ -277,21 +277,27 @@ side_finding: |
   which suggests projects already own their cloned workflow, but this
   needs a behavioral test on next session).
 
-### 26. U-14-25 — AuditTable 6 cols, NO Risk column
-expected: AuditTable renders with 6 cols (Zaman / Aktör / İşlem / Hedef / IP / Detay); NO Risk column (verifies D-C5, D-Z1, D-Z2 — risk column deferred-to-v3.0).
-result: issue
-reported: |
-  Column layout is wrong:
-  - Hedef column renders empty for every row
-  - IP column is missing entirely from the header + body
-  - Rightmost column has no header label and re-displays Zaman (time)
-    a second time
-  Net effect: the table renders only ~4-5 distinct columns instead of
-  the contracted 6, and the contract violation is observable to the
-  user. The Risk column (correctly absent) is not the issue — the
-  issue is the OTHER columns either failing to render data or being
-  duplicated.
-severity: major
+### 26. U-14-25 — AuditTable 5 cols (Path B per Plan 14-16), NO Risk column, NO IP column
+expected: AuditTable renders with 5 cols (Zaman / Aktör / İşlem / Hedef / Detay) — IP deferred to v2.1 per plan 14-16 user signoff (Path B); NO Risk column (verifies D-C5, D-Z1, D-Z2 — risk column deferred-to-v3.0). All 5 column header cells use role="columnheader"; body rows use role="row" + role="cell"; rightmost cell is Detay (no duplicate Zaman). Hedef column renders the resolved entity_label from audit_repo._resolve_entity_label (project_name / task_title / milestone_title / artifact_name / "yorum:" prefix / f"{ENTITY}-{id}" legacy fallback) — never empty / never raw entity_id.
+result: pending_reverify
+reported_legacy: |
+  (Original UAT pre-Plan-14-16) Column layout was wrong:
+  - Hedef column rendered empty for every row
+  - IP column was missing from header + body
+  - Rightmost column had no header label and re-displayed Zaman (time)
+    a second time, yielding ~4-5 distinct columns instead of the
+    legacy 6-col contract.
+fix_summary: |
+  Plan 14-16 (Cluster D, Path B) reduces the contract to 5 columns
+  permanently per user_decision_locked 2026-04-28 ("IP kolonu sil,
+  relevant bir kolon varsa onu koyalım"). Backend
+  audit_repo.get_global_audit now emits entity_label via cross-table
+  resolver. Frontend ADMIN_AUDIT_GRID = "90px 160px 180px 1fr 1.5fr"
+  (5 tracks); admin-audit-table.tsx header drops the aria-hidden
+  filler; admin-audit-row.tsx drops the 28px MoreH placeholder; Detay
+  cell wraps <ActivityRow variant="admin-table" hideTimestamp={true}/>
+  to suppress the inner mono timestamp.
+severity_legacy: major
 
 ### 27. U-14-26 — Audit URL-driven filters + chip facets
 expected: Click "Filtre" → AuditFilterModal opens with 4 fields (Başlangıç / Bitiş / Aktör / İşlem öneki); set Başlangıç to 2026-04-01 → click Uygula → URL contains ?from=2026-04-01; chip "Tarih: 2026-04-01 →" appears above table; click chip × → URL param drops + chip vanishes (verifies D-C5, D-Z2).
@@ -385,7 +391,7 @@ expected: Toggle locale TR ↔ EN via header <select> → walk every admin tab +
 result: pass
 
 ### 34. U-14-33 — 1280px viewport layout integrity
-expected: Resize browser to 1280px (admin desktop-first per CONTEXT) → 5-col StatCards row stays on one line; AuditTable's 6 cols remain visible without horizontal scroll; admin layout NavTabs strip is single-line (verifies CONTEXT desktop-first scope, UI-SPEC §Spacing).
+expected: Resize browser to 1280px (admin desktop-first per CONTEXT) → 5-col StatCards row stays on one line; AuditTable's 5 cols (Plan 14-16 Path B) remain visible without horizontal scroll; admin layout NavTabs strip is single-line (verifies CONTEXT desktop-first scope, UI-SPEC §Spacing).
 result: issue
 reported: |
   When the viewport is narrowed below the design width, the rightmost
@@ -634,35 +640,46 @@ side_findings: 7
     - workflow-editor page reads template_id query param and seeds
       editor with that template's content
 
-- truth: "AuditTable on /admin/audit renders the contracted 6 columns (Zaman / Aktör / İşlem / Hedef / IP / Detay) with all cells populated"
-  status: failed
+- truth: "AuditTable on /admin/audit renders the contracted 5 columns (Zaman / Aktör / İşlem / Hedef / Detay) with all cells populated — IP column deferred to v2.1 per Plan 14-16 Path B user signoff"
+  status: closed_pending_reverify
   reason: |
-    Test 26 — Column layout is broken:
-    - Hedef column renders empty for every row
-    - IP column is missing entirely from header + body
-    - Rightmost column has no header label and re-displays Zaman
-    The user observes ~4-5 distinct columns instead of 6, with a
-    duplicated Zaman at the right edge. The Risk column (correctly
-    absent per D-Z1) is not at issue — the issue is the OTHER
-    columns failing to render data or being structurally duplicated.
-    Likely the column-definition array has a schema/key mismatch
-    against the row payload (Hedef value missing from API), AND the
-    IP column was either not added or was added under a different
-    key the renderer doesn't pick up, AND a stray duplicate Zaman
-    cell got pushed at the end.
+    Test 26 closed by Plan 14-16 (Cluster D, Path B) per
+    user_decision_locked 2026-04-28 ("IP kolonu sil, relevant bir kolon
+    varsa onu koyalım"). Original 6-col contract was reduced to 5
+    columns permanently because the codebase has 12 create_with_metadata
+    call sites — exceeding the 5-site Path A threshold by 2.4×, so
+    Path A (full IP column with migration 007 + 12 call-site updates)
+    requires explicit user opt-in via plan 14-19 (NOT spawned).
+    Plan 14-16 ships:
+    - Backend: audit_repo._resolve_entity_label populates Hedef from
+      enriched extra_metadata (Plan 14-09); legacy rows fall back to
+      f"{ENTITY}-{id}" (D-D6); never empty / never raw entity_id.
+    - Frontend: ADMIN_AUDIT_GRID = "90px 160px 180px 1fr 1.5fr"
+      (5 tracks); aria-hidden filler removed; 28px MoreH stub removed;
+      Detay cell wraps <ActivityRow hideTimestamp={true}/> via M-4
+      hideTimestamp prop to suppress the inner mono timestamp.
+    UAT re-verification on next session: walk to /admin/audit, count
+    5 column headers in order [Zaman, Aktör, İşlem, Hedef, Detay], confirm
+    Hedef shows project/task names (or f"TASK-42" for legacy rows),
+    confirm rightmost cell is Detay text not a duplicate Zaman.
   severity: major
   test: 26
   artifacts:
-    - components/admin/audit/admin-audit-table.tsx (column definitions)
-    - hooks/admin/use-admin-audit.ts (response shape)
-    - Backend/app/api/v1/admin_audit.py (audit row serializer — verify
-      target / ip_address / detay fields are emitted)
-  missing:
-    - Hedef column resolves the audit_log.entity_type+entity_id pair
-      to a human-readable target string ("Yapay Zeka Modülü" not "4")
-    - IP column renders audit_log.ip_address (or appropriate metadata
-      field) at the contracted position
-    - Stray duplicate Zaman at row-end removed from column array
+    - components/admin/audit/admin-audit-table.tsx (5-cell header,
+      role="columnheader" semantics)
+    - components/admin/audit/admin-audit-row.tsx (5-track grid,
+      hideTimestamp passthrough, role="row"/role="cell")
+    - components/activity/activity-row.tsx (hideTimestamp prop,
+      default false)
+    - Backend/app/infrastructure/database/repositories/audit_repo.py
+      (_resolve_entity_label helper)
+    - Backend/tests/integration/test_admin_audit_serialization.py
+      (4 mandatory + 2 defensive resolver tests)
+  fix_commits: |
+    feat(14-16): emit entity_label cross-table resolver in get_global_audit (Cluster D Path B)
+    test(14-16): RED — failing tests for 5-col grid + Hedef position + hideTimestamp prop
+    feat(14-16): GREEN — 5-col grid + role-based ARIA + hideTimestamp prop
+  ip_column_status: deferred_to_v21_with_user_approval_requirement
 
 - truth: "JSON export from /admin/audit delivers an authenticated, filter-aware JSON file"
   status: failed

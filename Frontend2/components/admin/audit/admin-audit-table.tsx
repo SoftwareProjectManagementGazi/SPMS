@@ -1,22 +1,35 @@
 "use client"
 
-// Phase 14 Plan 14-07 — Admin audit log table.
+// Phase 14 Plan 14-07 + Plan 14-16 (Cluster D, Path B) — Admin audit log table.
 //
-// Renders the audit log table per UI-SPEC §Surface H lines 457-487:
-//   - 6-column grid: Time(90px) / Actor(160px) / Action(180px) / Target(1fr)
-//     / Detay(1fr) / MoreH(28px). NO risk column (D-Z1).
+// Path B locked per <user_decision_locked> 2026-04-28: 5-column grid (IP
+// column dropped permanently). Original 14-07 contract reduced from 6 to 5
+// columns because the codebase has 12 create_with_metadata call sites
+// (verified by checker), exceeding the 5-site Path A threshold by 2.4×.
+//
+// Renders the audit log table per UI-SPEC §Surface H lines 457-487 (REVISED
+// for Path B — IP column footnote added in §Surface H):
+//   - 5-column grid: Zaman(90px) / Aktör(160px) / İşlem(180px) / Hedef(1fr)
+//     / Detay(1.5fr). NO risk column (D-Z1). NO IP column (Path B; deferred
+//     to v2.1 with explicit user-approval requirement).
 //   - Pitfall 6 — when response.truncated=true, render AlertBanner tone="warning"
 //     ABOVE the header row with the "50.000" cap message.
 //   - Empty / error states via DataState (Phase 13 D-F2 primitive).
 //   - Pagination toolbar rendered inside the Card so the bottom border lines
 //     up with the rest of the surface.
 //
-// Critical: per CONTEXT D-D5, the Detay column wraps the existing
-// <ActivityRow variant="admin-table"/> from Frontend2/components/activity/
-// activity-row.tsx. Plan 14-10 fills the variant render branch — for now
-// the existing default-variant render flows through, which is the agreed
-// graceful-degradation strategy (Plan 14-02 Summary documented this
-// hand-off).
+// Plan 14-16 must_haves.truths:
+//   1. Header row + body rows + grid template all agree on 5 columns.
+//   2. Hedef column never empty / never raw entity_id (backend resolver
+//      handles this via _resolve_entity_label).
+//   3. NO duplicate Zaman cell at right edge — rightmost header is Detay,
+//      rightmost body cell is Detay (which uses hideTimestamp to suppress
+//      its inner mono timestamp).
+//
+// ARIA roles — header cells use role="columnheader", header row uses
+// role="row", body rows + cells use role="row" + role="cell" (in
+// admin-audit-row.tsx). RTL tests in Plan 14-16 Test 1 + Test 2 query
+// positionally via these roles to verify column ORDER, not just presence.
 
 import * as React from "react"
 
@@ -75,8 +88,13 @@ export function AdminAuditTable({ filter, onUpdate }: AdminAuditTableProps) {
         </div>
       )}
 
-      {/* Header row — 6 columns, NO risk column (D-Z1). */}
+      {/* Header row — Plan 14-16 (Path B): 5 cells in order
+          [Zaman, Aktör, İşlem, Hedef, Detay]. NO risk column (D-Z1).
+          NO IP column (Path B). NO aria-hidden filler at row-end (the
+          duplicate-Zaman bug source under the previous 14-07 6-track grid).
+          role="row" + role="columnheader" let RTL tests assert ORDER. */}
       <div
+        role="row"
         style={{
           display: "grid",
           gridTemplateColumns: ADMIN_AUDIT_GRID,
@@ -90,12 +108,21 @@ export function AdminAuditTable({ filter, onUpdate }: AdminAuditTableProps) {
           gap: 8,
         }}
       >
-        <div>{adminAuditT("admin.audit.col_time", language)}</div>
-        <div>{adminAuditT("admin.audit.col_actor", language)}</div>
-        <div>{adminAuditT("admin.audit.col_action", language)}</div>
-        <div>{adminAuditT("admin.audit.col_target", language)}</div>
-        <div>{adminAuditT("admin.audit.col_detay", language)}</div>
-        <div aria-hidden />
+        <div role="columnheader">
+          {adminAuditT("admin.audit.col_time", language)}
+        </div>
+        <div role="columnheader">
+          {adminAuditT("admin.audit.col_actor", language)}
+        </div>
+        <div role="columnheader">
+          {adminAuditT("admin.audit.col_action", language)}
+        </div>
+        <div role="columnheader">
+          {adminAuditT("admin.audit.col_target", language)}
+        </div>
+        <div role="columnheader">
+          {adminAuditT("admin.audit.col_detay", language)}
+        </div>
       </div>
 
       {/* Body — DataState handles loading / error / empty / data. */}
