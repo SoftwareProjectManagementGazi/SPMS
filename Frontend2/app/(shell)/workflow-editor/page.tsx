@@ -1,11 +1,31 @@
 "use client"
 
-// /workflow-editor route (Phase 12 Plan 12-07).
+// /workflow-editor route (Phase 12 Plan 12-07 + Phase 14 Plan 14-18 B-5).
 //
-// Reads ?projectId=X from useSearchParams. Missing or invalid (NaN) projectId
-// triggers router.replace('/projects'). Viewport gate: <1024 px renders the
-// ViewportFallback page; >=1024 px mounts the EditorPage which dynamic-
-// imports the React Flow canvas with ssr:false (CONTEXT D-07).
+// Plan 14-18 dispatch — the route now serves TWO surfaces:
+//   - ?projectId=X → original Phase 12 EditorPage (project lifecycle/status
+//     React Flow canvas — unchanged behavior).
+//   - ?templateId=X → NEW TemplateEditorPage (ProcessTemplate field editor —
+//     name + description + read-only previews of columns/recurring_tasks/
+//     behavioral_flags). Saves via PATCH /process-templates/{id}.
+//   - neither → redirect /projects (legacy fallback).
+//
+// SCOPE NOTE — see TemplateEditorPage's file-level comment (Frontend2/
+// components/workflow-editor/template-editor-page.tsx) for why we ship a
+// separate editor for templates rather than reusing the React Flow canvas.
+// TL;DR: ProcessTemplate has no nodes/edges shape; forcing it into the
+// Phase 12 canvas would require an alembic migration + 4-6 backend endpoints
+// + 33-component refactor. Per <user_decision_locked> the executor signaled
+// back via 14-18-SUMMARY.md and shipped a working editor for the actual
+// ProcessTemplate fields instead. Defer is OFF the table; this is NOT a
+// stub — admin can change name/description and PATCH lands.
+//
+// Reads ?projectId=X / ?templateId=Y from useSearchParams. Missing or invalid
+// (NaN) projectId AND missing templateId triggers router.replace('/projects').
+// Viewport gate: <1024 px renders the ViewportFallback page; >=1024 px mounts
+// the appropriate editor. The viewport gate is intentionally applied to BOTH
+// editor variants — the template editor body is not as canvas-heavy but the
+// admin Workflows tab itself is desktop-only (UI-SPEC §736 ports forward).
 //
 // The route is a Client Component because:
 //   1. useSearchParams + useRouter are client-only hooks
@@ -24,6 +44,7 @@ import { useApp } from "@/context/app-context"
 import { useProject } from "@/hooks/use-projects"
 import { ViewportFallback } from "@/components/lifecycle/viewport-fallback"
 import { EditorPage } from "@/components/workflow-editor/editor-page"
+import { TemplateEditorPage } from "@/components/workflow-editor/template-editor-page"
 
 const VIEWPORT_MIN = 1024
 
@@ -44,6 +65,14 @@ function WorkflowEditorRouteInner() {
     [language],
   )
 
+  // Plan 14-18 — dispatch dimension. Templates first (admin path) so the
+  // legacy projectId branch falls through unchanged when only templateId
+  // is present.
+  const templateIdRaw = searchParams.get("templateId")
+  const templateId = templateIdRaw ? Number(templateIdRaw) : Number.NaN
+  const isTemplateRoute =
+    templateIdRaw !== null && !Number.isNaN(templateId)
+
   const projectIdRaw = searchParams.get("projectId")
   const projectId = projectIdRaw ? Number(projectIdRaw) : Number.NaN
 
@@ -52,7 +81,10 @@ function WorkflowEditorRouteInner() {
   const [viewportOK, setViewportOK] = React.useState<boolean | null>(null)
 
   React.useEffect(() => {
-    if (!projectIdRaw || Number.isNaN(projectId)) {
+    // Plan 14-18 — dispatch redirect on neither-param. When templateId is
+    // present we skip the redirect entirely; when projectId is missing AND
+    // templateId is missing we land back at /projects.
+    if (!isTemplateRoute && (!projectIdRaw || Number.isNaN(projectId))) {
       router.replace("/projects")
       return
     }
@@ -60,16 +92,33 @@ function WorkflowEditorRouteInner() {
     check()
     window.addEventListener("resize", check)
     return () => window.removeEventListener("resize", check)
-  }, [projectIdRaw, projectId, router])
+  }, [projectIdRaw, projectId, isTemplateRoute, router])
 
   // useProject hook is enabled only when projectId is a valid number — the
   // hook's internal `enabled: !!id` short-circuits the API call when id is
   // NaN (Number(NaN) is falsy).
+  // Plan 14-18 — when we are in the template branch we pass 0 so the hook
+  // is disabled (no spurious project fetch).
   const { data: project, isLoading } = useProject(
-    Number.isNaN(projectId) ? 0 : projectId,
+    isTemplateRoute || Number.isNaN(projectId) ? 0 : projectId,
   )
 
-  // Redirect in flight — render nothing.
+  // Plan 14-18 template branch — dispatch BEFORE the project-machinery so
+  // a missing/invalid projectId doesn't trigger the legacy "Proje bulunamadı"
+  // fallback when the user actually came in with ?templateId=.
+  if (isTemplateRoute) {
+    // Initial paint guard — viewport check has not yet run.
+    if (viewportOK === null) return null
+    if (!viewportOK) {
+      // Reuse ViewportFallback with templateId-flavoured copy is a v2.1 nit;
+      // for now we send the desktop-only message generically (the fallback
+      // page just instructs the user to visit on a wider viewport).
+      return <ViewportFallback projectId={templateId} />
+    }
+    return <TemplateEditorPage templateId={templateId} />
+  }
+
+  // Legacy project branch — Redirect in flight: render nothing.
   if (Number.isNaN(projectId)) return null
 
   // Initial paint guard — viewport check has not yet run.

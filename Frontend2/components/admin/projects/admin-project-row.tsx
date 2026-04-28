@@ -17,6 +17,14 @@
 // next to the name (UI-SPEC §Color line 215 — archived projects are visually
 // dimmed in lists).
 //
+// Plan 14-18 (Cluster F UAT Test 22 side-finding) — opacity is now SCOPED:
+// the outer row container stays at opacity 1, and only the 7 content cells
+// (key/name/methodology/lead/tasks/progress/created) carry the dimming. The
+// 8th cell (the MoreH actions cell) explicitly forces opacity:1 so the ⋮
+// trigger remains discoverable on archived rows. ConfirmDialog opened from
+// the actions menu is portal'd to document.body (Plan 14-18 confirm-dialog
+// fix) so its overlay/content also escape any ancestor dimming.
+//
 // Per-row actions live in <AdminProjectRowActions/> (EXACTLY 2 menu items —
 // Arşivle + Sil — D-B5; NO transfer-ownership).
 
@@ -129,6 +137,12 @@ export function AdminProjectRow({
     [goToDetail],
   )
 
+  // Plan 14-18 (Cluster F UAT Test 22 side-finding) — content cells share an
+  // archived dimming style; the actions cell explicitly forces opacity:1 so
+  // the ⋮ trigger stays full-opacity for a11y/discoverability.
+  const dimmed: React.CSSProperties = isArchived ? { opacity: 0.6 } : {}
+  const fullOpacity: React.CSSProperties = { opacity: 1 }
+
   return (
     <div
       role="button"
@@ -144,11 +158,14 @@ export function AdminProjectRow({
         gap: 8,
         borderBottom: isLast ? "0" : "1px solid var(--border)",
         fontSize: 12.5,
-        // Archived projects: opacity 0.6 visual dim per UI-SPEC §Color line 215.
-        // The MoreH actions remain interactive (a11y: arşivden çıkarma + sil
-        // need to stay reachable on archived rows).
-        opacity: isArchived ? 0.6 : 1,
-        transition: "opacity 0.12s, background 0.12s",
+        // Plan 14-18 — opacity is NO LONGER applied at row level. It now lives
+        // on each of the 7 content cells; the 8th (actions) cell forces
+        // opacity:1. This is necessary so:
+        //   1. The MoreH ⋮ trigger remains discoverable on archived rows.
+        //   2. ConfirmDialog opened from the actions menu (portal'd to
+        //      document.body via Plan 14-18 confirm-dialog fix) renders at
+        //      full opacity unaffected by this row's dimming.
+        transition: "background 0.12s",
         cursor: "pointer",
       }}
       onMouseEnter={(e) => {
@@ -170,6 +187,7 @@ export function AdminProjectRow({
           borderRadius: 4,
           display: "inline-block",
           width: "fit-content",
+          ...dimmed,
         }}
       >
         {project.key}
@@ -183,6 +201,7 @@ export function AdminProjectRow({
           alignItems: "center",
           gap: 6,
           minWidth: 0,
+          ...dimmed,
         }}
       >
         <span
@@ -202,7 +221,7 @@ export function AdminProjectRow({
       </div>
 
       {/* 3) Methodology badge */}
-      <div>
+      <div style={{ ...dimmed }}>
         <Badge size="xs" tone={methodBadgeTone(project.methodology)}>
           {project.methodology}
         </Badge>
@@ -217,6 +236,7 @@ export function AdminProjectRow({
           alignItems: "center",
           gap: 6,
           minWidth: 0,
+          ...dimmed,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -243,13 +263,15 @@ export function AdminProjectRow({
       {/* 5) Tasks — "{N} · {M} bitti" */}
       <div
         className="mono"
-        style={{ fontSize: 11, color: "var(--fg-muted)" }}
+        style={{ fontSize: 11, color: "var(--fg-muted)", ...dimmed }}
       >
         {totalTasks} · {doneTasks} {tasksDoneSuffix}
       </div>
 
       {/* 6) Progress bar + percent */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 4, ...dimmed }}
+      >
         <div
           style={{
             flex: 1,
@@ -277,15 +299,17 @@ export function AdminProjectRow({
       </div>
 
       {/* 7) Created — short date */}
-      <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+      <div style={{ fontSize: 11, color: "var(--fg-muted)", ...dimmed }}>
         {formatCreatedAt(project.createdAt, lang)}
       </div>
 
       {/* 8) MoreH — EXACTLY 2 actions (Arşivle + Sil), D-B5 NO transfer.
            stopPropagation so opening the menu / picking an action doesn't
-           also route the row to /projects/{id}. */}
+           also route the row to /projects/{id}.
+           Plan 14-18 — opacity:1 explicitly so the ⋮ trigger stays solid on
+           archived rows (the dimming is scoped to cells 1-7). */}
       <div
-        style={{ position: "relative" }}
+        style={{ position: "relative", ...fullOpacity }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >

@@ -225,6 +225,20 @@ svg { display: block; }
   background: var(--surface-2);
 }
 
+/* Plan 14-18 (Cluster F UAT Test 32) — velocity-card project name link
+   hover affordance. The /admin/stats velocity grid wraps each card's
+   project key in a <Link> so admins can drill into the project detail.
+   This selector ships the visual hover feedback (color shift + underline)
+   so the affordance is discoverable. Cursor:pointer is implicit on Link. */
+.velocity-card-project-link {
+  transition: color 0.1s ease;
+}
+.velocity-card-project-link:hover,
+.velocity-card-project-link:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
 /* UI-sweep: Button primitive previously translated translateY(0.5px) via
    imperative onMouseDown/Up/Leave handlers — keyboard activations got no
    feedback. Move the press-down to CSS so :active fires for both pointer

@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { AlertTriangle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/primitives"
 
@@ -12,6 +13,13 @@ import { Button } from "@/components/primitives"
 // - danger   → AlertTriangle icon prefix, confirm Button variant="danger"
 // - warning  → AlertCircle icon prefix, confirm Button variant="primary" (warning amber
 //              reserved for AlertBanner; CTA button stays primary tone)
+//
+// Plan 14-18 (Cluster F UAT Test 22 side-finding) — dialog is now portal'd
+// to document.body so opening it from a dimmed ancestor (e.g., the archived
+// project row in /admin/projects) does NOT cascade ancestor opacity into
+// the dialog. Without the portal, an archived row's opacity:0.6 visually
+// dimmed the entire dialog body when the user clicked the row's ⋮ Sil
+// action.
 
 interface ConfirmDialogProps {
   open: boolean
@@ -37,7 +45,13 @@ export function ConfirmDialog({
     tone === "danger" ? "var(--priority-critical)" :
     tone === "warning" ? "var(--status-review)" :
     "var(--fg)"
-  return (
+  // Plan 14-18 — render the dialog into a portal at document.body so it
+  // escapes any ancestor opacity / transform / overflow ancestry (Test 22
+  // side-finding: archived row opacity 0.6 cascaded into the dialog).
+  // SSR safety: createPortal requires document, so guard for the server
+  // render pass (Next.js 16 may evaluate this module on the server even for
+  // client components used in static metadata).
+  const dialog = (
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex",
       alignItems: "center", justifyContent: "center",
       background: "oklch(0 0 0 / 0.4)", backdropFilter: "blur(2px)" }}
@@ -61,4 +75,6 @@ export function ConfirmDialog({
       </div>
     </div>
   )
+  if (typeof document === "undefined") return null
+  return createPortal(dialog, document.body)
 }

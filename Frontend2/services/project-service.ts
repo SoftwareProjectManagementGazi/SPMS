@@ -293,6 +293,28 @@ export const projectService = {
     await apiClient.delete(`/process-templates/${id}`)
   },
 
+  // Phase 14 Plan 14-18 (Cluster F, B-5) — admin Workflows Düzenle flow.
+  // Backend PATCH /process-templates/{id} exists already (Backend/app/api/v1/
+  // process_templates.py:61 — UpdateProcessTemplateUseCase). Built-in
+  // templates raise PermissionError → 403; the UI gates the Düzenle action
+  // by hiding the form's edit affordances when is_builtin=true.
+  updateProcessTemplate: async (
+    id: number,
+    payload: {
+      name?: string
+      description?: string | null
+      columns?: unknown[]
+      recurring_tasks?: unknown[]
+      behavioral_flags?: Record<string, unknown>
+    },
+  ): Promise<unknown> => {
+    const response = await apiClient.patch(
+      `/process-templates/${id}`,
+      payload,
+    )
+    return response.data
+  },
+
   // D-26: task statistics for Dashboard StatCard 4 (open/in-progress/done task counts)
   // Uses /tasks/my-tasks — the only task-list endpoint with no path param. Backend has no
   // global GET /tasks route (405 Method Not Allowed); project-scoped lists live at

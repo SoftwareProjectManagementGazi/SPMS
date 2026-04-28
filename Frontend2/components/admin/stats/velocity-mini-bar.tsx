@@ -21,6 +21,7 @@
 // Project key (mono 10.5) per UI-SPEC §Typography line 124.
 
 import * as React from "react"
+import Link from "next/link"
 
 export interface VelocityMiniBarData {
   projectId: number
@@ -67,8 +68,15 @@ export function VelocityMiniBar({ v }: VelocityMiniBarProps) {
       }}
     >
       {/* Project key — mono 10.5 (UI-SPEC §Typography line 124, verbatim
-          prototype line 467). Truncated with ellipsis when long. */}
-      <div
+          prototype line 467). Truncated with ellipsis when long.
+          Plan 14-18 (Cluster F UAT Test 32) — wrapped in Link so admins can
+          drill from the velocity card into the project detail page. The
+          velocity-card-project-link className lets globals.css apply a
+          :hover affordance (color shift + underline). */}
+      <Link
+        href={`/projects/${v.projectId}`}
+        className="velocity-card-project-link"
+        title={v.name}
         style={{
           fontFamily: "var(--font-mono)",
           fontSize: 10.5,
@@ -76,11 +84,12 @@ export function VelocityMiniBar({ v }: VelocityMiniBarProps) {
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
+          textDecoration: "none",
+          display: "block",
         }}
-        title={v.name}
       >
         {v.key}
-      </div>
+      </Link>
 
       {/* Big-number progress — 20px, 600, -0.5 spacing, tabular-nums
           (UI-SPEC §Typography line 121, verbatim prototype line 468). */}
