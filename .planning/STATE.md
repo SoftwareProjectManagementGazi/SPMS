@@ -127,6 +127,7 @@ Progress: [██████████] 100%
 ### Roadmap Evolution
 
 - Phase 14 added: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
+- Phase 15 added: RBAC altyapısını düzeltmek ve admin panelini düzgünce bağlamak (v3.0'dan şu anki milestone'a alınıyor)
 
 ### Decisions
 

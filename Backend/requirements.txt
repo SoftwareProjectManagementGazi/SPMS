@@ -5,6 +5,7 @@ alembic
 asyncpg
 pydantic-settings
 passlib[bcrypt]
+bcrypt<4.1  # passlib 1.7.4 incompatible with bcrypt >=4.1 (detect_wrap_bug ValueError)
 python-jose
 python-multipart
 pytest
