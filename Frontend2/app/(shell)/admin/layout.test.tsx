@@ -197,7 +197,7 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
 
   // ---- Plan 14-11 — header-button wiring (D-B6) ----
 
-  it("Case 5 — Rapor al click → downloadAuthenticated('/api/v1/admin/summary.pdf', 'admin-summary-<YYYY-MM-DD>.pdf') (D-B6, Plan 14-13 Cluster A 401 fix)", () => {
+  it("Case 5 — Rapor al click → downloadAuthenticated('<API_BASE>/admin/summary.pdf', 'admin-summary-<YYYY-MM-DD>.pdf') (D-B6, Plan 14-13 Cluster A 401 fix + dev-server 404 fix)", () => {
     authStateRef.current = {
       user: {
         id: 1,
@@ -216,15 +216,19 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
     // "Rapor al". Match either locale defensively in case the mock changes.
     const raporButton = screen.getByRole("button", { name: /Rapor al|Export/i })
     fireEvent.click(raporButton)
-    // Plan 14-13 contract: the authenticated helper is invoked with the
-    // canonical PDF endpoint URL and a date-suffixed filename. The helper
-    // itself attaches the Authorization header (verified in
-    // download-authenticated.test.ts), so a green here proves the click
-    // reaches the right consumer — not the deprecated downloadCsv anchor
-    // path that triggered the UAT 401.
+    // Plan 14-13 + 14-13.1 (dev-server 404 fix) contract: the authenticated
+    // helper is invoked with the FULL backend URL (NEXT_PUBLIC_API_URL prefix
+    // + /admin/summary.pdf), mirroring adminUserService.exportCsv() and
+    // adminAuditService.exportJsonUrl(). Without the prefix, the request
+    // resolves against Next.js dev (localhost:3000), which has no /api/v1
+    // route and 404s. The helper itself attaches the Authorization header
+    // (verified in download-authenticated.test.ts), so a green here proves
+    // the click reaches the right consumer with the right URL.
     expect(downloadAuthenticatedMock).toHaveBeenCalledTimes(1)
+    const apiBase =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
     expect(downloadAuthenticatedMock).toHaveBeenCalledWith(
-      "/api/v1/admin/summary.pdf",
+      `${apiBase}/admin/summary.pdf`,
       expect.stringMatching(/^admin-summary-\d{4}-\d{2}-\d{2}\.pdf$/),
     )
     // Rapor al MUST NOT navigate — only the Audit log button does.
