@@ -414,6 +414,58 @@ describe("ActivityRow", () => {
     expect(screen.getByText("2026-05-01")).toBeInTheDocument()
   })
 
+  // ---------------------------------------------------------------------------
+  // Phase 14 Plan 14-15 (Cluster C N-2 fix) — admin-table primary line wraps
+  // to 2-3 lines by default instead of clipping mid-string. title attr is
+  // preserved as a screen-reader / overflow-beyond-clamp complement, not the
+  // primary affordance.
+  // ---------------------------------------------------------------------------
+
+  it("P14-15-N2: admin-table primary cell wraps multi-line (whiteSpace:normal + WebkitLineClamp:3) and carries a title attr complement", () => {
+    const longTitle =
+      "Yapay Zeka Modülü ve Çok Uzun Bir Proje İsmi — Bu satır kesinlikle tek satıra sığmaz, tooltip olmadan görülmesi için sarmalanmalıdır"
+    const ev = makeEvent({
+      entity_type: "project",
+      action: "updated",
+      field_name: "status",
+      user_id: 2,
+      user_name: "Sistem",
+      old_value: "ACTIVE",
+      new_value: "ARCHIVED",
+      metadata: {
+        project_name: longTitle,
+        old_value_label: "ACTIVE",
+        new_value_label: "ARCHIVED",
+      },
+    })
+
+    const { container } = render(
+      <ActivityRow event={ev} variant="admin-table" />,
+    )
+
+    // The Detay primary cell — find the inner div with the long primary line.
+    // Look for any descendant whose computed style declares whiteSpace=normal.
+    const allDivs = Array.from(
+      container.querySelectorAll<HTMLDivElement>("div"),
+    )
+    const wrappedDiv = allDivs.find(
+      (d) => d.style.whiteSpace === "normal",
+    )
+    expect(wrappedDiv, "expected at least one div with whiteSpace=normal").not.toBeUndefined()
+    // Multi-line clamp present (3 lines) — value is "3" (string in inline style).
+    expect(wrappedDiv!.style.getPropertyValue("-webkit-line-clamp")).toBe(
+      "3",
+    )
+    // wordBreak guards against unbroken tokens blowing up cell width.
+    expect(wrappedDiv!.style.wordBreak).toBe("break-word")
+
+    // The role=article container carries a title attribute as a screen-reader
+    // / overflow-beyond-clamp complement (NOT the primary affordance per N-2).
+    const article = container.querySelector('[role="article"]')
+    expect(article).not.toBeNull()
+    expect(article!.getAttribute("title")).toBeTruthy()
+  })
+
   it("P14-T8: Pitfall 1 cross-phase regression — task_status_changed render path still works (non-extended payload)", () => {
     // EXACTLY the Phase 13-shaped payload — no Phase 14 extra metadata keys.
     // Plan 14-10 must not break the existing render path.
