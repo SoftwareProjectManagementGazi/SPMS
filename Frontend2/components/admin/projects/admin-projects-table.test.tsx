@@ -197,6 +197,48 @@ describe("AdminProjectsTable (Plan 14-05 Task 1)", () => {
     expect(within(menus[0]).queryByText(/ownership/i)).toBeNull()
   })
 
+  it("Case 5 — Plan 14-18 UAT Test 22 side-finding: archived row's MoreH actions cell stays at opacity 1", () => {
+    projectsStateRef.current = { isLoading: false, data: MOCK_PROJECTS }
+    render(<AdminProjectsTable filter={{ q: "" }} />)
+
+    // The archived row (Gamma) — its OUTER row container should NOT carry
+    // opacity 0.6 anymore. The opacity is moved to a CONTENT wrapper inside
+    // the row, while the actions cell stays at full opacity (so the ⋮ trigger
+    // remains visually solid — accessibility + a11y per UI-SPEC §Color line
+    // 215 hint).
+    //
+    // Assertion: the MoreH trigger button (aria-label="İşlemler") on the
+    // archived row must have a computed opacity that is NOT < 1 from the
+    // row-level dimming. We assert the ANCESTOR chain of the trigger contains
+    // a node with style.opacity === "1" between the trigger and any 0.6-
+    // opacity wrapper.
+    const triggers = screen.getAllByLabelText("İşlemler")
+    // Archived (Gamma) is the 3rd row → 3rd trigger.
+    expect(triggers.length).toBeGreaterThanOrEqual(3)
+    const archivedTrigger = triggers[2]
+
+    // Walk up: starting from the trigger we should hit a wrapper with
+    // explicit opacity:1 BEFORE we hit any wrapper with opacity 0.6. If we
+    // find a 0.6 wrapper FIRST it means the actions are still dimmed.
+    let cur: HTMLElement | null = archivedTrigger
+    let foundActionsFullOpacity = false
+    let foundDimmingFirst = false
+    while (cur && cur.parentElement) {
+      const op = cur.style.opacity
+      if (op === "1") {
+        foundActionsFullOpacity = true
+        break
+      }
+      if (op && parseFloat(op) <= 0.65) {
+        foundDimmingFirst = true
+        break
+      }
+      cur = cur.parentElement
+    }
+    expect(foundDimmingFirst).toBe(false)
+    expect(foundActionsFullOpacity).toBe(true)
+  })
+
   it("Case 4 — Sil click opens Modal with two-step key-typing confirm; primary CTA disabled until match", () => {
     projectsStateRef.current = { isLoading: false, data: MOCK_PROJECTS }
     render(<AdminProjectsTable filter={{ q: "" }} />)

@@ -109,6 +109,42 @@ describe("ConfirmDialog tone prop (Plan 14-01 Task 1)", () => {
     expect(document.querySelector("svg.lucide-circle-alert")).toBeNull()
   })
 
+  it("Plan 14-18 UAT Test 22 side-finding — dialog renders via React portal so ancestor opacity does not cascade", () => {
+    // Simulate the bug scenario: an archived row wrapper applies opacity 0.6,
+    // and ConfirmDialog used to render INSIDE the row tree (a regular React
+    // child) so the row's opacity cascaded into the dialog. The fix is to
+    // mount the dialog into document.body via a portal — escaping the row's
+    // style ancestry entirely.
+    render(
+      <div data-testid="dim-parent" style={{ opacity: 0.3 }}>
+        <ConfirmDialog
+          open={true}
+          title="Sil"
+          body="Bu işlem geri alınamaz."
+          tone="danger"
+          onConfirm={noop}
+          onCancel={noop}
+        />
+      </div>,
+    )
+
+    // The dialog's outer scrim/container element MUST NOT be a descendant of
+    // the dim-parent — i.e., it must be portal'd to document.body. Walk up
+    // from the dialog title's text node and assert NO ancestor is the
+    // dim-parent.
+    const titleNode = screen.getByText("Sil")
+    let cur: HTMLElement | null = titleNode
+    let foundDimAncestor = false
+    while (cur && cur.parentElement) {
+      if (cur.getAttribute && cur.getAttribute("data-testid") === "dim-parent") {
+        foundDimAncestor = true
+        break
+      }
+      cur = cur.parentElement
+    }
+    expect(foundDimAncestor).toBe(false)
+  })
+
   it("does not render anything when open=false", () => {
     const { container } = render(
       <ConfirmDialog
