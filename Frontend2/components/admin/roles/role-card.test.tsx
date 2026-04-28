@@ -3,6 +3,11 @@
 // counts and 'Görüntüle' navigates to /admin/users with the role filter
 // pre-applied").
 //
+// Task 2 coverage (?role= URL param parser on /admin/users) lives in
+// `app/(shell)/admin/users/page.test.tsx` to keep the import boundary tight
+// (the users page mounts more dependencies — toasts, modals, react-query
+// — than the lighter-weight role-card surface).
+//
 // Five mandatory cases per <behavior>:
 //
 //   1. RoleCard with userCount={12} renders "12" — and NEVER renders the
