@@ -1,4 +1,4 @@
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Any, Mapping
 from datetime import date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sqlfunc, text, or_, and_
@@ -7,6 +7,57 @@ from app.domain.repositories.audit_repository import IAuditRepository
 from app.infrastructure.database.models.audit_log import AuditLogModel
 from app.infrastructure.database.models.task import TaskModel
 from app.infrastructure.database.models.team import TeamProjectModel, TeamMemberModel
+
+
+# ---------------------------------------------------------------------------
+# Plan 14-16 (Cluster D, Path B) — entity_label resolver.
+#
+# Replaces the hardcoded `entity_label: None` previously emitted by
+# get_global_audit (and the project / user activity feeds) with a best-effort
+# resolver that reads the enriched extra_metadata JSONB shipped by Plan 14-09.
+# Path B is locked per <user_decision_locked> 2026-04-28 — IP column dropped,
+# entity_label resolved here is the ONLY source of data for the Hedef column.
+#
+# Priority order (first match wins):
+#   1. extra_metadata.task_title       (task entity, Plan 14-09 enriched)
+#   2. extra_metadata.project_name     (project entity)
+#   3. extra_metadata.milestone_title  (milestone entity)
+#   4. extra_metadata.artifact_name    (artifact entity)
+#   5. extra_metadata.comment_excerpt  (comment entity — first 60 chars,
+#      "yorum:" prefix to disambiguate the cell from a real entity name)
+#   6. f"{entity_type.upper()}-{entity_id}" (legacy fallback for pre-Plan-14-09
+#      audit rows where extra_metadata is None / empty — D-D6 backward compat)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_entity_label(row: Mapping[str, Any]) -> Optional[str]:
+    """Best-effort resolution of a human-readable target name for the Hedef column.
+
+    The row argument is whatever the audit_repo projection produces — either a
+    SQLAlchemy result mapping (rows from get_global_audit / get_project_activity
+    items_stmt) OR a plain dict (in-memory test fakes). We only access two
+    fields: extra_metadata (or metadata — both keys checked) and entity_type +
+    entity_id for the legacy fallback.
+    """
+    md = row.get("extra_metadata")
+    if md is None:
+        # Some callers (in-memory fakes / projection rows already mapped) carry
+        # the JSONB under the wire-shape key "metadata".
+        md = row.get("metadata")
+    if md is not None and isinstance(md, dict):
+        for key in ("task_title", "project_name", "milestone_title", "artifact_name"):
+            value = md.get(key)
+            if value:
+                return str(value)
+        excerpt = md.get("comment_excerpt")
+        if excerpt:
+            text_value = str(excerpt)
+            return f"yorum: {text_value[:60]}"
+    entity_type = row.get("entity_type")
+    entity_id = row.get("entity_id")
+    if entity_type and entity_id is not None:
+        return f"{str(entity_type).upper()}-{entity_id}"
+    return None
 
 
 class SqlAlchemyAuditRepository(IAuditRepository):
@@ -337,7 +388,10 @@ class SqlAlchemyAuditRepository(IAuditRepository):
                 "action": row["action"],
                 "entity_type": row["entity_type"],
                 "entity_id": row["entity_id"],
-                "entity_label": None,
+                # Plan 14-16 (Cluster D, Path B) — Hedef column data source.
+                # Replaces hardcoded None with cross-table resolver that reads
+                # the enriched extra_metadata JSONB shipped by Plan 14-09.
+                "entity_label": _resolve_entity_label(row),
                 "field_name": row["field_name"],
                 "old_value": row["old_value"],
                 "new_value": row["new_value"],
