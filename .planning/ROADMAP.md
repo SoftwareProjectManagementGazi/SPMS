@@ -3,7 +3,7 @@
 ## Milestones
 
 - SHIPPED **v1.0 MVP** -- Phases 1-7 (shipped 2026-04-20)
-- IN PROGRESS **v2.0 Frontend Overhaul & Backend Expansion** -- Phases 8-14
+- IN PROGRESS **v2.0 Frontend Overhaul & Backend Expansion** -- Phases 8-15
 
 ## Phases
 
@@ -43,6 +43,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 12: Lifecycle, Phase Gate & Workflow Editor** - Phase gate mechanics, milestone/artifact/report UI, workflow editor enhancements (plans complete 2026-04-25; manual UAT sign-off deferred to a later /gsd-verify-work pass — see STATE.md "Deferred Items")
 - [x] **Phase 13: Reporting, Activity & User Profile** - CFD/Lead-Cycle/Iteration charts, phase reports section, activity tab, user profile page (completed 2026-04-26)
 - [x] **Phase 14: Admin Panel** - Prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/) (completed 2026-04-27)
+- [ ] **Phase 15: RBAC Yeniden Tasarımı & Phase 14 Deferred Items Cleanup** - RBAC altyapısının baştan tasarlanması (Roller/İzin Matrisi sekmelerinin gerçek backend bağlantısı, admin panelin tam işlevsel hale getirilmesi) ve Phase 14 boyunca [deferred-items.md](phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/deferred-items.md) dosyasında biriken pre-existing test/build hatalarının temizlenmesi (workflow-editor harness, backend pytest unit drift, StatCard tone, project_workflow_patch 422 yolu)
 
 ## Phase Details
 
@@ -204,6 +205,7 @@ Phases execute in numeric order: 8 -> 8.1 -> 9 -> 9.1 -> ... -> 13
 | 12. Lifecycle, Phase Gate & Workflow Editor | v2.0 | 8/10 | Executing | - |
 | 13. Reporting, Activity & User Profile | v2.0 | 10/10 | Complete    | 2026-04-26 |
 | 14. Admin Panel | v2.0 | 18/18 | Complete   | 2026-04-28 |
+| 15. RBAC Yeniden Tasarımı & Phase 14 Deferred Items Cleanup | v2.0 | 0/0 | Not planned | - |
 
 ### Phase 14: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 
@@ -232,11 +234,25 @@ Plans:
 - [x] 14-17-PLAN.md — **Cluster E** (gap-closure) — Roles tab per-card counts (real numbers, not '=' placeholder) + Görüntüle cross-link to /admin/users?role=<id> with URL-param parser (closes UAT Test 19)
 - [x] 14-18-PLAN.md — **Cluster F** (gap-closure) — Polish + bug-fix sweep: logout 404 fix + /auth/set-password page + archived row opacity scope + Templates Düzenle route + Velocity card link + viewport overflow + UsersTable debounce + audit chip Aktör name + velocity terminology + done-column whitelist + Methodology subtitle (closes UAT Tests 4/13/22/24/27/31/32/34 + side-findings)
 
-### Phase 15: RBAC altyapısını düzeltmek ve admin panelini düzgünce bağlamak (v3.0'dan şu anki milestone'a alınıyor)
+### Phase 15: RBAC Yeniden Tasarımı & Phase 14 Deferred Items Cleanup
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 14
+**Goal:** RBAC altyapısının baştan tasarlanması (Phase 14 D-A2..A5 ile defer edilen Roller / İzin Matrisi sekmelerinin v3.0'dan v2.0'a alınarak gerçek backend bağlantısı, admin panelin tam işlevsel hale getirilmesi) **VE** Phase 14 boyunca biriken `phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/deferred-items.md` dosyasındaki pre-existing test/build hatalarının temizlenmesi.
+
+**Scope (deferred-items.md kapsamı):**
+1. **Frontend build hatası** — `app/(shell)/reports/page.tsx:158` StatCard `tone="warning"` (Phase 13 P08 drift; rename → "neutral" veya enum genişletme)
+2. **Backend pytest unit drift (11 fails)** — `test_register_user`, `test_phase_gate_use_case`, `test_manage_phase_reports`, `test_task_repo_soft_delete`, `test_deps_package_structure` (Phase 12/13/14 use-case sözleşme drift'i)
+3. **Backend integration 422 path** — `test_project_workflow_patch.py` 3 fails (`ValueError → 422 detail` translation eksik; `app/api/v1/projects.py` PATCH handler)
+4. **Frontend workflow-editor harness (19 fails)** — `editor-page` (16) + `selection-panel` (1) + `workflow-canvas` (2); `@xyflow/react@12.x` `ReactFlowProvider` wrap eksikliği + `Position` type drift + `phase-edge` / `use-transition-authority` / `milestones-subtab` / `lib/api-client` TS errors
+5. **Backend infra** — DB-required integration testlerinin local ortamda `ConnectionRefusedError` ile skip-error'a düşmesini ya skip-mark ile temizleme ya da test-db fixture introduction
+
+**Scope (RBAC kapsamı):**
+1. **Backend** — `Role`, `Permission`, `RolePermission` entity'leri (Phase 14 D-A2 defer notu altında); `IRoleRepository` + `IPermissionRepository` ABC'leri; `SqlAlchemy*Repository` impl + Alembic migration; D-A4 izin-matrisi seed (5 ana rol × ~15 kaynak × CRUD)
+2. **API** — `GET/POST/PATCH/DELETE /admin/roles`, `GET/PATCH /admin/permissions/matrix`, role-assignment uçları
+3. **Frontend** — `/admin/roles` ve `/admin/permissions` sekmelerindeki **7-katlı placeholder savunmasının** kaldırılması (Phase 14 P04 14-04-PLAN.md'de kuruldu); gerçek tablo/matrix UI'ları; `useRoles`, `usePermissions` hook'ları
+4. **Cross-cutting** — Mevcut JWT claim'lerine `roles[]` / `permissions[]` eklenmesi; FastAPI `Depends(require_permission(...))` decorator pattern'i; frontend `<RequirePermission>` guard
+
+**Requirements**: RBAC-01..RBAC-08 (yeni; /gsd-plan-phase sırasında atanacak), TIDY-01..TIDY-05 (deferred-items.md → her bullet bir TIDY-)
+**Depends on:** Phase 14 (admin panel UI iskeleti var, RBAC sekmeleri placeholder ile bekliyor; deferred-items.md cluster B/C/D/F gap-closure çıktıları korunmalı)
 **Plans:** 0 plans
 
 Plans:

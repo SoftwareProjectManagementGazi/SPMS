@@ -134,6 +134,7 @@ Progress: [██████████] 100%
 
 - Phase 14 added: Admin Panel — prototype'taki /admin yönetim paneli sayfasının Frontend2'ye birebir tamamen işlevsel implementasyonu (kaynak: New_Frontend/, hedef: Frontend2/)
 - Phase 15 added: RBAC altyapısını düzeltmek ve admin panelini düzgünce bağlamak (v3.0'dan şu anki milestone'a alınıyor)
+- Phase 15 scope expanded (2026-04-28): Phase 14 deferred-items.md cleanup (StatCard tone build error + 11 backend pytest unit drifts + 3 project_workflow_patch 422 fails + 19 workflow-editor harness fails + DB-required integration skip-error infra) eklendi; Phase 15 artık iki bacaklı: (a) RBAC infra yeniden tasarımı (D-A2..A5 v3.0→v2.0 reactivation), (b) deferred-items.md TIDY-01..TIDY-05 temizliği. Slug: `15-rbac-redesign-and-phase-14-deferred-cleanup`
 
 ### Decisions
 
