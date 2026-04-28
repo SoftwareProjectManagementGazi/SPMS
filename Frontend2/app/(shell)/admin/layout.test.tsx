@@ -116,7 +116,12 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
     expect(replaceMock).not.toHaveBeenCalled()
   })
 
-  it("Case 2 — unauthenticated user → router.replace('/auth/login?next=/admin')", () => {
+  it("Case 2 — unauthenticated user → router.replace('/login?from=/admin') (Plan 14-18 fix)", () => {
+    // Plan 14-18 (Cluster F UAT Test 4 side-finding) — the original
+    // /auth/login destination was 404 (the (auth) route group has /login at
+    // its root, not /auth/login). The param renamed from `next` to `from`
+    // to align with the M-5 contract honored by /login (login/page.tsx
+    // searchParams.get("from") ?? searchParams.get("next") ?? "/dashboard").
     authStateRef.current = { user: null, isLoading: false }
     usePathnameMock.mockReturnValue("/admin")
     render(
@@ -124,7 +129,7 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
         <div>child</div>
       </AdminLayout>,
     )
-    expect(replaceMock).toHaveBeenCalledWith("/auth/login?next=/admin")
+    expect(replaceMock).toHaveBeenCalledWith("/login?from=/admin")
   })
 
   it("Case 3 — non-admin role → router.replace('/dashboard') + danger toast with 'yetki'", () => {

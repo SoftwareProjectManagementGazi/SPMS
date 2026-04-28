@@ -270,3 +270,60 @@ HTTP integration tests in `test_admin_audit_get_global.py` skip-error on the
 absent dev Postgres (5 fixture errors are pre-existing infra; 3 in-memory
 tests pass).
 
+## Plan 14-18 (Cluster F polish bundle)
+
+### Pre-existing failures in workflow-editor test harness
+
+**Discovered during:** Plan 14-18 final `npx vitest run` whole-suite sweep.
+
+**Symptom:**
+- `components/workflow-editor/editor-page.test.tsx` — 16 tests fail at HEAD
+  (Tests 6-21).
+- `components/workflow-editor/selection-panel.test.tsx` — 1 test fails (Test 5).
+- `components/workflow-editor/workflow-canvas.test.tsx` — 2 tests fail
+  (readOnly forwarding cases).
+
+**Verified pre-existing:** Stashing all Plan 14-18 changes and re-running
+`npx vitest run components/workflow-editor/editor-page` reproduces the same
+16 failures. The last touch on these files is commit `aadf3cf8` (Phase 12
+fix: "fix(workflow-editor): adopt React Flow controlled-state pattern, kill
+drag flicker") — predates Plan 14-18 by several phases.
+
+**Why deferred:**
+- Plan 14-18 does NOT modify `editor-page.tsx`, `selection-panel.tsx`, or
+  `workflow-canvas.tsx`. Plan 14-18 added `template-editor-page.tsx` (a
+  brand-new sibling component for the B-5 reuse-vs-defer outcome) and
+  modified the dispatcher in `app/(shell)/workflow-editor/page.tsx` to
+  route `?templateId=` to the new component. Neither change touches the
+  failing harness.
+- SCOPE BOUNDARY rule per executor `<deviation_rules>` — only auto-fix
+  issues directly caused by the current task's changes. The pre-existing
+  failures are out of scope.
+
+**Verification (Plan 14-18 scope only):**
+- `npx vitest run components/shell/avatar-dropdown 'app/(auth)/login/page'
+  components/admin/projects components/admin/workflows components/admin/stats
+  components/projects/confirm-dialog components/admin/users/users-toolbar
+  components/admin/audit/audit-filter-chips lib/admin/admin-table-shell` →
+  54/54 green across all Plan 14-18 surfaces.
+- `npm run build` (Frontend2 strict TS + prerender) → green; new `/set-password`
+  route appears in route table.
+- Backend `python -m pytest tests/integration/test_admin_stats_done_columns.py`
+  → 26/26 green (parametrized DONE_COLUMN_NAMES whitelist contract).
+
+### Backend integration tests skip-error on absent dev Postgres
+
+**Discovered during:** Plan 14-18 Backend smoke check.
+
+**Symptom:** `test_admin_stats.py::test_admin_stats_admin_gets_200` and
+2 sibling HTTP-layer tests raise `ConnectionRefusedError` because the
+local Postgres isn't running; the in-process use-case tests
+(`test_get_admin_stats_composite_shape`, `test_get_admin_stats_velocities_capped_at_30`)
+pass. Same pattern as Plans 14-09 / 14-15 / 14-16 deferred items above.
+
+**Why deferred:** Pre-existing infra concern — DB-required integration
+tests skip-error in any local execution without `docker compose up
+postgres`. Plan 14-18 doesn't introduce new HTTP-layer integration tests
+on absent infra; the new `test_admin_stats_done_columns.py` is a pure
+unit-level constants test that runs without DB.
+
