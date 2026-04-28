@@ -118,6 +118,29 @@ Requirements for v2.0 Frontend Overhaul & Backend Expansion. Each maps to roadma
 - [x] **PROF-03**: Header avatar dropdown'i yapilir — Profilim/Ayarlar/Cikis Yap menusu
 - [x] **PROF-04**: Profil gorev listesinde MTTaskRow bileseninden yeniden kullanilir [E15]
 
+### RBAC Yeniden Tasarimi (Phase 15)
+
+Phase 14 D-A2..A5 ile v3.0'a defer edilen Roller / Izin Matrisi sekmelerinin v2.0'a alinmasi ve admin panelin tam islevsel hale getirilmesi.
+
+- [ ] **RBAC-01**: Permission domain layer kurulur — `Permission`, `RolePermission` entity'leri, `IPermissionRepository`/`IRolePermissionRepository`/`IRoleRepository` ABC'leri, SqlAlchemy impl + mapper'lar; Alembic migration 007 (permissions + role_permissions tablolari + roles.is_system_role/icon_key/color_token + permissions.scope ENUM + 26 perm seed + role_permissions matrix bootstrap, idempotent) [Phase 15]
+- [ ] **RBAC-02**: `require_permission(key)` decorator + `_has_permission(user, key)` helper + JWT claim'ine `permissions: [...]` array eklenmesi (login + register response) + `PERMISSION_DENIED` error_code + `missing_permission` field; `permitted_client(perms=[...])` test fixture (authenticated_client genişletmesi) [Phase 15]
+- [ ] **RBAC-03**: 14+ mevcut `Depends(require_admin)` callsite'inin endpoint-bazli `Depends(require_permission('admin.*'))`'a migrate edilmesi (admin_users / admin_audit / admin_stats / admin_summary / admin_join_requests / admin_settings / activity / process_templates / teams); bulk-action endpoint'inin use case icinde dynamic perm check; `change_user_role.py` use case'inin `AdminRole` literal'dan `role_id: int`'e migrate edilmesi (Phase 14 14-01 testlerinin esle update'i) [Phase 15]
+- [ ] **RBAC-04**: App-wide mutation endpoint'lerine (POST/PATCH/DELETE: tasks, projects, comments, milestones, artifacts, phase_reports, workflow, lifecycle) `Depends(require_permission('<resource>.<action>'))` eklenmesi (Hibrit perm DSL); mevcut `get_project_member` ve `require_project_transition_authority` (Phase 9 D-15) yan yana korunur (2-tier check); `rbac.*` SemanticEventType audit events (`permission_granted`/`permission_revoked`/`role_created`/`role_updated`/`role_deleted`) [Phase 15]
+- [ ] **RBAC-05**: Custom rol full CRUD backend — `CreateRoleUseCase`/`UpdateRoleUseCase`/`DeleteRoleUseCase` (silinen role kullanicilarini Member rolune migrate eden tek transaction, audit emission); `ListRolesUseCase`/`ListPermissionsUseCase`/`GetPermissionMatrixUseCase`/`UpdatePermissionMatrixUseCase`; `GET/POST/PATCH/DELETE /api/v1/admin/roles` + `GET /api/v1/admin/permissions` + `GET/PATCH /api/v1/admin/permissions/matrix` (auto-save per cell) router'lari; system role protection (`is_system_role` boolean, PATCH/DELETE `SYSTEM_ROLE_PROTECTED` 422); role name validation (UNIQUE + 1-50 char + Latin/TR alfabe + reserved system isimleri); self-edit prevention defansif backend [Phase 15]
+- [ ] **RBAC-06**: Frontend RBAC servis + hook katmani — `services/admin-rbac-service.ts` (roles + permissions + matrix CRUD); TanStack Query hook'lari (`useRoles`, `usePermissions`, `usePermissionMatrix`, `useCreateRole`, `useUpdateRole`, `useDeleteRole`, `useUpdatePermissionCell` optimistic mutation); `<RequirePermission perm='...'>` guard component (UI hide); `useAuth().permissions: string[]` + `useAuth().hasPermission(key)` helper; AvatarDropdown "Admin Paneli" link gate'inin `role.name === 'Admin'`'den `_has_permission(user, 'admin.access')`'a migrate edilmesi (Phase 13 D-D2 contract update + Plan 14-11 regression test guncelleme) [Phase 15]
+- [ ] **RBAC-07**: Permission Matrix UI uplift (tek atomic commit) — 7-katli placeholder defense'in tamamen kaldirilmasi (toggle disabled/aria-disabled, v3.0 tooltip, v3.0 Badge, AlertBanner placeholder mesaji "aktif"e degisir, "Kopyala" enable, NewRolePlaceholderCard → NewRoleModalTrigger, Guest disabled → active read-only); auto-save per-cell mutation + Toast "Yetki guncellendi" + revert on 4xx; per-row scope badge ('(system)' / '(project)') backend `permissions.scope` kolonundan; RTL test'lerinin (`permission-matrix-card.test.tsx`, `permission-row.test.tsx`, `role-card.test.tsx`, `new-role-placeholder-card.test.tsx`) Case 1-7 yeni davranisla guncellenmesi [Phase 15]
+- [ ] **RBAC-08**: Roles tab full CRUD frontend + E2E + UAT — "Yeni rol olustur" modal (icon picker 8 lucide-react ikon + 6 oklch token preset color swatch + name 1-50 char validation + description); "Rolu duzenle" modal (system rolleri disabled/gizli); "Rolu sil" ConfirmDialog (kullanici sayisi warning + Member fallback mesaji); self-edit prevention UI (currentUser kendi rolunu degistiremez); Guest active read-only system role card; activity-row + audit-event-mapper + event-meta `rbac.*` event render branch'leri; Playwright E2E specs (skip-guarded per Phase 11 D-50): admin role flip, custom role create/delete + Member fallback, matrix toggle persists, Guest read-only login, self-edit prevented, admin link perm-based; `15-UAT-CHECKLIST.md` ~20-25 satir [Phase 15]
+
+### Phase 14 Deferred Items Cleanup (Phase 15)
+
+`phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/deferred-items.md` icindeki pre-existing test/build hatalarinin temizlenmesi.
+
+- [ ] **TIDY-01**: Frontend StatCard `tone="warning"` build hatasi (`app/(shell)/reports/page.tsx:158`) — Plan 14-18 Cluster F sonrasi verify-and-close; hala kirmiziysa StatCard tone enum'una `'warning'` eklenir VEYA `tone="neutral"`/`tone="danger"` rename; `npm run build` smoke + dokumante [Phase 15]
+- [ ] **TIDY-02**: Backend pytest unit 11 fail root-cause fix — `test_register_user.py` (2), `test_phase_gate_use_case.py` (4), `test_manage_phase_reports.py` (2), `test_task_repo_soft_delete.py` (2), `test_deps_package_structure.py` (1) mevcut signature/contract'a hizalanir; skip-mark veya silme alternatifleri reddedildi [Phase 15]
+- [ ] **TIDY-03**: Backend integration `test_project_workflow_patch.py` 3 fail — `app/api/v1/projects.py` PATCH handler'a `try/except (ValidationError, ValueError)` → `HTTPException(422, detail={error_code: 'INVALID_WORKFLOW_CONFIG', message})` translation eklenir; legacy_n1_id / zero_initial / zero_final test'leri yesilir [Phase 15]
+- [ ] **TIDY-04**: Frontend workflow-editor 19 test fail root-cause fix — `vitest.setup.ts`'a `<ReactFlowProvider>` test wrapper helper; `editor-page.test.tsx` 16 test wrap'lanir; `selection-panel.test.tsx` Test 5 fix; `workflow-canvas.test.tsx` 2 readOnly test fix; pre-existing TS errors (`phase-edge.test.tsx` Position drift, `use-transition-authority.test.tsx` UseQueryResult cast, `milestones-subtab.test.tsx` spread-arg fixture, `lib/api-client.test.ts` TS error) duzeltilir; 19 test yesil baseline [Phase 15]
+- [ ] **TIDY-05**: DB-required integration tests skip-error infrastructure — `Backend/tests/conftest.py`'a `requires_db` marker + `pytest_collection_modifyitems` hook (DB connection probe → fail ise marker'li testler skip); ~40 dosyaya marker sed ile eklenir; developer iter `pytest -m 'not requires_db'`, CI full suite Postgres up [Phase 15]
+
 ### Page Conversions
 
 - [x] **PAGE-01
@@ -232,10 +255,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROF-02 | Phase 13 | Complete |
 | PROF-03 | Phase 13 | Complete |
 | PROF-04 | Phase 13 | Complete |
+| RBAC-01 | Phase 15 | Pending |
+| RBAC-02 | Phase 15 | Pending |
+| RBAC-03 | Phase 15 | Pending |
+| RBAC-04 | Phase 15 | Pending |
+| RBAC-05 | Phase 15 | Pending |
+| RBAC-06 | Phase 15 | Pending |
+| RBAC-07 | Phase 15 | Pending |
+| RBAC-08 | Phase 15 | Pending |
+| TIDY-01 | Phase 15 | Pending |
+| TIDY-02 | Phase 15 | Pending |
+| TIDY-03 | Phase 15 | Pending |
+| TIDY-04 | Phase 15 | Pending |
+| TIDY-05 | Phase 15 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 63 total
-- Mapped to phases: 63
+- v2.0 requirements: 76 total (63 prior + 13 RBAC/TIDY in Phase 15)
+- Mapped to phases: 76
 - Unmapped: 0
 
 ---
