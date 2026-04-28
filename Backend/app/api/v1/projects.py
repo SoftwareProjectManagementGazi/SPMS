@@ -14,6 +14,8 @@ from app.api.dependencies import (
     get_notification_service,
     _is_admin,
 )
+from app.api.deps.audit import get_audit_repo
+from app.domain.repositories.audit_repository import IAuditRepository
 from app.api.deps.auth import require_project_transition_authority
 from app.application.services.notification_service import PollingNotificationService
 from app.domain.entities.notification import NotificationType
@@ -241,6 +243,7 @@ async def delete_project(
     project_id: int,
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
     current_user: User = Depends(get_current_user),
     notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
@@ -251,8 +254,12 @@ async def delete_project(
     project_name = project.name
 
     try:
-        use_case = DeleteProjectUseCase(project_repo)
-        await use_case.execute(project_id, current_user.id)  # type: ignore
+        # Plan 14-14 — pass full User entity + audit_repo so the use case can
+        # apply the admin-bypass on ownership and write the
+        # `project.deleted_by_admin` compliance audit row when the bypass
+        # actually fires (admin acting on a project they don't manage).
+        use_case = DeleteProjectUseCase(project_repo, audit_repo=audit_repo)
+        await use_case.execute(project_id, actor=current_user)
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

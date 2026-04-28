@@ -2,10 +2,12 @@ from typing import List, Optional
 from pydantic import ValidationError
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.artifact_repository import IArtifactRepository
+from app.domain.repositories.audit_repository import IAuditRepository
 from app.application.dtos.project_dtos import ProjectCreateDTO, ProjectUpdateDTO, ProjectResponseDTO
 from app.application.dtos.workflow_dtos import WorkflowConfig as WorkflowConfigDTO
 from app.domain.entities.project import Project, Methodology
 from app.domain.entities.board_column import BoardColumn
+from app.domain.entities.user import User
 from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError
 from app.application.services.artifact_seeder import ArtifactSeeder
 
@@ -179,12 +181,74 @@ class UpdateProjectUseCase:
 
 
 class DeleteProjectUseCase:
-    def __init__(self, project_repo: IProjectRepository):
-        self.project_repo = project_repo
+    """Delete a project. Plan 14-14 (UAT Test 23): admin actors bypass the
+    PM-ownership guard so /admin/projects "Sil" works on any project.
 
-    async def execute(self, project_id: int, manager_id: int) -> None:
+    Per CLAUDE.md DIP discipline the use case accepts the full domain User
+    entity (not a FastAPI primitive). The router resolves
+    ``current_user`` via Depends(get_current_user) and passes it through
+    as ``actor=``.
+
+    Audit-trail compliance (must_haves truth #4 + threat T-14-14-02):
+    when admin overrides the ownership rule, an explicit
+    ``project.deleted_by_admin`` audit row is written with
+    ``user_id=<admin id>``, ``entity_id=<project id>``, and
+    ``metadata.target_manager_id=<original PM id>`` so the compliance
+    review can see WHO deleted WHOSE project.
+    """
+
+    def __init__(
+        self,
+        project_repo: IProjectRepository,
+        audit_repo: Optional[IAuditRepository] = None,
+    ):
+        self.project_repo = project_repo
+        self.audit_repo = audit_repo
+
+    async def execute(self, project_id: int, actor: User) -> None:
         project = await self.project_repo.get_by_id(project_id)
-        if not project or project.manager_id != manager_id:
+        if project is None:
             raise ProjectNotFoundError(project_id)
 
+        # Admin bypass — admins can delete any project regardless of
+        # ownership. Threat T-14-14-01: gated AFTER Depends(get_current_user)
+        # which already enforces JWT validity; non-admin actors fall through
+        # to the original 404 path (info-disclosure-safe).
+        is_admin = (
+            actor.role is not None
+            and actor.role.name is not None
+            and actor.role.name.lower() == "admin"
+        )
+        if not is_admin and project.manager_id != actor.id:
+            # Preserve existing info-disclosure-safe response for non-admin
+            # actors trying to delete a project they don't manage — same
+            # response as a missing project (Plan 14-14 must_haves truth #3).
+            raise ProjectNotFoundError(project_id)
+
+        original_manager_id = project.manager_id
+        original_key = project.key
+        original_name = project.name
+
         await self.project_repo.delete(project_id)
+
+        # Compliance audit row — only when admin OVERRODE the ownership
+        # check (i.e. is_admin AND not also the project's manager).
+        # When an admin happens to be the project's PM the regular delete
+        # path is sufficient; the repo-level audit (Plan 14-09 enrichment)
+        # already covers it and a duplicate by_admin row would be noise.
+        if (
+            self.audit_repo is not None
+            and is_admin
+            and original_manager_id != actor.id
+        ):
+            await self.audit_repo.create_with_metadata(
+                entity_type="project",
+                entity_id=project_id,
+                action="project.deleted_by_admin",
+                user_id=actor.id,
+                metadata={
+                    "target_manager_id": original_manager_id,
+                    "project_key": original_key,
+                    "project_name": original_name,
+                },
+            )
