@@ -182,15 +182,19 @@ describe("AvatarDropdown", () => {
     expect(screen.queryByRole("menu")).toBeNull()
   })
 
-  // Test 9 — Çıkış Yap calls logout + router.push("/auth/login")
-  it("calls useAuth().logout() and router.push('/auth/login') on Çıkış Yap click", async () => {
+  // Test 9 — Plan 14-18 (Cluster F, UAT Test 4 side-finding): Çıkış Yap must
+  // route to /login (the real route at app/(auth)/login/page.tsx). The original
+  // Phase 13 D-D3 destination /auth/login was NEVER backed by a real page —
+  // there is no app/(auth)/auth/login/ directory. This test was previously
+  // asserting the bug.
+  it("calls useAuth().logout() and router.push('/login') on Çıkış Yap click", async () => {
     const user = userEvent.setup()
     render(<AvatarDropdown />)
     await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
     const logoutBtn = screen.getByRole("menuitem", { name: /Çıkış Yap|Sign Out/i })
     await user.click(logoutBtn)
     expect(logoutMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith("/auth/login")
+    expect(pushMock).toHaveBeenCalledWith("/login")
   })
 
   // Test 10 — Profilim navigates to /users/{id}
