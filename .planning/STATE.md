@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
-status: verifying
-stopped_at: Phase 14 Plan 14-12 complete (phase gate — 5 Playwright e2e specs + 33-row UAT checklist + VALIDATION.md flipped to nyquist_compliant: true; ready for /gsd-verify-work)
-last_updated: "2026-04-27T09:36:16.633Z"
-last_activity: 2026-04-27
+status: executing
+stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
+last_updated: "2026-04-28T15:26:35.760Z"
+last_activity: 2026-04-28
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 66
-  completed_plans: 66
-  percent: 100
+  total_phases: 8
+  completed_phases: 6
+  total_plans: 72
+  completed_plans: 67
+  percent: 93
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — VERIFYING
-Plan: 12 of 12
-Status: Phase complete — ready for /gsd-verify-work
-Last activity: 2026-04-27
+Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
+Plan: 2 of 18
+Status: Ready to execute
+Last activity: 2026-04-28
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -121,6 +121,7 @@ Progress: [██████████] 100%
 | Phase 14 P10 | 25 min | 2 tasks | 5 files |
 | Phase 14 P11 | 5min | 1 task | 3 files (2 atomic commits — RED/GREEN; layout.tsx + 2 test files; 6/6 layout RTL + 14/14 avatar-dropdown RTL green; build green; D-B6 button wiring + D-D2 cross-phase contract verification) |
 | Phase 14 P12 | 759 | 2 tasks | 9 files |
+| Phase 14 P13 | 11 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -466,6 +467,8 @@ Key constraints for v2.0:
 - [Phase ?]: Plan 14-12: Used Phase 13 health-check skip-guard pattern (beforeEach + fetch /api/v1/health) instead of GSD_E2E_DB_SEEDED env-var pattern — deviation rule 1, matches actual prior-spec implementation
 - [Phase ?]: Plan 14-12: VALIDATION.md status enum is 'complete' (not 'approved' per PLAN draft) to match in-progress→complete lifecycle in STATE.md / ROADMAP.md; sign-off pedigree captured in approved_at + approved_by fields
 - [Phase ?]: Plan 14-12: Backend integration suite is the contract for /admin/* (162/165 pass, 3 pre-existing test_project_workflow_patch failures); full pytest exposed 11 additional pre-existing unit failures verified via git stash and logged in deferred-items.md
+- [Phase ?]: Plan 14-13: Single shared downloadAuthenticated() helper closes 3 UAT 401 gaps (Rapor al PDF / Users CSV / Audit JSON) by switching from anchor-trigger downloadCsv() to fetch+blob+programmatic-click; mirrors api-client.ts:18 quoted-token guard verbatim
+- [Phase ?]: Plan 14-13: csv-export.ts kept (NOT deleted) with prominent deprecation header + JSDoc @deprecated tag — reserved for hypothetical PUBLIC endpoints; zero live admin callers remain
 
 ### Pending Todos
 
@@ -496,7 +499,7 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-27T09:35:45.344Z
+Last session: 2026-04-28T15:26:07.940Z
 Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
 Resume file: None
 

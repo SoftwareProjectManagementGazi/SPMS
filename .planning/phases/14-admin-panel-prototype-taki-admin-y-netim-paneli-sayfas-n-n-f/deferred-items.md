@@ -179,3 +179,36 @@ in a module that has since exported `get_milestone_repo`.
 (e) Update `test_deps_package_structure.py::test_stub_submodules_exist` to
     expect `get_milestone_repo` in `app.api.deps.milestone.__all__`.
 Not blocking Plan 14-12 phase-gate ship.
+
+## Plan 14-13 (Cluster A — UAT 401 fix)
+
+### Pre-existing workflow-editor test failures
+
+**Discovered during:** Plan 14-13 final regression `npx vitest run` (full
+Frontend2 suite).
+
+**Symptom:** 19 tests failing across 3 files:
+- `components/workflow-editor/editor-page.test.tsx` (16 cases — Tests 6–21)
+- `components/workflow-editor/selection-panel.test.tsx` (1 case — Test 5)
+- `components/workflow-editor/workflow-canvas.test.tsx` (2 cases — readOnly forwards)
+
+**Origin:** Pre-existing — verified by checking out `c3147c31` (the
+commit BEFORE Plan 14-13 started) and running the same suite: same 19
+failures, same files. Plan 14-13 did NOT touch `components/workflow-editor/`
+or any of its dependencies.
+
+**Scope decision:** OUT-OF-SCOPE per Plan 14-13's `must_haves.truths` (which
+covers admin downloads only — 3 endpoints, 1 helper, 1 layout test mock
+swap). Rule 1/2/3 auto-fix is bounded to issues "DIRECTLY caused by the
+current task's changes."
+
+**Verification (Plan 14-13 scope only):** `npx vitest run components/admin
+lib/admin "app/(shell)/admin"` reports 12/12 files / 57/57 tests green;
+`npm run build` succeeds.
+
+**Action item:** A future workflow-editor stabilization plan should
+investigate whether these failures correspond to a React 19 / Next 16
+upgrade, a `@xyflow/react@12.10.2` API drift, or a TanStack Query v5
+contract change. The failures predate Phase 14 entirely (Plan 14-13 is the
+last gap-closure plan in the phase).
+
