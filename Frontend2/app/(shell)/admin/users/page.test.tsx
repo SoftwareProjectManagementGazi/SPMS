@@ -68,13 +68,16 @@ vi.mock("@/components/toast", () => ({
 }))
 
 // ---- useAdminUsers — capture filter argument so we can assert on it ----
-const useAdminUsersSpy = vi.fn(() => ({
+// Typed as `(filter: unknown) => ...` so the vi.fn().mock.calls indexing
+// returns a properly-typed tuple (vs. `(...args: unknown[])` which collapses
+// the call shape to `unknown[]` and triggers TS2493 on indexed access).
+const useAdminUsersSpy = vi.fn((_filter?: unknown) => ({
   data: { items: [], total: 0 },
   isLoading: false,
   error: null,
 }))
 vi.mock("@/hooks/use-admin-users", () => ({
-  useAdminUsers: (...args: unknown[]) => useAdminUsersSpy(...args),
+  useAdminUsers: (filter?: unknown) => useAdminUsersSpy(filter),
 }))
 
 // ---- Other admin hooks used by row actions / modals ----
@@ -166,8 +169,10 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
       expect(calls.length).toBeGreaterThan(0)
-      const lastFilter = calls[calls.length - 1][0] as { role?: string }
-      expect(lastFilter.role).toBe("Project Manager")
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string }
+        | undefined
+      expect(lastFilter?.role).toBe("Project Manager")
     })
   })
 
@@ -176,8 +181,10 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
     render(<AdminUsersPage />)
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
-      const lastFilter = calls[calls.length - 1][0] as { role?: string }
-      expect(lastFilter.role).toBe("Admin")
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string }
+        | undefined
+      expect(lastFilter?.role).toBe("Admin")
     })
   })
 
@@ -186,8 +193,10 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
     render(<AdminUsersPage />)
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
-      const lastFilter = calls[calls.length - 1][0] as { role?: string }
-      expect(lastFilter.role).toBe("Member")
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string }
+        | undefined
+      expect(lastFilter?.role).toBe("Member")
     })
   })
 
@@ -202,8 +211,10 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
 
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
-      const lastFilter = calls[calls.length - 1][0] as { role?: string }
-      expect(lastFilter.role).toBe("Admin")
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string }
+        | undefined
+      expect(lastFilter?.role).toBe("Admin")
     })
   })
 
@@ -215,9 +226,11 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
 
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
-      const lastFilter = calls[calls.length - 1][0] as { role?: string }
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string }
+        | undefined
       // URL must override the stale localStorage value.
-      expect(lastFilter.role).toBe("Admin")
+      expect(lastFilter?.role).toBe("Admin")
     })
 
     // And the page must write through so the NEXT visit (without ?role=)
@@ -238,9 +251,11 @@ describe("AdminUsersPage ?role= URL param parser (Plan 14-17 Task 2)", () => {
 
     await waitFor(() => {
       const calls = useAdminUsersSpy.mock.calls
-      const lastFilter = calls[calls.length - 1][0] as { role?: string | undefined }
+      const lastFilter = calls[calls.length - 1]?.[0] as
+        | { role?: string | undefined }
+        | undefined
       // No explicit role filter — DEFAULT_FILTER has role: undefined.
-      expect(lastFilter.role).toBeUndefined()
+      expect(lastFilter?.role).toBeUndefined()
     })
   })
 })

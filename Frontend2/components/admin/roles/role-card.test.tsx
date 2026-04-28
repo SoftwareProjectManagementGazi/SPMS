@@ -69,9 +69,11 @@ const adminUsersStateRef: { current: AdminUsersQ } = {
   current: { data: [], isLoading: false, error: null },
 }
 // Spy reference so Test 6 can assert `{limit: 1000}` was passed.
-const useAdminUsersSpy = vi.fn(() => adminUsersStateRef.current)
+// Typed as `(_filter?: unknown)` so vi.fn().mock.calls indexing returns a
+// properly-typed tuple (vs. `(...args: unknown[])` collapsing to `unknown[]`).
+const useAdminUsersSpy = vi.fn((_filter?: unknown) => adminUsersStateRef.current)
 vi.mock("@/hooks/use-admin-users", () => ({
-  useAdminUsers: (...args: unknown[]) => useAdminUsersSpy(...args),
+  useAdminUsers: (filter?: unknown) => useAdminUsersSpy(filter),
 }))
 
 // SUT — imported AFTER all mocks
@@ -274,7 +276,8 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
     // Approach 1 in the plan).
     expect(useAdminUsersSpy).toHaveBeenCalled()
     const args = useAdminUsersSpy.mock.calls[0]
+    expect(args).toBeDefined()
     // First arg should be a filter object containing limit: 1000.
-    expect(args[0]).toMatchObject({ limit: 1000 })
+    expect(args?.[0]).toMatchObject({ limit: 1000 })
   })
 })

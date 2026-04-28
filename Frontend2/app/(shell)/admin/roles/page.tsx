@@ -137,22 +137,23 @@ export default function AdminRolesPage() {
       {/* Plan 14-17 — N-3 MANDATORY truncation banner. Only renders when
           totalUsers > 1000 (Approach 1 ceiling). Without this banner the
           per-role counts silently undercount; with it the admin knows
-          exactly how many users are missing from the slice. */}
+          exactly how many users are missing from the slice.
+          Wrapped in a div with role='alert' + data-testid because the
+          AlertBanner primitive only forwards className/style — wrapper
+          adds the ARIA semantics + RTL hook without touching shared code. */}
       {isCountTruncated && (
-        <AlertBanner
-          tone="warning"
-          role="alert"
-          data-testid="role-count-truncation-banner"
-        >
-          <strong>
-            {adminRbacT(
-              "admin.roles.count_truncation_warning_title",
-              language,
-            )}
-            :
-          </strong>{" "}
-          {truncationBody}
-        </AlertBanner>
+        <div role="alert" data-testid="role-count-truncation-banner">
+          <AlertBanner tone="warning">
+            <strong>
+              {adminRbacT(
+                "admin.roles.count_truncation_warning_title",
+                language,
+              )}
+              :
+            </strong>{" "}
+            {truncationBody}
+          </AlertBanner>
+        </div>
       )}
 
       {/* Role cards grid — auto-fill responsive (≥3 per row at desktop;
