@@ -7,7 +7,10 @@
 //   - "Son 24 saat" quick filter Button (sets date_from = now - 24h, date_to = now)
 //   - "Filtre" Button — opens AuditFilterModal (Task 2)
 //   - flex spacer
-//   - "JSON" export Button — calls downloadCsv(adminAuditService.exportJsonUrl(filter))
+//   - "JSON" export Button — Plan 14-13 (Cluster A 401 fix) replaced the
+//     original downloadCsv() anchor-trigger with downloadAuthenticated(),
+//     so the request now carries Authorization: Bearer <token> and the
+//     backend's Depends(require_admin) returns 200 instead of 401.
 //
 // Search behavior: the prototype's search input was decorative (no backend
 // support). The /admin/audit endpoint doesn't expose a free-text search;
@@ -21,8 +24,10 @@ import { Search, Calendar, Filter, Download } from "lucide-react"
 
 import { Input, Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useToast } from "@/components/toast"
 import { adminAuditT } from "@/lib/i18n/admin-audit-keys"
-import { downloadCsv } from "@/lib/admin/csv-export"
+// Plan 14-13 — authenticated download (Cluster A 401 fix). See helper docs.
+import { downloadAuthenticated } from "@/lib/admin/download-authenticated"
 import {
   adminAuditService,
   type AdminAuditFilter,
@@ -42,6 +47,7 @@ export function AdminAuditToolbar({
   onOpenFilterModal,
 }: AdminAuditToolbarProps) {
   const { language } = useApp()
+  const { showToast } = useToast()
 
   const onLast24h = () => {
     const now = new Date()
@@ -52,9 +58,20 @@ export function AdminAuditToolbar({
     })
   }
 
-  const onJsonExport = () => {
-    const url = adminAuditService.exportJsonUrl(filter)
-    downloadCsv(url, "audit-log.json")
+  // Plan 14-13 — authenticated download (Cluster A 401 fix). The audit JSON
+  // is server-rendered (D-B8 honors the current filter); the helper only
+  // fixes the missing Authorization header.
+  const onJsonExport = async () => {
+    try {
+      const url = adminAuditService.exportJsonUrl(filter)
+      const filename = `audit-${new Date().toISOString().slice(0, 10)}.json`
+      await downloadAuthenticated(url, filename)
+    } catch (err) {
+      showToast({
+        variant: "error",
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
   }
 
   return (

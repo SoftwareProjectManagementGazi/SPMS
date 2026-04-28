@@ -5,8 +5,11 @@
 // Layout (verbatim prototype admin.jsx lines 156-168):
 //   [search input] [SegmentedControl: Tümü/Admin/PM/Member] ↔ [CSV] [Bulk invite] [Add user]
 //
-// CSV button → downloadCsv(/admin/users.csv?<URLSearchParams of filter>)
-// per CONTEXT D-W3 (server-rendered, NO client-side blob).
+// CSV button → downloadAuthenticated(/admin/users.csv?<URLSearchParams of filter>)
+// per CONTEXT D-W3 (server-rendered, NO client-side blob). Plan 14-13
+// (Cluster A 401 fix) replaced the original anchor-trigger downloadCsv() —
+// which stripped the Authorization header — with a fetch+blob helper that
+// includes Bearer <token>.
 //
 // Bulk-invite + Add-user buttons emit onOpenBulkInvite / onOpenAddUser which
 // the parent page wires to its modal-open state.
@@ -21,8 +24,13 @@ import {
   type SegmentedOption,
 } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useToast } from "@/components/toast"
 import { adminUsersT } from "@/lib/i18n/admin-users-keys"
-import { downloadCsv } from "@/lib/admin/csv-export"
+// Plan 14-13 — authenticated download (Cluster A 401 fix). The previous
+// downloadCsv() anchor-trigger fired GET without Authorization, so the
+// backend's Depends(require_admin) returned 401. downloadAuthenticated()
+// uses fetch() with an explicit Bearer header.
+import { downloadAuthenticated } from "@/lib/admin/download-authenticated"
 import {
   adminUserService,
   type AdminUserListFilter,
@@ -43,6 +51,7 @@ export function UsersToolbar({
 }: UsersToolbarProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
+  const { showToast } = useToast()
 
   // 4-option SegmentedControl (Tümü / Admin / PM / Member).
   const roleOptions: SegmentedOption[] = [
@@ -52,11 +61,20 @@ export function UsersToolbar({
     { id: "Member", label: "Member" },
   ]
 
-  const handleCsvExport = () => {
-    // D-W3: server-rendered CSV. The service builds the URL with current
-    // filter; downloadCsv triggers an anchor click (NO client-side blob).
-    const url = adminUserService.exportCsv(filter)
-    downloadCsv(url)
+  // Plan 14-13 — authenticated download (Cluster A 401 fix). The CSV is
+  // still server-rendered (D-W3 — UTF-8 BOM + Content-Disposition);
+  // downloadAuthenticated() just fixes the missing Authorization header.
+  const handleCsvExport = async () => {
+    try {
+      const url = adminUserService.exportCsv(filter)
+      const filename = `users-${new Date().toISOString().slice(0, 10)}.csv`
+      await downloadAuthenticated(url, filename)
+    } catch (err) {
+      showToast({
+        variant: "error",
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
   }
 
   return (

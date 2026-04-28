@@ -32,14 +32,16 @@ vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
 }))
 
-// ---- csv-export mock — Plan 14-11 wires downloadCsv() into the Rapor al
-// button so the click triggers a server-side PDF download. Mocking the module
-// keeps the test from creating a real <a> + .click() in jsdom (which would
-// noop here without a real browser anyway). The assertion proves the click
-// hands the canonical URL + filename to the export helper.
-const downloadCsvMock = vi.fn()
-vi.mock("@/lib/admin/csv-export", () => ({
-  downloadCsv: (...args: unknown[]) => downloadCsvMock(...args),
+// ---- download-authenticated mock — Plan 14-13 (B-2 fix) swapped the Rapor al
+// button from downloadCsv() to downloadAuthenticated() so the request carries
+// Authorization: Bearer <token> and avoids the UAT 401 gap. The mock target
+// MUST be the new module — otherwise the test silently fails to assert
+// anything meaningful (the click goes through the real helper which then
+// throws because there's no fetch in jsdom).
+const downloadAuthenticatedMock = vi.fn(async () => undefined)
+vi.mock("@/lib/admin/download-authenticated", () => ({
+  downloadAuthenticated: (...args: unknown[]) =>
+    downloadAuthenticatedMock(...args),
 }))
 
 // ---- next/link mock — plain anchor (mirrors nav-tabs.test.tsx pattern) ----
@@ -89,7 +91,8 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
   beforeEach(() => {
     replaceMock.mockReset()
     pushMock.mockReset()
-    downloadCsvMock.mockReset()
+    downloadAuthenticatedMock.mockReset()
+    downloadAuthenticatedMock.mockResolvedValue(undefined)
     showToastMock.mockReset()
     usePathnameMock.mockReset()
     usePathnameMock.mockReturnValue("/admin")
@@ -189,7 +192,7 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
 
   // ---- Plan 14-11 — header-button wiring (D-B6) ----
 
-  it("Case 5 — Rapor al click → downloadCsv('/api/v1/admin/summary.pdf', 'admin-summary.pdf') (D-B6)", () => {
+  it("Case 5 — Rapor al click → downloadAuthenticated('/api/v1/admin/summary.pdf', 'admin-summary-<YYYY-MM-DD>.pdf') (D-B6, Plan 14-13 Cluster A 401 fix)", () => {
     authStateRef.current = {
       user: {
         id: 1,
@@ -208,13 +211,16 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
     // "Rapor al". Match either locale defensively in case the mock changes.
     const raporButton = screen.getByRole("button", { name: /Rapor al|Export/i })
     fireEvent.click(raporButton)
-    // Plan 14-01 endpoint contract: server-rendered PDF + Content-Disposition
-    // attachment. Filename overrides the server-suggested value (browsers
-    // honor the anchor's `download` attribute when same-origin).
-    expect(downloadCsvMock).toHaveBeenCalledTimes(1)
-    expect(downloadCsvMock).toHaveBeenCalledWith(
+    // Plan 14-13 contract: the authenticated helper is invoked with the
+    // canonical PDF endpoint URL and a date-suffixed filename. The helper
+    // itself attaches the Authorization header (verified in
+    // download-authenticated.test.ts), so a green here proves the click
+    // reaches the right consumer — not the deprecated downloadCsv anchor
+    // path that triggered the UAT 401.
+    expect(downloadAuthenticatedMock).toHaveBeenCalledTimes(1)
+    expect(downloadAuthenticatedMock).toHaveBeenCalledWith(
       "/api/v1/admin/summary.pdf",
-      "admin-summary.pdf",
+      expect.stringMatching(/^admin-summary-\d{4}-\d{2}-\d{2}\.pdf$/),
     )
     // Rapor al MUST NOT navigate — only the Audit log button does.
     expect(pushMock).not.toHaveBeenCalled()
@@ -240,6 +246,6 @@ describe("AdminLayout — admin route guard (Pitfalls 3 + 10)", () => {
     // Pure client-side push — NO PDF download triggered.
     expect(pushMock).toHaveBeenCalledTimes(1)
     expect(pushMock).toHaveBeenCalledWith("/admin/audit")
-    expect(downloadCsvMock).not.toHaveBeenCalled()
+    expect(downloadAuthenticatedMock).not.toHaveBeenCalled()
   })
 })

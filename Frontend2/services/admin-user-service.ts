@@ -1,9 +1,11 @@
 // Phase 14 Plan 14-01 — Admin user-management service.
 //
 // 7 service methods backed by /admin/users (Backend Plan 14-01 Task 3 router).
-// CSV export returns a URL string for csv-export.downloadCsv() to trigger —
-// NO in-browser fetch, NO blob handling per D-W3 (server-rendered CSV with
-// UTF-8 BOM is the single source of truth).
+// CSV export returns a URL string. Plan 14-13 (Cluster A 401 fix) replaced
+// the consumer-side caller from csv-export.downloadCsv() (anchor-trigger,
+// strips Authorization header → 401) to download-authenticated.ts which
+// uses fetch() with an explicit Bearer header. The CSV itself is still
+// server-rendered (D-W3 — UTF-8 BOM + Content-Disposition).
 
 import { apiClient } from "@/lib/api-client"
 
@@ -120,9 +122,10 @@ export const adminUserService = {
 
   /**
    * D-W3 — return the CSV export URL string. Caller wraps in
-   * csv-export.downloadCsv() to trigger the browser download via a hidden
-   * anchor. NO axios call here, NO blob assembly — server ships UTF-8 BOM
-   * + Content-Disposition: attachment.
+   * `downloadAuthenticated()` from `@/lib/admin/download-authenticated`
+   * (Plan 14-13 Cluster A 401 fix) to trigger the browser download with
+   * an Authorization: Bearer header. NO axios call here, NO blob assembly
+   * — server ships UTF-8 BOM + Content-Disposition: attachment.
    */
   exportCsv: (filter?: AdminUserListFilter): string => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"

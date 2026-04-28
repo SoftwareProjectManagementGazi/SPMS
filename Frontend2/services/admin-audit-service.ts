@@ -62,8 +62,10 @@ export const adminAuditService = {
 
   /**
    * D-B8 — return the JSON export URL string. Caller wraps in
-   * csv-export.downloadCsv() to trigger the browser download. Server
-   * enforces the 50k row hard cap (D-Z2).
+   * `downloadAuthenticated()` from `@/lib/admin/download-authenticated`
+   * (Plan 14-13 Cluster A 401 fix) to trigger the browser download with
+   * an Authorization: Bearer header. Server enforces the 50k row hard cap
+   * (D-Z2).
    */
   exportJsonUrl: (filter?: AdminAuditFilter): string => {
     const baseUrl =
