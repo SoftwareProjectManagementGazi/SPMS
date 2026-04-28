@@ -1,15 +1,60 @@
 "use client"
 import * as React from "react"
 import { useAuth } from "@/context/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { LogoMark } from "@/components/logo-mark"
 import { Button } from "@/components/primitives"
 import { Input } from "@/components/primitives"
 
+/**
+ * Plan 14-18 (Cluster F, M-5 closure) — safe relative-URL redirect guard.
+ *
+ * The login page accepts a `?from=` (or legacy `?next=`) param so that
+ * anonymous-redirect bounces from gated routes (e.g., /admin/* per Plan 14-18
+ * admin-layout) preserve the user's intended destination through the login
+ * round-trip. WITHOUT a guard an attacker could craft a phishing link like:
+ *
+ *   /login?from=https://evil.example.com/exfiltrate
+ *
+ * and the post-login push would obediently navigate the authenticated user
+ * to the attacker's host. The guard rejects ANY value that:
+ *   1. Doesn't start with `/`                  → not a relative URL
+ *   2. Starts with `//`                        → protocol-relative URL
+ *   3. Contains `://`                          → defense-in-depth
+ *
+ * On reject we fall back to /dashboard (the existing default).
+ */
+function safeRedirect(target: string | null): string {
+  if (!target) return "/dashboard"
+  if (!target.startsWith("/")) return "/dashboard"
+  if (target.startsWith("//")) return "/dashboard" // protocol-relative
+  if (target.includes("://")) return "/dashboard" // defense-in-depth
+  return target
+}
+
+// Plan 14-18 — Next.js 16 useSearchParams CSR-bailout: any client component
+// reading useSearchParams() must sit inside a <Suspense/> boundary so the
+// build can statically prerender the shell. We wrap the inner page in
+// Suspense at the route entry; the inner component is the actual UI.
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <LoginPageInner />
+    </React.Suspense>
+  )
+}
+
+function LoginPageInner() {
   const { login } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Plan 14-18 — honor `?from=` (Plan 14-18 admin-layout convention) FIRST,
+  // then `?next=` (legacy callers). Default to /dashboard. Open-redirect
+  // guard via safeRedirect().
+  const redirectTarget = safeRedirect(
+    searchParams.get("from") ?? searchParams.get("next"),
+  )
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [remember, setRemember] = React.useState(false)
@@ -22,7 +67,11 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       await login(email, password)
-      router.push("/dashboard")
+      // Plan 14-18 M-5 — was: router.push("/dashboard"). The hardcoded
+      // destination silently dropped any ?from=/admin/users param so admin
+      // anonymous-redirect bounces always landed on /dashboard, breaking
+      // the URL-preservation contract of admin-layout's anonymous guard.
+      router.push(redirectTarget)
     } catch {
       // T-10-03-02: generic error — does not reveal whether email or password was wrong
       setError("Giriş başarısız. E-posta veya şifrenizi kontrol edin.")

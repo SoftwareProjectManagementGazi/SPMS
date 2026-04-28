@@ -65,7 +65,12 @@ export default function AdminLayout({
   useEffect(() => {
     if (isLoading) return // ← Pitfall 3 mitigation lives here.
     if (!user) {
-      router.replace(`/auth/login?next=${pathname}`)
+      // Plan 14-18 (Cluster F UAT Test 4 side-finding) — /auth/login was 404
+      // (the (auth) route group has /login at its root, not /auth/login).
+      // Param renamed from `next` to `from` to align with the M-5 search-param
+      // contract honored by /login (Plan 14-18 — Frontend2/app/(auth)/login/
+      // page.tsx supports both `from` and `next` for legacy callers).
+      router.replace(`/login?from=${pathname}`)
       return
     }
     const roleName = user.role?.name?.toLowerCase()

@@ -13,8 +13,12 @@
 //    name + role badge + email) + 5 menu items separated by hr lines.
 //  - 5 items (CONTEXT D-D2): Profilim → /users/{id}, Ayarlar → /settings,
 //    Yönetim Paneli → /admin (admin-only), Dil submenu (TR/EN inline radio),
-//    Çıkış Yap → useAuth().logout() + router.push('/auth/login') (D-D3 —
-//    /auth/login NOT legacy /login from SidebarUserMenu).
+//    Çıkış Yap → useAuth().logout() + router.push('/login') (Plan 14-18
+//    Cluster F UAT Test 4 side-finding fix — the original D-D3 destination
+//    /auth/login was NEVER backed by a real page; the auth route group has
+//    only forgot-password / login / session-expired. Sending users to
+//    /auth/login produced a 404 on every logout. The real route is /login
+//    (Frontend2/app/(auth)/login/page.tsx).
 //
 // A11y (CONTEXT D-D7..D-D8):
 //  - Trigger: aria-haspopup="menu", aria-expanded, aria-controls, aria-label.
@@ -181,7 +185,11 @@ export function AvatarDropdown() {
     setOpen(false)
     setDilOpen(false)
     logout()
-    router.push("/auth/login")
+    // Plan 14-18 (Cluster F UAT Test 4 side-finding): /auth/login was 404 —
+    // the (auth) route group has /login at its root, not /auth/login. The
+    // anonymous-redirect target in admin/layout.tsx is also /login (with
+    // ?from=) so logout + admin-bounce share a single landing page.
+    router.push("/login")
   }
 
   const handleNav = (href: string) => () => {
@@ -392,7 +400,8 @@ export function AvatarDropdown() {
               margin: "4px 0",
             }}
           />
-          {/* Çıkış Yap — D-D3 — /auth/login NOT legacy /login */}
+          {/* Çıkış Yap — Plan 14-18 (Cluster F): /login (real route);
+              the original D-D3 target /auth/login was 404. */}
           <button
             type="button"
             role="menuitem"
