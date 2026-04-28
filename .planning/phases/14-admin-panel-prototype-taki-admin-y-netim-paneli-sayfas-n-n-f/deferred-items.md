@@ -212,3 +212,32 @@ upgrade, a `@xyflow/react@12.10.2` API drift, or a TanStack Query v5
 contract change. The failures predate Phase 14 entirely (Plan 14-13 is the
 last gap-closure plan in the phase).
 
+## Plan 14-15 (Wave 1 — Cluster C gap closure)
+
+### Pre-existing workflow-editor failures still present
+
+**Discovered during:** Plan 14-15 full vitest regression run (full suite).
+
+**Symptom:** 19 failures across 3 test files (workflow-editor only):
+- `components/workflow-editor/editor-page.test.tsx` (16 fails)
+- `components/workflow-editor/selection-panel.test.tsx` (1 fail)
+- `components/workflow-editor/workflow-canvas.test.tsx` (2 fails)
+
+**Verification this is pre-existing:** Stashed Plan 14-15 changes and re-ran
+`npx vitest run components/workflow-editor/editor-page.test.tsx` on the clean
+parent — same 16 failures. Plan 14-15 is unrelated (only touches
+`components/admin/overview/recent-admin-events.{tsx,test.tsx}` +
+`components/activity/activity-row.{tsx,test.tsx}`).
+
+**Why deferred:** Same scope-boundary rationale as Plan 14-13 — Cluster C
+gap-closure is bounded to admin-overview Recent Events + admin-table Detay
+column. Workflow-editor harness setup (likely missing QueryClientProvider /
+ReactFlowProvider in test setup) belongs in a workflow-editor stabilization
+plan.
+
+**Verification (Plan 14-15 scope only):** `npx vitest run
+components/admin/overview/recent-admin-events.test.tsx
+components/activity/activity-row.test.tsx` reports 22/22 green; the broader
+admin + activity surface (`components/admin/audit/`, `components/activity/`)
+reports 34/34 green.
+

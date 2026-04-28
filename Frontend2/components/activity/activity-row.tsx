@@ -514,26 +514,62 @@ export function ActivityRow({
       </>
     )
 
+    // Plan 14-15 (Cluster C N-2 fix) — compose a plain-text fallback for the
+    // title attribute. This is the screen-reader / overflow-beyond-clamp
+    // complement (NOT the primary affordance — the visible cell wraps to
+    // up to 3 lines). When metadata is sparse (D-D6 backward-compat), fall
+    // back to the ariaLabel which is guaranteed non-empty.
+    const adminTablePrimaryText =
+      [
+        userName,
+        meta.verb(language),
+        taskTitle ? `'${taskTitle}'` : null,
+        projectName ? `'${projectName}'` : null,
+        milestoneTitle ? `'${milestoneTitle}'` : null,
+        artifactName ? `'${artifactName}'` : null,
+        targetUserName ?? userEmail ?? null,
+        oldLabel && newLabel ? `${oldLabel} → ${newLabel}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || ariaLabel
+
     return (
       <div
         role="article"
         aria-label={ariaLabel}
+        // Plan 14-15 (N-2) — title as complement, not primary affordance.
+        // Visible cell wraps to 3 lines; title only matters when content
+        // exceeds 3 lines or for screen-reader announcements.
+        title={adminTablePrimaryText}
         style={{
           display: "grid",
           gridTemplateColumns: "1fr auto",
-          alignItems: "center",
+          alignItems: "start",
           gap: 12,
           padding: "0",
           fontSize: 12.5,
           minWidth: 0,
         }}
       >
+        {/* Plan 14-15 (Cluster C N-2 fix) — line-wrap is the DEFAULT.
+            Previously single-line ellipsis required users to hover for
+            content; multi-line clamp lets the user READ the full primary
+            line within the table cell. WebkitLineClamp:3 caps row height at
+            3 lines so the table grid stays compact (must_haves.truths #4).
+            wordBreak:break-word prevents long unbroken tokens (URLs, IDs)
+            from blowing up cell width. */}
         <div
           style={{
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 3,
             overflow: "hidden",
             textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
             minWidth: 0,
+            lineHeight: 1.4,
           }}
         >
           {primary}
@@ -544,6 +580,9 @@ export function ActivityRow({
             fontSize: 11,
             color: "var(--fg-muted)",
             whiteSpace: "nowrap",
+            // Pin the timestamp to the top of the cell so a 3-line primary
+            // doesn't push the time vertically into the next row.
+            paddingTop: 1,
           }}
         >
           {event.timestamp

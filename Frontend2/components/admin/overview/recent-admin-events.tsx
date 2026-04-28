@@ -25,7 +25,48 @@ import type { ActivityItem } from "@/services/activity-service"
 export function RecentAdminEvents() {
   const { language } = useApp()
   const q = useAdminAudit({ limit: 10 })
-  const items: ActivityItem[] = q.data?.items ?? []
+
+  // Plan 14-15 (Cluster C, Diagnosis A — B-4 PRE-COMMITTED) — explicit
+  // DTO → ActivityItem normalizer.
+  //
+  // Previously: `q.data?.items ?? [] as ActivityItem[]` — bald TS cast that
+  // shipped AdminAuditItem rows directly into ActivityRow's admin-table
+  // variant. Today the wire shapes happen to overlap (both services type
+  // their items as ActivityItem), but this is a latent bug: any future field
+  // drift between AdminAuditItem and ActivityItem (e.g. an
+  // entity_label-only field on the admin side) would silently break the
+  // audit-event-mapper dispatch in this card and route every row to the
+  // generic "değiştirdi bir görev alanını" catch-all (Test 11 failure mode).
+  //
+  // Fix: explicitly map every field the mapper + admin-table render branch
+  // reads. mapAuditToSemantic in audit-event-mapper.ts reads `entity_type`,
+  // `field_name`, and `action`; the render branch reads metadata.{task_title,
+  // project_name, comment_excerpt, …} — preserve all of these. useMemo
+  // because q.data?.items is a stable reference per fetch but we want to
+  // avoid recomputing on unrelated re-renders.
+  //
+  // Diagnoses B (legacy un-enriched rows) + C (mapper ordering) were
+  // explicitly DEFERRED per checker B-4 — re-open ONLY if this normalizer
+  // fix doesn't make Test 11 pass on real-DB data.
+  const items: ActivityItem[] = React.useMemo(
+    () =>
+      (q.data?.items ?? []).map((row) => ({
+        id: row.id,
+        user_id: row.user_id,
+        user_name: row.user_name,
+        user_avatar: row.user_avatar,
+        action: row.action,
+        entity_type: row.entity_type,
+        entity_id: row.entity_id,
+        entity_label: row.entity_label,
+        field_name: row.field_name,
+        old_value: row.old_value,
+        new_value: row.new_value,
+        timestamp: row.timestamp,
+        metadata: row.metadata,
+      })),
+    [q.data?.items],
+  )
 
   return (
     <Card padding={16}>
