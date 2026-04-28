@@ -487,6 +487,103 @@ describe("ActivityRow", () => {
     ).toBeInTheDocument()
   })
 
+  // ---------------------------------------------------------------------------
+  // Phase 14 Plan 14-16 Task 2 (M-4) — hideTimestamp prop with explicit default.
+  //
+  // Path B locked per <user_decision_locked> 2026-04-28: the AdminAuditTable
+  // renders timestamp in its leftmost Zaman cell. The Detay cell wraps
+  // <ActivityRow variant="admin-table" hideTimestamp={true}/> so the inner
+  // mono timestamp is suppressed, eliminating the duplicate-Zaman bug at the
+  // cell level (must_haves.truths #3).
+  //
+  // M-4 contract:
+  //   - hideTimestamp default = false (preserves Recent Events render — that
+  //     card has NO outer Zaman cell, so the inner timestamp is the only one).
+  //   - hideTimestamp={true} suppresses the inner mono timestamp div.
+  //   - The default variant ("default") is unaffected — it has a different
+  //     anatomy (Avatar + content column with the time row attached below).
+  // ---------------------------------------------------------------------------
+
+  it("M-4 default: variant=admin-table without hideTimestamp prop renders the inner mono timestamp (Recent Events behavior preserved)", () => {
+    const fixedISO = new Date("2026-04-28T12:00:00Z").toISOString()
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "due_date",
+      timestamp: fixedISO,
+      metadata: {
+        task_title: "M-4 default test",
+        field_name: "due_date",
+        old_value_label: "2026-04-25",
+        new_value_label: "2026-05-01",
+      },
+    })
+    const { container } = render(
+      <ActivityRow event={ev} variant="admin-table" />,
+    )
+    // The inner mono div (right side of the 1fr/auto grid) renders the
+    // formatted relative time when hideTimestamp is not passed (default false).
+    const monoNodes = Array.from(
+      container.querySelectorAll<HTMLDivElement>("div.mono"),
+    )
+    // At least one .mono node holds the timestamp (formatRelativeTime output).
+    expect(monoNodes.length).toBeGreaterThanOrEqual(1)
+    const timestampPresent = monoNodes.some((d) => (d.textContent ?? "").trim().length > 0)
+    expect(timestampPresent).toBe(true)
+  })
+
+  it("M-4 audit-table: variant=admin-table with hideTimestamp={true} omits the inner mono timestamp (no duplicate Zaman)", () => {
+    const fixedISO = new Date("2026-04-28T12:00:00Z").toISOString()
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "updated",
+      field_name: "due_date",
+      timestamp: fixedISO,
+      metadata: {
+        task_title: "M-4 hide test",
+        field_name: "due_date",
+        old_value_label: "2026-04-25",
+        new_value_label: "2026-05-01",
+      },
+    })
+    const { container } = render(
+      <ActivityRow event={ev} variant="admin-table" hideTimestamp />,
+    )
+    // The inner mono timestamp div is NOT rendered when hideTimestamp is true.
+    // Path B contract: only the AdminAuditTable's leftmost Zaman cell shows
+    // the timestamp; the Detay cell content has none.
+    const monoNodes = Array.from(
+      container.querySelectorAll<HTMLDivElement>("div.mono"),
+    )
+    // Either no .mono div, OR none of them carry a non-empty text node.
+    const timestampPresent = monoNodes.some((d) => (d.textContent ?? "").trim().length > 0)
+    expect(timestampPresent).toBe(false)
+    // Sanity — the primary line content still renders (we haven't broken the cell).
+    expect(
+      screen.getByText(/M-4 hide test/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it("M-4 default-variant: hideTimestamp prop is ignored on variant='default' (Avatar-anchored layout has its own time row, not in scope)", () => {
+    // Defensive — the prop is admin-table-specific. The default variant has a
+    // different anatomy (Avatar + content column); hideTimestamp must NOT
+    // crash or alter rendering when set on the default variant.
+    const ev = makeEvent({
+      entity_type: "task",
+      action: "created",
+      entity_label: "MOBIL-9",
+      metadata: { task_key: "MOBIL-9" },
+    })
+    const { container } = render(
+      <ActivityRow event={ev} hideTimestamp />,
+    )
+    expect(container.firstChild).not.toBeNull()
+    // No crash; verb still rendered.
+    expect(
+      screen.getByText(/oluşturdu/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
   // Sanity: within() helper imported but not used elsewhere — silence linter
   void within
 })
