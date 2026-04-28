@@ -13,6 +13,14 @@
 //   - Border-radius 4
 //   - Font-size 12
 //   - × button on the right (X icon, 12px)
+//
+// Plan 14-18 (Cluster F UAT Test 27 side-finding) — Aktör chip now resolves
+// the actor_id to a user's full_name (or email when full_name is empty) via
+// the new `usersById` prop. When the id isn't in the map (or the map prop
+// is omitted) we fall back to a localized "Bilinmeyen kullanıcı (id N)"
+// label rather than the raw numeric id alone — admins recognized the id-
+// only chip as a UI bug. The audit page wires the map via the new
+// useUsersLookup() hook (hooks/use-users-lookup.ts).
 
 import * as React from "react"
 import { X } from "lucide-react"
@@ -21,11 +29,23 @@ import { useApp } from "@/context/app-context"
 import { adminAuditT } from "@/lib/i18n/admin-audit-keys"
 import type { AdminAuditFilter } from "@/services/admin-audit-service"
 
+/** Plan 14-18 — minimal user shape consumed by the chip. Matches the
+ *  hooks/use-users-lookup.ts return value AND the existing /admin/users
+ *  payload (full_name? + email? per UserListDTO + AdminUserListDTO). */
+export interface AuditChipUser {
+  id: number
+  full_name?: string
+  email?: string
+}
+
 interface AuditFilterChipsProps {
   filter: AdminAuditFilter
-  /** Map of actor_id → display label so we can show "Aktör: {name}" rather
-   *  than "Aktör: 42". When unknown the chip shows the raw id. */
-  actorLabel?: string
+  /** Plan 14-18 — map of actor_id → user shape so the Aktör chip can
+   *  resolve the id to a real name. Wired by /admin/audit/page.tsx via
+   *  the new useUsersLookup() hook; when omitted we fall back to a
+   *  localized "Bilinmeyen kullanıcı (id N)" label. NEVER renders the
+   *  raw numeric id alone. */
+  usersById?: Record<number, AuditChipUser>
   onClear: (facet: ChipFacet) => void
 }
 
@@ -46,7 +66,7 @@ interface ChipDef {
 
 export function AuditFilterChips({
   filter,
-  actorLabel,
+  usersById,
   onClear,
 }: AuditFilterChipsProps) {
   const { language } = useApp()
@@ -54,9 +74,24 @@ export function AuditFilterChips({
   const chips: ChipDef[] = []
 
   if (filter.actor_id !== undefined) {
-    const actorText =
-      actorLabel ??
-      String(filter.actor_id)
+    // Plan 14-18 — resolve actor_id → display label.
+    //   1. usersById has the id AND user has a non-empty full_name → show it.
+    //   2. usersById has the id AND user has an email → fall back to email.
+    //   3. id absent from the map (or map prop missing) → localized
+    //      "Bilinmeyen kullanıcı (id N)" / "Unknown user (id N)" — NEVER
+    //      the raw id alone.
+    const user = usersById?.[filter.actor_id]
+    let actorText: string
+    if (user?.full_name && user.full_name.trim().length > 0) {
+      actorText = user.full_name
+    } else if (user?.email && user.email.trim().length > 0) {
+      actorText = user.email
+    } else {
+      actorText = adminAuditT(
+        "admin.audit.chip_actor_unknown",
+        language,
+      ).replace("{id}", String(filter.actor_id))
+    }
     chips.push({
       facet: "actor",
       text: `${adminAuditT("admin.audit.chip_actor_label", language)}: ${actorText}`,

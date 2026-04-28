@@ -118,6 +118,15 @@ export const ADMIN_AUDIT_I18N_KEYS = {
     tr: "Filtreyi kaldır",
     en: "Clear filter",
   },
+  // Plan 14-18 (Cluster F UAT Test 27) — fallback when audit chip Aktör
+  // facet has an actor_id we can't resolve to a user record (id absent
+  // from /admin/users response or response not yet loaded). The {id}
+  // token is replaced inline with String(actor_id) so admins can still
+  // trace the audit row to a record. NEVER renders the raw id alone.
+  "admin.audit.chip_actor_unknown": {
+    tr: "Bilinmeyen kullanıcı (id {id})",
+    en: "Unknown user (id {id})",
+  },
 
   // -------------------------------------------------------------------------
   // Pagination toolbar

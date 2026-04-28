@@ -34,6 +34,9 @@ import type { AdminAuditFilter } from "@/services/admin-audit-service"
 import { AdminAuditToolbar } from "@/components/admin/audit/admin-audit-toolbar"
 import { AuditFilterChips } from "@/components/admin/audit/audit-filter-chips"
 import { AuditFilterModal } from "@/components/admin/audit/audit-filter-modal"
+// Plan 14-18 (Cluster F UAT Test 27) — wires the actor name resolver so
+// the Aktör chip shows full_name (or email) rather than the raw id.
+import { useUsersLookup } from "@/hooks/use-users-lookup"
 
 // D-C6 lazy load — the table component is the heaviest part of this
 // surface (it pulls in ActivityRow + the audit-row grid + pagination).
@@ -121,6 +124,11 @@ function AdminAuditPageInner() {
 
   const [modalOpen, setModalOpen] = React.useState(false)
 
+  // Plan 14-18 — actor lookup for the chip strip. Shares the cache slot
+  // with useAdminUsers via identical queryKey shape so cross-tab navigation
+  // does not double-fetch.
+  const usersLookup = useUsersLookup()
+
   // ---- Filter mutation helpers ----
   //
   // Two semantics depending on caller intent:
@@ -192,7 +200,11 @@ function AdminAuditPageInner() {
         />
       </Card>
 
-      <AuditFilterChips filter={filter} onClear={onClearChip} />
+      <AuditFilterChips
+        filter={filter}
+        usersById={usersLookup.usersById}
+        onClear={onClearChip}
+      />
 
       <AdminAuditTable filter={filter} onUpdate={updateFilter} />
 

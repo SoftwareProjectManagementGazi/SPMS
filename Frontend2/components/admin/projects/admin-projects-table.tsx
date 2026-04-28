@@ -23,6 +23,8 @@ import { useApp } from "@/context/app-context"
 import { useProjects } from "@/hooks/use-projects"
 import { adminProjectsT } from "@/lib/i18n/admin-projects-keys"
 import type { Project } from "@/services/project-service"
+// Plan 14-18 (Cluster F UAT Test 34) — viewport overflow shell.
+import { AdminTableShell } from "@/lib/admin/admin-table-shell"
 
 import {
   AdminProjectRow,
@@ -74,62 +76,67 @@ export function AdminProjectsTable({ filter }: AdminProjectsTableProps) {
   const emptyCopy = trimmedQ ? empty_no_match : empty_no_projects
 
   return (
-    <Card padding={0}>
-      {/* Header row (table column labels) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: ROW_GRID_TEMPLATE,
-          padding: "10px 16px",
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: 0.4,
-          color: "var(--fg-subtle)",
-          fontWeight: 600,
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div>{adminProjectsT("admin.projects.col_key", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_name", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_method", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_lead", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_tasks", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_progress", lang)}</div>
-        <div>{adminProjectsT("admin.projects.col_created", lang)}</div>
-        <div />
-      </div>
-
-      {/* Body — DataState fallback + row list */}
-      <DataState
-        loading={q.isLoading}
-        error={q.error}
-        empty={isEmpty}
-        emptyFallback={
-          <div
-            style={{
-              padding: "32px 16px",
-              textAlign: "center",
-              fontSize: 12.5,
-              color: "var(--fg-subtle)",
-            }}
-          >
-            {emptyCopy}
-          </div>
-        }
-      >
-        <div>
-          {filtered.map((p, i) => (
-            <AdminProjectRow
-              key={p.id}
-              project={p}
-              // Task counts now flow through project.taskCount / project.taskDoneCount,
-              // populated by the backend admin-bypass aggregate
-              // (project_repo.task_counts_by_project_ids — Plan 14-05 follow-up).
-              isLast={i === filtered.length - 1}
-            />
-          ))}
+    // Plan 14-18 — AdminTableShell wraps the Card so narrow viewports get
+    // a horizontal scrollbar instead of overlapping cells.
+    // Projects table grid total ≈ 1100px (8-col ROW_GRID_TEMPLATE).
+    <AdminTableShell minWidth={1100}>
+      <Card padding={0}>
+        {/* Header row (table column labels) */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: ROW_GRID_TEMPLATE,
+            padding: "10px 16px",
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: 0.4,
+            color: "var(--fg-subtle)",
+            fontWeight: 600,
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <div>{adminProjectsT("admin.projects.col_key", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_name", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_method", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_lead", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_tasks", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_progress", lang)}</div>
+          <div>{adminProjectsT("admin.projects.col_created", lang)}</div>
+          <div />
         </div>
-      </DataState>
-    </Card>
+
+        {/* Body — DataState fallback + row list */}
+        <DataState
+          loading={q.isLoading}
+          error={q.error}
+          empty={isEmpty}
+          emptyFallback={
+            <div
+              style={{
+                padding: "32px 16px",
+                textAlign: "center",
+                fontSize: 12.5,
+                color: "var(--fg-subtle)",
+              }}
+            >
+              {emptyCopy}
+            </div>
+          }
+        >
+          <div>
+            {filtered.map((p, i) => (
+              <AdminProjectRow
+                key={p.id}
+                project={p}
+                // Task counts now flow through project.taskCount / project.taskDoneCount,
+                // populated by the backend admin-bypass aggregate
+                // (project_repo.task_counts_by_project_ids — Plan 14-05 follow-up).
+                isLast={i === filtered.length - 1}
+              />
+            ))}
+          </div>
+        </DataState>
+      </Card>
+    </AdminTableShell>
   )
 }

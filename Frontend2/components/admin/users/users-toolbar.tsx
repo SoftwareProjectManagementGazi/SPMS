@@ -13,6 +13,14 @@
 //
 // Bulk-invite + Add-user buttons emit onOpenBulkInvite / onOpenAddUser which
 // the parent page wires to its modal-open state.
+//
+// Plan 14-18 (Cluster F UAT Test 12 side-finding) — search input is now
+// DEBOUNCED (250ms via setTimeout) so onFilterChange fires once after the
+// user stops typing instead of on every keystroke. Combined with the
+// useAdminUsers hook's placeholderData: keepPreviousData (v5.99.2 syntax;
+// see hooks/use-admin-users.ts) the table no longer "thrashes" on rapid
+// input. Role / SegmentedControl filter updates are NOT debounced — they
+// fire immediately because they represent a single user action.
 
 import * as React from "react"
 import { Search, Download, Mail, Plus } from "lucide-react"
@@ -43,6 +51,41 @@ export interface UsersToolbarProps {
   onOpenBulkInvite: () => void
 }
 
+/**
+ * Plan 14-18 — hand-rolled debounce hook. We don't depend on use-debounce
+ * (not in package.json) — keeping the dep surface minimal. The hook
+ * returns a stable callback that delays its invocation by `delay` ms,
+ * coalescing rapid calls into a single trailing-edge invocation. Cancels
+ * any pending invocation on unmount so we don't fire after the component
+ * tears down.
+ */
+function useDebouncedCallback<T extends (...args: never[]) => void>(
+  fn: T,
+  delay: number,
+) {
+  const fnRef = React.useRef(fn)
+  fnRef.current = fn
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return React.useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        fnRef.current(...args)
+      }, delay)
+    },
+    [delay],
+  )
+}
+
+const SEARCH_DEBOUNCE_MS = 250
+
 export function UsersToolbar({
   filter,
   onFilterChange,
@@ -52,6 +95,44 @@ export function UsersToolbar({
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
   const { showToast } = useToast()
+
+  // Plan 14-18 — local search input state so the controlled <Input/>
+  // remains responsive on every keystroke; the parent's filter receives
+  // updates only after the debounce window settles. We sync from the
+  // upstream filter.q on its initial value so external resets (e.g., a
+  // role-card link clearing q) propagate; we DO NOT sync on every render
+  // because that would defeat the local-controlled-input contract.
+  const [localSearch, setLocalSearch] = React.useState<string>(filter.q ?? "")
+  // Track the last upstream q we observed; only adopt upstream changes that
+  // didn't originate from us (i.e., when upstream changes from outside our
+  // debounced flush).
+  const lastSentSearchRef = React.useRef<string>(filter.q ?? "")
+  React.useEffect(() => {
+    if ((filter.q ?? "") !== lastSentSearchRef.current) {
+      // Upstream changed via someone else (not our debounced flush) —
+      // re-sync the local input to match.
+      setLocalSearch(filter.q ?? "")
+      lastSentSearchRef.current = filter.q ?? ""
+    }
+  }, [filter.q])
+
+  // Debounced update — coalesces 3 keystrokes within 250ms into a single
+  // onFilterChange invocation with the FINAL q value.
+  const debouncedFlushSearch = useDebouncedCallback(
+    (next: string) => {
+      lastSentSearchRef.current = next
+      onFilterChange({ ...filter, q: next })
+    },
+    SEARCH_DEBOUNCE_MS,
+  )
+
+  const handleSearchChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value
+    setLocalSearch(value)
+    debouncedFlushSearch(value)
+  }
 
   // 4-option SegmentedControl (Tümü / Admin / PM / Member).
   const roleOptions: SegmentedOption[] = [
@@ -93,8 +174,8 @@ export function UsersToolbar({
       <Input
         icon={<Search size={13} />}
         placeholder={adminUsersT("admin.users.search_placeholder", lang)}
-        value={filter.q ?? ""}
-        onChange={(e) => onFilterChange({ ...filter, q: e.target.value })}
+        value={localSearch}
+        onChange={handleSearchChange}
         size="sm"
         style={{ width: 240 }}
       />

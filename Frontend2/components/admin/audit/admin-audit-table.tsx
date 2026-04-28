@@ -38,6 +38,8 @@ import { useApp } from "@/context/app-context"
 import { adminAuditT } from "@/lib/i18n/admin-audit-keys"
 import { useAdminAudit } from "@/hooks/use-admin-audit"
 import type { AdminAuditFilter } from "@/services/admin-audit-service"
+// Plan 14-18 (Cluster F UAT Test 34) — viewport overflow shell.
+import { AdminTableShell } from "@/lib/admin/admin-table-shell"
 
 import {
   AdminAuditRow,
@@ -72,6 +74,10 @@ export function AdminAuditTable({ filter, onUpdate }: AdminAuditTableProps) {
   const isEmpty = !q.isLoading && !q.error && items.length === 0
 
   return (
+    // Plan 14-18 — AdminTableShell wraps the Card so narrow viewports get
+    // a horizontal scrollbar instead of overlapping cells.
+    // Audit table grid total ≈ 1180px (5-col Path B post-14-16).
+    <AdminTableShell minWidth={1180}>
     <Card padding={0}>
       {/* Pitfall 6 — 50k cap warning AlertBanner.
           Renders ABOVE the header row when the backend truncated the result
@@ -167,5 +173,6 @@ export function AdminAuditTable({ filter, onUpdate }: AdminAuditTableProps) {
         />
       )}
     </Card>
+    </AdminTableShell>
   )
 }
