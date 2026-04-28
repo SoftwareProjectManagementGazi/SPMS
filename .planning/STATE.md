@@ -4,15 +4,15 @@ milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
 current_phase: 14
 status: executing
-stopped_at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
-last_updated: "2026-04-28T15:38:39.708Z"
+stopped_at: Phase 14 Plan 14-15 complete (Cluster C — Recent Events Diagnosis-A normalizer + Detay N-2 line-wrap + M-3 structural-dispatch test)
+last_updated: "2026-04-28T15:51:32.463Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 72
-  completed_plans: 68
-  percent: 94
+  completed_plans: 69
+  percent: 96
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 3 of 18
+Plan: 4 of 18
 Status: Ready to execute
 Last activity: 2026-04-28
 
-Progress: [█████████░] 94%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -123,6 +123,7 @@ Progress: [█████████░] 94%
 | Phase 14 P12 | 759 | 2 tasks | 9 files |
 | Phase 14 P13 | 11 | 2 tasks | 9 files |
 | Phase 14 P14 | 5min | 2 tasks | 3 files |
+| Phase 14 P15 | 6 min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -472,6 +473,9 @@ Key constraints for v2.0:
 - [Phase ?]: Plan 14-13: csv-export.ts kept (NOT deleted) with prominent deprecation header + JSDoc @deprecated tag — reserved for hypothetical PUBLIC endpoints; zero live admin callers remain
 - [Phase ?]: Plan 14-14: DeleteProjectUseCase accepts actor: User (DIP) + admin-bypass on PM-ownership; project.deleted_by_admin audit row records target_manager_id for compliance (UAT Test 23 closed)
 - [Phase ?]: Plan 14-14 audit pass: only DeleteProjectUseCase had the bug; UpdateProjectUseCase already has is_admin: bool admin-bypass; archive routes through Update; 0 follow-up plans needed; sibling-flow Test 4 ships as pytest.skip sentinel per M-1
+- [Phase 14]: Plan 14-15 (Cluster C): explicit useMemo'd field-by-field DTO->ActivityItem normalizer in recent-admin-events.tsx replaces bald 'as ActivityItem[]' cast (Diagnosis A pre-committed by checker B-4) — Locks in correctness against future field drift; today the wire shapes overlap, but next time AdminAuditItem and ActivityItem diverge, the bald cast would silently route every row to the catch-all (Test 11 failure mode)
+- [Phase 14]: Plan 14-15 (D-D5/N-2): admin-table Detay variant defaults to multi-line wrap (whiteSpace:normal + WebkitLineClamp:3 + wordBreak:break-word); title attr is screen-reader complement, not primary affordance — Per N-2 user-stated quality bar (Frustrations directive — re-read user instructions before claiming a task is done), title-attr-only requires hover to read content; multi-line clamp lets the user READ the full primary line within the table cell
+- [Phase 14]: Plan 14-15 (M-3): structural-dispatch test (vi.spyOn + expect.objectContaining) asserts BOTH /admin Recent Events and /admin/audit Detay invoke mapAuditToSemantic with structurally-identical input — replaces brittle text-equality smoke — Structural assertion forces a real bug if the normalizer drops a field; text-equality could pass coincidentally if both consumers happened to coerce to the same fallback. Single-source-of-truth contract is now mechanically guarded.
 
 ### Pending Todos
 
@@ -502,8 +506,8 @@ v2.0 additions:
 
 ## Session Continuity
 
-Last session: 2026-04-28T15:38:39.694Z
-Stopped at: Phase 14 Plan 14-06 complete (/admin/workflows tab — template card grid + impact-aware Sil with Yine de sil checkbox + client-side composed clone, D-B6 enforced)
+Last session: 2026-04-28T15:51:32.452Z
+Stopped at: Phase 14 Plan 14-15 complete (Cluster C — Recent Events Diagnosis-A normalizer + Detay N-2 line-wrap + M-3 structural-dispatch test)
 Resume file: None
 
 **Current Phase:** 14
