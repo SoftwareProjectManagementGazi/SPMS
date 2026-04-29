@@ -1,10 +1,16 @@
 """API-08 / D-36 Artifact CRUD router.
 
-Permissions (D-36):
+Permissions (D-36 baseline + Phase 15 D-3.5 / D-3.6 perm DSL):
   GET (list/detail) — any project member
-  POST/DELETE — require_project_transition_authority (Admin/PM/TL)
-  PATCH /artifacts/{id}/mine — assignee only (status/note/file_id)
-  PATCH /artifacts/{id} — Admin/PM/TL (all fields including assignee_id)
+  POST/PATCH/DELETE — Hibrit 2-tier (D-1.14):
+    tier 1: require_permission("artifact.create" / "artifact.edit" / "artifact.delete")
+    tier 2: inline RPTA (Admin/PM/TL — yan yana, D-3.6)
+  PATCH /artifacts/{id}/mine — assignee only (status/note/file_id), no perm gate
+    because the assignee writes their own work product (D-36 self-edit semantics).
+
+  Resource-specific perms per D-3.5 — Migration 007 seeds artifact.create/edit/delete
+  distinctly. The legacy umbrella alias `require_permission("lifecycle.edit")` is
+  intentionally NOT used here (kept reserved for the dedicated phase_transitions router).
 """
 import uuid
 from pathlib import Path
@@ -12,7 +18,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
-from app.api.deps.auth import get_current_user, _is_admin
+from app.api.deps.auth import get_current_user, _is_admin, require_permission  # Phase 15 D-3.5 / D-3.6 — artifact.* perms
 from app.api.deps.artifact import get_artifact_repo
 from app.api.deps.project import get_project_repo
 from app.api.deps.audit import get_audit_repo
@@ -119,6 +125,7 @@ async def get_artifact(
 @router.post("/artifacts", response_model=ArtifactResponseDTO, status_code=201)
 async def create_artifact(
     dto: ArtifactCreateDTO,
+    _perm=Depends(require_permission("artifact.create")),  # Phase 15 D-3.5 tier 1 (Pitfall 13 — perm-first)
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),
@@ -176,6 +183,7 @@ async def update_artifact_as_assignee(
 async def update_artifact_as_manager(
     artifact_id: int,
     dto: ArtifactUpdateByManagerDTO,
+    _perm=Depends(require_permission("artifact.edit")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),
@@ -196,6 +204,7 @@ async def update_artifact_as_manager(
 @router.delete("/artifacts/{artifact_id}", status_code=204)
 async def delete_artifact(
     artifact_id: int,
+    _perm=Depends(require_permission("artifact.delete")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     artifact_repo=Depends(get_artifact_repo),
     project_repo=Depends(get_project_repo),

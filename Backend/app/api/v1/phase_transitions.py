@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps.auth import require_project_transition_authority
+from app.api.deps.auth import require_project_transition_authority, require_permission  # Phase 15 D-1.4 — lifecycle.edit gate
 from app.api.deps.project import get_project_repo
 from app.api.deps.task import get_task_repo
 from app.api.deps.audit import get_audit_repo
@@ -31,6 +31,7 @@ async def create_phase_transition(
     dto: PhaseTransitionRequestDTO,
     request: Request,
     idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    _perm=Depends(require_permission("lifecycle.edit")),  # Phase 15 D-1.4 tier 1 (Pitfall 13 — perm-first; D-3.6 RPTA tier 2 yan yana)
     user=Depends(require_project_transition_authority),
     project_repo=Depends(get_project_repo),
     task_repo=Depends(get_task_repo),

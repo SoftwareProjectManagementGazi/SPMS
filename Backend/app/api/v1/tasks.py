@@ -16,6 +16,7 @@ from app.api.dependencies import (
     get_user_repo,
     get_notification_preference_repo,
 )
+from app.api.deps.auth import require_permission  # Phase 15 D-1.4 / D-1.14 — perm DSL tier 1
 from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
 from app.infrastructure.email.email_service import send_notification_email
@@ -57,6 +58,7 @@ router = APIRouter()
 @router.post("/", response_model=TaskResponseDTO, status_code=status.HTTP_201_CREATED)
 async def create_task(
     dto: TaskCreateDTO,
+    _perm: User = Depends(require_permission("task.create")),  # Phase 15 D-1.14 tier 1 (Pitfall 13 — perm-first)
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_current_user),
@@ -166,6 +168,7 @@ async def update_task(
     dto: TaskUpdateDTO,
     background_tasks: BackgroundTasks,
     apply_to: str = Query("this", description="'this' or 'all' — apply update to all future series instances"),
+    _perm: User = Depends(require_permission("task.change_status")),  # Phase 15 D-1.14 (umbrella per plan)
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
@@ -293,6 +296,7 @@ async def patch_task(
     task_id: int,
     dto: TaskUpdateDTO,
     background_tasks: BackgroundTasks,
+    _perm: User = Depends(require_permission("task.change_status")),  # Phase 15 D-1.14 (umbrella per plan)
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),
@@ -418,6 +422,7 @@ async def patch_task(
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: int,
+    _perm: User = Depends(require_permission("task.delete")),  # Phase 15 D-1.14 tier 1
     task_repo: ITaskRepository = Depends(get_task_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_task_project_member),

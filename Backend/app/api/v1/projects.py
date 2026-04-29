@@ -16,7 +16,7 @@ from app.api.dependencies import (
 )
 from app.api.deps.audit import get_audit_repo
 from app.domain.repositories.audit_repository import IAuditRepository
-from app.api.deps.auth import require_project_transition_authority
+from app.api.deps.auth import require_project_transition_authority, require_permission, _has_permission  # Phase 15 D-1.4
 from app.application.services.notification_service import PollingNotificationService
 from app.domain.entities.notification import NotificationType
 from app.application.dtos.project_dtos import (
@@ -43,7 +43,7 @@ from app.domain.repositories.team_repository import ITeamRepository
 from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.sprint_repository import ISprintRepository
 from app.domain.entities.user import User
-from app.domain.entities.project import Project
+from app.domain.entities.project import Project, ProjectStatus
 from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError, UserNotFoundError
 
 router = APIRouter()
@@ -100,6 +100,7 @@ async def _fire_integration_event(process_config, event_type: str, payload: dict
 @router.post("/", response_model=ProjectResponseDTO, status_code=status.HTTP_201_CREATED)
 async def create_project(
     dto: ProjectCreateDTO,
+    _perm: User = Depends(require_permission("project.create")),  # Phase 15 D-1.14 tier 1
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
     task_repo: ITaskRepository = Depends(get_task_repo),
@@ -195,12 +196,29 @@ async def get_project(
 async def update_project(
     project_id: int,
     dto: ProjectUpdateDTO,
+    _perm: User = Depends(require_permission("project.edit")),  # Phase 15 D-1.14 tier 1 (archive via status flows through PATCH per D-25)
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
     current_user: User = Depends(get_current_user),
     notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
+    # Phase 15 D-1.4 / D-1.14 — archive lifecycle (PATCH /{id} status=ARCHIVED per D-25)
+    # additionally requires the dedicated archive perm. The matrix UI exposes
+    # `require_permission("project.archive")` as a separate row so revoking it
+    # disables archive without disabling project.edit. FastAPI Depends cannot
+    # read the body, so we apply the perm gate inline (same dispatch idiom as
+    # bulk_action_user use case D-1.16 / Pitfall 17).
+    if dto.status == ProjectStatus.ARCHIVED:
+        if not _has_permission(current_user, "project.archive"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "PERMISSION_DENIED",
+                    "missing_permission": "project.archive",
+                    "message": "Bu işlem için project.archive yetkisi gerekir",
+                },
+            )
     try:
         use_case = UpdateProjectUseCase(project_repo, sprint_repo)
         project = await use_case.execute(project_id, dto, current_user.id, is_admin=_is_admin(current_user))  # type: ignore
@@ -270,6 +288,7 @@ async def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: int,
+    _perm: User = Depends(require_permission("project.delete")),  # Phase 15 D-1.14 tier 1
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
     audit_repo: IAuditRepository = Depends(get_audit_repo),

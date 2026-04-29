@@ -26,6 +26,7 @@ from app.api.dependencies import (
     get_project_repo,
     _is_admin,
 )
+from app.api.deps.auth import require_permission  # Phase 15 D-1.4 / D-3.5 — labels under lifecycle.edit umbrella
 from app.application.dtos.label_dtos import LabelCreateDTO, LabelResponseDTO
 from app.application.use_cases.manage_labels import (
     ListProjectLabelsUseCase,
@@ -63,6 +64,7 @@ async def list_project_labels(
 )
 async def create_label(
     dto: LabelCreateDTO,
+    _perm: User = Depends(require_permission("lifecycle.edit")),  # Phase 15 D-3.5 — labels are project-admin scope
     current_user: User = Depends(get_current_user),
     project_repo: IProjectRepository = Depends(get_project_repo),
     repo: ILabelRepository = Depends(get_label_repo),

@@ -1,8 +1,14 @@
 """API-09 / D-37 PhaseReport CRUD + PDF export router.
 
-Permissions (D-37):
+Permissions (D-37 baseline + Phase 15 D-3.5 / D-3.6 perm DSL):
   GET (list/detail/pdf) — any project member (PDF also for members)
-  POST/PATCH/DELETE — require_project_transition_authority (Admin/PM/TL)
+  POST/PATCH/DELETE — Hibrit 2-tier (D-1.14):
+    tier 1: require_permission("phase_report.create" / "phase_report.edit" / "phase_report.delete")
+    tier 2: inline RPTA (Admin/PM/TL — yan yana, D-3.6)
+
+  Resource-specific perms per D-3.5 — Migration 007 seeds phase_report.create/edit/delete
+  distinctly. The legacy umbrella alias `require_permission("lifecycle.edit")` is
+  intentionally NOT used here (kept reserved for the dedicated phase_transitions router).
 
 PDF rate limit (D-51): 30s per user (in-memory dict keyed by user_id).
 """
@@ -12,7 +18,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from app.api.deps.auth import get_current_user, _is_admin
+from app.api.deps.auth import get_current_user, _is_admin, require_permission  # Phase 15 D-3.5 / D-3.6 — phase_report.* perms
 from app.api.deps.phase_report import get_phase_report_repo
 from app.api.deps.project import get_project_repo
 from app.api.deps.audit import get_audit_repo
@@ -92,6 +98,7 @@ async def get_report(
 @router.post("/phase-reports", response_model=PhaseReportResponseDTO, status_code=201)
 async def create_report(
     dto: PhaseReportCreateDTO,
+    _perm=Depends(require_permission("phase_report.create")),  # Phase 15 D-3.5 tier 1 (Pitfall 13 — perm-first)
     user=Depends(get_current_user),
     report_repo=Depends(get_phase_report_repo),
     audit_repo=Depends(get_audit_repo),
@@ -109,6 +116,7 @@ async def create_report(
 async def update_report(
     report_id: int,
     dto: PhaseReportUpdateDTO,
+    _perm=Depends(require_permission("phase_report.edit")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     report_repo=Depends(get_phase_report_repo),
     project_repo=Depends(get_project_repo),
@@ -124,6 +132,7 @@ async def update_report(
 @router.delete("/phase-reports/{report_id}", status_code=204)
 async def delete_report(
     report_id: int,
+    _perm=Depends(require_permission("phase_report.delete")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     report_repo=Depends(get_phase_report_repo),
     project_repo=Depends(get_project_repo),

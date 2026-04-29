@@ -1,8 +1,15 @@
 """API-07 / D-35 Milestone CRUD router.
 
-Permissions (D-35):
+Permissions (D-35 baseline + Phase 15 D-3.5 / D-3.6 perm DSL):
   GET (list/detail) — any project member
-  POST/PATCH/DELETE — require_project_transition_authority (Admin/PM/TL)
+  POST/PATCH/DELETE — Hibrit 2-tier (D-1.14):
+    tier 1: require_permission("milestone.create" / "milestone.edit" / "milestone.delete")
+    tier 2: require_project_transition_authority (Admin/PM/TL — yan yana, D-3.6)
+
+  Resource-specific perms per D-3.5 — Migration 007 seeds milestone.create/edit/delete
+  distinctly so the matrix UI exposes them as separate togglable rows. The legacy
+  umbrella alias `require_permission("lifecycle.edit")` is intentionally NOT used
+  here (kept reserved for the dedicated phase_transitions router instead).
 
 Note on inline authority check:
   require_project_transition_authority DI helper takes project_id as path param.
@@ -14,7 +21,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.api.deps.auth import get_current_user, _is_admin
+from app.api.deps.auth import get_current_user, _is_admin, require_permission  # Phase 15 D-3.5 / D-3.6 — milestone.* perms
 from app.api.deps.milestone import get_milestone_repo
 from app.api.deps.project import get_project_repo
 from app.api.deps.audit import get_audit_repo
@@ -91,6 +98,7 @@ async def get_milestone(
 @router.post("/milestones", response_model=MilestoneResponseDTO, status_code=201)
 async def create_milestone(
     dto: MilestoneCreateDTO,
+    _perm=Depends(require_permission("milestone.create")),  # Phase 15 D-3.5 tier 1 (Pitfall 13 — perm-first; D-3.6 inline RPTA stays yan yana)
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),
@@ -146,6 +154,7 @@ async def create_milestone_for_project(
 async def update_milestone(
     milestone_id: int,
     dto: MilestoneUpdateDTO,
+    _perm=Depends(require_permission("milestone.edit")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),
@@ -165,6 +174,7 @@ async def update_milestone(
 @router.delete("/milestones/{milestone_id}", status_code=204)
 async def delete_milestone(
     milestone_id: int,
+    _perm=Depends(require_permission("milestone.delete")),  # Phase 15 D-3.5 tier 1
     user=Depends(get_current_user),
     milestone_repo=Depends(get_milestone_repo),
     project_repo=Depends(get_project_repo),

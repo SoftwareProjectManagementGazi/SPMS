@@ -16,6 +16,7 @@ from app.api.dependencies import (
     get_notification_preference_repo,
     _is_admin,
 )
+from app.api.deps.auth import require_permission  # Phase 15 D-1.4 / D-3.5 — comment.* perms
 from app.api.deps.audit import get_audit_repo
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.repositories.user_repository import IUserRepository
@@ -58,6 +59,7 @@ async def list_comments(
 async def create_comment(
     dto: CommentCreateDTO,
     background_tasks: BackgroundTasks,
+    _perm: User = Depends(require_permission("comment.create")),  # Phase 15 D-3.5 tier 1
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
     task_repo: ITaskRepository = Depends(get_task_repo),
@@ -139,6 +141,7 @@ async def create_comment(
 async def update_comment(
     comment_id: int,
     dto: CommentUpdateDTO,
+    _perm: User = Depends(require_permission("comment.edit")),  # Phase 15 D-3.5 tier 1
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
     task_repo: ITaskRepository = Depends(get_task_repo),
@@ -154,6 +157,7 @@ async def update_comment(
 @router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_comment(
     comment_id: int,
+    _perm: User = Depends(require_permission("comment.delete")),  # Phase 15 D-3.5 tier 1
     current_user: User = Depends(get_current_user),
     comment_repo: ICommentRepository = Depends(get_comment_repo),
     task_repo: ITaskRepository = Depends(get_task_repo),
