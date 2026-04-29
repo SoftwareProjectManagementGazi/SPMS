@@ -25,6 +25,9 @@ import app.infrastructure.database.models.audit_log  # noqa: F401
 import app.infrastructure.database.models.role  # noqa: F401
 import app.infrastructure.database.models.board_column  # noqa: F401
 import app.infrastructure.database.models.notification  # noqa: F401
+# Phase 15 Plan 15-04 — RBAC redesign additions
+import app.infrastructure.database.models.permission  # noqa: F401
+import app.infrastructure.database.models.role_permission  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
