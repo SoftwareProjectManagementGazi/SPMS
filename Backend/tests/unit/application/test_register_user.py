@@ -46,6 +46,21 @@ class MockUserRepository(IUserRepository):
     async def get_all_by_role(self, role_name: str) -> List[User]:
         return [u for u in self.users.values() if getattr(u, "role", None) == role_name]
 
+    # Plan 15-05 D-1.17 — IUserRepository ABC extension (Phase 15 RBAC Wave 1)
+    async def update_role(self, user_id: int, role_id: int) -> None:
+        user = self.users.get(user_id)
+        if user is not None:
+            user.role_id = role_id
+
+    async def bulk_update_role_id(self, from_role_id: int, to_role_id: int) -> List[int]:
+        affected: List[int] = []
+        for u in self.users.values():
+            if getattr(u, "role_id", None) == from_role_id:
+                u.role_id = to_role_id
+                if u.id is not None:
+                    affected.append(u.id)
+        return affected
+
 class MockSecurityService(ISecurityService):
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return plain_password == hashed_password.replace("hashed_", "")

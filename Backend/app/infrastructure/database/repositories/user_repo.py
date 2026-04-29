@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException
 
@@ -124,3 +124,43 @@ class SqlAlchemyUserRepository(IUserRepository):
         )
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
+
+    # ------------------------------------------------------------------
+    # Phase 15 RBAC-03 / D-1.17 (Plan 15-05)
+    # ------------------------------------------------------------------
+
+    async def update_role(self, user_id: int, role_id: int) -> None:
+        """Phase 15 D-1.17 — set users.role_id directly.
+
+        Replaces the Phase 14 14-01 `_make_update_role` closure pattern. The
+        session.flush() (rather than commit()) keeps this play nicely inside the
+        outer get_db_session() transaction — DeleteRoleUseCase composes this
+        with bulk_update_role_id + role_perm_repo.delete_by_role + role_repo.delete
+        in one atomic txn (Member-fallback-01 mitigation).
+        """
+        await self.session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(role_id=role_id)
+        )
+        await self.session.flush()
+
+    async def bulk_update_role_id(self, from_role_id: int, to_role_id: int) -> List[int]:
+        """Phase 15 D-2.2 — DeleteRoleUseCase Member fallback.
+
+        Returns affected user IDs (for per-user audit emission). Single transaction;
+        caller (DeleteRoleUseCase) composes with role_perm_repo.delete_by_role +
+        role_repo.delete inside the same get_db_session() scope.
+        """
+        affected = await self.session.execute(
+            select(UserModel.id).where(UserModel.role_id == from_role_id)
+        )
+        user_ids = [row[0] for row in affected.all()]
+        if user_ids:
+            await self.session.execute(
+                update(UserModel)
+                .where(UserModel.role_id == from_role_id)
+                .values(role_id=to_role_id)
+            )
+            await self.session.flush()
+        return user_ids

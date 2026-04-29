@@ -27,9 +27,14 @@ async def _db_has_roles(session: AsyncSession) -> bool:
 
 
 # Ordered list of (path, method, payload) - admin endpoints that need a {uid}
+# Phase 15 D-1.17 (Plan 15-05): role-change body migrated from {role: AdminRole}
+# string to {role_id: int}. The 403/401 access-class tests below only need ANY
+# valid-shape body for the DTO to validate, so we hardcode role_id=1 (which is
+# whatever the seeded Admin role id happens to be — the assertion is that the
+# response is 403/401, not that the role exists).
 ADMIN_ENDPOINTS_NEED_USER = [
     ("/api/v1/admin/users/{uid}/password-reset", "post", None),
-    ("/api/v1/admin/users/{uid}/role", "patch", {"role": "Member"}),
+    ("/api/v1/admin/users/{uid}/role", "patch", {"role_id": 1}),  # D-1.17 migrated
     ("/api/v1/admin/users/{uid}/deactivate", "patch", None),
 ]
 ADMIN_ENDPOINTS_NO_USER = [
@@ -166,13 +171,21 @@ async def test_admin_deactivate_admin_gets_204(authenticated_client, db_session)
 
 @pytest.mark.asyncio
 async def test_admin_change_role_admin_gets_204(authenticated_client, db_session):
+    """Phase 15 D-1.17 (Plan 15-05) — body migrated from `role: AdminRole` string
+    to `role_id: int`. We look up the Project Manager role id from the seeded
+    roles table at runtime (Migration 007 seeds the 4 system roles).
+    """
     if not await _db_has_roles(db_session):
         pytest.skip("Roles not seeded")
     uid = await _seed_target_user(db_session, "tgtrole@testexample.com")
+    pm_role_id = (await db_session.execute(
+        text("SELECT id FROM roles WHERE name='Project Manager' LIMIT 1")
+    )).scalar()
+    assert pm_role_id is not None, "Project Manager role must be seeded"
     async with authenticated_client(role="admin") as ac:
         r = await ac.patch(
             f"/api/v1/admin/users/{uid}/role",
-            json={"role": "Project Manager"},
+            json={"role_id": int(pm_role_id)},
         )
         assert r.status_code == 204, r.text
 
