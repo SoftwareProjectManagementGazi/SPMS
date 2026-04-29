@@ -5,7 +5,7 @@
 
 ## Plan 14-01 (Wave 0)
 
-### Pre-existing TypeScript build error in app/(shell)/reports/page.tsx
+### TIDY-01: Pre-existing TypeScript build error in app/(shell)/reports/page.tsx
 
 **Discovered during:** Plan 14-01 final `npm run build` smoke check.
 
@@ -20,7 +20,7 @@ Type error: Type '"warning"' is not assignable to type
 The StatCard `tone="warning"` value was added when StatCard's tone enum did
 NOT include "warning". Subsequent StatCard refactor narrowed the union.
 
-**Why deferred:**
+**Why deferred (originally):**
 - Out of scope for Plan 14-01 — not introduced by Wave 0 code.
 - The Plan 14-01 unit + integration tests pass; only the final `next build`
   type-checker catches it because `npm run build` runs strict type-check
@@ -30,9 +30,36 @@ NOT include "warning". Subsequent StatCard refactor narrowed the union.
   consistent with existing hook patterns (use-projects.ts uses `unknown` but
   many other hooks use `any` — no project-wide convention enforced).
 
-**Action item:** A future cleanup phase or a Phase 14-02 follow-up plan should
-fix the StatCard tone usage in reports/page.tsx (rename to "neutral" or extend
-the StatCard tone enum to include "warning").
+**Status: CLOSED by Plan 15-03 (verify-and-close on 2026-04-29).**
+
+**Resolution path (Path A — verify-only, zero file change in Plan 15-03):**
+- Plan 15-03 ran `cd Frontend2 && npm run build` on 2026-04-29 and the
+  build exits 0 cleanly (24 routes prerendered, TypeScript strict pass).
+- The actual fix landed earlier in commit `dce2ba92` (Plan 14-01 fixup,
+  "fix(14-01-fixup): unblock Wave 1+ build — pre-existing TS + Suspense
+  errors"), which renamed the offending consumer from `tone="warning"` to
+  `tone="danger"` at `Frontend2/app/(shell)/reports/page.tsx:158`.
+  Plan 14-18 Cluster F did NOT modify the StatCard tone surface — the
+  speculation in the Plan 15-03 PLAN body that "Plan 14-18 most likely
+  closed it" was incorrect; the actual closer is the Plan 14-01 fixup
+  commit. Plan 15-03 verifies and records the closure.
+- StatCard tone enum at `Frontend2/components/dashboard/stat-card.tsx`
+  remains `"primary" | "info" | "success" | "danger" | "neutral"` — no
+  modification was needed because the consumer was renamed, not the enum
+  extended (per CONTEXT D-4.5 D-00 quality bar: prefer minimal-change
+  closure over defensive enum widening).
+- TIDY-01 will not re-open in Phase 15 RBAC plans because:
+  (a) the consumer was permanently renamed to `tone="danger"` at line 158,
+  (b) Phase 15 RBAC plans (15-04+) do not touch reports/page.tsx StatCard
+      tones; they touch role/permission UI surfaces separately.
+
+**Verification (2026-04-29):**
+- `cd Frontend2 && npm run build` — exit 0, 24 routes generated, TypeScript
+  strict mode green.
+- `git diff Frontend2/components/dashboard/stat-card.tsx` (Plan 15-03) →
+  empty (zero-change path A).
+- `git diff Frontend2/app/(shell)/reports/page.tsx` (Plan 15-03) →
+  empty (consumer was already renamed by `dce2ba92`).
 
 ## Plan 14-09 (Wave 3)
 
