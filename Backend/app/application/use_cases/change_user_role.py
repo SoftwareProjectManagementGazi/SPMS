@@ -1,6 +1,6 @@
 """Phase 15 RBAC-03 / D-1.17 — ChangeUserRoleUseCase migrated (Plan 15-05).
 
-Phase 14 14-01 used `target_role: AdminRole` literal + duck-typed
+Phase 14 14-01 used a string-literal role enum + duck-typed
 update_role/role_id_resolver callables. Plan 15-05 migrates to:
 
 - Constructor: (user_repo: IUserRepository, role_repo: IRoleRepository,
