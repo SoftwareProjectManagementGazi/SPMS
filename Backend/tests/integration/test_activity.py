@@ -8,6 +8,9 @@ Covers:
 import pytest
 from httpx import AsyncClient
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 @pytest.mark.asyncio
 async def test_get_global_activity_admin_returns_200(authenticated_client, db_session):

@@ -15,6 +15,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.services import idempotency_cache
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Skip guard: detect whether migration 005 has been applied

@@ -3,6 +3,9 @@ import pytest
 from sqlalchemy import text
 from app.infrastructure.database.repositories.team_repo import SqlAlchemyTeamRepository
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 @pytest.mark.asyncio
 async def test_user_leads_any_team_on_project_positive(async_session):

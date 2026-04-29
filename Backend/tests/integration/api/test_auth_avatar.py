@@ -1,5 +1,8 @@
 import pytest
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # AUTH-01 (avatar): Avatar Upload and Serving — xfail integration stubs
 # These tests will be implemented in Plan 02-03.

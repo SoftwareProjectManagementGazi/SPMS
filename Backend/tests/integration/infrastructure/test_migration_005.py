@@ -25,6 +25,9 @@ from sqlalchemy import text
 
 from app.infrastructure.database.models.audit_log import AuditLogModel
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Helper: detect whether migration 005 has been applied to the connected DB

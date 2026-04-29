@@ -27,6 +27,9 @@ from app.domain.exceptions import (
     JoinRequestNotFoundError,
 )
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 class FakeProjectJoinRequestRepo:
     def __init__(self) -> None:

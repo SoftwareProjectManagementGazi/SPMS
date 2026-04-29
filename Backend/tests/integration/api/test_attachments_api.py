@@ -1,5 +1,8 @@
 import pytest
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # TASK-09: Attachments API endpoints — integration test stubs
 # These tests will be implemented in a later plan.

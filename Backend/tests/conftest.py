@@ -176,3 +176,56 @@ async def authenticated_client(db_session):
         app.dependency_overrides.clear()
 
     return _builder
+
+
+# ---------------------------------------------------------------------------
+# Phase 15 Plan 15-02 TIDY-05 — `requires_db` marker + auto-skip when DB down.
+# Source: 15-RESEARCH.md Pattern 7 (pytest_collection_modifyitems with DB probe).
+# CONTEXT D-4.4: developer iter `pytest -m 'not requires_db'`; CI `pytest`.
+# ---------------------------------------------------------------------------
+
+def pytest_configure(config):
+    """Register the `requires_db` marker so `--strict-markers` does not warn."""
+    config.addinivalue_line(
+        "markers",
+        "requires_db: marks tests as requiring a live Postgres connection",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-skip @pytest.mark.requires_db tests when the DB is unreachable.
+
+    Probes settings.DATABASE_URL at collection time. On connection failure,
+    adds pytest.mark.skip(reason=...) to every test tagged `requires_db`.
+    Probe failures must NEVER raise — they only add skip markers.
+
+    Threat model (T-15-02 Test-01): probe failures are caught inside _probe;
+    pool_pre_ping=True short-circuits in <100ms on connection refused, so the
+    hook does not stall collection. Connection string is sourced from settings
+    only — never logged.
+    """
+    import asyncio
+    import sqlalchemy as sa
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    async def _probe() -> bool:
+        try:
+            engine = create_async_engine(settings.DATABASE_URL, pool_pre_ping=True)
+            async with engine.connect() as conn:
+                await conn.execute(sa.text("SELECT 1"))
+            await engine.dispose()
+            return True
+        except Exception:
+            return False
+
+    try:
+        db_alive = asyncio.run(_probe())
+    except Exception:
+        # Defensive: even an unexpected event-loop error must not abort collection.
+        db_alive = False
+
+    if not db_alive:
+        skip_marker = pytest.mark.skip(reason="DB not available (requires_db)")
+        for item in items:
+            if "requires_db" in item.keywords:
+                item.add_marker(skip_marker)

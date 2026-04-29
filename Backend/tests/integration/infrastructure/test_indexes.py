@@ -7,6 +7,9 @@ Implementation is pending Plan 01-04 (DB index creation).
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 @pytest.mark.asyncio
 @pytest.mark.xfail(reason="pending implementation in 01-04 — DB indexes not yet created")

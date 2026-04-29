@@ -208,7 +208,7 @@ async def update_project(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectAccessDeniedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
-    except ValidationError as e:
+    except (ValidationError, ValueError) as e:
         # Phase 12 Plan 12-10 (Bug X + Bug Y UAT fix) — surface WorkflowConfig
         # Pydantic validation failures as 422 (not 500). Pre-fix the use case
         # never validated workflow shapes, so bad node IDs / missing
@@ -216,9 +216,38 @@ async def update_project(
         # active, we must convert pydantic.ValidationError -> 422 so the
         # FE save-flow's 422 branch (CONTEXT D-32 5-error matrix) shows
         # the correct "Doğrulama hatası" toast.
+        #
+        # Phase 15 Plan 15-02 TIDY-03 (CONTEXT D-4.3 / RESEARCH Pitfall 4):
+        # Pydantic v2 custom validators (e.g. WorkflowConfig.is_final D-19
+        # rule 4 check) raise ValueError, which Pydantic v2 *wraps* into a
+        # ValidationError before it propagates here. The wrapped
+        # ValidationError.errors() default output includes ctx={"error":
+        # ValueError(...)} — the raw exception object is NOT JSON serializable
+        # so JSONResponse.render() throws TypeError. Two fixes layered:
+        #   1. Use include_context=False on .errors() (strips the raw exception).
+        #   2. When the validation failure is purely a custom-validator
+        #      ValueError (every entry has type=='value_error'), surface the
+        #      stable INVALID_WORKFLOW_CONFIG envelope so the FE error_code
+        #      taxonomy (D-32) maps to the correct toast.
+        if isinstance(e, ValidationError):
+            errors = e.errors(include_context=False)
+            value_error_only = bool(errors) and all(
+                err.get("type") == "value_error" for err in errors
+            )
+            if value_error_only:
+                # Strip Pydantic prefix "Value error, " from the message for cleaner FE display.
+                first_msg = str(errors[0].get("msg", ""))
+                cleaned = first_msg.removeprefix("Value error, ")
+                detail = {"error_code": "INVALID_WORKFLOW_CONFIG", "message": cleaned}
+            else:
+                detail = errors
+        else:
+            # Bare ValueError (raised outside a Pydantic validator — e.g. a
+            # raw ValueError inside the use case body).
+            detail = {"error_code": "INVALID_WORKFLOW_CONFIG", "message": str(e)}
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=e.errors(),
+            detail=detail,
         )
 
     # Notify all admins about project update (excluding the actor)

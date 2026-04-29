@@ -5,6 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from app.infrastructure.database.repositories.phase_report_repo import SqlAlchemyPhaseReportRepository
 from app.domain.entities.phase_report import PhaseReport
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 async def _ensure_project(async_session, key="PRREP1"):
     existing = (await async_session.execute(text(f"SELECT id FROM projects WHERE key='{key}'"))).scalar()

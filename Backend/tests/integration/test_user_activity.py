@@ -10,6 +10,9 @@ import pytest
 
 from app.application.use_cases.get_user_activity import GetUserActivityUseCase
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 def _audit_item(
     item_id: int, *, action: str = "created", entity_type: str = "task",

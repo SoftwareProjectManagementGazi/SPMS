@@ -21,6 +21,9 @@ from app.domain.entities.project_join_request import (
     ProjectJoinRequest,
 )
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 class FakeProjectJoinRequestRepo:
     """In-memory IProjectJoinRequestRepository impl — captures last create call."""

@@ -19,6 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.get_global_audit import GetGlobalAuditUseCase
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 async def _db_has_roles(session: AsyncSession) -> bool:
     try:

@@ -9,6 +9,9 @@ import pytest_asyncio
 from sqlalchemy import text
 from httpx import AsyncClient
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Domain + Application — pure unit-style tests (no DB, no HTTP)

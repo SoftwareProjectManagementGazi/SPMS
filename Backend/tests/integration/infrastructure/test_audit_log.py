@@ -15,6 +15,9 @@ from app.infrastructure.database.models.audit_log import AuditLogModel
 from app.infrastructure.database.repositories.task_repo import SqlAlchemyTaskRepository
 from app.infrastructure.database.repositories.project_repo import SqlAlchemyProjectRepository
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 @pytest.mark.asyncio
 @pytest.mark.xfail(reason="Integration test — requires live DB with seeded data; run manually")

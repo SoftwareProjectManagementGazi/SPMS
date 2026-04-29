@@ -5,6 +5,10 @@ is usable from the API layer (no import issues). Unit coverage of rules is
 in tests/unit/application/test_workflow_validation.py.
 """
 from app.application.dtos.workflow_dtos import WorkflowConfig
+import pytest
+
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
 
 
 def test_workflow_config_importable():

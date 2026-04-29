@@ -3,6 +3,9 @@ from app.infrastructure.database.repositories.user_repo import SqlAlchemyUserRep
 from app.domain.entities.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 @pytest.mark.asyncio
 async def test_create_and_get_user(db_session: AsyncSession):
     """

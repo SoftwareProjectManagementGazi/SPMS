@@ -19,6 +19,9 @@ from app.domain.services.chart_applicability import (
     ITERATION_METHODOLOGIES,
 )
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # In-memory fakes (Phase 12 D-09 pattern)

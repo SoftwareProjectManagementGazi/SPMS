@@ -12,6 +12,9 @@ themselves before they ever touch a database.
 import pytest
 from app.application.dtos.workflow_dtos import WorkflowEdge
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 def _extract_default_workflow_edges_from_seeder():
     """Read the seeder module and pull out every edge dict from every template.

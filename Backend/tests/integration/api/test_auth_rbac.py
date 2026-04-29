@@ -13,6 +13,9 @@ from app.infrastructure.database.repositories.task_repo import SqlAlchemyTaskRep
 from app.infrastructure.config import settings
 from app.infrastructure.database.models.user import UserModel # For creation if repo expects entity
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 # Helper to generate token
 def create_test_token(email: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=15)

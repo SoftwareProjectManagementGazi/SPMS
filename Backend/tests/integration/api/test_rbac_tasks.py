@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from app.infrastructure.database.models import UserModel, ProjectModel, TaskModel, RoleModel
 from app.infrastructure.adapters.security_adapter import SecurityAdapter
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Helpers

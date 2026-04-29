@@ -4,6 +4,9 @@ from sqlalchemy import text
 from app.infrastructure.database.repositories.artifact_repo import SqlAlchemyArtifactRepository
 from app.domain.entities.artifact import Artifact, ArtifactStatus
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 async def _ensure_project(async_session, key="ARTIF1"):
     result = await async_session.execute(text(f"SELECT id FROM projects WHERE key='{key}'"))

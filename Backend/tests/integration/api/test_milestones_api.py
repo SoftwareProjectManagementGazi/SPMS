@@ -5,6 +5,9 @@ Tests require migration 005 applied. Skip cleanly otherwise.
 import pytest
 from sqlalchemy import text
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Skip guard

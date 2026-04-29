@@ -27,6 +27,9 @@ from app.infrastructure.database.repositories.project_repo import (
     DONE_COLUMN_NAMES,
 )
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Membership contract — names that MUST be in the whitelist

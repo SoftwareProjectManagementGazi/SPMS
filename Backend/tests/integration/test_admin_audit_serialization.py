@@ -34,6 +34,9 @@ from app.infrastructure.database.repositories.audit_repo import (
     _resolve_entity_label,
 )
 
+# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
+pytestmark = pytest.mark.requires_db
+
 
 # ---------------------------------------------------------------------------
 # Test 1 — project_name takes precedence and resolves cleanly
