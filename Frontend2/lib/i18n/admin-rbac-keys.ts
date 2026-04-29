@@ -1,11 +1,20 @@
-// Phase 14 Plan 14-04 — Admin RBAC placeholder i18n key map.
+// Phase 14 Plan 14-04 (placeholder shape) → Phase 15 Plan 15-10 (RBAC active)
+// — Admin RBAC i18n key map.
 //
 // Surface D (/admin/roles) + Surface E (/admin/permissions) per UI-SPEC.
-// Both surfaces are RBAC-deferred placeholders (CONTEXT D-A2..A5):
-//   - Roller tab: 4 system-role cards + dashed-border "Yeni rol oluştur"
-//     placeholder + page-level AlertBanner explaining v3.0 defer.
-//   - İzin Matrisi: 14×4 matrix with EVERY toggle disabled + aria-disabled
-//     + tooltip + v3.0 Badge in card header.
+//   - Roller tab: 4 system-role cards (Sistem badge for is_system_role=true,
+//     read-only) + active "Yeni rol oluştur" trigger card opening
+//     RoleCreateModal (Plan 15-11) + page-level AlertBanner explaining the
+//     active state.
+//   - İzin Matrisi: 14×4 matrix with auto-save toggles per cell mutation
+//     (D-1.12 useUpdatePermissionCell), per-row scope badge (D-3.4), Admin
+//     column read-only (D-1.5 super-role), Guest column read-only (D-2.4).
+//
+// Phase 15 Plan 15-10 dropped the `admin.permissions.v3_badge_label` and
+// `admin.roles.v3_badge_label` keys (atomic 7-layer placeholder defense
+// removal per D-2.7 — see 15-PATTERNS.md §21 atomic invariant). The
+// `admin.permissions.toggle_tooltip` key was also dropped (toggles no longer
+// have a placeholder tooltip — they auto-save on change).
 //
 // Per Plan 14-02 precedent (admin-keys.ts shipped Surface A + Surface B in
 // one Task 1 commit so same-wave commits don't double-touch the same file):
@@ -19,9 +28,14 @@ export const ADMIN_RBAC_I18N_KEYS = {
   // Surface D — /admin/roles (Roller — RBAC PLACEHOLDER per D-A2..A5)
   // -------------------------------------------------------------------------
 
+  // Phase 15 Plan 15-10 (RBAC active) — AlertBanner FLIPPED from Phase 14
+  // 14-04 placeholder text. Granular role CRUD now live (Plan 15-11 wires
+  // RoleCreateModal); per-row scope badge live (D-3.4); auto-save toggles
+  // live (D-1.12). System roles (Admin / PM / Member / Guest) are read-only
+  // — Düzenle/Sil buttons hidden when is_system_role=true.
   "admin.roles.alert_banner_body": {
-    tr: "Bu sayfa görüntüleme amaçlıdır. Granüler rol/izin yönetimi v3.0 sürümünde gelecek; şu an yetkilendirme Admin / Project Manager / Member rolü ve proje üyeliği üzerinden çalışıyor.",
-    en: "This page is view-only. Granular role/permission management will arrive in v3.0; authorization currently runs through the Admin / Project Manager / Member role and project membership.",
+    tr: "RBAC altyapısı aktif. Sistem rolleri (Admin / PM / Member / Guest) salt okunur; özel roller oluşturup izinleri yönetebilirsiniz.",
+    en: "RBAC layer active. System roles (Admin / PM / Member / Guest) are read-only; create custom roles and manage their permissions.",
   },
 
   // 4 role card titles + descriptions per UI-SPEC §Surface D + D-A5
@@ -53,9 +67,12 @@ export const ADMIN_RBAC_I18N_KEYS = {
     tr: "Guest",
     en: "Guest",
   },
+  // Phase 15 Plan 15-10 — Guest description FLIPPED from Phase 14 14-04
+  // placeholder. Guest is now an active read-only system role (no v3.0
+  // language).
   "admin.roles.guest_description": {
-    tr: "Yalnızca salt-okuma. v3.0'da gelecek.",
-    en: "Read-only. Coming in v3.0.",
+    tr: "Salt-okuma — atandığı projelerde içerik görüntüler ama değişiklik yapamaz.",
+    en: "Read-only — views content on assigned projects without making changes.",
   },
 
   "admin.roles.users_count_label": {
@@ -85,32 +102,41 @@ export const ADMIN_RBAC_I18N_KEYS = {
     en: "Counts shown are based on the first 1000 users out of {total}; visit the Users tab for the full list.",
   },
 
-  // "Yeni rol oluştur" placeholder card per D-A4
+  // Phase 15 Plan 15-10 — "Yeni rol oluştur" trigger card (renamed from
+  // placeholder card). Click opens RoleCreateModal (Plan 15-11). Subtitle/
+  // tooltip FLIPPED from Phase 14 14-04 v3.0 placeholder copy.
   "admin.roles.new_role_title": {
-    tr: "Yeni rol oluşturma",
+    tr: "Yeni rol oluştur",
     en: "Create new role",
   },
   "admin.roles.new_role_subtitle": {
-    tr: "v3.0'da gelecek",
-    en: "Coming in v3.0",
+    tr: "Özel bir rol tanımla",
+    en: "Define a custom role",
   },
   "admin.roles.new_role_tooltip": {
-    tr: "Granüler RBAC v3.0 sürümünde gelecek.",
-    en: "Granular RBAC arrives in v3.0.",
+    tr: "Yeni özel rol oluştur",
+    en: "Create a new custom role",
   },
 
-  "admin.roles.v3_badge_label": {
-    tr: "v3.0",
-    en: "v3.0",
+  // Phase 15 Plan 15-10 — "Sistem" badge for is_system_role=true cards.
+  // Replaces the v3.0 warning Badge that Phase 14 14-04 used to mark Guest as
+  // deferred. Now indicates that the role is built-in and read-only.
+  "admin.roles.system_badge_label": {
+    tr: "Sistem",
+    en: "System",
   },
 
   // -------------------------------------------------------------------------
   // Surface E — /admin/permissions (İzin Matrisi — RBAC PLACEHOLDER per D-A3)
   // -------------------------------------------------------------------------
 
+  // Phase 15 Plan 15-10 (RBAC active) — AlertBanner copy FLIPPED from Phase 14
+  // 14-04 placeholder text. See Plan 15-10 layer 4 of 7-layer atomic uplift
+  // (D-2.7) — RBAC infra is now active and toggle changes auto-save per
+  // D-1.12 optimistic mutation in useUpdatePermissionCell.
   "admin.permissions.alert_banner_body": {
-    tr: "Bu sayfa demo amaçlıdır. Granüler izin yönetimi v3.0 sürümünde gelecek; şu an yetkilendirme Admin / Project Manager / Member rolü ve proje üyeliği üzerinden çalışıyor.",
-    en: "This page is demo-only. Granular permission management arrives in v3.0; authorization currently runs through the Admin / Project Manager / Member role and project membership.",
+    tr: "RBAC altyapısı aktif. Toggle değişiklikleri anında kaydedilir; Admin sütunu salt okunur (sistem rolü korunur).",
+    en: "RBAC layer active. Toggle changes save immediately; Admin column is read-only (system role protected).",
   },
 
   "admin.permissions.card_title": {
@@ -118,26 +144,38 @@ export const ADMIN_RBAC_I18N_KEYS = {
     en: "Permission Matrix",
   },
   "admin.permissions.card_subtitle": {
-    tr: "Rol başına tüm izinler tek bakışta",
-    en: "All permissions by role at a glance",
-  },
-  "admin.permissions.v3_badge_label": {
-    tr: "v3.0",
-    en: "v3.0",
+    tr: "Rol başına tüm izinler tek bakışta — değişiklikler anında kaydedilir",
+    en: "All permissions by role at a glance — changes save immediately",
   },
 
+  // Phase 15 Plan 15-10 — Kopyala button now ENABLED (D-2.7 atomic uplift
+  // layer 5). Tooltip FLIPPED from "v3.0'da gelecek" to a real action hint
+  // (the button copies the matrix as JSON to clipboard for v2.0 — full CSV
+  // export deferred to v2.1).
   "admin.permissions.copy_button": {
     tr: "Kopyala",
-    en: "Clone",
+    en: "Copy",
   },
   "admin.permissions.copy_tooltip": {
-    tr: "v3.0'da gelecek",
-    en: "Coming in v3.0",
+    tr: "İzin matrisini panoya JSON olarak kopyala",
+    en: "Copy permission matrix to clipboard as JSON",
+  },
+  "admin.permissions.copy_success": {
+    tr: "İzin matrisi panoya kopyalandı",
+    en: "Permission matrix copied to clipboard",
   },
 
-  "admin.permissions.toggle_tooltip": {
-    tr: "RBAC altyapısı v3.0 sürümünde gelecek.",
-    en: "RBAC arrives in v3.0.",
+  // Phase 15 Plan 15-10 — Per-row scope badge labels (D-3.4 — 2-tier check
+  // transparency). PermissionScopeBadge renders these inline next to the
+  // permission key so admins know whether the perm gates a system-level or
+  // project-level action.
+  "admin.permissions.scope_system": {
+    tr: "(sistem)",
+    en: "(system)",
+  },
+  "admin.permissions.scope_project": {
+    tr: "(proje)",
+    en: "(project)",
   },
 
   // 4 permission group labels per UI-SPEC §Surface E

@@ -1,25 +1,25 @@
 "use client"
 
-// Phase 14 Plan 14-04 Task 2 — /admin/permissions (İzin Matrisi) sub-route
-// page.
+// Phase 14 Plan 14-04 (placeholder) → Phase 15 Plan 15-10 (RBAC active)
+// — /admin/permissions (İzin Matrisi) sub-route page.
 //
-// RBAC-deferred placeholder per CONTEXT D-A3:
-//   - 14×4 disabled toggle matrix (data from Plan 14-01
-//     lib/admin/permissions-static.ts).
-//   - Page-level AlertBanner explaining v3.0 RBAC defer (UI-SPEC §Surface E
-//     row 395).
-//   - PermissionMatrixCard ships v3.0 Badge in card header + disabled
-//     "Kopyala" button + every toggle disabled with aria-disabled + tooltip.
+// Layer 4 of D-2.7 atomic 7-layer placeholder uplift: AlertBanner copy is
+// FLIPPED from the Phase 14 14-04 deferred-warning to an active-state info
+// message about auto-save behavior. The i18n key
+// `admin.permissions.alert_banner_body` carries the new copy; tone="info"
+// is appropriate (informational, not warning).
 //
-// Multiple defense layers per threat model T-14-04-01 — a future v3.0
-// contributor would have to remove ALL of:
-//   1. disabled attribute on every <input> (14 × 4 = 56 toggles)
-//   2. aria-disabled="true" on every toggle
-//   3. tooltip "RBAC altyapısı v3.0 sürümünde gelecek"
-//   4. v3.0 Badge in card header
-//   5. AlertBanner on this page
-//   6. Kopyala disabled state
-// before accidentally enabling permission writes.
+// The 6 placeholder defense layers shipped by Phase 14 14-04 are removed in
+// the same atomic commit that ships Plan 15-10:
+//   1. permission-row.tsx disabled toggle attrs (general case removed —
+//      Admin/Guest retain disabled per D-1.5/D-2.4)
+//   2. permission-matrix-card.tsx tooltip with the placeholder text
+//   3. permission-matrix-card.tsx Badge in card header
+//   4. THIS FILE — AlertBanner content
+//   5. permission-matrix-card.tsx Kopyala disabled
+//   6. role-card.tsx Guest disabled state (separate route, same atomic
+//      commit)
+//   7. roles/page.tsx NewRolePlaceholderCard → NewRoleModalTrigger
 //
 // AdminLayout (Plan 14-02) wraps this page automatically — page header +
 // NavTabs strip + admin-only route guard inherited.

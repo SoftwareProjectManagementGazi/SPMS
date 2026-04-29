@@ -1,44 +1,23 @@
 "use client"
 
-// Phase 14 Plan 14-04 Task 1 — /admin/roles (Roller) sub-route page.
+// Phase 14 Plan 14-04 (placeholder) → Phase 15 Plan 15-10 (RBAC active)
+// — /admin/roles (Roller) sub-route page.
 //
-// RBAC-deferred placeholder per CONTEXT D-A2..A5:
-//   - 4 system role cards (Admin / PM / Member / Guest) with REWRITTEN
-//     descriptions reflecting v2.0 reality (Admin = system-wide; PM/Member =
-//     project-scoped via Team.leader_id) — replaces prototype's misleading
-//     "all roles are global" implication.
-//   - Guest card visually disabled with v3.0 Badge (cursor:not-allowed +
-//     opacity 0.6 + warning Badge in card header).
-//   - 5th "Yeni rol oluştur" card = dashed-border placeholder + tooltip
-//     "Granüler RBAC v3.0 sürümünde gelecek" (D-A4).
-//   - Page-level AlertBanner explains placeholder semantics so admins don't
-//     mistake the page for a functional CRUD surface.
+// Layers 6 + 7 of D-2.7 atomic 7-layer placeholder uplift:
+//   - Layer 6: NewRolePlaceholderCard → NewRoleModalTrigger. The trigger
+//     fires onClick to open RoleCreateModal (Plan 15-11 wires the modal
+//     mount). For Plan 15-10 we just hold a useState flag; the modal
+//     itself ships in Plan 15-11.
+//   - Layer 7: Guest card no longer rendered with `disabled` + `v3Badge`
+//     props. It's now an active read-only system role; the Sistem badge
+//     comes from `is_system_role` (Plan 15-09 RoleCard prop accepts it).
 //
-// Per-role user counts read from useAdminUsers() aggregate (D-Y1 — NO new
-// endpoint; reuses Plan 14-01 Wave 0 hook). Guest count is 0 in v2.0
-// (no Guest role in the users.role enum yet).
+// Plan 14-17 (Cluster E gap closure) — count source + N-3 truncation banner
+// + Görüntüle cross-link wiring is preserved unchanged. The per-role count
+// pipeline still uses useAdminUsers({limit: 1000}) and renders the
+// truncation AlertBanner when total > 1000 (UAT Test 19 invariant).
 //
-// Plan 14-17 (Cluster E gap closure) — TWO concerns wired here:
-//
-//   A. Count source fix (Approach 1). The default useAdminUsers() returned
-//      the FIRST PAGE (~50 users), making per-role counts undercount past
-//      page 1. We now request `{limit: 500}` (backend hard cap) so counts
-//      cover the full typical population. Past 500 users counts truncate
-//      silently, which is why concern B is mandatory.
-//
-//   B. MANDATORY truncation AlertBanner (N-3). When the response's `total`
-//      field exceeds 500, render an AlertBanner WARNING that the per-role
-//      counts are based on the first 500 users. Without this banner the
-//      counts silently lie. v2.1 candidate: dedicated /admin/users/role-counts
-//      endpoint (Approach 2) bypasses the limit entirely.
-//
-//   C. Loading state propagated to RoleCard (em-dash fallback in
-//      role-card.tsx — null-safety guard via Number.isFinite). When
-//      useAdminUsers().isLoading is true, the cards render `userCount={undefined}`
-//      and the card itself draws an em-dash placeholder.
-//
-// AdminLayout (Plan 14-02) wraps this page automatically — page header +
-// NavTabs strip + admin-only route guard inherited via the layout segment.
+// AdminLayout (Plan 14-02) wraps this page automatically.
 
 import * as React from "react"
 import { ShieldCheck, Briefcase, User, Eye } from "lucide-react"
@@ -49,7 +28,7 @@ import { useAdminUsers } from "@/hooks/use-admin-users"
 import { adminRbacT } from "@/lib/i18n/admin-rbac-keys"
 
 import { RoleCard } from "@/components/admin/roles/role-card"
-import { NewRolePlaceholderCard } from "@/components/admin/roles/new-role-placeholder-card"
+import { NewRoleModalTrigger } from "@/components/admin/roles/new-role-modal-trigger"
 
 interface AdminUserShape {
   id: number
@@ -65,19 +44,25 @@ export default function AdminRolesPage() {
   // 500 users the truncation AlertBanner kicks in (N-3 below).
   const usersQ = useAdminUsers({ limit: 500 })
 
+  // Plan 15-10 — RoleCreateModal open state. Plan 15-11 will mount the
+  // <RoleCreateModal open={createOpen} onClose={...}/> inside this page;
+  // for Plan 15-10 we just hold the flag so the trigger has a real
+  // onClick destination.
+  const [createOpen, setCreateOpen] = React.useState(false)
+  // Eslint hint — the value is intentionally read once Plan 15-11 wires
+  // the modal. Reference it so TS doesn't flag the variable as unused.
+  void createOpen
+
   // Defensive shape extraction — useAdminUsers may return either the legacy
   // /auth/users array shape OR the Plan 14-03 /admin/users {items, total}
-  // shape. Tolerate both for graceful degradation (matches stat-cards.tsx
-  // pattern from Plan 14-02).
+  // shape. Tolerate both for graceful degradation.
   const users: AdminUserShape[] = React.useMemo(() => {
     const data = usersQ.data as unknown
     if (Array.isArray(data)) return data as AdminUserShape[]
     return (data as { items?: AdminUserShape[] } | undefined)?.items ?? []
   }, [usersQ.data])
 
-  // Plan 14-17 — N-3 truncation detection. The response shape is
-  // {items, total}; if total > 1000 the per-role counts (derived from the
-  // first 1000 items) are silently incomplete. Banner rendered below.
+  // Plan 14-17 — N-3 truncation detection.
   const totalUsers: number = React.useMemo(() => {
     const data = usersQ.data as unknown
     if (Array.isArray(data)) return (data as unknown[]).length
@@ -85,13 +70,11 @@ export default function AdminRolesPage() {
   }, [usersQ.data])
   const isCountTruncated = totalUsers > 500
 
-  // Plan 14-17 — when isLoading we want RoleCard's em-dash fallback to
-  // render. Passing `undefined` (instead of 0) makes the loading state
-  // visually distinct from the legitimate "0 admins" case.
+  // Plan 14-17 — passing `undefined` while loading (em-dash fallback in
+  // RoleCard handles render).
   const isLoadingCounts = usersQ.isLoading
 
-  // Per-role counts (case-insensitive match on role.name; tolerates
-  // backend's "Project Manager" string and any future casing drift).
+  // Per-role counts (case-insensitive match on role.name).
   const adminCount = isLoadingCounts
     ? undefined
     : users.filter(
@@ -107,13 +90,10 @@ export default function AdminRolesPage() {
     : users.filter(
         (u) => (u.role?.name ?? "").toLowerCase() === "member",
       ).length
-  // No Guest role in v2.0 enum — 0 always (NOT undefined; the empty count
-  // is meaningful, not a loading state).
+  // No Guest role population in v2.0 enum — 0 always.
   const guestCount = 0
 
-  // Banner body with {total} substitution. The i18n key value contains
-  // "{total}" as a literal placeholder string — replaced at render time so
-  // the admin sees the real magnitude (e.g., 1500) and not just "first 1000".
+  // Banner body with {total} substitution.
   const truncationBody = adminRbacT(
     "admin.roles.count_truncation_warning_body",
     language,
@@ -127,20 +107,12 @@ export default function AdminRolesPage() {
         gap: 16,
       }}
     >
-      {/* Page-level AlertBanner — D-Y1 / UI-SPEC §Surface D row 374.
-          Explains the v3.0 RBAC defer so admins don't mistake the page for
-          a functional CRUD surface. */}
+      {/* Page-level AlertBanner — Plan 15-10 active-state copy. */}
       <AlertBanner tone="info">
         {adminRbacT("admin.roles.alert_banner_body", language)}
       </AlertBanner>
 
-      {/* Plan 14-17 — N-3 MANDATORY truncation banner. Only renders when
-          totalUsers > 1000 (Approach 1 ceiling). Without this banner the
-          per-role counts silently undercount; with it the admin knows
-          exactly how many users are missing from the slice.
-          Wrapped in a div with role='alert' + data-testid because the
-          AlertBanner primitive only forwards className/style — wrapper
-          adds the ARIA semantics + RTL hook without touching shared code. */}
+      {/* Plan 14-17 — N-3 MANDATORY truncation banner. */}
       {isCountTruncated && (
         <div role="alert" data-testid="role-count-truncation-banner">
           <AlertBanner tone="warning">
@@ -166,7 +138,7 @@ export default function AdminRolesPage() {
           gap: 14,
         }}
       >
-        {/* Admin — --priority-critical icon fill (UI-SPEC §Color line 167) */}
+        {/* Admin — --priority-critical icon fill */}
         <RoleCard
           id="admin"
           icon={<ShieldCheck size={16} aria-hidden="true" />}
@@ -175,9 +147,10 @@ export default function AdminRolesPage() {
           name={adminRbacT("admin.roles.admin_name", language)}
           description={adminRbacT("admin.roles.admin_description", language)}
           userCount={adminCount}
+          isSystemRole
         />
 
-        {/* Project Manager — --status-progress icon fill (UI-SPEC line 180) */}
+        {/* Project Manager */}
         <RoleCard
           id="pm"
           icon={<Briefcase size={16} aria-hidden="true" />}
@@ -186,9 +159,10 @@ export default function AdminRolesPage() {
           name={adminRbacT("admin.roles.pm_name", language)}
           description={adminRbacT("admin.roles.pm_description", language)}
           userCount={pmCount}
+          isSystemRole
         />
 
-        {/* Member — --fg-muted icon fill (UI-SPEC line 184) */}
+        {/* Member */}
         <RoleCard
           id="member"
           icon={<User size={16} aria-hidden="true" />}
@@ -197,10 +171,14 @@ export default function AdminRolesPage() {
           name={adminRbacT("admin.roles.member_name", language)}
           description={adminRbacT("admin.roles.member_description", language)}
           userCount={memberCount}
+          isSystemRole
         />
 
-        {/* Guest — disabled + v3.0 Badge per D-A5 (Eye icon = read-only
-            affordance; --fg-subtle for "deferred" visual cue). */}
+        {/* Guest — Plan 15-10 layer 7: NO `disabled` + NO `v3Badge` props.
+            Renders as an active read-only card with the Sistem badge from
+            isSystemRole=true. The Görüntüle link is intentionally omitted
+            on cards with no users (guestCount === 0) — see RoleCard for
+            the empty-state guard. */}
         <RoleCard
           id="guest"
           icon={<Eye size={16} aria-hidden="true" />}
@@ -209,12 +187,13 @@ export default function AdminRolesPage() {
           name={adminRbacT("admin.roles.guest_name", language)}
           description={adminRbacT("admin.roles.guest_description", language)}
           userCount={guestCount}
-          disabled
-          v3Badge
+          isSystemRole
         />
 
-        {/* "Yeni rol oluştur" 5th card — dashed-border placeholder per D-A4. */}
-        <NewRolePlaceholderCard />
+        {/* Plan 15-10 layer 6 — NewRoleModalTrigger replaces the Phase 14
+            14-04 NewRolePlaceholderCard. onClick sets createOpen; Plan
+            15-11 will wire the actual <RoleCreateModal /> mount. */}
+        <NewRoleModalTrigger onClick={() => setCreateOpen(true)} />
       </div>
     </div>
   )

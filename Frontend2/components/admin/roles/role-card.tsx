@@ -1,66 +1,62 @@
 "use client"
 
-// Phase 14 Plan 14-04 Task 1 — RoleCard component (UI-SPEC §Surface D).
+// Phase 14 Plan 14-04 (placeholder) → Phase 15 Plan 15-10 (RBAC active)
+// — RoleCard component.
 //
-// Renders ONE of the 4 system role cards (Admin / Project Manager / Member /
-// Guest). Card descriptions are REWRITTEN per CONTEXT D-A5 to reflect the
-// v2.0 reality (Admin = system-wide; PM/Member = project-scoped via
-// Team.leader_id). Replaces prototype's misleading "all roles are global"
-// implication.
+// Layer 7 of D-2.7 atomic 7-layer placeholder uplift: the Guest card is
+// no longer disabled with the deferred-version Badge. The new contract:
+//   - `disabled` prop REMOVED from this component (was the cursor:not-allowed
+//     + opacity 0.6 visual layer 7; Phase 14 14-04 used it solely for Guest).
+//   - `v3Badge` prop REMOVED — the Sistem badge takes its place for
+//     is_system_role=true.
+//   - `isSystemRole` prop ADDED — drives the Sistem badge in the card
+//     header AND hides Düzenle/Sil action buttons.
+//   - `onEdit` / `onDelete` props ADDED for Plan 15-11 custom-role CRUD;
+//     they remain optional and disabled-from-rendering for system roles.
 //
-// EXPLICIT PER UI-SPEC §Surface D line 379: NO "Düzenle" button on system-role
-// cards. The card is information-only; granular RBAC editing is deferred to
-// v3.0 (D-A2..A4). Removing the button entirely is a deliberate prototype
-// improvement — see CONTEXT D-A4.
-//
-// Disabled state (Guest card per D-A5):
-//   1. cursor: not-allowed
-//   2. opacity: 0.6
-//   3. v3.0 Badge tone="warning" in card header
-// Multiple defenses against accidental v3.0 reactivation per threat model
-// T-14-04-02.
-//
-// Plan 14-17 (Cluster E gap closure) — TWO additional concerns wired here:
-//
-//   A. Null-safe count rendering. The bare `{userCount}` JSX expression
-//      stringifies undefined → "" (silent invisibility) and NaN → "NaN"
-//      (visible bug). Number.isFinite() gates the render so the em-dash
-//      placeholder shows during loading or after a malformed upstream
-//      response — NEVER "undefined" / "NaN" / "=".
-//
-//   B. Cross-tab navigation affordance ("Görüntüle" Link). On non-disabled
-//      cards, a Link navigates to /admin/users?role=<id> with the role
-//      filter pre-applied (D-A5 cross-tab data consistency). Disabled cards
-//      (Guest) intentionally omit the affordance — no useless navigation
-//      to an empty filter view in v2.0.
+// Plan 14-17 (Cluster E gap closure) — null-safe count rendering AND
+// "Görüntüle" cross-link are preserved verbatim. The Görüntüle link now
+// renders for all cards including the previous Guest disabled case (the
+// disabled-suppress conditional is gone; the empty-count case is still
+// useless UX, but the truthful behavior is "Guest with 0 users → still
+// link, just lands on an empty filter").
 
 import * as React from "react"
 import Link from "next/link"
-import { Card, Badge } from "@/components/primitives"
+import { Card, Badge, Button } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { adminRbacT } from "@/lib/i18n/admin-rbac-keys"
 
 export interface RoleCardProps {
-  id: "admin" | "pm" | "member" | "guest"
+  /**
+   * Role identifier — used as the data attribute hook + the Görüntüle link
+   * query param. For system roles this is the lowercase short name
+   * ("admin" / "pm" / "member" / "guest"); for custom roles (Plan 15-11)
+   * the numeric role ID is acceptable.
+   */
+  id: string
   icon: React.ReactNode
-  iconBgColor: string // e.g., "color-mix(in oklch, var(--priority-critical) 18%, transparent)"
-  iconColor: string // e.g., "var(--priority-critical)"
+  iconBgColor: string
+  iconColor: string
   name: string
   description: string
   /**
-   * Per-role user count. Plan 14-17 — accepted as `number | undefined` so the
-   * caller can pass `undefined` while the upstream useAdminUsers query is
-   * still loading; the component renders an em-dash fallback in that case.
-   * NaN is also tolerated and rendered as the em-dash.
+   * Per-role user count. Plan 14-17 — accepted as `number | undefined` so
+   * the caller can pass `undefined` while the upstream useAdminUsers query
+   * is still loading; the component renders an em-dash fallback in that
+   * case. NaN is also tolerated.
    */
   userCount: number | undefined
   /**
-   * Visually disable the card (cursor:not-allowed + opacity 0.6). Used for
-   * the Guest card per D-A5 — placeholder for the future v3.0 read-only role.
+   * Phase 15 Plan 15-10 — Sistem badge + hides Düzenle/Sil action buttons.
+   * The card LOOKS active (no opacity 0.6, no cursor:not-allowed); only the
+   * mutation affordances are hidden.
    */
-  disabled?: boolean
-  /** Render the v3.0 Badge in the card header (tone="warning"). */
-  v3Badge?: boolean
+  isSystemRole?: boolean
+  /** Plan 15-11 — fires when the user clicks Düzenle on a custom role. */
+  onEdit?: () => void
+  /** Plan 15-11 — fires when the user clicks Sil on a custom role. */
+  onDelete?: () => void
 }
 
 export function RoleCard({
@@ -71,8 +67,9 @@ export function RoleCard({
   name,
   description,
   userCount,
-  disabled,
-  v3Badge,
+  isSystemRole,
+  onEdit,
+  onDelete,
 }: RoleCardProps) {
   const { language } = useApp()
 
@@ -82,15 +79,11 @@ export function RoleCard({
   const safeCount = Number.isFinite(userCount) ? (userCount as number) : "—"
 
   return (
-    <Card
-      data-role-card-id={id}
-      padding={18}
-      style={{
-        cursor: disabled ? "not-allowed" : "default",
-        opacity: disabled ? 0.6 : 1,
-      }}
-    >
-      {v3Badge && (
+    <Card data-role-card-id={id} padding={18}>
+      {/* Plan 15-10 layer 7 — Sistem badge replaces the deferred warning
+          Badge. tone="neutral" + size="xs" matches the per-row scope badge
+          style (visual consistency across the RBAC surface). */}
+      {isSystemRole && (
         <div
           style={{
             display: "flex",
@@ -98,8 +91,8 @@ export function RoleCard({
             marginBottom: 8,
           }}
         >
-          <Badge tone="warning" size="xs">
-            {adminRbacT("admin.roles.v3_badge_label", language)}
+          <Badge tone="neutral" size="xs">
+            {adminRbacT("admin.roles.system_badge_label", language)}
           </Badge>
         </div>
       )}
@@ -141,7 +134,7 @@ export function RoleCard({
             {name}
           </div>
 
-          {/* Description (12.5/--fg-muted/lineHeight 1.5 — D-A5 reality copy) */}
+          {/* Description (12.5/--fg-muted/lineHeight 1.5) */}
           <div
             style={{
               fontSize: 12.5,
@@ -152,9 +145,7 @@ export function RoleCard({
             {description}
           </div>
 
-          {/* User count footer (NO "Düzenle" button per D-A5 + UI-SPEC §Surface
-              D line 379 — explicit removal is the prototype improvement).
-              Plan 14-17 — null-safe `safeCount` (em-dash on undefined / NaN). */}
+          {/* User count footer (Plan 14-17 — null-safe `safeCount`). */}
           <div
             style={{
               fontSize: 11.5,
@@ -170,28 +161,49 @@ export function RoleCard({
           </div>
 
           {/* Plan 14-17 (Cluster E) — Görüntüle cross-tab navigation
-              affordance. Wired only when the card is NOT disabled — Guest
-              has no real users in v2.0 so the link would land on an empty
-              filtered table (UX antipattern). Per D-A5 this is a
-              navigation aid, NOT a CRUD trigger; D-A4 RBAC defer remains
-              respected (no "Düzenle" / no permission editing). */}
-          {!disabled && (
-            <Link
-              href={`/admin/users?role=${id}`}
-              data-testid={`role-card-view-link-${id}`}
+              affordance. Plan 15-10 — wired for ALL cards now (including
+              Guest); the empty-filter UX for Guest with 0 users is
+              acceptable since the role is now active. */}
+          <Link
+            href={`/admin/users?role=${id}`}
+            data-testid={`role-card-view-link-${id}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              marginTop: 4,
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--status-progress)",
+              textDecoration: "none",
+            }}
+          >
+            {adminRbacT("admin.roles.view_users_link_label", language)} →
+          </Link>
+
+          {/* Plan 15-11 — Düzenle / Sil buttons for CUSTOM roles only.
+              System roles (is_system_role=true) hide these buttons; the
+              backend additionally rejects PATCH/DELETE on system roles
+              with 422 SYSTEM_ROLE_PROTECTED (defense in depth). */}
+          {!isSystemRole && (onEdit || onDelete) && (
+            <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                marginTop: 4,
-                fontSize: 12,
-                fontWeight: 500,
-                color: "var(--status-progress)",
-                textDecoration: "none",
+                display: "flex",
+                gap: 6,
+                marginTop: 8,
               }}
             >
-              {adminRbacT("admin.roles.view_users_link_label", language)} →
-            </Link>
+              {onEdit && (
+                <Button size="xs" variant="ghost" onClick={onEdit}>
+                  {language === "tr" ? "Düzenle" : "Edit"}
+                </Button>
+              )}
+              {onDelete && (
+                <Button size="xs" variant="ghost" onClick={onDelete}>
+                  {language === "tr" ? "Sil" : "Delete"}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

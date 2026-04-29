@@ -1,41 +1,45 @@
-// Phase 14 Plan 14-17 (Cluster E gap closure) — RoleCard + AdminRolesPage RTL
-// coverage closing UAT Test 19 ("Roles tab cards display real per-role user
-// counts and 'Görüntüle' navigates to /admin/users with the role filter
-// pre-applied").
+// Phase 14 Plan 14-17 (Cluster E) → Phase 15 Plan 15-10 (RBAC active)
+// — RoleCard + AdminRolesPage RTL tests.
 //
-// Task 2 coverage (?role= URL param parser on /admin/users) lives in
-// `app/(shell)/admin/users/page.test.tsx` to keep the import boundary tight
-// (the users page mounts more dependencies — toasts, modals, react-query
-// — than the lighter-weight role-card surface).
+// Plan 15-10 — Layer 7 of D-2.7 atomic 7-layer placeholder uplift FLIPS
+// these assertions:
+//   - Phase 14: Guest renders with disabled + v3Badge props.
+//   - Phase 15: Guest renders as ACTIVE read-only card with isSystemRole
+//     prop driving the Sistem badge; NO opacity 0.6, NO disabled cursor,
+//     NO v3.0 string.
 //
-// Five mandatory cases per <behavior>:
+// Plan 14-17 invariants PRESERVED unchanged:
+//   - Null-safe count rendering (em-dash for undefined / NaN, not "undefined"
+//     / "NaN" strings).
+//   - useAdminUsers({limit: 1000}) count source ceiling.
+//   - N-3 truncation AlertBanner when total > 1000.
 //
-//   1. RoleCard with userCount={12} renders "12" — and NEVER renders the
-//      literal "=" symbol, "undefined", or "NaN" (defensive null-safety
-//      negative assertions).
-//
-//   2. AdminRolesPage with mocked useAdminUsers returning a known set of
-//      users (3 admins, 5 PMs, 12 members, total=20) renders the cards with
-//      "3", "5", "12" respectively. AlertBanner is NOT rendered (total ≤ 1000).
-//
-//   3. AdminRolesPage with isLoading=true renders an em-dash placeholder
-//      ("—") instead of "undefined" / "NaN" — Number.isFinite() guard kicks
-//      in when userCount is undefined during the first paint.
-//
-//   4. AdminRolesPage with total=1500 (> 1000) renders the AlertBanner with
-//      the count_truncation_warning copy — N-3 HARD requirement, not optional.
-//
-//   5. RoleCard renders a "Görüntüle" / "View" link with href
-//      /admin/users?role=<id> for non-disabled cards. Disabled (Guest) card
-//      does NOT render the affordance.
-//
-//   6. AdminRolesPage's useAdminUsers receives `{limit: 1000}` — confirms
-//      the count source fix actually fetches the broader population (Approach
-//      1).
+// Cases:
+//   1   — RoleCard userCount=12 renders "12"; never "=" / "undefined" / "NaN".
+//   1b  — RoleCard userCount=NaN renders em-dash, NOT "NaN".
+//   5a  — RoleCard renders Görüntüle link with /admin/users?role=<id> for
+//         all cards (Phase 15 — no longer disabled-suppressed for Guest).
+//   7   (NEW) — RoleCard with isSystemRole renders Sistem badge.
+//   7b  (NEW) — RoleCard without isSystemRole does NOT render Sistem badge.
+//   7c  (NEW) — RoleCard with isSystemRole HIDES Düzenle/Sil action buttons
+//         even when onEdit/onDelete props are provided.
+//   7d  (NEW) — RoleCard without isSystemRole RENDERS Düzenle/Sil when
+//         onEdit/onDelete are provided.
+//   7e  (NEW) — RoleCard does NOT contain the literal "v3.0" anywhere
+//         (atomic uplift gate against accidental Phase 14 reactivation).
+//   2   — AdminRolesPage with mocked counts renders 3/5/12; no truncation
+//         banner when total ≤ 1000.
+//   3   — AdminRolesPage with isLoading=true renders em-dash placeholders.
+//   4   — AdminRolesPage with total=1500 renders truncation AlertBanner.
+//   6   — AdminRolesPage's useAdminUsers receives {limit: 1000}.
+//   8   (NEW) — AdminRolesPage Roller AlertBanner copy is FLIPPED active
+//         message, NOT v3.0 placeholder.
+//   9   (NEW) — AdminRolesPage renders NewRoleModalTrigger (NOT
+//         NewRolePlaceholderCard).
 
 import * as React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import { ShieldCheck } from "lucide-react"
 
 // ---- next/navigation mock ----
@@ -68,9 +72,6 @@ type AdminUsersQ = {
 const adminUsersStateRef: { current: AdminUsersQ } = {
   current: { data: [], isLoading: false, error: null },
 }
-// Spy reference so Test 6 can assert `{limit: 1000}` was passed.
-// Typed as `(_filter?: unknown)` so vi.fn().mock.calls indexing returns a
-// properly-typed tuple (vs. `(...args: unknown[])` collapsing to `unknown[]`).
 const useAdminUsersSpy = vi.fn((_filter?: unknown) => adminUsersStateRef.current)
 vi.mock("@/hooks/use-admin-users", () => ({
   useAdminUsers: (filter?: unknown) => useAdminUsersSpy(filter),
@@ -80,7 +81,7 @@ vi.mock("@/hooks/use-admin-users", () => ({
 import { RoleCard } from "./role-card"
 import AdminRolesPage from "@/app/(shell)/admin/roles/page"
 
-describe("RoleCard (Plan 14-17 — count rendering null-safety)", () => {
+describe("RoleCard (Plan 14-17 + Plan 15-10 — count + Sistem badge)", () => {
   beforeEach(() => {
     adminUsersStateRef.current = { data: [], isLoading: false, error: null }
     useAdminUsersSpy.mockClear()
@@ -98,10 +99,7 @@ describe("RoleCard (Plan 14-17 — count rendering null-safety)", () => {
         userCount={12}
       />,
     )
-    // Positive — the real count is rendered.
     expect(screen.getByText("12")).toBeInTheDocument()
-    // Negative — neither the broken "=" symbol nor any of its
-    // unsafe-stringification cousins appear.
     const card = screen.getByText("12").closest("[data-role-card-id]")
     expect(card).not.toBeNull()
     expect(card!.textContent).not.toMatch(/=/)
@@ -124,11 +122,10 @@ describe("RoleCard (Plan 14-17 — count rendering null-safety)", () => {
     const card = screen.getByText(/Admin/).closest("[data-role-card-id]")
     expect(card).not.toBeNull()
     expect(card!.textContent).not.toMatch(/NaN/)
-    // Em-dash placeholder is the contractual fallback per Plan 14-17 Step 3.
     expect(card!.textContent).toMatch(/—/)
   })
 
-  it("Case 5a — non-disabled card renders Görüntüle link to /admin/users?role=<id>", () => {
+  it("Case 5a — non-system card renders Görüntüle link to /admin/users?role=<id>", () => {
     render(
       <RoleCard
         id="admin"
@@ -140,13 +137,31 @@ describe("RoleCard (Plan 14-17 — count rendering null-safety)", () => {
         userCount={3}
       />,
     )
-    // Görüntüle link with TR copy + correct query param.
     const link = screen.getByRole("link", { name: /Görüntüle/i })
     expect(link).toBeInTheDocument()
     expect(link.getAttribute("href")).toBe("/admin/users?role=admin")
   })
 
-  it("Case 5b — disabled card does NOT render Görüntüle link", () => {
+  it("Case 5b — Plan 15-10: Guest card ALSO renders Görüntüle link (no longer suppressed)", () => {
+    render(
+      <RoleCard
+        id="guest"
+        icon={<ShieldCheck size={16} />}
+        iconBgColor="transparent"
+        iconColor="var(--fg)"
+        name="Guest"
+        description="Salt-okuma."
+        userCount={0}
+        isSystemRole
+      />,
+    )
+    // Phase 14 14-04 suppressed the link on disabled cards. Plan 15-10
+    // makes Guest active read-only and re-enables the link.
+    const link = screen.getByRole("link", { name: /Görüntüle/i })
+    expect(link.getAttribute("href")).toBe("/admin/users?role=guest")
+  })
+
+  it("Case 7 (NEW) — isSystemRole renders Sistem badge", () => {
     render(
       <RoleCard
         id="guest"
@@ -156,24 +171,98 @@ describe("RoleCard (Plan 14-17 — count rendering null-safety)", () => {
         name="Guest"
         description="..."
         userCount={0}
-        disabled
-        v3Badge
+        isSystemRole
       />,
     )
-    // No Görüntüle link should appear on disabled cards (no useless
-    // navigation to an empty filter view).
-    expect(screen.queryByRole("link", { name: /Görüntüle/i })).toBeNull()
+    expect(screen.getByText("Sistem")).toBeInTheDocument()
+  })
+
+  it("Case 7b (NEW) — non-system role does NOT render Sistem badge", () => {
+    render(
+      <RoleCard
+        id="designer"
+        icon={<ShieldCheck size={16} />}
+        iconBgColor="transparent"
+        iconColor="var(--fg)"
+        name="Designer"
+        description="Custom role"
+        userCount={5}
+      />,
+    )
+    expect(screen.queryByText("Sistem")).toBeNull()
+  })
+
+  it("Case 7c (NEW) — isSystemRole HIDES Düzenle/Sil even when handlers provided", () => {
+    render(
+      <RoleCard
+        id="admin"
+        icon={<ShieldCheck size={16} />}
+        iconBgColor="transparent"
+        iconColor="var(--fg)"
+        name="Admin"
+        description="..."
+        userCount={3}
+        isSystemRole
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole("button", { name: /Düzenle/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /Sil/i })).toBeNull()
+  })
+
+  it("Case 7d (NEW) — non-system role RENDERS Düzenle/Sil when handlers provided", () => {
+    const onEdit = vi.fn()
+    const onDelete = vi.fn()
+    render(
+      <RoleCard
+        id="designer"
+        icon={<ShieldCheck size={16} />}
+        iconBgColor="transparent"
+        iconColor="var(--fg)"
+        name="Designer"
+        description="..."
+        userCount={5}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />,
+    )
+    const editBtn = screen.getByRole("button", { name: /Düzenle/i })
+    const deleteBtn = screen.getByRole("button", { name: /Sil/i })
+    expect(editBtn).toBeInTheDocument()
+    expect(deleteBtn).toBeInTheDocument()
+    fireEvent.click(editBtn)
+    expect(onEdit).toHaveBeenCalledOnce()
+    fireEvent.click(deleteBtn)
+    expect(onDelete).toHaveBeenCalledOnce()
+  })
+
+  it("Case 7e (NEW) — RoleCard does NOT contain 'v3.0' string anywhere", () => {
+    render(
+      <RoleCard
+        id="guest"
+        icon={<ShieldCheck size={16} />}
+        iconBgColor="transparent"
+        iconColor="var(--fg)"
+        name="Guest"
+        description="Salt-okuma."
+        userCount={0}
+        isSystemRole
+      />,
+    )
+    const card = screen.getByText("Guest").closest("[data-role-card-id]")
+    expect(card).not.toBeNull()
+    expect(card!.textContent ?? "").not.toMatch(/v3\.0/i)
   })
 })
 
-describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
+describe("AdminRolesPage (Plan 14-17 + Plan 15-10 — count + AlertBanner + trigger)", () => {
   beforeEach(() => {
     adminUsersStateRef.current = { data: [], isLoading: false, error: null }
     useAdminUsersSpy.mockClear()
   })
 
   it("Case 2 — known users → cards show 3/5/12 counts; no truncation banner", () => {
-    // 3 admins + 5 PMs + 12 members + total=20 (≤ 1000 → no banner).
     const items = [
       ...Array.from({ length: 3 }, (_, i) => ({
         id: 100 + i,
@@ -199,7 +288,6 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
 
     render(<AdminRolesPage />)
 
-    // Find each card by data-role-card-id and assert its rendered count.
     const adminCard = document.querySelector('[data-role-card-id="admin"]')
     const pmCard = document.querySelector('[data-role-card-id="pm"]')
     const memberCard = document.querySelector('[data-role-card-id="member"]')
@@ -210,7 +298,6 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
     expect(pmCard!.textContent).toMatch(/5/)
     expect(memberCard!.textContent).toMatch(/12/)
 
-    // Truncation banner MUST NOT appear when total ≤ 1000.
     expect(
       screen.queryByText(/ilk 1000 kullanıcı|first 1000 user/i),
     ).toBeNull()
@@ -225,13 +312,11 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
 
     render(<AdminRolesPage />)
 
-    // No card text should contain unsafe stringification.
     const allCards = document.querySelectorAll("[data-role-card-id]")
     for (const card of allCards) {
       expect(card.textContent).not.toMatch(/undefined/i)
       expect(card.textContent).not.toMatch(/NaN/)
     }
-    // Em-dash placeholder appears at least once across the cards.
     const fullText = Array.from(allCards)
       .map((c) => c.textContent ?? "")
       .join(" ")
@@ -239,7 +324,6 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
   })
 
   it("Case 4 — total > 1000 → AlertBanner with count_truncation_warning copy (N-3 HARD)", () => {
-    // 50 sample users but total=1500 — reproduces the truncation scenario.
     const items = Array.from({ length: 50 }, (_, i) => ({
       id: 1000 + i,
       is_active: true,
@@ -253,17 +337,13 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
 
     render(<AdminRolesPage />)
 
-    // Truncation banner MUST appear — TR or EN copy substring.
     expect(
       screen.getByText(/ilk 1000 kullanıcı|first 1000 user/i),
     ).toBeInTheDocument()
-    // Total count surfaces in the banner body.
-    expect(
-      screen.getByText(/1500/),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/1500/)).toBeInTheDocument()
   })
 
-  it("Case 6 — useAdminUsers called with {limit: 500} (count source fix)", () => {
+  it("Case 6 — useAdminUsers called with {limit: 1000}", () => {
     adminUsersStateRef.current = {
       data: { items: [], total: 0 },
       isLoading: false,
@@ -271,12 +351,52 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
     }
     render(<AdminRolesPage />)
 
-    // The count fix bumps useAdminUsers from default-paginated to limit=500
-    // (the backend hard cap) so per-role counts cover the entire user table.
     expect(useAdminUsersSpy).toHaveBeenCalled()
     const args = useAdminUsersSpy.mock.calls[0]
     expect(args).toBeDefined()
-    // First arg should be a filter object containing limit: 500.
-    expect(args?.[0]).toMatchObject({ limit: 500 })
+    expect(args?.[0]).toMatchObject({ limit: 1000 })
+  })
+
+  it("Case 8 (NEW) — Roller AlertBanner copy is FLIPPED active message (no 'v3.0')", () => {
+    adminUsersStateRef.current = {
+      data: { items: [], total: 0 },
+      isLoading: false,
+      error: null,
+    }
+    render(<AdminRolesPage />)
+
+    // Phase 14 14-04 banner contained "v3.0 sürümünde"; Plan 15-10 banner
+    // contains "RBAC altyapısı aktif".
+    expect(screen.getByText(/RBAC altyapısı aktif/i)).toBeInTheDocument()
+    // Negative — the v3.0 placeholder copy must not survive.
+    expect(screen.queryByText(/v3\.0 sürümünde/i)).toBeNull()
+  })
+
+  it("Case 9 (NEW) — renders NewRoleModalTrigger (replaces NewRolePlaceholderCard)", () => {
+    adminUsersStateRef.current = {
+      data: { items: [], total: 0 },
+      isLoading: false,
+      error: null,
+    }
+    render(<AdminRolesPage />)
+
+    // The trigger is a clickable button (role="button"); placeholder was a
+    // role="presentation" div.
+    expect(screen.getByTestId("new-role-modal-trigger")).toBeInTheDocument()
+    expect(
+      screen.getByTestId("new-role-modal-trigger").tagName,
+    ).toBe("BUTTON")
+    // Phase 14 14-04 testid is gone.
+    expect(screen.queryByTestId("new-role-placeholder-card")).toBeNull()
+  })
+
+  it("Case 10 (NEW) — Roles page does NOT contain 'v3.0' anywhere", () => {
+    adminUsersStateRef.current = {
+      data: { items: [], total: 0 },
+      isLoading: false,
+      error: null,
+    }
+    const { container } = render(<AdminRolesPage />)
+    expect(container.textContent ?? "").not.toMatch(/v3\.0/i)
   })
 })
