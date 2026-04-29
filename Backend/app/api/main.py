@@ -189,6 +189,14 @@ app.include_router(admin_audit.router, prefix="/api/v1", tags=["Admin"])
 app.include_router(admin_stats.router, prefix="/api/v1", tags=["Admin"])
 app.include_router(admin_summary.router, prefix="/api/v1", tags=["Admin"])
 
+# Phase 15 Plan 15-06 — RBAC admin routers (CRUD + matrix). Each router
+# carries its own /admin/roles or /admin/permissions prefix; the router
+# include adds /api/v1 so final paths are /api/v1/admin/roles etc.
+# All endpoints gated by Depends(require_permission(...)) — no require_admin.
+from app.api.v1 import admin_roles, admin_permissions
+app.include_router(admin_roles.router, prefix="/api/v1", tags=["Admin RBAC"])
+app.include_router(admin_permissions.router, prefix="/api/v1", tags=["Admin RBAC"])
+
 # Public static file serving for uploaded avatars (profile pictures are not sensitive)
 _static_dir = Path(__file__).resolve().parent.parent.parent / "static"
 _static_dir.mkdir(parents=True, exist_ok=True)
