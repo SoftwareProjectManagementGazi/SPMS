@@ -40,9 +40,12 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
-      isLoading: false,
+      // Phase 15 Plan 15-01 (TIDY-04 harness fix) — TanStack Query v5 renamed
+      // `isLoading` to `isPending` for new queries (UseQueryResult shape).
+      // useLedTeams returns a UseQueryResult, so the mock must reflect v5.
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 7 }} />)
     expect(screen.getByTestId("result").textContent).toBe("yes")
   })
@@ -57,9 +60,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
-      isLoading: false,
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 7 }} />)
     expect(screen.getByTestId("result").textContent).toBe("yes")
   })
@@ -74,9 +77,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [{ id: 1, name: "BE Team", project_ids: [1, 2] }],
-      isLoading: false,
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 99 }} />)
     expect(screen.getByTestId("result").textContent).toBe("yes")
   })
@@ -91,9 +94,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [{ id: 1, name: "Other", project_ids: [99] }],
-      isLoading: false,
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 99 }} />)
     expect(screen.getByTestId("result").textContent).toBe("no")
   })
@@ -108,9 +111,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
-      isLoading: false,
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 99 }} />)
     expect(screen.getByTestId("result").textContent).toBe("no")
   })
@@ -125,9 +128,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: undefined,
-      isLoading: true,
+      isPending: true,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={{ id: 1, managerId: 99 }} />)
     expect(screen.getByTestId("result").textContent).toBe("no")
   })
@@ -142,9 +145,9 @@ describe("useTransitionAuthority", () => {
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
-      isLoading: false,
+      isPending: false,
       error: null,
-    } as ReturnType<typeof ledTeamsHook.useLedTeams>)
+    } as unknown as ReturnType<typeof ledTeamsHook.useLedTeams>)
     render(<HarnessForProject project={null} />)
     expect(screen.getByTestId("result").textContent).toBe("no")
   })

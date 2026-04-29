@@ -10,14 +10,20 @@
 // noise in their console.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import type { MockInstance } from "vitest"
 
 // Stub axios.create so we can capture the registered interceptors and
 // invoke them directly. Pre-fix and post-fix code paths both register a
 // response interceptor with `(success, error)` arity; we capture the
 // error handler and call it with synthetic axios error objects.
+//
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — type `error` as returning
+// Promise<unknown> (the real axios interceptor signature) so the
+// `handler(err).catch(...)` calls below are well-typed (was TS2571
+// "Object is of type 'unknown'" for every test case).
 const responseHandlers: Array<{
   success: (r: unknown) => unknown
-  error: (e: unknown) => unknown
+  error: (e: unknown) => Promise<unknown>
 }> = []
 
 vi.mock("axios", () => {
@@ -27,7 +33,13 @@ vi.mock("axios", () => {
         use: () => 0,
       },
       response: {
-        use: (success: (r: unknown) => unknown, error: (e: unknown) => unknown) => {
+        // Phase 15 Plan 15-01 (TIDY-04 harness fix) — keep the captured
+        // handler shape's return type aligned with the response-handler
+        // typing (Promise<unknown>) so the test bodies can chain .catch.
+        use: (
+          success: (r: unknown) => unknown,
+          error: (e: unknown) => Promise<unknown>,
+        ) => {
           responseHandlers.push({ success, error })
           return responseHandlers.length - 1
         },
@@ -46,7 +58,15 @@ vi.mock("@/lib/constants", () => ({
 }))
 
 describe("api-client response interceptor", () => {
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+  // Phase 15 Plan 15-01 (TIDY-04 harness fix) — declaring
+  // `consoleErrorSpy: ReturnType<typeof vi.spyOn>` resolves to a
+  // generic MockInstance<unknown[], unknown> that does not accept
+  // assignment from vi.spyOn(console, "error") in vitest 1.6 (TS2322).
+  // Use vitest's exported MockInstance with the actual call signature.
+  let consoleErrorSpy: MockInstance<
+    [message?: unknown, ...optionalParams: unknown[]],
+    void
+  >
 
   beforeEach(async () => {
     responseHandlers.length = 0

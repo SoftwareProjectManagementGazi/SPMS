@@ -30,9 +30,15 @@ vi.mock("@/components/toast", () => ({
 }))
 
 // Mock useTransitionAuthority — overridable per-test via implementation swap.
-const transitionAuthorityMock = vi.fn(() => true)
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — TanStack v5 + stricter
+// useTransitionAuthority signature (TransitionAuthorityProject | null |
+// undefined) made the prior `(...args: unknown[])` spread fail TS2556.
+// Declare the mock with an explicit (project: unknown) => boolean signature
+// so the passthrough below type-checks (was TS2554 — 0 vs 1 args). Keep
+// the .mockReturnValue API by retaining vi.MockedFunction's typing.
+const transitionAuthorityMock = vi.fn<[project: unknown], boolean>(() => true)
 vi.mock("@/hooks/use-transition-authority", () => ({
-  useTransitionAuthority: (...args: unknown[]) => transitionAuthorityMock(...args),
+  useTransitionAuthority: (project: unknown) => transitionAuthorityMock(project),
 }))
 
 // Mock apiClient at module scope — service layer reads from it.

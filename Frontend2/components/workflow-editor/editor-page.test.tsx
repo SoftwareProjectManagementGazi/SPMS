@@ -31,7 +31,12 @@ vi.mock("@/context/app-context", () => ({
 }))
 
 // useTransitionAuthority mock — toggle per test.
-const mockUseTransitionAuthority = vi.fn(() => true)
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — declare with explicit
+// `[project: unknown], boolean` generic args so the (project) passthrough
+// below type-checks (was TS2554 — 0 vs 1 args after the spread fix).
+const mockUseTransitionAuthority = vi.fn<[project: unknown], boolean>(
+  () => true,
+)
 vi.mock("@/hooks/use-transition-authority", () => ({
   useTransitionAuthority: (project: unknown) =>
     mockUseTransitionAuthority(project),
