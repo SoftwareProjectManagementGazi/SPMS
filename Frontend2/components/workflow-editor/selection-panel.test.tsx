@@ -90,8 +90,13 @@ describe("SelectionPanel", () => {
         onWorkflowChange={() => {}}
       />,
     )
-    // Header is "n1.name → n2.name"
-    expect(screen.getByText(/Başlatma → Yürütme/)).toBeTruthy()
+    // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production EdgeEditor
+    // (selection-panel.tsx:413-437) renders the source name + arrow icon +
+    // target name across separate divs (not as a single "Başlatma →
+    // Yürütme" string), so a regex spanning both names cannot match a
+    // single text node. Verify each name is present independently.
+    expect(screen.getByText("Başlatma")).toBeTruthy()
+    expect(screen.getByText("Yürütme")).toBeTruthy()
     // Edge type label
     expect(screen.getByText("Bağlantı Tipi")).toBeTruthy()
     // SegmentedControl 3 options

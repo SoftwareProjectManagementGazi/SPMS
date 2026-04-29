@@ -33,15 +33,25 @@ vi.mock("@/context/app-context", () => ({
 // useTransitionAuthority mock — toggle per test.
 const mockUseTransitionAuthority = vi.fn(() => true)
 vi.mock("@/hooks/use-transition-authority", () => ({
-  useTransitionAuthority: (...args: unknown[]) =>
-    mockUseTransitionAuthority(...args),
+  useTransitionAuthority: (project: unknown) =>
+    mockUseTransitionAuthority(project),
 }))
 
 // useCycleCounters mock — Plan 12-08 wires this into EditorPage; tests do
 // NOT mount QueryClientProvider so the underlying useQuery would throw.
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — return STABLE Map references
+// so the editor's cycleMap-dep useEffect does not refire every render and
+// drive an infinite render loop. Using `new Map()` per call worked when the
+// editor's data flow short-circuited earlier (pre @tanstack/react-query
+// useQuery wiring) but post-Triage #3 the projection effects depend on
+// cycleMap and must observe a stable identity. vi.hoisted ensures the
+// constant exists at the time vitest hoists the vi.mock factory.
+const { STABLE_EMPTY_CYCLE_MAP } = vi.hoisted(() => ({
+  STABLE_EMPTY_CYCLE_MAP: new Map<string, number>(),
+}))
 vi.mock("@/hooks/use-cycle-counters", () => ({
-  useCycleCounters: () => ({ data: new Map<string, number>() }),
-  buildCycleMap: () => new Map<string, number>(),
+  useCycleCounters: () => ({ data: STABLE_EMPTY_CYCLE_MAP }),
+  buildCycleMap: () => STABLE_EMPTY_CYCLE_MAP,
 }))
 
 // Plan 12-09 — useToast / useQueryClient / projectService mocks. Tests do NOT
@@ -53,8 +63,27 @@ vi.mock("@/components/toast", () => ({
 }))
 
 const mockInvalidateQueries = vi.fn()
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — editor-page.tsx now imports
+// `useQuery` directly (Triage #3 phase-transitions BFS feed). Without this
+// stub the entire test file errors at first render: '"useQuery" export is
+// not defined on the "@tanstack/react-query" mock'. Return a STABLE
+// (frozen, hoisted) v5 UseQueryResult shape so the editor's
+// `transitionsQuery.data ?? []` fallback returns the same reference every
+// render — otherwise the `nodeStates` useMemo dep churns and we burn the
+// vitest worker into JS-heap-OOM. vi.hoisted is required because vitest
+// hoists vi.mock factories above the rest of the module body.
+const { STABLE_EMPTY_QUERY } = vi.hoisted(() => ({
+  STABLE_EMPTY_QUERY: Object.freeze({
+    data: Object.freeze([]),
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+    error: null,
+  }),
+}))
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
+  useQuery: () => STABLE_EMPTY_QUERY,
 }))
 
 const mockUpdateProcessConfig = vi.fn()
@@ -81,6 +110,18 @@ const capturedHandlers: {
   onNodeDragStop?: (e: unknown, node: unknown) => void
 } = {}
 vi.mock("@xyflow/react", () => ({
+  // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production wraps the inner
+  // canvas in <ReactFlowProvider> (workflow-canvas-inner.tsx:129) and uses
+  // useReactFlow() to expose imperative zoom/fit handles. Both must exist on
+  // the mock object or the component crashes at first render.
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="rf-provider">{children}</div>
+  ),
+  useReactFlow: () => ({
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+  }),
   ReactFlow: ({
     children,
     onNodesChange,
@@ -108,6 +149,8 @@ vi.mock("@xyflow/react", () => ({
   BaseEdge: () => null,
   EdgeLabelRenderer: () => null,
   getBezierPath: () => ["", 0, 0, 0, 0],
+  applyNodeChanges: <T,>(_changes: unknown, items: T[]) => items,
+  applyEdgeChanges: <T,>(_changes: unknown, items: T[]) => items,
 }))
 
 // next/dynamic stub — kept for Plan 12-07 baseline tests that observe
@@ -164,6 +207,14 @@ const mockProject: Project = {
   managerAvatar: null,
   progress: 0,
   columns: [],
+  // Phase 15 Plan 15-01 (TIDY-04 harness fix) — Project type added
+  // boardColumns/taskCount/taskDoneCount fields after this fixture was
+  // written (project-service.ts maps board_columns + task_count +
+  // task_done_count from the API). Test was not consuming them; provide
+  // minimal-shape defaults so tsc --noEmit passes.
+  boardColumns: [],
+  taskCount: 0,
+  taskDoneCount: 0,
   processConfig: null,
   createdAt: "2026-01-01T00:00:00Z",
 }
@@ -199,14 +250,15 @@ describe("EditorPage", () => {
     throw new Error("Header Save button not found")
   }
 
-  it("Test 6: renders H1 'İş Akışı Tasarımcısı' + project subtitle + Save/Geri/Çoğalt buttons", () => {
+  it("Test 6: renders H1 'İş Akışı Tasarımcısı' + project subtitle + Save/Geri buttons", () => {
     render(<EditorPage project={mockProject} />)
     expect(screen.getByText("İş Akışı Tasarımcısı")).toBeTruthy()
     expect(screen.getByText("Mobil Bankacılık 3.0")).toBeTruthy()
     expect(screen.getByText("MOBIL")).toBeTruthy()
-    // 3 right-side buttons (multiple Save match — getAllByText)
+    // Phase 15 Plan 15-01 (TIDY-04 harness fix) — header was redesigned
+    // before this baseline; "Çoğalt" button was demoted to context-menu
+    // only (editor-page.tsx:830). Header now exposes Geri + Kaydet.
     expect(screen.getByText("Geri")).toBeTruthy()
-    expect(screen.getByText("Çoğalt")).toBeTruthy()
     expect(screen.getAllByText("Kaydet").length).toBeGreaterThan(0)
   })
 

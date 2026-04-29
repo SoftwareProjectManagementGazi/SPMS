@@ -5,6 +5,12 @@
 
 import { describe, it, expect, vi } from "vitest"
 import { render, fireEvent } from "@testing-library/react"
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — Position is an enum in the
+// real @xyflow/react .d.ts, so passing the string literals "right"/"left"
+// to PhaseEdge's typed sourcePosition/targetPosition props produces
+// TS2322. Import the enum (the type-only import resolves against the real
+// package types regardless of vi.mock at runtime) and use enum members.
+import { Position } from "@xyflow/react"
 import { PhaseEdge } from "./phase-edge"
 
 vi.mock("@/context/app-context", () => ({
@@ -44,7 +50,6 @@ interface RenderProps {
 }
 
 function renderEdge(p: RenderProps = {}) {
-  // @ts-expect-error — full EdgeProps shape replaced with minimal stubs
   return render(
     <PhaseEdge
       id="e1"
@@ -54,8 +59,8 @@ function renderEdge(p: RenderProps = {}) {
       sourceY={0}
       targetX={100}
       targetY={100}
-      sourcePosition="right"
-      targetPosition="left"
+      sourcePosition={Position.Right}
+      targetPosition={Position.Left}
       selected={p.selected ?? false}
       data={{
         type: p.type ?? "flow",
@@ -113,7 +118,6 @@ describe("PhaseEdge — Plan 12-08 inline label edit (CONTEXT D-14)", () => {
     editMode?: boolean
   }) {
     return render(
-      // @ts-expect-error — full EdgeProps shape replaced with minimal stubs
       <PhaseEdge
         id="e1"
         source="A"
@@ -122,8 +126,8 @@ describe("PhaseEdge — Plan 12-08 inline label edit (CONTEXT D-14)", () => {
         sourceY={0}
         targetX={100}
         targetY={100}
-        sourcePosition="right"
-        targetPosition="left"
+        sourcePosition={Position.Right}
+        targetPosition={Position.Left}
         selected={false}
         data={{
           type: "flow",

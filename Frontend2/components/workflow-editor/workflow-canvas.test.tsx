@@ -21,23 +21,40 @@ vi.mock("@/context/app-context", () => ({
 
 // Stub the @xyflow/react module so we can assert prop forwarding without
 // actually mounting React Flow (which needs ResizeObserver + jsdom layout).
+//
+// Phase 15 Plan 15-01 (TIDY-04 harness fix) — production
+// workflow-canvas-inner.tsx:129 wraps the canvas in <ReactFlowProvider>
+// and useReactFlow() exposes imperative zoom/fit handles via
+// CanvasControlsBridge. Both must exist on the mock.
 vi.mock("@xyflow/react", () => ({
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="rf-provider">{children}</div>
+  ),
+  useReactFlow: () => ({
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+  }),
   ReactFlow: ({
     nodesDraggable,
     nodesConnectable,
-    edgesUpdatable,
+    edgesReconnectable,
     children,
   }: {
     nodesDraggable?: boolean
     nodesConnectable?: boolean
-    edgesUpdatable?: boolean
+    edgesReconnectable?: boolean
     children?: React.ReactNode
   }) => (
     <div
       data-testid="reactflow"
       data-nodes-draggable={String(nodesDraggable)}
       data-nodes-connectable={String(nodesConnectable)}
-      data-edges-updatable={String(edgesUpdatable)}
+      // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production prop is
+      // `edgesReconnectable` (workflow-canvas-inner.tsx:149); the older
+      // React Flow API name `edgesUpdatable` was renamed in v12. The
+      // exposed data-attribute keeps its readable test-attribute name.
+      data-edges-updatable={String(edgesReconnectable)}
     >
       {children}
     </div>
