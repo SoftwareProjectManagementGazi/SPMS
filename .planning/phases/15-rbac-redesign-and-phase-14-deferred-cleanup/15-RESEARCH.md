@@ -1330,57 +1330,72 @@ def downgrade() -> None:
 6. **DB-required integration tests** must use `pytestmark = pytest.mark.requires_db` at module level (Pitfall 7 per CONTEXT D-4.4).
 7. **E2E specs are skip-guarded per Phase 11 D-50** — `test.skip(condition, reason)` at top of describe block. CI runs full; dev iter skip.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **PostgreSQL native ENUM vs VARCHAR + CHECK for `permissions.scope`** (D-3.5 Discretion).
    - What we know: Both work. Phase 9 precedent is VARCHAR. Native ENUM is more correct semantically but Alembic enum migrations are painful.
    - What's unclear: Does the planner want strict DB-level safety or migration simplicity?
    - Recommendation: VARCHAR(16) + CHECK constraint (Pattern 4 alternative). Plan 15-04 picks; explicit Discretion grant in CONTEXT.
+   - **RESOLVED:** VARCHAR(16) + CHECK constraint per Phase 9 precedent (Plan 15-04 task 2.1 / migration task 3.1). `ck_permissions_scope` constraint enforces `scope IN ('system', 'project')`.
 
 2. **Permissions-static.ts deprecation strategy** (Discretion).
    - What we know: File has 14 perm rows + types `PermissionKey` and `AdminRole`. Plan 15-09 audits consumers.
    - What's unclear: Are there any consumers outside `permission-matrix-card.tsx` and `permission-row.tsx`?
    - Recommendation: Plan 15-09 runs `grep -rn "permissions-static" Frontend2/` BEFORE Plan 15-10 ships. If only the matrix files import, file becomes legacy import shim re-exporting types from new `lib/admin/rbac-types.ts`. If wider consumers, keep file in place + redirect data source.
+   - **RESOLVED:** Plan 15-09 audits consumers via grep; the file becomes a legacy import shim re-exporting types (`PermissionKey`, `AdminRole`) from the new `lib/admin/rbac-types.ts`. Hard deletion deferred to a follow-up plan once all importers are migrated.
 
 3. **`<RequirePermission/>` guard implementation: HOC vs render-prop vs hook + early return** (Discretion).
    - What we know: Hook + early return is recommended (CONTEXT Discretion). React 19 prefers composition.
    - What's unclear: Server Action permission checks — Phase 15 doesn't use Server Actions, so N/A.
    - Recommendation: Hook + early return per Example 4 above. `useHasPermission(perm)` returns boolean; component conditionally renders children.
+   - **RESOLVED:** Hook + early return pattern per RESEARCH Code Example 4 (Plan 15-09 task 1.x). `<RequirePermission perm="admin.users.invite">{children}</RequirePermission>` calls `useHasPermission(perm)` internally and returns null when denied.
 
 4. **Matrix UI per-row scope badge styling** (Discretion).
    - What we know: 3 candidate options — Badge tone='neutral' inline, separate chip, prefix etiketi.
    - What's unclear: Which is consistent with Phase 14 D-D2 metadata badges?
    - Recommendation: `<Badge tone='neutral' size='xs'>(system)</Badge>` inline next to perm key. Mirrors Phase 14 14-09 D-D2 metadata badge convention.
+   - **RESOLVED:** Inline `<Badge tone="neutral" size="xs">(system)</Badge>` (or `(project)`) next to the perm key, consistent with Phase 14 D-D2 metadata badge convention. Plan 15-10 implements in `permission-row.tsx`.
 
 5. **JWT permissions[] claim sorting** (Discretion).
    - What we know: Alphabetical recommended (deterministic, debug-friendly).
    - What's unclear: None.
    - Recommendation: `sorted(perms)` everywhere — login encode + permitted_client fixture.
+   - **RESOLVED:** Alphabetical sort (deterministic, debug-friendly) per RESEARCH Pitfall 14. `sorted(perms)` applied at JWT encode time in login handler (Plan 15-06) and `_make_test_jwt` fixture (Plan 15-04 task 2.8).
 
 6. **Idempotency-Key for matrix toggle PATCH** (Discretion).
    - What we know: Phase 9 D-08 idempotency pattern (5dk TTL); UI optimistic update double-click revert may be sufficient.
    - What's unclear: Can rapid toggles produce backend race?
    - Recommendation: NO Idempotency-Key. UI cancelQueries + onMutate snapshot handles double-click. Backend PATCH is idempotent at row level (`{role_id, perm_key, granted}` is the natural key).
+   - **RESOLVED:** No Idempotency-Key required. UI optimistic update with `cancelQueries` in `onMutate` dampens double-clicks; backend PATCH is naturally idempotent at the row level (`INSERT … ON CONFLICT DO NOTHING` for grant, `DELETE WHERE` for revoke). Plan 15-10 skips Idempotency-Key header.
 
 7. **role_permissions row delete vs soft-flag on revoke** (Discretion).
    - What we know: Hard-delete recommended (bounded row count, audit_log preserves history).
    - What's unclear: None.
    - Recommendation: Hard-delete. `INSERT INTO role_permissions ON CONFLICT DO NOTHING` for grant; `DELETE FROM role_permissions WHERE role_id=:r AND permission_id=:p` for revoke.
+   - **RESOLVED:** Hard-delete (DB row count bounded ≤ 38 perms × ~10 roles = ~380 rows max; audit log preserves revocation history). Plan 15-04 `SqlAlchemyRolePermissionRepository.set_cell` implements via `delete()` statement.
 
 8. **Plan 15-10 SemanticEventType new chip vs fold into existing `admin` chip** (R-19).
    - What we know: Phase 14 14-10 created `admin` chip for 10 admin-side types.
    - What's unclear: Should `rbac.*` 5 new types fold into `admin` (consistency) or get a new `rbac` chip (granularity)?
    - Recommendation: Fold into `admin` chip. Plan 15-09 adds 5 to the existing `if` block at `audit-event-mapper.ts:178-191`. New chip would clutter the SegmentedControl.
+   - **RESOLVED:** Fold the 5 `rbac.*` SemanticEventTypes into the existing `admin` chip (no new chip; activity SegmentedControl unchanged). Plan 15-09 task 2.x extends `audit-event-mapper.ts:178-191` admin-chip branch.
 
 9. **Plan 15-04 single plan vs split into 15-04a / 15-04b** (CONTEXT D-01 strawman).
    - What we know: Strawman lists 15-04 as ~10-15 files (Permission entity + 3 repos + 3 ORM + migration + permitted_client fixture).
    - What's unclear: Is this fat enough to risk 14-01 levels of complexity?
    - Recommendation: Single plan. Phase 14 14-01 was ~30 files and shipped fine. Plan 15-04 is half that. Don't fragment.
+   - **RESOLVED:** Single plan (mirror Phase 14 14-01 fat-infra Wave 0 pattern). Plan 15-04 ships domain entities + repository ABCs + ORM models + repo impls + DI factories + Migration 007 + `permitted_client` fixture in one cohesive unit (~19 files post-Migration-007 perm extension, still under the 14-01 baseline).
 
 10. **Login handler perm computation: per-request DB query or denormalized cache?** (Implementation detail).
     - What we know: At login time, fetch `SELECT p.key FROM permissions p JOIN role_permissions rp ON p.id=rp.permission_id WHERE rp.role_id=:role_id` ⇒ build claim.
     - What's unclear: Do we cache per-role perm list in memory?
     - Recommendation: NO cache. Login is rare (once per 30dk per user). DB query is cheap (~26 rows max). Simplicity wins.
+    - **RESOLVED:** No cache; per-request JOIN at login time. Worst-case query is bounded (~38 perms × max-PM=23 rows). Plan 15-06 login handler calls `IRolePermissionRepository.list_by_role(role_id)` directly inside `LoginUserUseCase.execute`.
+
+11. **`permitted_client` fixture location** (Discretion — Plan 15-04 placement).
+    - What we know: `Backend/tests/conftest.py` already hosts `authenticated_client`.
+    - What's unclear: Top-level conftest vs separate `Backend/tests/integration/conftest.py`?
+    - **RESOLVED:** Top-level `Backend/tests/conftest.py` per Discretion (unit tests can also use the fixture for JWT-claim composition checks; placement matches `authenticated_client`). Plan 15-04 task 2.8 appends in place.
 
 ## Sources
 

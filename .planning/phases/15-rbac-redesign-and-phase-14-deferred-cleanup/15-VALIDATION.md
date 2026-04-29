@@ -60,8 +60,8 @@ created: 2026-04-29
 | RBAC-02 | 15-06 | 1 | _has_permission(user, key) Admin super-role short-circuit | unit | `cd Backend && python -m pytest tests/unit/test_has_permission.py -q` | ❌ W0 | ⬜ pending |
 | RBAC-02 | 15-06 | 1 | require_permission decorator → 403 PERMISSION_DENIED | integration | `cd Backend && python -m pytest tests/integration/test_require_permission_decorator.py -q` | ❌ W0 | ⬜ pending |
 | RBAC-02 | 15-06 | 1 | JWT login response carries permissions[] claim | integration | `cd Backend && python -m pytest tests/integration/test_login_returns_permissions.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | 26 perms seeded with correct scope | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_permissions.py::test_list_returns_26_with_scope -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | role_permissions matrix bootstrap (PM 13 / Member 3 / Admin 0 / Guest 0) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_role_permission_matrix.py::test_seeded_matrix_shape -q` | ❌ W0 | ⬜ pending |
+| RBAC-02 | 15-06 | 1 | 38 perms seeded with correct scope (project=26, system=12) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_permissions.py::test_list_returns_38_with_scope -q` | ❌ W0 | ⬜ pending |
+| RBAC-02 | 15-06 | 1 | role_permissions matrix bootstrap (PM 23 / Member 5 / Admin 0 / Guest 0) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_role_permission_matrix.py::test_seeded_matrix_shape -q` | ❌ W0 | ⬜ pending |
 | RBAC-03 | 15-07 | 1 | All 14+ require_admin migrate to require_permission, full admin suite green | integration | `cd Backend && python -m pytest tests/integration/admin/ -q` | partial (existing tests need update) | ⬜ pending |
 | RBAC-03 | 15-07 | 1 | Bulk-action dynamic perm check raises on missing sub-perm | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_users_bulk.py::test_dynamic_perm_check_raises -q` | ❌ W0 | ⬜ pending |
 | RBAC-03 | 15-07 | 1 | rbac.* audit events emit (5 SemanticEventTypes) | integration | `cd Backend && python -m pytest tests/integration/test_rbac_audit_emission.py -q` | ❌ W0 | ⬜ pending |
@@ -117,7 +117,7 @@ created: 2026-04-29
 - [ ] `Backend/tests/integration/test_requires_db_marker.py` — marker auto-skip behavior (Plan 15-02 TIDY-05)
 - [ ] `Backend/tests/integration/api/test_2tier_perm_check.py` — perm + membership/leader sequencing across 8 endpoint families (Plan 15-08)
 - [ ] `Backend/tests/integration/admin/test_admin_roles.py` — CRUD + system protection + Member fallback (Plan 15-05/06)
-- [ ] `Backend/tests/integration/admin/test_admin_permissions.py` — list 26 perms with scope (Plan 15-06)
+- [ ] `Backend/tests/integration/admin/test_admin_permissions.py` — list 38 perms with scope (project=26, system=12) (Plan 15-06)
 - [ ] `Backend/tests/integration/admin/test_admin_role_permission_matrix.py` — matrix GET + per-cell PATCH (Plan 15-06)
 - [ ] `Backend/tests/integration/admin/test_admin_users_bulk.py::test_dynamic_perm_check_raises` (extend existing or NEW; Plan 15-07)
 
@@ -170,7 +170,7 @@ created: 2026-04-29
 | Member fallback ConfirmDialog UX text | RBAC-05 | i18n nuance, designer review | Trigger "Rolü sil" on a custom role with 5 users assigned → verify dialog body text reads ~"Bu rolü silmek 5 kullanıcıyı Member rolüne taşıyacak. Devam?" |
 | Avatar dropdown admin link visibility for SuperUser custom role | RBAC-06 | Cross-role dropdown UX | Create custom role "SuperUser" with `admin.access` perm → log in as user with that role → verify "Admin Paneli" link visible in dropdown. Remove `admin.access` perm → re-login → verify link hidden. |
 | 7-layer atomic deploy state — partial deploy detection | RBAC-07 | Atomic-commit invariant | After Plan 15-10 merge: `git diff HEAD~1 --stat` should show 7 production files + 4 test files in single commit. Verify no "v3.0" string survives in any of: `permission-matrix-card.tsx`, `permission-row.tsx`, `app/(shell)/admin/permissions/page.tsx`, `app/(shell)/admin/roles/page.tsx`, `role-card.tsx`. |
-| Migration 007 schema-push smoke | RBAC-01 | Live DB integrity check | Local: `cd Backend && alembic upgrade head` → verify `permissions`, `role_permissions` tables created, `roles.is_system_role/icon_key/color_token` columns added, 26 perm rows seeded, role_permissions matrix seeded (PM 13 / Member 3 / Admin 0 / Guest 0). Re-run → verify no errors (idempotency). |
+| Migration 007 schema-push smoke | RBAC-01 | Live DB integrity check | Local: `cd Backend && alembic upgrade head` → verify `permissions`, `role_permissions` tables created, `roles.is_system_role/icon_key/color_token` columns added, 38 perm rows seeded (26 project + 12 admin/system), role_permissions matrix seeded (PM 23 / Member 5 / Admin 0 / Guest 0). Re-run → verify no errors (idempotency). |
 | Cross-phase Plan 14-11 D-D2 contract regression | RBAC-06 | Cross-phase test contract update | After Plan 15-11: re-read `.planning/phases/14-admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f/14-11-PLAN.md` → verify regression test 14 update is documented in Phase 15 commit history (visible via `git log --grep "D-D2" --grep "avatar-dropdown" --grep "perm-based"`). |
 | 15-UAT-CHECKLIST.md scenario walkthrough | RBAC-08 | End-to-end UAT signoff | Plan 15-12 ships ~20-25 row checklist; manual click-through covering: Admin role flip, Custom role create/delete + Member fallback, Permission matrix toggle persists, Guest read-only login, Self-edit prevented, Admin Paneli link perm-based, System role protected from rename/delete. |
 
