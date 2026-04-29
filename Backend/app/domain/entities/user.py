@@ -13,8 +13,13 @@ class User(BaseModel):
     is_active: bool = True
     role_id: Optional[int] = None
 
-    role: Optional[Role] = None 
-    
+    role: Optional[Role] = None
+
+    # Phase 15 RBAC-01 (Pitfall 18): JWT permissions[] claim. Claim-only field;
+    # populated by get_current_user from JWT (Plan 15-06). DO NOT persist to DB.
+    # Default empty list defends against None.
+    permissions: list[str] = []
+
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

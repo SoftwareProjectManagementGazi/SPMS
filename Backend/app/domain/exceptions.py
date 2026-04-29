@@ -231,3 +231,43 @@ class JoinRequestInvalidStateError(DomainError):
         super().__init__(
             f"Join request {request_id} is in state '{current_status}'; only 'pending' requests can be transitioned"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 15 — RBAC redesign domain exceptions (Plan 15-04)
+# ---------------------------------------------------------------------------
+
+
+class RoleNotFoundError(DomainError):
+    """Phase 15 — Raised when role lookup by id/name fails. Router maps to 404."""
+    def __init__(self, role_ref):
+        self.role_ref = role_ref
+        super().__init__(f"Role '{role_ref}' not found")
+
+
+class SystemRoleProtectedError(DomainError):
+    """Phase 15 D-2.3 — Raised on PATCH/DELETE of a system role.
+    Router maps to 422 with error_code SYSTEM_ROLE_PROTECTED."""
+    def __init__(self, role_id: int, role_name: str):
+        self.role_id = role_id
+        self.role_name = role_name
+        super().__init__(
+            f"System role '{role_name}' (id={role_id}) cannot be modified or deleted"
+        )
+
+
+class RoleNameInvalidError(DomainError):
+    """Phase 15 D-2.6 — Raised when role name violates length/regex/reserved-name rules.
+    Router maps to 422 with error_code ROLE_NAME_INVALID."""
+    def __init__(self, name: str, reason: str):
+        self.name = name
+        self.reason = reason
+        super().__init__(f"Role name '{name}' invalid: {reason}")
+
+
+class PermissionDeniedError(DomainError):
+    """Phase 15 D-1.11 — Raised by use cases on missing perms (e.g., bulk-action D-1.16).
+    Router maps to 403 with error_code PERMISSION_DENIED + missing_permission attribute."""
+    def __init__(self, missing_permission: str):
+        self.missing_permission = missing_permission
+        super().__init__(f"Permission '{missing_permission}' required")
