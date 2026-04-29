@@ -66,8 +66,18 @@ class BulkInviteResponseDTO(BaseModel):
 
 
 class RoleChangeRequestDTO(BaseModel):
-    """PATCH /admin/users/{id}/role body."""
-    role: AdminRole
+    """PATCH /admin/users/{id}/role body.
+
+    Phase 15 D-1.17 (Plan 15-05): migrated from `role: AdminRole` literal to
+    `role_id: int` so custom roles (Plan 15-11 modal) can be assigned via the
+    same endpoint. The legacy `AdminRole` Literal remains in place for
+    InviteUserRequestDTO until Plan 15-07 migrates that path too.
+
+    NOTE: Plan 15-06 owns the router rewrite that consumes this new shape.
+    Until then, the existing admin_users.py route still references `dto.role`
+    (broken at runtime, integration tests skipped via requires_db marker).
+    """
+    role_id: int                                # Phase 15 D-1.17 — dynamic role lookup via IRoleRepository
 
     model_config = ConfigDict(from_attributes=True)
 
