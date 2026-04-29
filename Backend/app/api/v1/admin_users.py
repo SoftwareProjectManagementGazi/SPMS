@@ -17,12 +17,13 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.audit import get_audit_repo
 from app.api.deps.auth import require_admin
 from app.api.deps.password_reset import get_password_reset_repo
+from app.api.deps.role import get_role_repo
 from app.api.deps.security import get_security_service
 from app.api.deps.user import get_user_repo
 from app.application.dtos.admin_user_dtos import (
@@ -44,29 +45,30 @@ from app.application.use_cases.deactivate_user import DeactivateUserUseCase
 from app.application.use_cases.invite_user import InviteUserUseCase
 from app.application.use_cases.reset_user_password import ResetUserPasswordUseCase
 from app.domain.entities.user import User
-from app.domain.exceptions import UserAlreadyExistsError, UserNotFoundError
+from app.domain.exceptions import (
+    RoleNotFoundError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
+from app.domain.repositories.role_repository import IRoleRepository
 from app.infrastructure.config import settings
 from app.infrastructure.database.database import get_db_session
-from app.infrastructure.database.models.role import RoleModel
 from app.infrastructure.database.models.user import UserModel
 
 router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Helper closures — kept here (router layer) so use cases stay free of
-# Role table coupling per D-A6 (RBAC infra deferred; role_id resolution lives
-# at the wiring boundary)
+# Helper closures — Phase 15 Plan 15-06 migrated the role-update and
+# role-name-resolver closures to IRoleRepository ABC injection. The Phase 14
+# `_make_toggle_active` closure remains until Plan 15-07 ports the deactivate
+# endpoint; deactivate logic is unchanged by Plan 15-06.
+#
+# The role-name → role-id translation that the legacy invite/bulk endpoints
+# still perform is now handled inline via `_resolve_role_id_via_repo` (uses
+# IRoleRepository.get_by_name). Plan 15-07 will migrate those endpoints to
+# `role_id: int` DTOs and remove the resolver entirely.
 # ---------------------------------------------------------------------------
-
-
-def _make_role_id_resolver(session: AsyncSession):
-    async def resolve(role_name: str) -> Optional[int]:
-        stmt = select(RoleModel).where(RoleModel.name.ilike(role_name))
-        result = await session.execute(stmt)
-        row = result.scalar_one_or_none()
-        return row.id if row else None
-    return resolve
 
 
 def _make_toggle_active(session: AsyncSession):
@@ -80,15 +82,18 @@ def _make_toggle_active(session: AsyncSession):
     return toggle
 
 
-def _make_update_role(session: AsyncSession):
-    async def upd(user_id: int, role_id: Optional[int]) -> None:
-        await session.execute(
-            update(UserModel)
-            .where(UserModel.id == user_id)
-            .values(role_id=role_id)
-        )
-        await session.commit()
-    return upd
+def _resolve_role_id_via_repo(role_repo: IRoleRepository):
+    """Phase 15 Plan 15-06 — Pitfall 12 follow-through.
+
+    Returns a (role_name -> Optional[int]) async callable backed by
+    IRoleRepository.get_by_name (case-insensitive ILIKE). Used by the legacy
+    invite/bulk-invite endpoints until Plan 15-07 migrates their DTOs to
+    role_id: int.
+    """
+    async def resolve(role_name: str) -> Optional[int]:
+        role = await role_repo.get_by_name(role_name)
+        return role.id if role is not None else None
+    return resolve
 
 
 # ---------------------------------------------------------------------------
@@ -177,9 +182,14 @@ async def invite_user(
     pwd_reset_repo=Depends(get_password_reset_repo),
     audit_repo=Depends(get_audit_repo),
     security=Depends(get_security_service),
-    session: AsyncSession = Depends(get_db_session),
+    role_repo: IRoleRepository = Depends(get_role_repo),
 ):
-    """D-B2 admin invite — creates user(is_active=False) + reset token + audit row."""
+    """D-B2 admin invite — creates user(is_active=False) + reset token + audit row.
+
+    Phase 15 Plan 15-06: role-name → id resolution now via IRoleRepository
+    (Pitfall 12 follow-through). Plan 15-07 will migrate the DTO to
+    `role_id: int`.
+    """
     uc = InviteUserUseCase(
         user_repo=user_repo,
         password_reset_repo=pwd_reset_repo,
@@ -191,7 +201,7 @@ async def invite_user(
     try:
         return await uc.execute(
             dto, admin_id=admin.id,
-            role_id_resolver=_make_role_id_resolver(session),
+            role_id_resolver=_resolve_role_id_via_repo(role_repo),
         )
     except UserAlreadyExistsError as e:
         raise HTTPException(
@@ -210,9 +220,12 @@ async def bulk_invite(
     pwd_reset_repo=Depends(get_password_reset_repo),
     audit_repo=Depends(get_audit_repo),
     security=Depends(get_security_service),
-    session: AsyncSession = Depends(get_db_session),
+    role_repo: IRoleRepository = Depends(get_role_repo),
 ):
-    """D-B4 bulk invite — 500-row server-side hard cap via Pydantic."""
+    """D-B4 bulk invite — 500-row server-side hard cap via Pydantic.
+
+    Phase 15 Plan 15-06: role-name → id resolution via IRoleRepository.
+    """
     invite_uc = InviteUserUseCase(
         user_repo=user_repo,
         password_reset_repo=pwd_reset_repo,
@@ -224,7 +237,7 @@ async def bulk_invite(
     bulk_uc = BulkInviteUserUseCase(invite_uc)
     return await bulk_uc.execute(
         dto, admin_id=admin.id,
-        role_id_resolver=_make_role_id_resolver(session),
+        role_id_resolver=_resolve_role_id_via_repo(role_repo),
     )
 
 
@@ -254,26 +267,46 @@ async def reset_user_password(
 @router.patch("/admin/users/{user_id}/role", status_code=http_status.HTTP_204_NO_CONTENT)
 async def change_user_role(
     user_id: int,
-    dto: RoleChangeRequestDTO,
+    body: RoleChangeRequestDTO,
     admin: User = Depends(require_admin),
     user_repo=Depends(get_user_repo),
+    role_repo: IRoleRepository = Depends(get_role_repo),
     audit_repo=Depends(get_audit_repo),
-    session: AsyncSession = Depends(get_db_session),
 ):
-    """D-A6 system-wide role flip — Admin / Project Manager / Member only."""
+    """D-A6 system-wide role flip — supports any role_id (system + custom roles).
+
+    Phase 15 Plan 15-06 / D-1.17 — Body migrated from ``{role: AdminRole}``
+    string-literal to ``{role_id: int}`` so custom Plan 15-11 roles can be
+    assigned. The migrated ChangeUserRoleUseCase injects IRoleRepository
+    and enforces the D-2.9 self-edit guard backend-authoritatively (T-15-02).
+
+    Plan 15-07 will migrate this handler from `Depends(require_admin)` to
+    `Depends(require_permission('admin.users.role_change'))`.
+    """
     uc = ChangeUserRoleUseCase(
         user_repo=user_repo,
+        role_repo=role_repo,
         audit_repo=audit_repo,
-        update_role=_make_update_role(session),
     )
     try:
         await uc.execute(
-            user_id, dto.role, admin_id=admin.id,
-            role_id_resolver=_make_role_id_resolver(session),
+            target_user_id=user_id,
+            role_id=body.role_id,
+            admin_id=admin.id,
         )
     except UserNotFoundError as e:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND, detail=str(e),
+        )
+    except RoleNotFoundError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND, detail=str(e),
+        )
+    except PermissionError as e:
+        # D-2.9 self-edit guard — backend-authoritative trust boundary
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail={"error_code": "PERMISSION_DENIED", "message": str(e)},
         )
 
 
@@ -307,10 +340,17 @@ async def bulk_action(
     dto: BulkActionRequestDTO,
     admin: User = Depends(require_admin),
     user_repo=Depends(get_user_repo),
+    role_repo: IRoleRepository = Depends(get_role_repo),
     audit_repo=Depends(get_audit_repo),
     session: AsyncSession = Depends(get_db_session),
 ):
-    """D-B7 per-user transaction; per-user audit row."""
+    """D-B7 per-user transaction; per-user audit row.
+
+    Phase 15 Plan 15-06: ChangeUserRoleUseCase now takes IRoleRepository +
+    role_id: int. The bulk-action `payload.role_id` (legacy callers may pass
+    `payload.role` string) is normalized via _resolve_role_id_via_repo before
+    invoking the use case.
+    """
     deactivate_uc = DeactivateUserUseCase(
         user_repo=user_repo,
         audit_repo=audit_repo,
@@ -318,13 +358,13 @@ async def bulk_action(
     )
     role_uc = ChangeUserRoleUseCase(
         user_repo=user_repo,
+        role_repo=role_repo,
         audit_repo=audit_repo,
-        update_role=_make_update_role(session),
     )
     uc = BulkActionUserUseCase(deactivate_uc, role_uc)
     return await uc.execute(
         dto, admin_id=admin.id,
-        role_id_resolver=_make_role_id_resolver(session),
+        role_id_resolver=_resolve_role_id_via_repo(role_repo),
     )
 
 

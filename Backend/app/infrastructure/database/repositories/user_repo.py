@@ -19,7 +19,13 @@ class SqlAlchemyUserRepository(IUserRepository):
         return User.model_validate(model)
 
     def _to_model(self, entity: User) -> UserModel:
-        data = entity.model_dump(exclude={"id", "created_at", "updated_at", "role"})
+        # Phase 15 Plan 15-04 added User.permissions: list[str] = [] as a
+        # JWT-claim-only field (Pitfall 18; NOT persisted to DB). Excluding
+        # it here keeps SqlAlchemyUserRepository.create from passing an
+        # invalid kwarg to UserModel (which has no `permissions` column).
+        data = entity.model_dump(
+            exclude={"id", "created_at", "updated_at", "role", "permissions"}
+        )
         return UserModel(**data)
 
     def _get_base_query(self):

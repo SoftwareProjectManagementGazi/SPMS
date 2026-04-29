@@ -39,6 +39,13 @@ async def get_current_user(
     user = await user_repo.get_by_email(email)
     if user is None:
         raise credentials_exception
+
+    # Phase 15 RBAC-02 (Plan 15-06) — JWT permissions[] claim → User.permissions.
+    # Pitfall 9 / R-02 backwards-compat: stale pre-Phase 15 tokens have no
+    # `permissions` claim; payload.get(..., []) defaults to empty list. Existing
+    # Admin users keep working via _is_admin(user) short-circuit in
+    # _has_permission (Admin super-role bypasses the empty list).
+    user.permissions = list(payload.get("permissions") or [])
     return user
 
 
@@ -79,10 +86,82 @@ async def require_admin_or_project_manager(
     return current_user
 
 
+# ---------------------------------------------------------------------------
+# Phase 15 RBAC-02 (Plan 15-06) — perm DSL primitives
+# ---------------------------------------------------------------------------
+
+
+def _has_permission(user: User, key: str) -> bool:
+    """Phase 15 D-1.5 + D-1.10 — Admin super-role short-circuit, then JWT-claim lookup.
+
+    Reads ``user.permissions`` which is JWT-derived in :func:`get_current_user`
+    (no DB hit per D-1.10). Defends against ``None`` via ``user.permissions or []``
+    per Pitfall 18.
+
+    Order of checks:
+    1. ``_is_admin(user)`` — Admin role.name.lower() == "admin" → True.
+       Even if matrix wiped, super-role kicks in (T-15-04 last-admin lockout
+       mitigation).
+    2. ``key in user.permissions`` — claim-derived membership lookup.
+    """
+    if _is_admin(user):
+        return True
+    return key in (user.permissions or [])
+
+
+def require_permission(key: str):
+    """Phase 15 D-1.4 / D-1.11 — Returns a Depends-compatible callable that
+    enforces a single permission key.
+
+    On failure raises ``HTTPException(403, detail={...})`` with the Phase 9
+    D-09 error_code envelope::
+
+        {
+            "error_code": "PERMISSION_DENIED",
+            "missing_permission": "<key>",
+            "message": "Bu işlem için <key> yetkisi gerekir"
+        }
+
+    Usage::
+
+        @router.post("/projects/{project_id}/milestones")
+        async def create(
+            ...,
+            _perm: User = Depends(require_permission("milestone.create")),  # tier 1 perm DSL
+            _auth: User = Depends(require_project_transition_authority),    # tier 2 (Phase 9 D-15)
+        ):
+            ...
+
+    The closure captures ``key`` so each call site gets its own checker. The
+    inner ``_checker`` re-uses :func:`get_current_user`'s caching so the JWT
+    is only decoded once per request even when stacked with other auth deps.
+    """
+
+    async def _checker(current_user: User = Depends(get_current_user)) -> User:
+        if not _has_permission(current_user, key):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_code": "PERMISSION_DENIED",
+                    "missing_permission": key,
+                    "message": f"Bu işlem için {key} yetkisi gerekir",
+                },
+            )
+        return current_user
+
+    return _checker
+
+
 __all__ = [
-    "oauth2_scheme", "get_db", "get_current_user",
-    "_is_admin", "_is_project_manager",
-    "require_admin", "require_admin_or_project_manager",
+    "oauth2_scheme",
+    "get_db",
+    "get_current_user",
+    "_is_admin",
+    "_is_project_manager",
+    "require_admin",
+    "require_admin_or_project_manager",
+    "_has_permission",
+    "require_permission",
 ]
 
 

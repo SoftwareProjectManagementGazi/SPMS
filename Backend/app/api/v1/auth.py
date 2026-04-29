@@ -22,8 +22,10 @@ from app.application.use_cases.update_user_profile import UpdateUserProfileUseCa
 from app.application.use_cases.request_password_reset import RequestPasswordResetUseCase
 from app.application.use_cases.confirm_password_reset import ConfirmPasswordResetUseCase
 from app.api.dependencies import get_user_repo, get_security_service, get_current_user, get_password_reset_repo
+from app.api.deps.role import get_role_permission_repo
 from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.password_reset_repository import IPasswordResetRepository
+from app.domain.repositories.role_permission_repository import IRolePermissionRepository
 from app.application.ports.security_port import ISecurityService
 from app.domain.entities.user import User
 from app.domain.exceptions import UserAlreadyExistsError, InvalidCredentialsError
@@ -62,9 +64,15 @@ async def login(
     dto: UserLoginDTO,
     user_repo: IUserRepository = Depends(get_user_repo),
     security_service: ISecurityService = Depends(get_security_service),
+    role_permission_repo: IRolePermissionRepository = Depends(get_role_permission_repo),
 ):
+    """Phase 15 D-1.3 (Plan 15-06) — composes JWT permissions[] claim from
+    role_permission_repo.list_by_role(user.role.id) sorted alphabetically
+    (Pitfall 14). The claim is read by get_current_user / _has_permission with
+    a backwards-compat default empty list (Pitfall 9).
+    """
     try:
-        use_case = LoginUserUseCase(user_repo, security_service)
+        use_case = LoginUserUseCase(user_repo, security_service, role_permission_repo)
         return await use_case.execute(dto)
     except InvalidCredentialsError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

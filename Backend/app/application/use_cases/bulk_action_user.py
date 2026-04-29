@@ -5,6 +5,11 @@ per batch). Returns BulkActionResponseDTO with per-user success/failed list.
 
 DIP — composes DeactivateUserUseCase + ChangeUserRoleUseCase; no infrastructure
 imports.
+
+Phase 15 Plan 15-06 — ChangeUserRoleUseCase migrated to (target_user_id,
+role_id: int, admin_id) signature. Bulk-action payload now accepts either
+``payload.role_id`` (preferred) or ``payload.role`` (legacy string, resolved
+via the optional ``role_id_resolver`` callable).
 """
 from typing import Any, Optional
 
@@ -42,11 +47,25 @@ class BulkActionUserUseCase:
                 elif request.action == "activate":
                     await self.deactivate_use_case.execute(user_id, admin_id, deactivate=False)
                 elif request.action == "role_change":
-                    new_role = (request.payload or {}).get("role")
-                    if new_role is None:
-                        raise ValueError("role_change requires payload.role")
+                    payload = request.payload or {}
+                    role_id = payload.get("role_id")
+                    if role_id is None:
+                        # Legacy: payload contains {role: str}; resolve via callback.
+                        legacy_role = payload.get("role")
+                        if legacy_role is None or role_id_resolver is None:
+                            raise ValueError(
+                                "role_change requires payload.role_id "
+                                "(or payload.role with role_id_resolver)"
+                            )
+                        role_id = await role_id_resolver(legacy_role)
+                        if role_id is None:
+                            raise ValueError(
+                                f"role_change: unknown role '{legacy_role}'"
+                            )
                     await self.role_change_use_case.execute(
-                        user_id, new_role, admin_id, role_id_resolver
+                        target_user_id=user_id,
+                        role_id=int(role_id),
+                        admin_id=admin_id,
                     )
                 else:
                     raise ValueError(f"Unknown action: {request.action}")
