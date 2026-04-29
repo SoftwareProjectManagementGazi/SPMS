@@ -1,4 +1,5 @@
-// Unit tests for components/shell/avatar-dropdown.tsx (Phase 13 Plan 13-02).
+// Unit tests for components/shell/avatar-dropdown.tsx (Phase 13 Plan 13-02 +
+// Phase 15 Plan 15-11 cross-phase migrate of Test 14 D-D2 → D-2.11).
 //
 // Per Plan 13-02 Task 1 <behavior> Tests 1-13 covering:
 //   1. Trigger renders with initials + aria-label
@@ -17,14 +18,24 @@
 //
 // Plan 14-11 added Test 14: clicking the Admin Paneli item for an admin user
 // invokes router.push("/admin") — verifies the Phase 13 D-D2 cross-phase
-// destination (Plan 14-02) is wired and reachable post-implementation. Phase 13
-// originally pointed the link at /admin but the destination was 404; Plan 14-02
-// shipped the AdminLayout, and Plan 14-11 locks the routing contract with a test
-// that fails loudly if a future refactor changes the href.
+// destination (Plan 14-02) is wired and reachable post-implementation.
+//
+// Phase 15 Plan 15-11 D-2.11 (CROSS-PHASE R-01): the gate behind the link
+// migrates from `role.name === "Admin"` to `hasPermission('admin.access')`.
+// Test 14 is updated SAME COMMIT to assert the new gate. Two MORE tests are
+// added (15 + 16) covering:
+//   15. D-2.11 — link visible when permissions=['admin.access'] (custom role
+//       SuperUser; Admin perm granted explicitly via matrix toggle).
+//   16. D-2.11 — link HIDDEN when permissions=[] AND hasPermission returns
+//       false (Member / non-admin custom roles).
+//   (Pitfall 9 backwards-compat for legacy Admin tokens with permissions=[]
+//   is implicitly covered by Test 3 + Test 5 — both pass an Admin role +
+//   inline hasPermission that mirrors the real super-role short-circuit.)
 //
 // Mock pattern verbatim from Frontend2/components/lifecycle/evaluation-report-card.test.tsx
 // (Phase 12 D-04 RTL+vi.mock pattern). next/navigation is mocked so useRouter().push
-// + usePathname() are deterministic.
+// + usePathname() are deterministic. The useAuth mock is now re-configurable
+// per-test via mockHasPermission so each test owns its perm state.
 
 import * as React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
@@ -47,13 +58,19 @@ let mockUser: unknown = {
   email: "test@example.com",
   role: { name: "Member" },
 }
+// Phase 15 Plan 15-11 — perm state is now configurable per test. Default to
+// the empty / deny-all shape; individual tests reset to the shape they need
+// (e.g., Tests 3/5 simulate the AuthContext's role.name === "Admin" short-
+// circuit by returning true; Tests 4/15/16 explicitly test the perm path).
+let mockPermissions: string[] = []
+let mockHasPermission: (key: string) => boolean = () => false
 vi.mock("@/context/auth-context", () => ({
   useAuth: () => ({
     user: mockUser,
     token: "x",
     isLoading: false,
-    permissions: [],
-    hasPermission: () => false,
+    permissions: mockPermissions,
+    hasPermission: (k: string) => mockHasPermission(k),
     login: vi.fn(),
     logout: logoutMock,
   }),
@@ -84,6 +101,12 @@ beforeEach(() => {
     role: { name: "Member" },
   }
   mockLanguage = "tr"
+  // Phase 15 Plan 15-11 — reset perm state. Default Member shape: no perms
+  // and hasPermission returns false. Admin-role tests override hasPermission
+  // to mirror the real AuthContext's role.name === "Admin" super-role
+  // short-circuit (Pitfall 9 backwards-compat).
+  mockPermissions = []
+  mockHasPermission = () => false
 })
 
 // --- Tests -------------------------------------------------------------
@@ -111,6 +134,10 @@ describe("AvatarDropdown", () => {
   })
 
   // Test 3 — Admin (object role.name === "Admin")
+  // Phase 15 Plan 15-11 D-2.11: the gate is now hasPermission('admin.access');
+  // for an Admin user the AuthContext's hasPermission helper short-circuits to
+  // true (D-1.5 super-role + Pitfall 9). Mirror that contract in the mock so
+  // the test continues to assert the correct invariant.
   it("shows the Yönetim Paneli admin item when role.name = Admin", async () => {
     mockUser = {
       id: "7",
@@ -118,6 +145,7 @@ describe("AvatarDropdown", () => {
       email: "admin@example.com",
       role: { name: "Admin" },
     }
+    mockHasPermission = () => true  // Admin super-role short-circuit
     const user = userEvent.setup()
     render(<AvatarDropdown />)
     await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
@@ -139,6 +167,9 @@ describe("AvatarDropdown", () => {
   })
 
   // Test 5 — role as plain string "admin" (lowercase, case-insensitive)
+  // Phase 15 Plan 15-11 D-2.11: AuthContext's hasPermission lowercases the
+  // role.name and short-circuits to true for "admin" — mirror that in the
+  // mock so this test asserts the actual production behavior.
   it("shows admin item when role is a lowercase string 'admin' (case-insensitive)", async () => {
     mockUser = {
       id: "7",
@@ -146,6 +177,7 @@ describe("AvatarDropdown", () => {
       email: "admin@example.com",
       role: "admin",
     }
+    mockHasPermission = () => true  // case-insensitive Admin short-circuit
     const user = userEvent.setup()
     render(<AvatarDropdown />)
     await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
@@ -267,25 +299,67 @@ describe("AvatarDropdown", () => {
     expect(document.activeElement).toBe(items[items.length - 1])
   })
 
-  // Test 14 — Plan 14-11 D-D2 cross-phase contract verification.
-  // Admin Paneli for an admin user must invoke router.push("/admin"); the
-  // Phase 14 admin layout (Plan 14-02) is now reachable, so the destination
-  // resolves. Implementation note: the menu items are <button> elements that
-  // call router.push() via handleNav(href) — NOT <Link href>. Asserting on
-  // pushMock(args[0] === "/admin") is the right contract; getAttribute("href")
-  // would be wrong because the element is a button, not an anchor.
-  it("Admin Paneli click routes to /admin for admin users (Plan 14-11 — D-D2 verification)", async () => {
+  // Test 14 — Plan 14-11 D-D2 cross-phase contract verification, MIGRATED
+  // SAME COMMIT to D-2.11 per Phase 15 Plan 15-11 + R-01 cross-phase
+  // invariant. The original assertion ("link visible when role.name === 'Admin'")
+  // is preserved as a backwards-compat semantic via the AuthContext's
+  // role-name short-circuit in hasPermission (Pitfall 9). This test now
+  // additionally asserts that clicking the link still calls router.push("/admin")
+  // — the routing destination contract Plan 14-11 originally locked.
+  it("Admin Paneli click routes to /admin for admin users (Plan 14-11 D-D2 → Plan 15-11 D-2.11 migrated)", async () => {
     mockUser = {
       id: "1",
       name: "Ayşe Admin",
       email: "[email protected]",
       role: { name: "Admin" },
     }
+    // Mirror the AuthContext's super-role short-circuit (D-1.5 + Pitfall 9):
+    // legacy Admin tokens with permissions=[] still see the link because
+    // hasPermission detects role.name === "Admin" and short-circuits to true.
+    mockHasPermission = () => true
     const user = userEvent.setup()
     render(<AvatarDropdown />)
     await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
     const adminItem = screen.getByRole("menuitem", { name: /Yönetim Paneli|Admin Panel/i })
     await user.click(adminItem)
     expect(pushMock).toHaveBeenCalledWith("/admin")
+  })
+
+  // Test 15 — Phase 15 Plan 15-11 D-2.11 NEW: custom role with explicit
+  // 'admin.access' perm sees the link. Demonstrates that admin access is no
+  // longer hard-coded to role.name === 'Admin'; any role with the perm
+  // toggled-on in the matrix gets the link.
+  it("D-2.11: 'Yönetim Paneli' link visible when hasPermission('admin.access') returns true (custom role)", async () => {
+    mockUser = {
+      id: "42",
+      name: "Süper Kullanıcı",
+      email: "superuser@example.com",
+      role: { name: "SuperUser" }, // custom role created by an Admin
+    }
+    mockPermissions = ["admin.access"]
+    mockHasPermission = (key: string) => key === "admin.access"
+    const user = userEvent.setup()
+    render(<AvatarDropdown />)
+    await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
+    expect(screen.queryByText(/Yönetim Paneli|Admin Panel/i)).toBeTruthy()
+  })
+
+  // Test 16 — Phase 15 Plan 15-11 D-2.11 NEW: a non-admin user (e.g.,
+  // Member with no admin.access perm) does NOT see the link, even when the
+  // permissions[] claim is empty (the default Pitfall 9 backwards-compat
+  // shape for tokens that predate Plan 15-08).
+  it("D-2.11: 'Yönetim Paneli' link HIDDEN when permissions=[] AND hasPermission returns false", async () => {
+    mockUser = {
+      id: "200",
+      name: "Member User",
+      email: "member@example.com",
+      role: { name: "Member" },
+    }
+    mockPermissions = []
+    mockHasPermission = () => false
+    const user = userEvent.setup()
+    render(<AvatarDropdown />)
+    await user.click(screen.getByRole("button", { name: /hesap menüsü|account menu/i }))
+    expect(screen.queryByText(/Yönetim Paneli|Admin Panel/i)).toBeNull()
   })
 })

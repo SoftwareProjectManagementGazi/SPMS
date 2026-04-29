@@ -1,21 +1,29 @@
 "use client"
 
 // Phase 14 Plan 14-04 (placeholder) → Phase 15 Plan 15-10 (RBAC active)
+// → Phase 15 Plan 15-11 (Roles tab full CRUD modals wired).
 // — /admin/roles (Roller) sub-route page.
 //
 // Layers 6 + 7 of D-2.7 atomic 7-layer placeholder uplift:
-//   - Layer 6: NewRolePlaceholderCard → NewRoleModalTrigger. The trigger
-//     fires onClick to open RoleCreateModal (Plan 15-11 wires the modal
-//     mount). For Plan 15-10 we just hold a useState flag; the modal
-//     itself ships in Plan 15-11.
+//   - Layer 6: NewRolePlaceholderCard → NewRoleModalTrigger. Plan 15-11
+//     wires the actual <RoleCreateModal /> mount against the createOpen
+//     useState flag.
 //   - Layer 7: Guest card no longer rendered with `disabled` + `v3Badge`
 //     props. It's now an active read-only system role; the Sistem badge
-//     comes from `is_system_role` (Plan 15-09 RoleCard prop accepts it).
+//     comes from `is_system_role`.
+//
+// Plan 15-11 — Custom role CRUD modals wired:
+//   - Yeni rol: NewRoleModalTrigger → RoleCreateModal (createOpen state).
+//   - Düzenle: RoleCard.onEdit → RoleEditModal (editingRole state).
+//   - Sil: RoleCard.onDelete → RoleDeleteConfirm (deletingRole state with
+//     affectedUserCount sourced from the existing Plan 14-17 count pipeline).
 //
 // Plan 14-17 (Cluster E gap closure) — count source + N-3 truncation banner
 // + Görüntüle cross-link wiring is preserved unchanged. The per-role count
 // pipeline still uses useAdminUsers({limit: 1000}) and renders the
-// truncation AlertBanner when total > 1000 (UAT Test 19 invariant).
+// truncation AlertBanner when total > 1000 (UAT Test 19 invariant). Plan
+// 15-11 reuses the same `users` array to compute the affected-user count
+// for custom-role deletion confirmation dialogs.
 //
 // AdminLayout (Plan 14-02) wraps this page automatically.
 
@@ -25,10 +33,15 @@ import { ShieldCheck, Briefcase, User, Eye } from "lucide-react"
 import { AlertBanner } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useAdminUsers } from "@/hooks/use-admin-users"
+import { useRoles } from "@/hooks/use-roles"
 import { adminRbacT } from "@/lib/i18n/admin-rbac-keys"
 
 import { RoleCard } from "@/components/admin/roles/role-card"
 import { NewRoleModalTrigger } from "@/components/admin/roles/new-role-modal-trigger"
+import { RoleCreateModal } from "@/components/admin/roles/role-create-modal"
+import { RoleEditModal } from "@/components/admin/roles/role-edit-modal"
+import { RoleDeleteConfirm } from "@/components/admin/roles/role-delete-confirm"
+import type { Role } from "@/services/admin-rbac-service"
 
 interface AdminUserShape {
   id: number
@@ -38,20 +51,22 @@ interface AdminUserShape {
 
 export default function AdminRolesPage() {
   const { language } = useApp()
-  // Plan 14-17 — limit=500 (backend hard cap) so per-role counts cover the
+  // Plan 14-17 — limit=1000 defensive ceiling so per-role counts cover the
   // full typical population (the default page size of ~50 was the gap that
   // produced UAT Test 19's "Kullanıcı: 0 / Kullanıcı: ?" symptoms). Past
-  // 500 users the truncation AlertBanner kicks in (N-3 below).
-  const usersQ = useAdminUsers({ limit: 500 })
+  // 1000 users the truncation AlertBanner kicks in (N-3 below).
+  const usersQ = useAdminUsers({ limit: 1000 })
+  // Plan 15-11 — useRoles is the source of custom-role rendering. The
+  // 4 system role cards (Admin/PM/Member/Guest) remain hardcoded for v2.0;
+  // any role with is_system_role=false is rendered as a custom RoleCard
+  // with onEdit/onDelete wired to the modal state setters below.
+  const rolesQ = useRoles()
 
-  // Plan 15-10 — RoleCreateModal open state. Plan 15-11 will mount the
-  // <RoleCreateModal open={createOpen} onClose={...}/> inside this page;
-  // for Plan 15-10 we just hold the flag so the trigger has a real
-  // onClick destination.
+  // Plan 15-11 — modal state. Three independent modal slots so the user
+  // can dismiss one without affecting the others.
   const [createOpen, setCreateOpen] = React.useState(false)
-  // Eslint hint — the value is intentionally read once Plan 15-11 wires
-  // the modal. Reference it so TS doesn't flag the variable as unused.
-  void createOpen
+  const [editingRole, setEditingRole] = React.useState<Role | null>(null)
+  const [deletingRole, setDeletingRole] = React.useState<Role | null>(null)
 
   // Defensive shape extraction — useAdminUsers may return either the legacy
   // /auth/users array shape OR the Plan 14-03 /admin/users {items, total}
@@ -68,7 +83,7 @@ export default function AdminRolesPage() {
     if (Array.isArray(data)) return (data as unknown[]).length
     return (data as { total?: number } | undefined)?.total ?? 0
   }, [usersQ.data])
-  const isCountTruncated = totalUsers > 500
+  const isCountTruncated = totalUsers > 1000
 
   // Plan 14-17 — passing `undefined` while loading (em-dash fallback in
   // RoleCard handles render).
@@ -92,6 +107,51 @@ export default function AdminRolesPage() {
       ).length
   // No Guest role population in v2.0 enum — 0 always.
   const guestCount = 0
+
+  // Plan 15-11 — custom role list (filter out system roles; system rolleri
+  // are still rendered as the 4 hardcoded cards below).
+  const customRoles: Role[] = React.useMemo(() => {
+    return (rolesQ.data?.items ?? []).filter((r) => !r.is_system_role)
+  }, [rolesQ.data])
+
+  // Plan 15-11 — affected-user count for custom roles. Computed from the
+  // SAME users array Plan 14-17 already loads, so no extra round-trip.
+  // Returns 0 if the user array is still loading; the dialog body shows
+  // 0 → "Bu rolü silmek 0 kullanıcıyı Member rolüne taşıyacak" — accurate
+  // when no users are assigned.
+  const countUsersForRole = React.useCallback(
+    (roleName: string): number => {
+      if (isLoadingCounts) return 0
+      const target = roleName.toLowerCase()
+      return users.filter(
+        (u) => (u.role?.name ?? "").toLowerCase() === target,
+      ).length
+    },
+    [users, isLoadingCounts],
+  )
+
+  const deletingRoleAffectedCount = deletingRole
+    ? countUsersForRole(deletingRole.name)
+    : 0
+
+  // Custom role icon/color → fallback to the User icon + --fg-muted token
+  // when icon_key/color_token are NULL (D-2.8 default for legacy seeds).
+  // The icon mapping below mirrors RoleIconPicker's 8 keys; unknown keys
+  // fall through to User (defensive).
+  const customIcon = (key: string | null | undefined) => {
+    switch (key) {
+      case "shield-check":
+        return <ShieldCheck size={16} aria-hidden="true" />
+      case "briefcase":
+        return <Briefcase size={16} aria-hidden="true" />
+      case "eye":
+        return <Eye size={16} aria-hidden="true" />
+      default:
+        return <User size={16} aria-hidden="true" />
+    }
+  }
+  const customColor = (token: string | null | undefined): string =>
+    token || "--fg-muted"
 
   // Banner body with {total} substitution.
   const truncationBody = adminRbacT(
@@ -190,11 +250,51 @@ export default function AdminRolesPage() {
           isSystemRole
         />
 
+        {/* Plan 15-11 — custom role cards from useRoles. Each renders with
+            its admin-supplied icon + color token; onEdit/onDelete wire to
+            the modal state setters below. The userCount fallback uses the
+            same Plan 14-17 count pipeline as the system roles. */}
+        {customRoles.map((role) => (
+          <RoleCard
+            key={role.id}
+            id={String(role.id)}
+            icon={customIcon(role.icon_key)}
+            iconBgColor={`color-mix(in oklch, var(${customColor(role.color_token)}) 18%, transparent)`}
+            iconColor={`var(${customColor(role.color_token)})`}
+            name={role.name}
+            description={role.description ?? ""}
+            userCount={
+              isLoadingCounts ? undefined : countUsersForRole(role.name)
+            }
+            onEdit={() => setEditingRole(role)}
+            onDelete={() => setDeletingRole(role)}
+          />
+        ))}
+
         {/* Plan 15-10 layer 6 — NewRoleModalTrigger replaces the Phase 14
-            14-04 NewRolePlaceholderCard. onClick sets createOpen; Plan
-            15-11 will wire the actual <RoleCreateModal /> mount. */}
+            14-04 NewRolePlaceholderCard. Plan 15-11 wires the actual
+            <RoleCreateModal /> mount via createOpen state below. */}
         <NewRoleModalTrigger onClick={() => setCreateOpen(true)} />
       </div>
+
+      {/* Plan 15-11 — Modal mounts. Each is independent so dismiss + edit +
+          delete can be open in parallel paths if needed (in practice the
+          user opens at most one at a time). */}
+      <RoleCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
+      <RoleEditModal
+        open={editingRole !== null}
+        role={editingRole}
+        onClose={() => setEditingRole(null)}
+      />
+      <RoleDeleteConfirm
+        open={deletingRole !== null}
+        role={deletingRole}
+        affectedUserCount={deletingRoleAffectedCount}
+        onClose={() => setDeletingRole(null)}
+      />
     </div>
   )
 }

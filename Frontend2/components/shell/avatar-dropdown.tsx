@@ -56,7 +56,10 @@ export function AvatarDropdown() {
   const [open, setOpen] = React.useState(false)
   const [dilOpen, setDilOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement | null>(null)
-  const { user, logout } = useAuth()
+  // Phase 15 Plan 15-11 D-2.11 — destructure hasPermission for the
+  // perm-based admin link gate (replaces the role.name === "Admin" check
+  // that Phase 13 D-D2 / Plan 14-11 originally shipped).
+  const { user, logout, hasPermission } = useAuth()
   const { language, setLanguage } = useApp()
   const router = useRouter()
   const pathname = usePathname()
@@ -66,11 +69,25 @@ export function AvatarDropdown() {
   // Role check — case-insensitive (D-A10 / Plan 13-02 Test 5). Tolerates
   // both shape variants: `{ id, name }` object (auth-service canonical) and
   // a plain string fallback if a future seed regresses to a string role.
+  // PRESERVED for the role badge tone derivation below (line ~205) — Phase 15
+  // D-2.10 mandates that the visual badge stays role-name driven; only the
+  // admin-link gate migrates to the perm-based check.
   const roleName =
     (typeof (user as { role?: unknown })?.role === "string"
       ? ((user as unknown as { role: string }).role)
       : (user as unknown as { role?: { name?: string } } | null)?.role?.name) || ""
   const isAdmin = roleName.toLowerCase() === "admin"
+
+  // Phase 15 D-2.11 — Admin Paneli link gate migrates from role.name check
+  // to hasPermission('admin.access'). The AuthContext's hasPermission helper
+  // already short-circuits to true for role.name === 'Admin' (D-1.5 super-
+  // role + Pitfall 9 backwards-compat for stale JWTs without the
+  // permissions[] claim), so existing Admin users keep the link without
+  // forcing re-login. Custom roles (e.g., "SuperUser") with the admin.access
+  // perm explicitly granted in the matrix also see the link. The CROSS-PHASE
+  // contract is asserted in avatar-dropdown.test.tsx Test 14 (originally
+  // Plan 14-11 D-D2 regression guard, updated SAME COMMIT for D-2.11).
+  const canAccessAdmin = hasPermission("admin.access")
 
   // 1. Click-outside (mousedown) — Phase 8 D-04 verbatim.
   React.useEffect(() => {
@@ -323,8 +340,14 @@ export function AvatarDropdown() {
             <Settings size={13} />
             {T("Ayarlar", "Settings")}
           </button>
-          {/* Yönetim Paneli — admin only (D-D2) */}
-          {isAdmin && (
+          {/* Yönetim Paneli — admin only. Phase 13 D-D2 originally gated
+              the link on role.name === "Admin"; Phase 15 D-2.11 migrates the
+              gate to hasPermission('admin.access'). The AuthContext helper
+              short-circuits to true for legacy Admin users (D-1.5 super-role
+              + Pitfall 9 backwards-compat), so this is a true superset of
+              the previous check. Plan 14-11's regression test (Test 14) was
+              updated SAME COMMIT to assert the new gate. */}
+          {canAccessAdmin && (
             <button
               type="button"
               role="menuitem"

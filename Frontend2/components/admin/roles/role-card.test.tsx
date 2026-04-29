@@ -63,6 +63,11 @@ vi.mock("@/context/app-context", () => ({
   useApp: () => ({ language: "tr" }),
 }))
 
+// ---- Toast mock ----
+vi.mock("@/components/toast", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 // ---- useAdminUsers mock — overridable per test ----
 type AdminUsersQ = {
   data?: unknown
@@ -75,6 +80,33 @@ const adminUsersStateRef: { current: AdminUsersQ } = {
 const useAdminUsersSpy = vi.fn((_filter?: unknown) => adminUsersStateRef.current)
 vi.mock("@/hooks/use-admin-users", () => ({
   useAdminUsers: (filter?: unknown) => useAdminUsersSpy(filter),
+}))
+
+// ---- Plan 15-11 — useRoles mock ----
+// AdminRolesPage now consumes useRoles to render custom roles. Default to
+// an empty list so the existing 4 system role cards still render unchanged
+// (no custom roles in the count test fixtures).
+type RolesQ = {
+  data?: { items: unknown[]; total: number }
+  isLoading?: boolean
+  error?: unknown
+}
+const rolesStateRef: { current: RolesQ } = {
+  current: { data: { items: [], total: 0 }, isLoading: false, error: null },
+}
+vi.mock("@/hooks/use-roles", () => ({
+  useRoles: () => rolesStateRef.current,
+}))
+
+// ---- Plan 15-11 — modal hooks (mutate spy + isPending=false) ----
+vi.mock("@/hooks/use-create-role", () => ({
+  useCreateRole: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+vi.mock("@/hooks/use-update-role", () => ({
+  useUpdateRole: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+vi.mock("@/hooks/use-delete-role", () => ({
+  useDeleteRole: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 // SUT — imported AFTER all mocks

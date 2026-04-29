@@ -13,6 +13,14 @@
 //                             (CONTEXT D-A6 enumerates 5 endpoints, no DELETE).
 //
 // Consumes Plan 14-01's shared MoreMenu primitive — DOES NOT rebuild.
+//
+// Phase 15 Plan 15-11 D-2.9 — Self-edit prevention UI: when this row's user
+// is the currently logged-in admin, the "Rolü değiştir" item is disabled to
+// prevent the admin from accidentally changing their own role and locking
+// themselves out (e.g., demoting Admin → Member). The backend
+// ChangeUserRoleUseCase ALSO raises PermissionError on self-edit (Phase 15
+// Plan 15-05 D-2.9 server-side gate); this UI guard is defense in depth and
+// makes the prohibited action visually obvious BEFORE the user clicks.
 
 import * as React from "react"
 
@@ -26,6 +34,7 @@ import { useResetPassword } from "@/hooks/use-reset-password"
 import { useChangeRole } from "@/hooks/use-change-role"
 import { useBulkAction } from "@/hooks/use-bulk-action"
 import { useApp } from "@/context/app-context"
+import { useAuth } from "@/context/auth-context"
 import { adminUsersT } from "@/lib/i18n/admin-users-keys"
 import type { AdminRole } from "@/services/admin-user-service"
 
@@ -43,6 +52,15 @@ export interface UserRowActionsProps {
 export function UserRowActions({ user }: UserRowActionsProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
+  // Phase 15 Plan 15-11 D-2.9 — read the logged-in user from AuthContext to
+  // detect self-edit. Defensive read: the auth user shape uses string ids
+  // (auth-service canonical) but the admin user shape uses number ids
+  // (admin-user-service canonical), so we compare via Number() / loose
+  // equality. Both branches are exercised in the unit tests.
+  const { user: currentUser } = useAuth()
+  const isSelf =
+    currentUser != null &&
+    Number((currentUser as { id?: string | number }).id) === user.id
 
   const resetM = useResetPassword()
   const changeRoleM = useChangeRole()
@@ -67,7 +85,14 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     {
       id: "change_role",
       label: adminUsersT("admin.users.more_change_role", lang),
-      onClick: () => setRoleSubmenuOpen(true),
+      // Phase 15 D-2.9 — disable when this row is the logged-in admin to
+      // prevent self-role-change lockout. Backend ChangeUserRoleUseCase
+      // additionally raises PermissionError as defense in depth.
+      disabled: isSelf,
+      onClick: () => {
+        if (isSelf) return
+        setRoleSubmenuOpen(true)
+      },
     },
     {
       id: "deactivate",
