@@ -7,6 +7,20 @@ interface AuthContextType {
   user: AuthUser | null
   token: string | null
   isLoading: boolean
+  // Phase 15 D-1.7 — RBAC permissions[] decoded from JWT payload.permissions
+  // claim. Empty array when the JWT lacks the claim (Pitfall 9 backwards-
+  // compat for tokens minted before Plan 15-08 — combined with the
+  // role.name === "Admin" short-circuit in hasPermission, existing Admins
+  // keep access while the rest of the app degrades to "no permissions".)
+  permissions: string[]
+  /**
+   * Phase 15 D-1.7 — Convenience guard for permission-gated UI. Returns true
+   * when the active user has the given permission key OR is an Admin (D-1.5
+   * super-role short-circuit). UI hides only — server-side
+   * Depends(require_permission) is the authoritative defense (CONTEXT.md
+   * cross-file rule line 417).
+   */
+  hasPermission: (key: string) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
 }
@@ -19,10 +33,48 @@ export function useAuth(): AuthContextType {
   return ctx
 }
 
+/**
+ * Phase 15 Plan 15-09 — Decode the `permissions` claim from a JWT payload.
+ *
+ * Pure base64url decode; NO signature verification client-side (per Phase 10
+ * D-03 localStorage convention — backend re-verifies on every request).
+ *
+ * Pitfall 9 — backwards-compat:
+ *   - null/undefined token  → []
+ *   - JWT without claim     → []
+ *   - claim is non-array    → []
+ *   - claim is array but contains non-strings → filter to strings only
+ *   - any decode failure    → [] (corrupt token, signature stripped, etc.)
+ *
+ * The empty-array fallback combined with the `role.name === "Admin"` short-
+ * circuit in hasPermission means existing Admins (whose tokens predate Plan
+ * 15-08) keep access without forcing a re-login.
+ */
+function decodePermissions(token: string | null): string[] {
+  if (!token) return []
+  try {
+    const parts = token.split(".")
+    if (parts.length < 2) return []
+    // base64url → base64 padding compensation
+    const b64 =
+      parts[1].replace(/-/g, "+").replace(/_/g, "/") +
+      "=".repeat((4 - (parts[1].length % 4)) % 4)
+    const payload = JSON.parse(atob(b64))
+    const perms = payload.permissions
+    return Array.isArray(perms)
+      ? perms.filter((p: unknown): p is string => typeof p === "string")
+      : []
+  } catch {
+    return []
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AuthUser | null>(null)
   const [token, setToken] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
+  // Phase 15 D-1.7 — permissions decoded from JWT claim.
+  const [permissions, setPermissions] = React.useState<string[]>([])
 
   // SSR-safe init: localStorage only accessible on client
   React.useEffect(() => {
@@ -30,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ? localStorage.getItem(AUTH_TOKEN_KEY) : null
     if (stored) {
       setToken(stored)
+      // Phase 15 D-1.7 — hydrate permissions from JWT on page reload.
+      setPermissions(decodePermissions(stored))
       authService.getCurrentUser()
         .then(setUser)
         .catch(() => {
@@ -51,6 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // D-03: set lightweight presence cookie for Next.js middleware
     document.cookie = `auth_session=1; path=/; SameSite=Lax; max-age=28800` // 8 hours — must match ACCESS_TOKEN_EXPIRE_MINUTES
     setToken(resp.access_token)
+    // Phase 15 D-1.7 — refresh permissions from new JWT.
+    setPermissions(decodePermissions(resp.access_token))
     const me = await authService.getCurrentUser()
     setUser(me)
   }, [])
@@ -69,11 +125,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null)
     setToken(null)
+    // Phase 15 D-1.7 — clear permissions on logout so no stale claims leak
+    // across user sessions on a shared device.
+    setPermissions([])
   }, [])
 
+  // Phase 15 D-1.7 — permission guard. Admin short-circuits to true (D-1.5
+  // super-role); everyone else checks against the decoded JWT permissions[].
+  // Case-insensitive role.name match guards against backend casing drift.
+  const hasPermission = React.useCallback(
+    (key: string) => {
+      const roleName = user?.role?.name?.toLowerCase()
+      if (roleName === "admin") return true
+      return permissions.includes(key)
+    },
+    [user, permissions],
+  )
+
   const value = React.useMemo(
-    () => ({ user, token, isLoading, login, logout }),
-    [user, token, isLoading, login, logout]
+    () => ({
+      user,
+      token,
+      isLoading,
+      permissions,
+      hasPermission,
+      login,
+      logout,
+    }),
+    [user, token, isLoading, permissions, hasPermission, login, logout],
   )
 
   return (

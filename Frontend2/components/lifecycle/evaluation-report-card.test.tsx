@@ -38,6 +38,8 @@ vi.mock("@/context/auth-context", () => ({
     user: { id: "1", name: "PM", email: "pm@x.io", role: { name: "Admin" } },
     token: "x",
     isLoading: false,
+    permissions: [],
+    hasPermission: () => false,
     login: vi.fn(),
     logout: vi.fn(),
   }),

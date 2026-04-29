@@ -95,6 +95,8 @@ function authAdmin() {
     user: { id: "1", name: "Admin", email: "a@b.co", role: { name: "Admin" } },
     token: "x",
     isLoading: false,
+    permissions: [],
+    hasPermission: () => false,
     login: vi.fn(),
     logout: vi.fn(),
   })

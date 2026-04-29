@@ -37,6 +37,8 @@ const authUserMock = vi.fn(() => ({
   user: { id: "1", name: "PM", email: "pm@x.io", role: { name: "Member" } },
   token: "x",
   isLoading: false,
+  permissions: [] as string[],
+  hasPermission: (_key: string) => false,
   login: vi.fn(),
   logout: vi.fn(),
 }))
@@ -161,6 +163,8 @@ beforeEach(() => {
     user: { id: "1", name: "PM", email: "pm@x.io", role: { name: "Member" } },
     token: "x",
     isLoading: false,
+    permissions: [],
+    hasPermission: () => false,
     login: vi.fn(),
     logout: vi.fn(),
   })

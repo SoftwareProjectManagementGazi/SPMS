@@ -35,6 +35,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "999", name: "Admin", email: "a@b.co", role: { name: "Admin" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -55,6 +57,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "7", name: "Mert", email: "m@b.co", role: { name: "Member" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -72,6 +76,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "5", name: "Zeynep", email: "z@b.co", role: { name: "Member" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -89,6 +95,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "5", name: "Member", email: "m@b.co", role: { name: "Member" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -106,6 +114,8 @@ describe("useTransitionAuthority", () => {
       user: null,
       token: null,
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -123,6 +133,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "5", name: "Member", email: "m@b.co", role: { name: "Member" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
@@ -140,6 +152,8 @@ describe("useTransitionAuthority", () => {
       user: { id: "5", name: "Member", email: "m@b.co", role: { name: "Member" } },
       token: "x",
       isLoading: false,
+      permissions: [],
+      hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
     })
