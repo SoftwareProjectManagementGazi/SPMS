@@ -118,13 +118,18 @@ from contextlib import asynccontextmanager
 from jose import jwt as _jose_jwt
 
 
-def _make_test_jwt(email: str) -> str:
+def _make_test_jwt(email: str, permissions: list[str] | None = None) -> str:
     """Generate a JWT for a test user email using the real app secret/algorithm.
 
     Security note (T-09-03-01): Tests use settings.JWT_SECRET (from .env which is gitignored).
     These tokens are ephemeral — db_session rolls back after each test (T-09-03-04).
+
+    Phase 15 Plan 15-04 — accepts optional permissions[] claim (sorted alphabetically per
+    Pitfall 14 for deterministic test assertions).
     """
-    payload = {"sub": email}
+    payload: dict = {"sub": email}
+    if permissions is not None:
+        payload["permissions"] = sorted(permissions)
     return _jose_jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -171,6 +176,64 @@ async def authenticated_client(db_session):
         # Override DB dependency so the app uses the same transactional session
         app.dependency_overrides[get_db_session] = lambda: db_session
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", follow_redirects=True) as client:
+            client.headers["Authorization"] = f"Bearer {token}"
+            yield client
+        app.dependency_overrides.clear()
+
+    return _builder
+
+
+# ---------------------------------------------------------------------------
+# Phase 15 Plan 15-04 — `permitted_client` fixture per D-1.15.
+# Like authenticated_client but with an explicit JWT permissions[] claim so
+# integration tests can exercise the require_permission DSL without depending
+# on the live role_permissions matrix.
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture
+async def permitted_client(db_session):
+    """Phase 15 D-1.15 — like authenticated_client but with explicit JWT permissions[] claim.
+
+    Usage::
+
+        async def test_x(permitted_client):
+            async with permitted_client(perms=["admin.users.invite"]) as client:
+                r = await client.post("/api/v1/admin/users", ...)
+                assert r.status_code == 201
+
+    Default role is "Member" (case-insensitive); pass ``role=`` to swap.
+    Tokens carry permissions sorted alphabetically (Pitfall 14) for deterministic
+    test assertions.
+    """
+    from sqlalchemy import select
+    from app.infrastructure.database.models.role import RoleModel
+    from app.infrastructure.database.models.user import UserModel
+
+    @asynccontextmanager
+    async def _builder(perms: list[str], role: str = "Member"):
+        stmt = select(RoleModel).where(RoleModel.name.ilike(role))
+        role_row = (await db_session.execute(stmt)).scalar_one_or_none()
+        if role_row is None:
+            role_row = (
+                await db_session.execute(select(RoleModel).limit(1))
+            ).scalar_one()
+        user = UserModel(
+            email=f"permclient+{abs(hash(tuple(sorted(perms))))}@testexample.com",
+            full_name="Test PermClient",
+            password_hash="$2b$12$fakehashfakehashfakehashfakehashfakehashfakehashfakehashfa",
+            is_active=True,
+            role_id=role_row.id,
+        )
+        db_session.add(user)
+        await db_session.flush()
+        token = _make_test_jwt(user.email, permissions=perms)
+        app.dependency_overrides[get_db_session] = lambda: db_session
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            follow_redirects=True,
+        ) as client:
             client.headers["Authorization"] = f"Bearer {token}"
             yield client
         app.dependency_overrides.clear()

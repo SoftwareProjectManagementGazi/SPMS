@@ -26,3 +26,7 @@ from app.infrastructure.database.models.phase_report import PhaseReportModel  # 
 from app.infrastructure.database.models.project_join_request import (  # noqa: F401
     ProjectJoinRequestModel,
 )
+
+# Phase 15 Plan 15-04 — RBAC redesign additions
+from app.infrastructure.database.models.permission import PermissionModel  # noqa: F401
+from app.infrastructure.database.models.role_permission import RolePermissionModel  # noqa: F401
