@@ -1,15 +1,15 @@
-"""Phase 14 Plan 14-01 — Admin join-request router (D-A1).
+"""Phase 14 Plan 14-01 / Phase 15 Plan 15-07 — Admin join-request router.
 
-4 endpoints:
-- GET    /admin/join-requests?status=pending&limit=&offset=  (admin list)
-- POST   /admin/join-requests/{id}/approve                   (admin approve)
-- POST   /admin/join-requests/{id}/reject                    (admin reject)
-- POST   /projects/{project_id}/join-requests                (PM-side create —
-            uses require_project_transition_authority)
-
-Every admin endpoint uses Depends(require_admin); the PM-side create endpoint
-uses require_project_transition_authority (Phase 9 D-15) so admins AND project
-managers AND team leaders may all open join requests for the project.
+4 endpoints with D-1.4 perm migration:
+- GET    /admin/join-requests?status=pending&limit=&offset=
+         (admin.access — pure read scope)
+- POST   /admin/join-requests/{id}/approve
+         (admin.join_requests.approve)
+- POST   /admin/join-requests/{id}/reject
+         (admin.join_requests.approve — same perm covers both actions)
+- POST   /projects/{project_id}/join-requests
+         (PM-side create — uses require_project_transition_authority,
+         Phase 9 D-15; UNTOUCHED by Plan 15-07)
 """
 from typing import Optional
 
@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status as http_sta
 
 from app.api.deps.audit import get_audit_repo
 from app.api.deps.auth import (
-    require_admin,
+    require_permission,
     require_project_transition_authority,
 )
 from app.api.deps.project import get_project_repo
@@ -106,7 +106,7 @@ async def list_pending_join_requests(
     status: str = Query(default="pending"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     repo=Depends(get_project_join_request_repo),
     project_repo=Depends(get_project_repo),
     user_repo=Depends(get_user_repo),
@@ -133,7 +133,7 @@ async def list_pending_join_requests(
 )
 async def approve_join_request(
     request_id: int,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.join_requests.approve")),
     repo=Depends(get_project_join_request_repo),
     audit_repo=Depends(get_audit_repo),
     team_repo=Depends(get_team_repo),
@@ -163,7 +163,7 @@ async def approve_join_request(
 )
 async def reject_join_request(
     request_id: int,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.join_requests.approve")),
     repo=Depends(get_project_join_request_repo),
     audit_repo=Depends(get_audit_repo),
     project_repo=Depends(get_project_repo),

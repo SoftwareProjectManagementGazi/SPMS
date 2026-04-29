@@ -8,7 +8,7 @@ from datetime import datetime
 
 from app.api.deps.project import get_project_member
 from app.api.deps.audit import get_audit_repo
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import require_permission
 from app.application.use_cases.get_project_activity import GetProjectActivityUseCase
 from app.application.use_cases.get_global_activity import GetGlobalActivityUseCase
 from app.application.dtos.activity_dtos import ActivityResponseDTO
@@ -25,17 +25,21 @@ router = APIRouter()
 async def get_global_activity(
     limit: int = Query(default=20, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _user=Depends(require_admin),
+    _user=Depends(require_permission("admin.access")),
     audit_repo=Depends(get_audit_repo),
 ) -> ActivityResponseDTO:
     """D-28: global activity feed across all projects for Dashboard ActivityFeed widget.
 
-    Restricted to admin callers (fix for BL-01, Phase 10 review): the endpoint
-    exposes audit_log rows across every project including textual diffs in
-    `old_value` / `new_value` / `metadata`. Allowing any authenticated member
-    to read these rows leaks data from projects they are not a member of.
-    Non-admin callers receive HTTP 403 — the frontend Dashboard handles that
-    gracefully (renders an empty activity feed).
+    Restricted to admin-scope callers (fix for BL-01, Phase 10 review): the
+    endpoint exposes audit_log rows across every project including textual
+    diffs in ``old_value`` / ``new_value`` / ``metadata``. Allowing any
+    authenticated member to read these rows leaks data from projects they
+    are not a member of. Non-admin callers receive HTTP 403 — the frontend
+    Dashboard handles that gracefully (renders an empty activity feed).
+
+    Phase 15 Plan 15-07 / D-1.4 — gate migrated from the legacy admin
+    decorator to Depends(require_permission('admin.access')). Admin role
+    short-circuits via _is_admin (D-1.5 super-role).
 
     Page size capped at 200 (T-10-02-04 DoS mitigation, default 20).
     """

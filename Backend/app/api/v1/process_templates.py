@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_current_user, get_process_template_repo, require_admin
+from app.api.dependencies import get_current_user, get_process_template_repo
+from app.api.deps.auth import require_permission
 from app.api.deps.project import get_project_repo
 from app.infrastructure.database.database import get_db_session
 from app.application.dtos.process_template_dtos import (
@@ -51,7 +52,7 @@ async def list_templates(
 )
 async def create_template(
     dto: ProcessTemplateCreateDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     repo=Depends(get_process_template_repo),
 ):
     uc = CreateProcessTemplateUseCase(repo)
@@ -62,7 +63,7 @@ async def create_template(
 async def update_template(
     template_id: int,
     dto: ProcessTemplateUpdateDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     repo=Depends(get_process_template_repo),
 ):
     try:
@@ -77,7 +78,7 @@ async def update_template(
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_template(
     template_id: int,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     repo=Depends(get_process_template_repo),
 ):
     try:
@@ -93,7 +94,7 @@ async def delete_template(
 async def apply_template(
     template_id: int,
     dto: ApplyTemplateDTO,
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(require_permission("admin.access")),
     template_repo=Depends(get_process_template_repo),
     project_repo=Depends(get_project_repo),
     session: AsyncSession = Depends(get_db_session),

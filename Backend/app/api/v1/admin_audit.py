@@ -1,12 +1,12 @@
-"""Phase 14 Plan 14-01 — Admin audit router (D-A8 / D-Z2 / Pitfall 6).
+"""Phase 14 Plan 14-01 / Phase 15 Plan 15-07 — Admin audit router.
 
-2 endpoints:
-- GET /admin/audit          — paginated list with date / actor / action filter
-- GET /admin/audit.json     — filter-aware JSON-array stream (D-B8 50k cap)
+2 endpoints (Plan 15-07 D-1.4 perm migration):
+- GET /admin/audit         — paginated list (admin.audit.read)
+- GET /admin/audit.json    — JSON-array export with 50k cap (admin.audit.export)
 
-Both use Depends(require_admin). The 50k hard cap is enforced inside
-audit_repo.get_global_audit; this router just surfaces the truncated flag
-to the frontend so it can render the AlertBanner above the table.
+The 50k hard cap is enforced inside audit_repo.get_global_audit; this router
+just surfaces the truncated flag to the frontend so it can render the
+AlertBanner above the table.
 """
 import json
 from datetime import datetime
@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from app.api.deps.audit import get_audit_repo
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import require_permission
 from app.application.dtos.admin_audit_dtos import AdminAuditResponseDTO
 from app.application.use_cases.get_global_audit import GetGlobalAuditUseCase
 from app.domain.entities.user import User
@@ -32,7 +32,7 @@ async def get_admin_audit(
     action_prefix: Optional[str] = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.audit.read")),
     audit_repo=Depends(get_audit_repo),
 ) -> AdminAuditResponseDTO:
     """D-A8 admin-wide audit retrieval. NO project-membership privacy filter
@@ -55,7 +55,7 @@ async def export_admin_audit_json(
     date_to: Optional[datetime] = Query(default=None),
     actor_id: Optional[int] = Query(default=None),
     action_prefix: Optional[str] = Query(default=None),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.audit.export")),
     audit_repo=Depends(get_audit_repo),
 ) -> StreamingResponse:
     """D-B8 JSON-array export honoring current filter. 50k row hard cap

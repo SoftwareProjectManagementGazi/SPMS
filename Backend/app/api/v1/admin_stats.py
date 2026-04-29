@@ -9,7 +9,7 @@ velocity_resolver closure passed to GetAdminStatsUseCase.
 from fastapi import APIRouter, Depends
 
 from app.api.deps.audit import get_audit_repo
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import require_permission
 from app.api.deps.project import get_project_repo
 from app.application.dtos.admin_stats_dtos import AdminStatsResponseDTO
 from app.application.use_cases.get_admin_stats import GetAdminStatsUseCase
@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.get("/admin/stats", response_model=AdminStatsResponseDTO)
 async def get_admin_stats(
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.stats.read")),
     audit_repo=Depends(get_audit_repo),
     project_repo=Depends(get_project_repo),
 ):

@@ -1,14 +1,18 @@
-"""Phase 14 Plan 14-01 — Admin user CRUD router (D-A6 / D-B2 / D-B3 / D-B4 / D-B7).
+"""Phase 14 Plan 14-01 / Phase 15 Plan 15-07 — Admin user CRUD router.
 
-7 endpoints, every handler uses Depends(require_admin):
-- POST   /admin/users                    invite (single)
-- POST   /admin/users/bulk-invite        bulk invite (max 500 per D-B4)
-- POST   /admin/users/{id}/password-reset   reset email link
-- PATCH  /admin/users/{id}/role          system-wide role flip
-- PATCH  /admin/users/{id}/deactivate    toggle is_active
-- POST   /admin/users/bulk-action        per-user transaction (deactivate /
-                                          activate / role_change)
-- GET    /admin/users.csv                StreamingResponse with UTF-8 BOM (D-W3)
+7 endpoints. Phase 15 D-1.4 migrates each handler from the legacy admin
+gate to endpoint-specific ``Depends(require_permission('<key>'))``:
+
+- GET    /admin/users                    list  → admin.access
+- POST   /admin/users                    invite → admin.users.invite
+- POST   /admin/users/bulk-invite        bulk invite → admin.users.invite
+- POST   /admin/users/{id}/password-reset reset email link → admin.users.invite
+- PATCH  /admin/users/{id}/role          role flip → admin.users.role_change
+- PATCH  /admin/users/{id}/deactivate    toggle is_active → admin.users.deactivate
+- POST   /admin/users/bulk-action        per-user txn → admin.users.bulk
+                                          (umbrella; use case adds dynamic
+                                          SUB_PERM_MAP check D-1.16)
+- GET    /admin/users.csv                CSV export → admin.access
 """
 import csv
 import io
@@ -21,7 +25,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps.audit import get_audit_repo
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import _has_permission, require_permission
 from app.api.deps.password_reset import get_password_reset_repo
 from app.api.deps.role import get_role_repo
 from app.api.deps.security import get_security_service
@@ -46,6 +50,7 @@ from app.application.use_cases.invite_user import InviteUserUseCase
 from app.application.use_cases.reset_user_password import ResetUserPasswordUseCase
 from app.domain.entities.user import User
 from app.domain.exceptions import (
+    PermissionDeniedError,
     RoleNotFoundError,
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -111,7 +116,7 @@ async def list_admin_users(
     q: Optional[str] = Query(default=None),
     limit: Optional[int] = Query(default=None, ge=1, le=500),
     offset: Optional[int] = Query(default=0, ge=0),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     user_repo=Depends(get_user_repo),
 ):
     """Phase 14 Plan 14-03 — admin-scoped user list.
@@ -177,7 +182,7 @@ async def list_admin_users(
 )
 async def invite_user(
     dto: InviteUserRequestDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.invite")),
     user_repo=Depends(get_user_repo),
     pwd_reset_repo=Depends(get_password_reset_repo),
     audit_repo=Depends(get_audit_repo),
@@ -215,7 +220,7 @@ async def invite_user(
 )
 async def bulk_invite(
     dto: BulkInviteRequestDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.invite")),
     user_repo=Depends(get_user_repo),
     pwd_reset_repo=Depends(get_password_reset_repo),
     audit_repo=Depends(get_audit_repo),
@@ -244,7 +249,7 @@ async def bulk_invite(
 @router.post("/admin/users/{user_id}/password-reset", status_code=http_status.HTTP_204_NO_CONTENT)
 async def reset_user_password(
     user_id: int,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.invite")),
     user_repo=Depends(get_user_repo),
     pwd_reset_repo=Depends(get_password_reset_repo),
     audit_repo=Depends(get_audit_repo),
@@ -268,7 +273,7 @@ async def reset_user_password(
 async def change_user_role(
     user_id: int,
     body: RoleChangeRequestDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.role_change")),
     user_repo=Depends(get_user_repo),
     role_repo: IRoleRepository = Depends(get_role_repo),
     audit_repo=Depends(get_audit_repo),
@@ -280,8 +285,9 @@ async def change_user_role(
     assigned. The migrated ChangeUserRoleUseCase injects IRoleRepository
     and enforces the D-2.9 self-edit guard backend-authoritatively (T-15-02).
 
-    Plan 15-07 will migrate this handler from `Depends(require_admin)` to
-    `Depends(require_permission('admin.users.role_change'))`.
+    Phase 15 Plan 15-07 / D-1.4 — gate migrated from the legacy admin
+    decorator to Depends(require_permission('admin.users.role_change')).
+    Admin role short-circuits via _is_admin (D-1.5 super-role).
     """
     uc = ChangeUserRoleUseCase(
         user_repo=user_repo,
@@ -313,7 +319,7 @@ async def change_user_role(
 @router.patch("/admin/users/{user_id}/deactivate", status_code=http_status.HTTP_204_NO_CONTENT)
 async def deactivate_user(
     user_id: int,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.deactivate")),
     user_repo=Depends(get_user_repo),
     audit_repo=Depends(get_audit_repo),
     session: AsyncSession = Depends(get_db_session),
@@ -338,7 +344,7 @@ async def deactivate_user(
 )
 async def bulk_action(
     dto: BulkActionRequestDTO,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.users.bulk")),
     user_repo=Depends(get_user_repo),
     role_repo: IRoleRepository = Depends(get_role_repo),
     audit_repo=Depends(get_audit_repo),
@@ -350,6 +356,13 @@ async def bulk_action(
     role_id: int. The bulk-action `payload.role_id` (legacy callers may pass
     `payload.role` string) is normalized via _resolve_role_id_via_repo before
     invoking the use case.
+
+    Phase 15 Plan 15-07 / D-1.16 — gate migrated to
+    Depends(require_permission('admin.users.bulk')) (umbrella). The use case
+    adds a dynamic per-action sub-perm check (SUB_PERM_MAP) that runs BEFORE
+    the per-user loop so a missing sub-perm raises PermissionDeniedError
+    without mutating any rows (Pitfall 17 — no partial success). The router
+    wires ``_has_permission`` as the DIP-preserving callable injection.
     """
     deactivate_uc = DeactivateUserUseCase(
         user_repo=user_repo,
@@ -361,16 +374,38 @@ async def bulk_action(
         role_repo=role_repo,
         audit_repo=audit_repo,
     )
-    uc = BulkActionUserUseCase(deactivate_uc, role_uc)
-    return await uc.execute(
-        dto, admin_id=admin.id,
-        role_id_resolver=_resolve_role_id_via_repo(role_repo),
+    # D-1.16 — DIP-preserving callable injection. Application layer never
+    # imports `_has_permission`; the API layer (which legitimately knows about
+    # auth dependencies) wires it at construction time.
+    uc = BulkActionUserUseCase(
+        deactivate_uc,
+        role_uc,
+        permission_check=_has_permission,
     )
+    try:
+        return await uc.execute(
+            dto,
+            admin_id=admin.id,
+            admin_user=admin,
+            role_id_resolver=_resolve_role_id_via_repo(role_repo),
+        )
+    except PermissionDeniedError as exc:
+        # D-1.16 sub-perm missing — Pitfall 17 fail-fast before DB.
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "PERMISSION_DENIED",
+                "missing_permission": exc.missing_permission,
+                "message": (
+                    f"Bu işlem için {exc.missing_permission} yetkisi gerekir"
+                ),
+            },
+        )
 
 
 @router.get("/admin/users.csv")
 async def export_users_csv(
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.access")),
     user_repo=Depends(get_user_repo),
 ):
     """D-W3 server-rendered CSV export — UTF-8 BOM for Excel-friendliness."""

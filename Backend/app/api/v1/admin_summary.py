@@ -20,7 +20,7 @@ from sqlalchemy import func as sqlfunc
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import require_permission
 from app.application.use_cases.generate_admin_summary_pdf import (
     GenerateAdminSummaryPDFUseCase,
 )
@@ -154,7 +154,7 @@ def _make_loader(session: AsyncSession):
 @limiter.limit("1/30seconds")
 async def generate_admin_summary_pdf(
     request: Request,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_permission("admin.summary.export")),
     session: AsyncSession = Depends(get_db_session),
 ):
     """D-B6 — 1-page admin summary PDF, 30s per-user rate limit."""
