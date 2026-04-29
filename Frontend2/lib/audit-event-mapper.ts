@@ -53,6 +53,17 @@ export type SemanticEventType =
   | "project_join_request_created"
   | "project_join_request_approved"
   | "project_join_request_rejected"
+  // NEW Phase 15 (D-1.9) — 5 RBAC additions emitted by Plans 15-05/06/07.
+  // entity_type='role' covers role lifecycle (created/updated/deleted) AND
+  // role-permission grant/revoke per CONTEXT D-1.9 — backend chose a single
+  // entity_type to keep the audit_log schema flat. The mapper differentiates
+  // via action_name (Pitfall 19 — keep this union in lockstep with the
+  // backend's audit_event_helpers.SemanticEventType enum).
+  | "rbac.role_created"
+  | "rbac.role_updated"
+  | "rbac.role_deleted"
+  | "rbac.permission_granted"
+  | "rbac.permission_revoked"
 
 export type ActivityFilterChip =
   | "create"
@@ -144,6 +155,17 @@ export function mapAuditToSemantic(item: ActivityItem): SemanticEventType | null
     if (item.action === "rejected") return "project_join_request_rejected"
   }
 
+  // NEW Phase 15 — RBAC family (D-1.9). Backend emits entity_type="role" for
+  // both role lifecycle (created/updated/deleted) AND role-permission grants/
+  // revokes — the action discriminates between them per CONTEXT line 209+.
+  if (item.entity_type === "role") {
+    if (item.action === "created") return "rbac.role_created"
+    if (item.action === "updated") return "rbac.role_updated"
+    if (item.action === "deleted") return "rbac.role_deleted"
+    if (item.action === "permission_granted") return "rbac.permission_granted"
+    if (item.action === "permission_revoked") return "rbac.permission_revoked"
+  }
+
   // Unrecognized — silently drop from timeline render.
   return null
 }
@@ -197,6 +219,21 @@ export function semanticToFilterChip(t: SemanticEventType): ActivityFilterChip {
     t === "project_archived"
   ) {
     return "status"
+  }
+
+  // NEW Phase 15 (Pitfall 19 + Open Question Q8 RESOLVED) — rbac.* events
+  // fold into the existing "admin" chip rather than introducing a new chip.
+  // The activity SegmentedControl already has 6 chips; an additional "rbac"
+  // chip would crowd the row, and rbac events are a strict subset of admin
+  // actions. Plan 15-09 keeps the chip set unchanged.
+  if (
+    t === "rbac.role_created" ||
+    t === "rbac.role_updated" ||
+    t === "rbac.role_deleted" ||
+    t === "rbac.permission_granted" ||
+    t === "rbac.permission_revoked"
+  ) {
+    return "admin"
   }
 
   // task_deleted (and any future additions) fall through — UI shows them

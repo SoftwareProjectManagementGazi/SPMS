@@ -152,6 +152,18 @@ export function ActivityRow({
     typeof md.source_phase_name === "string"
       ? md.source_phase_name
       : undefined
+  // Phase 15 Plan 15-09 (D-1.9) — RBAC family metadata. role_name surfaces on
+  // every rbac.* event; perm_key and affected_user_count are conditional.
+  // All reads are defensive (`as | undefined`) so a malformed audit row
+  // degrades gracefully rather than crashing the row render (D-D6).
+  const roleName =
+    typeof md.role_name === "string" ? md.role_name : undefined
+  const permKey =
+    typeof md.perm_key === "string" ? md.perm_key : undefined
+  const affectedUserCount =
+    typeof md.affected_user_count === "number"
+      ? md.affected_user_count
+      : undefined
 
   const refLabel = event.entity_label || taskKey || null
 
@@ -207,6 +219,15 @@ export function ActivityRow({
     | "project_join_request_created"
     | "project_join_request_approved"
     | "project_join_request_rejected"
+    // Phase 15 Plan 15-09 (D-1.9) — 5 NEW rbac.* members. Folded into the same
+    // `Phase14NewSemantic` type guard so the existing primary-line replacement
+    // path picks them up — Plan 15-09 reuses the layout (firstName + verb +
+    // strong-tagged subject) Phase 14 14-10 settled on.
+    | "rbac.role_created"
+    | "rbac.role_updated"
+    | "rbac.role_deleted"
+    | "rbac.permission_granted"
+    | "rbac.permission_revoked"
 
   const isPhase14New = (s: SemanticEventType): s is Phase14NewSemantic =>
     s === "task_field_updated" ||
@@ -221,7 +242,13 @@ export function ActivityRow({
     s === "user_password_reset_requested" ||
     s === "project_join_request_created" ||
     s === "project_join_request_approved" ||
-    s === "project_join_request_rejected"
+    s === "project_join_request_rejected" ||
+    // Phase 15 Plan 15-09 — rbac.* members reuse the Phase 14 render path.
+    s === "rbac.role_created" ||
+    s === "rbac.role_updated" ||
+    s === "rbac.role_deleted" ||
+    s === "rbac.permission_granted" ||
+    s === "rbac.permission_revoked"
 
   const muted = { color: "var(--fg-muted)" } as const
 
@@ -460,6 +487,68 @@ export function ActivityRow({
                 </span>
               </>
             ) : null}
+          </>
+        )
+
+      // -----------------------------------------------------------------------
+      // Phase 15 Plan 15-09 (D-1.9) — 5 RBAC render branches.
+      //
+      // role_name surfaces on every variant; permission_granted/revoked also
+      // surface perm_key. role_deleted surfaces affected_user_count when
+      // present (D-2.2 — orphaned users migrated to Member). All metadata
+      // reads degrade gracefully when missing (D-D6).
+      // -----------------------------------------------------------------------
+
+      case "rbac.role_created":
+      case "rbac.role_updated":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>{roleName ?? "?"}</span>
+          </>
+        )
+
+      case "rbac.role_deleted":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>{roleName ?? "?"}</span>
+            {affectedUserCount && affectedUserCount > 0 ? (
+              <>
+                {" "}
+                <span style={muted}>
+                  ({affectedUserCount}{" "}
+                  {language === "tr"
+                    ? "kullanıcı Member'a taşındı"
+                    : "users moved to Member"}
+                  )
+                </span>
+              </>
+            ) : null}
+          </>
+        )
+
+      case "rbac.permission_granted":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>{permKey ?? "?"}</span>{" "}
+            <span style={muted}>→</span>{" "}
+            <span style={{ fontWeight: 600 }}>{roleName ?? "?"}</span>
+          </>
+        )
+
+      case "rbac.permission_revoked":
+        return (
+          <>
+            <span style={{ fontWeight: 600 }}>{firstName}</span>{" "}
+            <span style={muted}>{meta.verb(language)}</span>{" "}
+            <span style={{ fontWeight: 600 }}>{permKey ?? "?"}</span>{" "}
+            <span style={muted}>←</span>{" "}
+            <span style={{ fontWeight: 600 }}>{roleName ?? "?"}</span>
           </>
         )
 

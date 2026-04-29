@@ -35,6 +35,10 @@ import {
   KeyRound,
   Check,
   X,
+  // Phase 15 Plan 15-09 — RBAC family icons.
+  ShieldPlus,
+  CheckCircle,
+  XCircle,
   type LucideIcon,
 } from "lucide-react"
 
@@ -194,5 +198,44 @@ export const eventMeta: Record<SemanticEventType, EventMeta> = {
       l === "tr"
         ? "katılım talebini reddetti"
         : "rejected join request for",
+  },
+
+  // -------------------------------------------------------------------------
+  // Phase 15 Plan 15-09 (D-1.9) — 5 RBAC entries.
+  //
+  // Color tokens follow the same convention used for user_*:
+  //   - status-done       additive lifecycle (role created / permission granted)
+  //   - status-progress   non-destructive update (role updated)
+  //   - priority-critical destructive (role deleted / permission revoked)
+  //
+  // Icon choices: ShieldPlus / ShieldCheck / Trash2 for role lifecycle;
+  // CheckCircle / XCircle for permission grants/revokes (matches the matrix
+  // cell affirmation/negation visual).
+  // -------------------------------------------------------------------------
+
+  "rbac.role_created": {
+    Icon: ShieldPlus,
+    color: "var(--status-done)",
+    verb: (l) => (l === "tr" ? "rol oluşturdu" : "created role"),
+  },
+  "rbac.role_updated": {
+    Icon: ShieldCheck,
+    color: "var(--status-progress)",
+    verb: (l) => (l === "tr" ? "rolü güncelledi" : "updated role"),
+  },
+  "rbac.role_deleted": {
+    Icon: Trash2,
+    color: "var(--priority-critical)",
+    verb: (l) => (l === "tr" ? "rolü sildi" : "deleted role"),
+  },
+  "rbac.permission_granted": {
+    Icon: CheckCircle,
+    color: "var(--status-done)",
+    verb: (l) => (l === "tr" ? "yetki verdi" : "granted permission"),
+  },
+  "rbac.permission_revoked": {
+    Icon: XCircle,
+    color: "var(--priority-critical)",
+    verb: (l) => (l === "tr" ? "yetki kaldırdı" : "revoked permission"),
   },
 }

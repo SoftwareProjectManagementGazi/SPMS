@@ -584,6 +584,52 @@ describe("ActivityRow", () => {
     ).toBeInTheDocument()
   })
 
+  // ---------------------------------------------------------------------------
+  // Phase 15 Plan 15-09 (D-1.9) — 5 NEW rbac.* render branches.
+  // ---------------------------------------------------------------------------
+
+  it("P15-T1: rbac.role_created renders role_name from extra_metadata", () => {
+    const ev = makeEvent({
+      entity_type: "role",
+      action: "created",
+      user_name: "Yusuf",
+      metadata: { role_name: "Designer" },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(
+      screen.getByText(/rol oluşturdu/i, { exact: false }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Designer")).toBeInTheDocument()
+  })
+
+  it("P15-T2: rbac.role_deleted renders role_name + affected_user_count badge", () => {
+    const ev = makeEvent({
+      entity_type: "role",
+      action: "deleted",
+      user_name: "Admin",
+      metadata: { role_name: "OldRole", affected_user_count: 3 },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(screen.getByText(/rolü sildi/i)).toBeInTheDocument()
+    expect(screen.getByText("OldRole")).toBeInTheDocument()
+    expect(
+      screen.getByText(/3 kullanıcı Member'a taşındı/i, { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it("P15-T3: rbac.permission_granted renders perm_key + role_name", () => {
+    const ev = makeEvent({
+      entity_type: "role",
+      action: "permission_granted",
+      user_name: "Admin",
+      metadata: { perm_key: "task.delete", role_name: "PM" },
+    })
+    render(<ActivityRow event={ev} />)
+    expect(screen.getByText(/yetki verdi/i)).toBeInTheDocument()
+    expect(screen.getByText("task.delete")).toBeInTheDocument()
+    expect(screen.getByText("PM")).toBeInTheDocument()
+  })
+
   // Sanity: within() helper imported but not used elsewhere — silence linter
   void within
 })

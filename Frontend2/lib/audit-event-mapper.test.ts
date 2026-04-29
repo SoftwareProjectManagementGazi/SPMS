@@ -241,6 +241,48 @@ describe("mapAuditToSemantic", () => {
       }),
     ).toBeNull()
   })
+
+  // -------------------------------------------------------------------------
+  // Phase 15 Plan 15-09 — 5 RBAC mappings (D-1.9 + Pitfall 19).
+  // Backend emits entity_type='role' for both role lifecycle (created/updated/
+  // deleted) AND role-permission grants/revokes; the action discriminates.
+  // -------------------------------------------------------------------------
+
+  it("P15-T1: role created → rbac.role_created", () => {
+    expect(
+      mapAuditToSemantic({ entity_type: "role", action: "created" }),
+    ).toBe("rbac.role_created")
+  })
+
+  it("P15-T2: role updated → rbac.role_updated", () => {
+    expect(
+      mapAuditToSemantic({ entity_type: "role", action: "updated" }),
+    ).toBe("rbac.role_updated")
+  })
+
+  it("P15-T3: role deleted → rbac.role_deleted", () => {
+    expect(
+      mapAuditToSemantic({ entity_type: "role", action: "deleted" }),
+    ).toBe("rbac.role_deleted")
+  })
+
+  it("P15-T4: role permission_granted → rbac.permission_granted", () => {
+    expect(
+      mapAuditToSemantic({
+        entity_type: "role",
+        action: "permission_granted",
+      }),
+    ).toBe("rbac.permission_granted")
+  })
+
+  it("P15-T5: role permission_revoked → rbac.permission_revoked", () => {
+    expect(
+      mapAuditToSemantic({
+        entity_type: "role",
+        action: "permission_revoked",
+      }),
+    ).toBe("rbac.permission_revoked")
+  })
 })
 
 describe("semanticToFilterChip", () => {
@@ -307,5 +349,23 @@ describe("semanticToFilterChip", () => {
 
   it("Pitfall 9: project_archived folds into the status chip", () => {
     expect(semanticToFilterChip("project_archived")).toBe("status")
+  })
+
+  // -------------------------------------------------------------------------
+  // Phase 15 Plan 15-09 — Pitfall 19 + Open Question Q8 RESOLVED.
+  // 5 rbac.* members fold into the existing "admin" chip rather than getting
+  // a new chip — the activity SegmentedControl already has 6 chips and rbac
+  // events are a strict subset of admin actions.
+  // -------------------------------------------------------------------------
+
+  it("Pitfall 19: rbac.role_* events fold into the admin chip", () => {
+    expect(semanticToFilterChip("rbac.role_created")).toBe("admin")
+    expect(semanticToFilterChip("rbac.role_updated")).toBe("admin")
+    expect(semanticToFilterChip("rbac.role_deleted")).toBe("admin")
+  })
+
+  it("Pitfall 19: rbac.permission_* events fold into the admin chip", () => {
+    expect(semanticToFilterChip("rbac.permission_granted")).toBe("admin")
+    expect(semanticToFilterChip("rbac.permission_revoked")).toBe("admin")
   })
 })
