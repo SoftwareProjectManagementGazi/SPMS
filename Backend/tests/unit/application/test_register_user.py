@@ -5,7 +5,7 @@ from app.domain.entities.user import User
 from app.domain.repositories.user_repository import IUserRepository
 from app.application.ports.security_port import ISecurityService
 from app.domain.exceptions import UserAlreadyExistsError
-from typing import Optional
+from typing import Optional, List
 
 # --- Mocks (Test Doubles) ---
 
@@ -28,6 +28,23 @@ class MockUserRepository(IUserRepository):
 
     async def get_by_id(self, user_id: int) -> Optional[User]:
         return self.users.get(user_id)
+
+    # Plan 15-02 TIDY-02: realign to current IUserRepository (Phase 9+ extensions).
+    async def update_password(self, user_id: int, password_hash: str) -> None:
+        user = self.users.get(user_id)
+        if user is not None:
+            user.password_hash = password_hash
+
+    async def search_by_email_or_name(self, query: str) -> List[User]:
+        q = query.lower()
+        return [
+            u for u in self.users.values()
+            if q in (u.email or "").lower()
+            or q in (u.full_name or "").lower()
+        ]
+
+    async def get_all_by_role(self, role_name: str) -> List[User]:
+        return [u for u in self.users.values() if getattr(u, "role", None) == role_name]
 
 class MockSecurityService(ISecurityService):
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:

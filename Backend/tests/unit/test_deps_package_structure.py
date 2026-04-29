@@ -90,19 +90,22 @@ def test_package_level_reexports():
     assert callable(get_team_repo)
 
 
-# --- Test 8: milestone/artifact/phase_report stubs exist (empty __all__) ---
+# --- Test 8: milestone/artifact/phase_report DI providers populated ---
 def test_stub_submodules_exist():
-    """Stub files exist and have empty __all__ (to be populated by plans 09-05/06/07)"""
+    """Plans 09-05/06/07 populated these sub-modules with concrete DI providers.
+
+    Plan 15-02 TIDY-02: realigned from the BACK-07 RED phase (`__all__ == []`)
+    to the post-09-05/06/07 GREEN reality (`__all__ == ["get_<x>_repo"]`).
+    """
     import app.api.deps.milestone as milestone_mod
     import app.api.deps.artifact as artifact_mod
     import app.api.deps.phase_report as phase_report_mod
     assert hasattr(milestone_mod, '__all__')
     assert hasattr(artifact_mod, '__all__')
     assert hasattr(phase_report_mod, '__all__')
-    # All stubs have empty __all__ (will be populated later)
-    assert milestone_mod.__all__ == []
-    assert artifact_mod.__all__ == []
-    assert phase_report_mod.__all__ == []
+    assert milestone_mod.__all__ == ["get_milestone_repo"]
+    assert artifact_mod.__all__ == ["get_artifact_repo"]
+    assert phase_report_mod.__all__ == ["get_phase_report_repo"]
 
 
 # --- Test 9: Each sub-module defines __all__ ---

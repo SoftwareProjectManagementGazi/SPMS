@@ -37,6 +37,9 @@ async def test_cycle_number_auto_calc_from_audit():
     project_repo.get_by_id = AsyncMock(return_value=_mk_project())
     audit_repo = MagicMock()
     audit_repo.count_phase_transitions = AsyncMock(return_value=2)
+    # Plan 15-02 TIDY-02: Plan 14-09 D-D2 added create_with_metadata audit emit
+    # inside CreatePhaseReportUseCase.execute. Mock must be AsyncMock to be awaitable.
+    audit_repo.create_with_metadata = AsyncMock()
     report_repo = MagicMock()
     report_repo.create = AsyncMock(
         side_effect=lambda r: PhaseReport(id=1, **r.model_dump(exclude={"id"}))
@@ -56,6 +59,8 @@ async def test_cycle_number_explicit_override():
     project_repo.get_by_id = AsyncMock(return_value=_mk_project())
     audit_repo = MagicMock()
     audit_repo.count_phase_transitions = AsyncMock()
+    # Plan 15-02 TIDY-02: same as above — D-D2 audit emit must be AsyncMock.
+    audit_repo.create_with_metadata = AsyncMock()
     report_repo = MagicMock()
     report_repo.create = AsyncMock(
         side_effect=lambda r: PhaseReport(id=1, **r.model_dump(exclude={"id"}))

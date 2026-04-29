@@ -12,19 +12,25 @@ from app.domain.exceptions import (
 )
 
 
-def _mk_project(mode="flexible", extra_nodes=None, criteria=None):
+def _mk_project(mode="flexible", extra_nodes=None, criteria=None, extra_edges=None):
     nodes = [
         {"id": "nd_Src123DXYZ", "name": "Source", "x": 0, "y": 0, "color": "#888", "is_archived": False},
         {"id": "nd_Tgt456DXYZ", "name": "Target", "x": 100, "y": 0, "color": "#888", "is_archived": False},
     ]
     if extra_nodes:
         nodes.extend(extra_nodes)
+    # Plan 15-02 TIDY-02: Phase 12 D-16/D-17 added the InvalidTransitionError edge
+    # check inside ExecutePhaseTransitionUseCase. Tests must declare an edge from
+    # source -> target for the happy-path transition.
+    edges = [{"id": "e1", "source": "nd_Src123DXYZ", "target": "nd_Tgt456DXYZ", "type": "flow"}]
+    if extra_edges:
+        edges.extend(extra_edges)
     return Project(
         id=1, key="K", name="P", start_date=datetime(2026, 1, 1),
         methodology=Methodology.SCRUM, status=ProjectStatus.ACTIVE,
         process_config={
             "schema_version": 1,
-            "workflow": {"mode": mode, "nodes": nodes, "edges": [], "groups": []},
+            "workflow": {"mode": mode, "nodes": nodes, "edges": edges, "groups": []},
             "phase_completion_criteria": criteria or {},
             "enable_phase_assignment": True,
             "enforce_sequential_dependencies": False,
@@ -85,7 +91,12 @@ async def test_continuous_mode_raises_400():
 @pytest.mark.asyncio
 async def test_archived_target_node_raises():
     # nd_Arc0000001 = nd_ + 10 chars (Arc0000001) — valid format, is_archived=True in project workflow
-    project = _mk_project(extra_nodes=[{"id": "nd_Arc0000001", "name": "A", "x": 0, "y": 0, "color": "#888", "is_archived": True}])
+    # Plan 15-02 TIDY-02: edge to archived target included so the archived check fires
+    # BEFORE the new D-16 edge check (archived check is earlier in execute_phase_transition).
+    project = _mk_project(
+        extra_nodes=[{"id": "nd_Arc0000001", "name": "A", "x": 0, "y": 0, "color": "#888", "is_archived": True}],
+        extra_edges=[{"id": "e2", "source": "nd_Src123DXYZ", "target": "nd_Arc0000001", "type": "flow"}],
+    )
     project_repo, task_repo, audit_repo, session = _mk_mocks(project)
     uc = ExecutePhaseTransitionUseCase(project_repo, task_repo, audit_repo, session)
     dto = PhaseTransitionRequestDTO(source_phase_id="nd_Src123DXYZ", target_phase_id="nd_Arc0000001")
