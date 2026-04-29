@@ -44,12 +44,12 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
     render(<RoleCreateModal open={true} onClose={vi.fn()} />)
     expect(screen.getByText(/Yeni rol oluştur/i)).toBeInTheDocument()
     // Name + description inputs reachable by their labels.
-    expect(screen.getByLabelText(/^isim$/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/açıklama/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/İsim/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Açıklama/)).toBeInTheDocument()
     // Icon picker (8 radios) + Color swatch (6 radios) = 14 radios in the radiogroups.
-    const iconGroup = screen.getByRole("radiogroup", { name: /ikon/i })
+    const iconGroup = screen.getByRole("radiogroup", { name: /İkon|Icon/ })
     expect(iconGroup).toBeInTheDocument()
-    const colorGroup = screen.getByRole("radiogroup", { name: /renk/i })
+    const colorGroup = screen.getByRole("radiogroup", { name: /Renk|Color/ })
     expect(colorGroup).toBeInTheDocument()
   })
 
@@ -61,17 +61,19 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
 
   it("Case 3 — empty name submit shows 'İsim boş olamaz' validation error", () => {
     render(<RoleCreateModal open={true} onClose={vi.fn()} />)
-    const saveBtn = screen.getByRole("button", { name: /kaydet/i })
-    // The Save button is disabled while invalid; click it anyway via fireEvent
-    // (vitest fires the handler regardless), and verify validation surfaces.
-    fireEvent.click(saveBtn)
-    expect(screen.getByText(/İsim boş olamaz/i)).toBeInTheDocument()
+    // The Save button is disabled while invalid; submit via the form's
+    // submit event (Enter key in any field equivalent) so the modal's
+    // handleSubmit runs and surfaces the validation error.
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    const form = nameInput.closest("form")!
+    fireEvent.submit(form)
+    expect(screen.getByText(/İsim boş olamaz/)).toBeInTheDocument()
     expect(createMutateMock).not.toHaveBeenCalled()
   })
 
   it("Case 4 — reserved name 'Admin' submit shows 'sistem rolü için ayrılmıştır' error", () => {
     render(<RoleCreateModal open={true} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Admin" } })
     const form = nameInput.closest("form")!
     fireEvent.submit(form)
@@ -81,7 +83,7 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
 
   it("Case 5 — invalid characters '@!' shows 'Geçersiz karakter' error", () => {
     render(<RoleCreateModal open={true} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Admin@!" } })
     const form = nameInput.closest("form")!
     fireEvent.submit(form)
@@ -91,8 +93,8 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
 
   it("Case 6 — valid submit fires useCreateRole.mutate with trimmed payload", async () => {
     render(<RoleCreateModal open={true} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
-    const descInput = screen.getByLabelText(/açıklama/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    const descInput = screen.getByLabelText(/Açıklama/) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "  Designer  " } })
     fireEvent.change(descInput, { target: { value: "  Custom role  " } })
 
@@ -117,7 +119,7 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
   it("Case 7 — onSuccess invokes the supplied onClose prop", () => {
     const onClose = vi.fn()
     render(<RoleCreateModal open={true} onClose={onClose} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Designer" } })
     const form = nameInput.closest("form")!
     fireEvent.submit(form)

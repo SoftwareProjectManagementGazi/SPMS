@@ -39,6 +39,8 @@ describe("RoleIconPicker (Plan 15-11 — D-2.8)", () => {
     const group = screen.getByRole("radiogroup")
     expect(group).toBeInTheDocument()
     // aria-label attribute set so screen readers announce the group purpose.
-    expect(group.getAttribute("aria-label")).toMatch(/ikon|icon/i)
+    // Note: Turkish capital İ (U+0130) does NOT lowercase to ASCII "i" via the
+    // /i regex flag, so we match the literal Turkish word OR English fallback.
+    expect(group.getAttribute("aria-label")).toMatch(/İkon|Icon/)
   })
 })

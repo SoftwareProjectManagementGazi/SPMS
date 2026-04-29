@@ -37,6 +37,6 @@ describe("RoleColorSwatch (Plan 15-11 — D-2.8)", () => {
   it("Case 4 — radiogroup has accessible label", () => {
     render(<RoleColorSwatch value={null} onChange={vi.fn()} />)
     const group = screen.getByRole("radiogroup")
-    expect(group.getAttribute("aria-label")).toMatch(/renk|color/i)
+    expect(group.getAttribute("aria-label")).toMatch(/Renk|Color/)
   })
 })

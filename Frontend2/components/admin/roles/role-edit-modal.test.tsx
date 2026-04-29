@@ -60,8 +60,8 @@ describe("RoleEditModal (Plan 15-11 — D-2.3 / D-2.8)", () => {
 
   it("Case 1 — pre-fills form from role prop", () => {
     render(<RoleEditModal open={true} role={customRole} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
-    const descInput = screen.getByLabelText(/açıklama/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    const descInput = screen.getByLabelText(/Açıklama/) as HTMLInputElement
     expect(nameInput.value).toBe("Designer")
     expect(descInput.value).toBe("Custom role for design folks")
     // Selected icon + color reflect the role.
@@ -80,8 +80,8 @@ describe("RoleEditModal (Plan 15-11 — D-2.3 / D-2.8)", () => {
 
   it("Case 3 — system role renders inputs disabled", () => {
     render(<RoleEditModal open={true} role={systemRole} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
-    const descInput = screen.getByLabelText(/açıklama/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    const descInput = screen.getByLabelText(/Açıklama/) as HTMLInputElement
     expect(nameInput.disabled).toBe(true)
     expect(descInput.disabled).toBe(true)
   })
@@ -94,7 +94,7 @@ describe("RoleEditModal (Plan 15-11 — D-2.3 / D-2.8)", () => {
 
   it("Case 5 — valid submit on custom role fires useUpdateRole.mutate with {id, req}", async () => {
     render(<RoleEditModal open={true} role={customRole} onClose={vi.fn()} />)
-    const nameInput = screen.getByLabelText(/^isim$/i) as HTMLInputElement
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Senior Designer" } })
 
     const saveBtn = await waitFor(() => {

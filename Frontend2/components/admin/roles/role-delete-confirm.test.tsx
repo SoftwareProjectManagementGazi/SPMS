@@ -91,7 +91,7 @@ describe("RoleDeleteConfirm (Plan 15-11 — D-2.2)", () => {
         onClose={onClose}
       />,
     )
-    const cancelBtn = screen.getByRole("button", { name: /iptal/i })
+    const cancelBtn = screen.getByRole("button", { name: /İptal/ })
     fireEvent.click(cancelBtn)
     expect(onClose).toHaveBeenCalled()
     expect(deleteMutateMock).not.toHaveBeenCalled()
