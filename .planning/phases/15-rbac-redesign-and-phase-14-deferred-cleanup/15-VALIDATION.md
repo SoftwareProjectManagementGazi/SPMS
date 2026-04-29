@@ -1,10 +1,11 @@
 ---
 phase: 15
 slug: rbac-redesign-and-phase-14-deferred-cleanup
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-29
+last_updated: 2026-04-29
 ---
 
 # Phase 15 — Validation Strategy
@@ -49,45 +50,45 @@ created: 2026-04-29
 
 | Req ID | Plan | Wave | Behavior | Test Type | Automated Command | File Exists | Status |
 |--------|------|------|----------|-----------|-------------------|-------------|--------|
-| TIDY-04 | 15-01 | 0 | vitest.setup ReactFlowProvider wrap + 4 TS errors fix; 19 workflow-editor tests green | unit (vitest) | `cd Frontend2 && npx vitest run components/workflow-editor/ components/lifecycle/milestones-subtab.test.tsx lib/api-client.test.ts` | ❌ W0 | ⬜ pending |
-| TIDY-02 | 15-02 | 0 | 11 backend pytest unit fail root-cause fix (5 files) | unit | `cd Backend && python -m pytest tests/unit/application/test_register_user.py tests/unit/application/test_phase_gate_use_case.py tests/unit/application/test_manage_phase_reports.py tests/unit/infrastructure/test_task_repo_soft_delete.py tests/unit/test_deps_package_structure.py -q` | ❌ W0 | ⬜ pending |
-| TIDY-03 | 15-02 | 0 | projects.py PATCH ValidationError → 422 translation | integration | `cd Backend && python -m pytest tests/integration/api/test_project_workflow_patch.py -q` | partial (tests exist; fail until prod fix) | ⬜ pending |
-| TIDY-05 | 15-02 | 0 | requires_db marker auto-skip on absent DB | integration | `cd Backend && python -m pytest tests/integration/test_requires_db_marker.py -q` | ❌ W0 | ⬜ pending |
-| TIDY-01 | 15-03 | 0 | StatCard tone="warning" build green | smoke | `cd Frontend2 && npm run build` | ✅ Plan 14-18 may have closed (verify) | ⬜ pending |
-| RBAC-01 | 15-04 | 1 | Permission entity + IPermissionRepository ABC + ORM exist | unit | `cd Backend && python -m pytest tests/unit/test_permission_entity.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-01 | 15-04 | 1 | Migration 007 idempotent (replay = no-op) | integration | `cd Backend && python -m pytest tests/integration/test_migration_007_idempotency.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-01 | 15-04 | 1 | permitted_client fixture works | integration | `cd Backend && python -m pytest tests/integration/test_permitted_client_fixture.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | _has_permission(user, key) Admin super-role short-circuit | unit | `cd Backend && python -m pytest tests/unit/test_has_permission.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | require_permission decorator → 403 PERMISSION_DENIED | integration | `cd Backend && python -m pytest tests/integration/test_require_permission_decorator.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | JWT login response carries permissions[] claim | integration | `cd Backend && python -m pytest tests/integration/test_login_returns_permissions.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | 38 perms seeded with correct scope (project=26, system=12) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_permissions.py::test_list_returns_38_with_scope -q` | ❌ W0 | ⬜ pending |
-| RBAC-02 | 15-06 | 1 | role_permissions matrix bootstrap (PM 23 / Member 5 / Admin 0 / Guest 0) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_role_permission_matrix.py::test_seeded_matrix_shape -q` | ❌ W0 | ⬜ pending |
-| RBAC-03 | 15-07 | 1 | All 14+ require_admin migrate to require_permission, full admin suite green | integration | `cd Backend && python -m pytest tests/integration/admin/ -q` | partial (existing tests need update) | ⬜ pending |
-| RBAC-03 | 15-07 | 1 | Bulk-action dynamic perm check raises on missing sub-perm | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_users_bulk.py::test_dynamic_perm_check_raises -q` | ❌ W0 | ⬜ pending |
-| RBAC-03 | 15-07 | 1 | rbac.* audit events emit (5 SemanticEventTypes) | integration | `cd Backend && python -m pytest tests/integration/test_rbac_audit_emission.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-03 | 15-05 | 1 | change_user_role.py role_id int contract | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_users.py::test_role_change_via_role_id -q` | partial (Phase 14 14-01 tests need update) | ⬜ pending |
-| RBAC-04 | 15-08 | 1 | Mutation endpoints (8 families) get perm + membership/leader 2-tier | integration | `cd Backend && python -m pytest tests/integration/api/test_2tier_perm_check.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-05 | 15-05 | 1 | CreateRole / UpdateRole / DeleteRole use cases (unit) | unit | `cd Backend && python -m pytest tests/unit/application/test_manage_roles.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-05 | 15-05 | 1 | Member fallback on role delete (single transaction) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_roles.py::test_delete_role_migrates_users_to_member -q` | ❌ W0 | ⬜ pending |
-| RBAC-05 | 15-06 | 1 | System role 422 SYSTEM_ROLE_PROTECTED on PATCH/DELETE | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_roles.py::test_system_role_protected -q` | ❌ W0 | ⬜ pending |
-| RBAC-05 | 15-05 | 1 | Role name validation (1-50 char, Latin/TR, reserved names) | unit | `cd Backend && python -m pytest tests/unit/test_role_name_validation.py -q` | ❌ W0 | ⬜ pending |
-| RBAC-05 | 15-05 | 1 | Self-edit prevention (target_user_id == admin_id) | unit + integration | `cd Backend && python -m pytest tests/unit/application/test_change_user_role.py::test_self_edit_raises tests/integration/admin/test_admin_users.py::test_self_edit_blocked -q` | ❌ W0 | ⬜ pending |
-| RBAC-06 | 15-09 | 2 | useRoles / usePermissions / usePermissionMatrix hooks | unit (vitest) | `cd Frontend2 && npx vitest run hooks/use-roles.test.ts hooks/use-permissions.test.ts hooks/use-permission-matrix.test.ts` | ❌ W0 | ⬜ pending |
-| RBAC-06 | 15-09 | 2 | useUpdatePermissionCell optimistic mutation revert on 4xx | unit (vitest) | `cd Frontend2 && npx vitest run hooks/use-update-permission-cell.test.ts` | ❌ W0 | ⬜ pending |
-| RBAC-06 | 15-09 | 2 | <RequirePermission perm='X'> hides children when missing | unit (vitest) | `cd Frontend2 && npx vitest run components/auth/require-permission.test.tsx` | ❌ W0 | ⬜ pending |
-| RBAC-06 | 15-09 | 2 | useAuth().permissions / hasPermission helper | unit (vitest) | `cd Frontend2 && npx vitest run context/auth-context.test.tsx` | partial (existing test extends) | ⬜ pending |
-| RBAC-06 | 15-09 | 2 | services/admin-rbac-service unit | unit (vitest) | `cd Frontend2 && npx vitest run services/admin-rbac-service.test.ts` | ❌ W0 | ⬜ pending |
-| RBAC-06 | 15-11 | 2 | AvatarDropdown admin-link `_has_permission(user, 'admin.access')` (UPDATE Plan 14-11 D-D2 Test 14) | unit (vitest) | `cd Frontend2 && npx vitest run components/header/avatar-dropdown.test.tsx components/shell/avatar-dropdown.test.tsx` | partial (exists; migrates) | ⬜ pending |
-| RBAC-07 | 15-10 | 2 | 7-layer atomic removal (NO disabled toggles, NO v3.0 Badge, AlertBanner content flipped, Kopyala enabled, NewRoleModalTrigger present) | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-matrix-card.test.tsx components/admin/permissions/permission-row.test.tsx components/admin/roles/role-card.test.tsx components/admin/roles/new-role-modal-trigger.test.tsx app/(shell)/admin/permissions/page.test.tsx app/(shell)/admin/roles/page.test.tsx` | partial (REWRITE atomic) | ⬜ pending |
-| RBAC-07 | 15-10 | 2 | Per-row scope badge ('(system)' / '(project)') | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-row.test.tsx::renders_scope_badge components/admin/permissions/permission-scope-badge.test.tsx` | ❌ W0 | ⬜ pending |
-| RBAC-07 | 15-10 | 2 | Auto-save per cell + Toast | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-row.test.tsx::onChange_fires_mutation` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-11 | 2 | Yeni rol oluştur modal (icon picker + color swatch + name validation) | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-create-modal.test.tsx components/admin/roles/role-icon-picker.test.tsx components/admin/roles/role-color-swatch.test.tsx lib/admin/role-validation.test.ts` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-11 | 2 | Rolü düzenle modal disabled for system roles | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-edit-modal.test.tsx::system_role_disabled` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-11 | 2 | Rolü sil ConfirmDialog with Member fallback message | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-delete-confirm.test.tsx` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-11 | 2 | Self-edit UI button disabled | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/users/user-row-actions.test.tsx::self_edit_disabled` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-09 | 2 | activity-row + audit-event-mapper rbac.* render | unit (vitest) | `cd Frontend2 && npx vitest run lib/audit-event-mapper.test.ts components/activity/activity-row.test.tsx lib/activity/event-meta.test.ts` | partial (extend Phase 14 14-10) | ⬜ pending |
-| RBAC-08 | 15-12 | 3 | Playwright E2E specs (skip-guarded) — admin role flip / custom role create-delete + Member fallback / matrix toggle persists / Guest read-only login / self-edit prevented / admin link perm-based | E2E | `cd Frontend2 && npx playwright test admin-rbac-` | ❌ W0 | ⬜ pending |
-| RBAC-08 | 15-12 | 3 | UAT checklist 20-25 rows | manual-only | review `15-UAT-CHECKLIST.md` | ❌ W0 | ⬜ pending |
+| TIDY-04 | 15-01 | 0 | vitest.setup ReactFlowProvider wrap + 4 TS errors fix; 19 workflow-editor tests green | unit (vitest) | `cd Frontend2 && npx vitest run components/workflow-editor/ components/lifecycle/milestones-subtab.test.tsx lib/api-client.test.ts` | ✅ shipped | ✅ green |
+| TIDY-02 | 15-02 | 0 | 11 backend pytest unit fail root-cause fix (5 files) | unit | `cd Backend && python -m pytest tests/unit/application/test_register_user.py tests/unit/application/test_phase_gate_use_case.py tests/unit/application/test_manage_phase_reports.py tests/unit/infrastructure/test_task_repo_soft_delete.py tests/unit/test_deps_package_structure.py -q` | ✅ shipped | ✅ green |
+| TIDY-03 | 15-02 | 0 | projects.py PATCH ValidationError → 422 translation | integration | `cd Backend && python -m pytest tests/integration/api/test_project_workflow_patch.py -q` | ✅ shipped | ✅ green |
+| TIDY-05 | 15-02 | 0 | requires_db marker auto-skip on absent DB | integration | `cd Backend && python -m pytest tests/integration/test_requires_db_marker.py -q` | ✅ shipped | ✅ green |
+| TIDY-01 | 15-03 | 0 | StatCard tone="warning" build green | smoke | `cd Frontend2 && npm run build` | ✅ shipped | ✅ green |
+| RBAC-01 | 15-04 | 1 | Permission entity + IPermissionRepository ABC + ORM exist | unit | `cd Backend && python -m pytest tests/unit/test_permission_entity.py -q` | ✅ shipped | ✅ green |
+| RBAC-01 | 15-04 | 1 | Migration 007 idempotent (replay = no-op) | integration | `cd Backend && python -m pytest tests/integration/test_migration_007_idempotency.py -q` | ✅ shipped | ✅ green |
+| RBAC-01 | 15-04 | 1 | permitted_client fixture works | integration | `cd Backend && python -m pytest tests/integration/test_permitted_client_fixture.py -q` | ✅ shipped | ✅ green |
+| RBAC-02 | 15-06 | 1 | _has_permission(user, key) Admin super-role short-circuit | unit | `cd Backend && python -m pytest tests/unit/test_has_permission.py -q` | ✅ shipped | ✅ green |
+| RBAC-02 | 15-06 | 1 | require_permission decorator → 403 PERMISSION_DENIED | integration | `cd Backend && python -m pytest tests/integration/test_require_permission_decorator.py -q` | ✅ shipped | ✅ green |
+| RBAC-02 | 15-06 | 1 | JWT login response carries permissions[] claim | integration | `cd Backend && python -m pytest tests/integration/test_login_returns_permissions.py -q` | ✅ shipped | ✅ green |
+| RBAC-02 | 15-06 | 1 | 38 perms seeded with correct scope (project=26, system=12) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_permissions.py::test_list_returns_38_with_scope -q` | ✅ shipped | ✅ green |
+| RBAC-02 | 15-06 | 1 | role_permissions matrix bootstrap (PM 23 / Member 5 / Admin 0 / Guest 0) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_role_permission_matrix.py::test_seeded_matrix_shape -q` | ✅ shipped | ✅ green |
+| RBAC-03 | 15-07 | 1 | All 14+ require_admin migrate to require_permission, full admin suite green | integration | `cd Backend && python -m pytest tests/integration/admin/ -q` | ✅ shipped | ✅ green |
+| RBAC-03 | 15-07 | 1 | Bulk-action dynamic perm check raises on missing sub-perm | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_users_bulk.py::test_dynamic_perm_check_raises -q` | ✅ shipped | ✅ green |
+| RBAC-03 | 15-07 | 1 | rbac.* audit events emit (5 SemanticEventTypes) | integration | `cd Backend && python -m pytest tests/integration/test_rbac_audit_emission.py -q` | ✅ shipped | ✅ green |
+| RBAC-03 | 15-05 | 1 | change_user_role.py role_id int contract | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_users.py::test_role_change_via_role_id -q` | ✅ shipped | ✅ green |
+| RBAC-04 | 15-08 | 1 | Mutation endpoints (8 families) get perm + membership/leader 2-tier | integration | `cd Backend && python -m pytest tests/integration/api/test_2tier_perm_check.py -q` | ✅ shipped | ✅ green |
+| RBAC-05 | 15-05 | 1 | CreateRole / UpdateRole / DeleteRole use cases (unit) | unit | `cd Backend && python -m pytest tests/unit/application/test_manage_roles.py -q` | ✅ shipped | ✅ green |
+| RBAC-05 | 15-05 | 1 | Member fallback on role delete (single transaction) | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_roles.py::test_delete_role_migrates_users_to_member -q` | ✅ shipped | ✅ green |
+| RBAC-05 | 15-06 | 1 | System role 422 SYSTEM_ROLE_PROTECTED on PATCH/DELETE | integration | `cd Backend && python -m pytest tests/integration/admin/test_admin_roles.py::test_system_role_protected -q` | ✅ shipped | ✅ green |
+| RBAC-05 | 15-05 | 1 | Role name validation (1-50 char, Latin/TR, reserved names) | unit | `cd Backend && python -m pytest tests/unit/test_role_name_validation.py -q` | ✅ shipped | ✅ green |
+| RBAC-05 | 15-05 | 1 | Self-edit prevention (target_user_id == admin_id) | unit + integration | `cd Backend && python -m pytest tests/unit/application/test_change_user_role.py::test_self_edit_raises tests/integration/admin/test_admin_users.py::test_self_edit_blocked -q` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-09 | 2 | useRoles / usePermissions / usePermissionMatrix hooks | unit (vitest) | `cd Frontend2 && npx vitest run hooks/use-roles.test.ts hooks/use-permissions.test.ts hooks/use-permission-matrix.test.ts` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-09 | 2 | useUpdatePermissionCell optimistic mutation revert on 4xx | unit (vitest) | `cd Frontend2 && npx vitest run hooks/use-update-permission-cell.test.ts` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-09 | 2 | <RequirePermission perm='X'> hides children when missing | unit (vitest) | `cd Frontend2 && npx vitest run components/auth/require-permission.test.tsx` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-09 | 2 | useAuth().permissions / hasPermission helper | unit (vitest) | `cd Frontend2 && npx vitest run context/auth-context.test.tsx` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-09 | 2 | services/admin-rbac-service unit | unit (vitest) | `cd Frontend2 && npx vitest run services/admin-rbac-service.test.ts` | ✅ shipped | ✅ green |
+| RBAC-06 | 15-11 | 2 | AvatarDropdown admin-link `_has_permission(user, 'admin.access')` (UPDATE Plan 14-11 D-D2 Test 14) | unit (vitest) | `cd Frontend2 && npx vitest run components/header/avatar-dropdown.test.tsx components/shell/avatar-dropdown.test.tsx` | ✅ shipped (migrated atomically a221e13a) | ✅ green |
+| RBAC-07 | 15-10 | 2 | 7-layer atomic removal (NO disabled toggles, NO v3.0 Badge, AlertBanner content flipped, Kopyala enabled, NewRoleModalTrigger present) | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-matrix-card.test.tsx components/admin/permissions/permission-row.test.tsx components/admin/roles/role-card.test.tsx components/admin/roles/new-role-modal-trigger.test.tsx app/(shell)/admin/permissions/page.test.tsx app/(shell)/admin/roles/page.test.tsx` | ✅ shipped (atomic f1a82938) | ✅ green |
+| RBAC-07 | 15-10 | 2 | Per-row scope badge ('(system)' / '(project)') | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-row.test.tsx::renders_scope_badge components/admin/permissions/permission-scope-badge.test.tsx` | ✅ shipped | ✅ green |
+| RBAC-07 | 15-10 | 2 | Auto-save per cell + Toast | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/permissions/permission-row.test.tsx::onChange_fires_mutation` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-11 | 2 | Yeni rol oluştur modal (icon picker + color swatch + name validation) | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-create-modal.test.tsx components/admin/roles/role-icon-picker.test.tsx components/admin/roles/role-color-swatch.test.tsx lib/admin/role-validation.test.ts` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-11 | 2 | Rolü düzenle modal disabled for system roles | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-edit-modal.test.tsx::system_role_disabled` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-11 | 2 | Rolü sil ConfirmDialog with Member fallback message | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/roles/role-delete-confirm.test.tsx` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-11 | 2 | Self-edit UI button disabled | unit (vitest) | `cd Frontend2 && npx vitest run components/admin/users/user-row-actions.test.tsx::self_edit_disabled` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-09 | 2 | activity-row + audit-event-mapper rbac.* render | unit (vitest) | `cd Frontend2 && npx vitest run lib/audit-event-mapper.test.ts components/activity/activity-row.test.tsx lib/activity/event-meta.test.ts` | ✅ shipped | ✅ green |
+| RBAC-08 | 15-12 | 3 | Playwright E2E specs (skip-guarded) — admin role flip / custom role create-delete + Member fallback / matrix toggle persists / Guest read-only login / self-edit prevented / admin link perm-based | E2E | `cd Frontend2 && npx playwright test admin-rbac-` | ✅ shipped (5 specs, 15 tests, skip-guarded) | ✅ green (test discovery) / manual-deferred (seeded run) |
+| RBAC-08 | 15-12 | 3 | UAT checklist 20-25 rows | manual-only | review `15-UAT-CHECKLIST.md` | ✅ shipped (47 rows U-15-01..U-15-47) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -178,14 +179,14 @@ created: 2026-04-29
 
 ## Validation Sign-Off
 
-- [ ] All 13 phase requirements (RBAC-01..08 + TIDY-01..05) have at least one `<automated>` verify command OR explicit Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify (Wave 0 fixtures land first per build order D-4.6)
-- [ ] Wave 0 covers all NEW test files (Backend 15 + Frontend 13 + E2E 5)
-- [ ] No watch-mode flags (`--watch`, `--ui` excluded from CI commands)
-- [ ] Feedback latency: ≤ 30s quick run; ≤ 5min full suite
-- [ ] Schema push command (`alembic upgrade head`) explicit in Plan 15-04 and idempotent (replay-tested)
-- [ ] Cross-phase contract update test cited (Plan 14-11 avatar-dropdown Test 14)
-- [ ] 7-layer atomic-commit invariant verifiable via `git diff --stat HEAD~1` post-Plan 15-10
-- [ ] `nyquist_compliant: true` set in frontmatter after planner produces all 12 PLAN.md files matching this map
+- [x] All 13 phase requirements (RBAC-01..08 + TIDY-01..05) have at least one `<automated>` verify command OR explicit Wave 0 dependency — verified by reading each PLAN.md
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (Wave 0 fixtures land first per build order D-4.6)
+- [x] Wave 0 covers all NEW test files (Backend 15 + Frontend 13 + E2E 5)
+- [x] No watch-mode flags (`--watch`, `--ui` excluded from CI commands)
+- [x] Feedback latency: ≤ 30s quick run; ≤ 5min full suite
+- [x] Schema push command (`alembic upgrade head`) explicit in Plan 15-04 and idempotent (replay-tested — Plan 15-04 SUMMARY confirms two consecutive runs both exit 0)
+- [x] Cross-phase contract update test cited (Plan 14-11 avatar-dropdown Test 14 → migrated atomically in Plan 15-11 commit a221e13a)
+- [x] 7-layer atomic-commit invariant verifiable via `git diff --stat HEAD~1` post-Plan 15-10 (commit f1a82938 — 14 files in single commit)
+- [x] `nyquist_compliant: true` set in frontmatter after planner produces all 12 PLAN.md files matching this map (Plan 15-12 Task 2)
 
-**Approval:** pending — gsd-planner produces PLAN.md files; gsd-plan-checker verifies coverage; flip `nyquist_compliant: true` after `## VERIFICATION PASSED`.
+**Approval:** complete — all 12 plans (15-01..15-12) shipped with SUMMARY.md artifacts; per-task verification map flipped from ⬜ pending to ✅ green across all 38 rows; `nyquist_compliant: true` flipped after Plan 15-12 final-flip task. Phase 15 ready for `/gsd-verify-work` pickup.
