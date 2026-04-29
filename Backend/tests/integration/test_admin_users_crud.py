@@ -235,3 +235,32 @@ async def test_bulk_invite_500_row_cap_enforced(authenticated_client, db_session
     async with authenticated_client(role="admin") as ac:
         r = await ac.post("/api/v1/admin/users/bulk-invite", json={"rows": rows})
         assert r.status_code == 422, f"expected 422 for 501 rows, got {r.status_code}: {r.text}"
+
+
+@pytest.mark.asyncio
+async def test_admin_users_list_accepts_limit_1000(authenticated_client, db_session):
+    """Plan 14-17 contract: /admin/roles page issues GET /admin/users?limit=1000
+    as a defensive ceiling so per-role counts cover the full user table.
+
+    The original Plan 14-03 cap was le=500; that drifted from Plan 14-17's FE
+    request and surfaced as a 422 on the live admin/roles page. Cap raised to
+    le=1000 in admin_users.py to honor the FE contract. This test fixes the
+    contract so a future tightening cannot silently re-break the page.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("Roles not seeded")
+    async with authenticated_client(role="admin") as ac:
+        r = await ac.get("/api/v1/admin/users?limit=1000")
+        assert r.status_code == 200, r.text
+
+
+@pytest.mark.asyncio
+async def test_admin_users_list_rejects_limit_above_1000(
+    authenticated_client, db_session
+):
+    """Cap upper bound — limit=1001 must be rejected at the DTO layer."""
+    if not await _db_has_roles(db_session):
+        pytest.skip("Roles not seeded")
+    async with authenticated_client(role="admin") as ac:
+        r = await ac.get("/api/v1/admin/users?limit=1001")
+        assert r.status_code == 422, r.text

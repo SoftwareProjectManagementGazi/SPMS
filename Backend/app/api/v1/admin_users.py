@@ -114,7 +114,7 @@ async def list_admin_users(
     role: Optional[AdminRole] = Query(default=None),
     status: Optional[str] = Query(default=None),  # "active" | "inactive"
     q: Optional[str] = Query(default=None),
-    limit: Optional[int] = Query(default=None, ge=1, le=500),
+    limit: Optional[int] = Query(default=None, ge=1, le=1000),
     offset: Optional[int] = Query(default=0, ge=0),
     admin: User = Depends(require_permission("admin.access")),
     user_repo=Depends(get_user_repo),
