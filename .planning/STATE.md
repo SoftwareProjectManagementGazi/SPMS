@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Frontend Overhaul & Backend Expansion
-current_phase: 14
+current_phase: 15
 status: executing
 stopped_at: Phase 15 context gathered
-last_updated: "2026-04-29T00:27:07.028Z"
-last_activity: 2026-04-29 -- Phase 15 planning complete
+last_updated: "2026-04-29T00:29:09.613Z"
+last_activity: 2026-04-29 -- Phase 15 execution started
 progress:
   total_phases: 8
   completed_phases: 7
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Ekiplerin farklI proje yonetim metodolojilerine uygun sekilde projelerini ve gorevlerini tek platformda takip edebilmesi.
-**Current focus:** Phase 14 — admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f
+**Current focus:** Phase 15 — RBAC Yeniden Tasarımı & Phase 14 Deferred Items Cleanup
 
 ## Current Position
 
-Phase: 14 (admin-panel-prototype-taki-admin-y-netim-paneli-sayfas-n-n-f) — EXECUTING
-Plan: 7 of 18
-Status: Ready to execute
-Last activity: 2026-04-29 -- Phase 15 planning complete
+Phase: 15 (RBAC Yeniden Tasarımı & Phase 14 Deferred Items Cleanup) — EXECUTING
+Plan: 1 of 12
+Status: Executing Phase 15
+Last activity: 2026-04-29 -- Phase 15 execution started
 
 Progress: [██████████] 100%
 
@@ -523,7 +523,7 @@ Last session: 2026-04-28T21:28:23.289Z
 Stopped at: Phase 15 context gathered
 Resume file: .planning/phases/15-rbac-redesign-and-phase-14-deferred-cleanup/15-CONTEXT.md
 
-**Current Phase:** 14
+**Current Phase:** 15
 
 **Next Plan:** 14-05 (`/admin/projects` Projeler tab — Wave 2). Owns the admin-wide project listing + 8-col table including archived projects + EXACTLY 2 MoreH actions (Arşivle + Sil two-step key-typing confirm per D-B5 — NO transfer-ownership). Wraps inside the AdminLayout from Plan 14-02 (guard + tabs strip inherited automatically).
 
