@@ -129,58 +129,95 @@ export function PermissionMatrixCard() {
         </Button>
       </div>
 
-      {/* Sticky column-header row — role names from API (Admin / PM /
-          Member / Guest / custom roles). gridTemplateColumns matches
-          PermissionRow exactly. */}
+      {/* Phase 15 hotfix — Kanban-board style horizontal scroll. The
+          matrix wrapper is the scroll container; header + rows share the
+          same grid template with min-width: fit-content so all role
+          columns are reachable via horizontal scroll without trying to
+          squeeze them into the viewport. The first (permission label)
+          column is sticky-left in PermissionRow so admins can always
+          read which perm a row represents while scrolling sideways. */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: `2fr repeat(${matrix.roles.length}, 100px)`,
-          padding: "10px 16px",
-          background: "var(--surface-2)",
-          borderBottom: "1px solid var(--border)",
-          fontSize: 11.5,
-          fontWeight: 600,
-          color: "var(--fg-muted)",
-          position: "sticky",
-          top: 0,
-          zIndex: 2,
+          overflowX: "auto",
+          maxWidth: "100%",
         }}
       >
-        <div>
-          {adminRbacT("admin.permissions.column_permission", language)}
-        </div>
-        {matrix.roles.map((role) => (
+        {/* Header row — sticky-top via position:sticky inside the scroll
+            container. matches PermissionRow gridTemplateColumns exactly so
+            cells align under role names. */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `260px repeat(${matrix.roles.length}, 120px)`,
+            background: "var(--surface-2)",
+            borderBottom: "1px solid var(--border)",
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: "var(--fg-muted)",
+            position: "sticky",
+            top: 0,
+            zIndex: 2,
+            minWidth: "fit-content",
+          }}
+        >
           <div
-            key={role.id}
             style={{
-              textAlign: "center",
-              display: "inline-flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
+              padding: "10px 16px",
+              // Sticky-left mirror of PermissionRow's first column so
+              // header + rows align both vertically and horizontally
+              // during scroll.
+              position: "sticky",
+              left: 0,
+              background: "var(--surface-2)",
+              borderRight: "1px solid var(--border)",
+              zIndex: 3,
             }}
           >
-            <span>{role.name}</span>
-            {role.is_system_role && (
-              <Badge tone="neutral" size="xs">
-                {adminRbacT("admin.roles.system_badge_label", language)}
-              </Badge>
-            )}
+            {adminRbacT("admin.permissions.column_permission", language)}
           </div>
+          {matrix.roles.map((role) => (
+            <div
+              key={role.id}
+              style={{
+                textAlign: "center",
+                display: "inline-flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                padding: "10px 8px",
+              }}
+            >
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100%",
+                }}
+                title={role.name}
+              >
+                {role.name}
+              </span>
+              {role.is_system_role && (
+                <Badge tone="neutral" size="xs">
+                  {adminRbacT("admin.roles.system_badge_label", language)}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Permission rows — 1 row per perm. Backend orders perms by group
+            + key (Plan 15-06); we render in the API-provided order. */}
+        {matrix.permissions.map((perm) => (
+          <PermissionRow
+            key={perm.id}
+            permission={perm}
+            roles={matrix.roles}
+            cells={matrix.cells}
+          />
         ))}
       </div>
-
-      {/* Permission rows — 1 row per perm. Backend orders perms by group
-          + key (Plan 15-06); we render in the API-provided order. */}
-      {matrix.permissions.map((perm) => (
-        <PermissionRow
-          key={perm.id}
-          permission={perm}
-          roles={matrix.roles}
-          cells={matrix.cells}
-        />
-      ))}
     </Card>
   )
 }

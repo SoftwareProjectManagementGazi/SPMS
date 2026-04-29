@@ -166,11 +166,16 @@ export function PermissionRow({ permission, roles, cells }: PermissionRowProps) 
       data-permission-row-key={permission.key}
       style={{
         display: "grid",
-        gridTemplateColumns: "2fr repeat(4, 100px)",
-        padding: "10px 16px",
+        // Phase 15 hotfix — dynamic column count tracks roles.length so
+        // custom Plan 15-11 roles (e.g. "Kodlamacı") render their own
+        // column. The permission label column is sticky-left so it stays
+        // visible while the role columns scroll horizontally inside the
+        // matrix-card wrapper.
+        gridTemplateColumns: `260px repeat(${roles.length}, 120px)`,
         alignItems: "center",
         borderBottom: "1px solid var(--border)",
         fontSize: 12.5,
+        minWidth: "fit-content",
       }}
     >
       <div
@@ -179,6 +184,14 @@ export function PermissionRow({ permission, roles, cells }: PermissionRowProps) 
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
+          padding: "10px 16px",
+          // Sticky-left so the perm label is always visible while the role
+          // columns scroll horizontally (Kanban-board style).
+          position: "sticky",
+          left: 0,
+          background: "var(--surface)",
+          borderRight: "1px solid var(--border)",
+          zIndex: 1,
         }}
       >
         <span>{label}</span>

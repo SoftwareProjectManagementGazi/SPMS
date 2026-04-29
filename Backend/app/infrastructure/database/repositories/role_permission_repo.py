@@ -35,6 +35,7 @@ class SqlAlchemyRolePermissionRepository(IRolePermissionRepository):
             )
             await self.session.execute(stmt)
         await self.session.flush()
+        await self.session.commit()
 
     async def list_by_role(self, role_id: int) -> List[Permission]:
         stmt = (
@@ -55,4 +56,5 @@ class SqlAlchemyRolePermissionRepository(IRolePermissionRepository):
         )
         result = await self.session.execute(stmt)
         await self.session.flush()
+        await self.session.commit()
         return result.rowcount or 0

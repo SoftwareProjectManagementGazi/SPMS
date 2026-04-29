@@ -99,8 +99,10 @@ export const adminUserService = {
     await apiClient.post(`/admin/users/${userId}/password-reset`)
   },
 
-  changeRole: async (userId: number, role: AdminRole): Promise<void> => {
-    await apiClient.patch(`/admin/users/${userId}/role`, { role })
+  // Phase 15 Plan 15-06 / D-1.17 — Backend body migrated from {role: AdminRole}
+  // string-literal to {role_id: int} so custom Plan 15-11 roles can be assigned.
+  changeRole: async (userId: number, roleId: number): Promise<void> => {
+    await apiClient.patch(`/admin/users/${userId}/role`, { role_id: roleId })
   },
 
   bulkAction: async (req: BulkActionRequest): Promise<BulkActionResponse> => {

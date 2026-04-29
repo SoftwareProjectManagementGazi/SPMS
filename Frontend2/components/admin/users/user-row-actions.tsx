@@ -4,15 +4,19 @@
 //
 // 5 menu items (verbatim per UI-SPEC):
 //   1. Şifre sıfırla        → useResetPassword.mutate(user.id) — no confirm
-//   2. Rolü değiştir        → submenu (Admin / PM / Member) via secondary
-//                             MoreMenu opened on click; useChangeRole.mutate.
+//   2. Rolü değiştir        → searchable popover with ALL roles (system + custom)
+//                             via useRoles(); useChangeRole.mutate({roleId}).
 //   3. Devre dışı bırak     → ConfirmDialog tone="danger" → useDeactivateUser
 //      (or Tekrar aktif et if user.is_active === false → useBulkAction
 //      action="activate")
 //   4. Sil                  → SOFT-DISABLED with tooltip "v2.1'de aktif olacak"
 //                             (CONTEXT D-A6 enumerates 5 endpoints, no DELETE).
 //
-// Consumes Plan 14-01's shared MoreMenu primitive — DOES NOT rebuild.
+// Phase 15 Plan 15-11 hotfix — replaces hardcoded ["Admin","PM","Member"] with
+// useRoles() so custom Plan 15-11 roles (e.g. "Kodlamacı") appear in the
+// submenu. Submenu now renders as a fixed-position popover anchored to the
+// trigger via getBoundingClientRect, so it never overflows the viewport edge,
+// and includes a search input for fast filtering across many roles.
 //
 // Phase 15 Plan 15-11 D-2.9 — Self-edit prevention UI: when this row's user
 // is the currently logged-in admin, the "Rolü değiştir" item is disabled to
@@ -33,10 +37,11 @@ import { useDeactivateUser } from "@/hooks/use-deactivate-user"
 import { useResetPassword } from "@/hooks/use-reset-password"
 import { useChangeRole } from "@/hooks/use-change-role"
 import { useBulkAction } from "@/hooks/use-bulk-action"
+import { useRoles } from "@/hooks/use-roles"
 import { useApp } from "@/context/app-context"
 import { useAuth } from "@/context/auth-context"
 import { adminUsersT } from "@/lib/i18n/admin-users-keys"
-import type { AdminRole } from "@/services/admin-user-service"
+import type { Role } from "@/services/admin-rbac-service"
 
 export interface UserRowActionsUser {
   id: number
@@ -52,11 +57,6 @@ export interface UserRowActionsProps {
 export function UserRowActions({ user }: UserRowActionsProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
-  // Phase 15 Plan 15-11 D-2.9 — read the logged-in user from AuthContext to
-  // detect self-edit. Defensive read: the auth user shape uses string ids
-  // (auth-service canonical) but the admin user shape uses number ids
-  // (admin-user-service canonical), so we compare via Number() / loose
-  // equality. Both branches are exercised in the unit tests.
   const { user: currentUser } = useAuth()
   const isSelf =
     currentUser != null &&
@@ -66,16 +66,17 @@ export function UserRowActions({ user }: UserRowActionsProps) {
   const changeRoleM = useChangeRole()
   const deactivateM = useDeactivateUser()
   const bulkActionM = useBulkAction()
+  const rolesQ = useRoles()
 
-  // ConfirmDialog state for Devre dışı bırak / Tekrar aktif et flows.
   const [confirmOpen, setConfirmOpen] = React.useState(false)
-  // Nested submenu state for "Rolü değiştir".
-  const [roleSubmenuOpen, setRoleSubmenuOpen] = React.useState(false)
+  const [rolePickerOpen, setRolePickerOpen] = React.useState(false)
+  // Anchor rect for the role-picker popover (computed at open time so the
+  // popover positions next to the MoreH icon — never the viewport edge).
+  const triggerRef = React.useRef<HTMLSpanElement>(null)
 
   const isActive = user.is_active !== false
   const userDisplayName = user.full_name || user.email || `#${user.id}`
 
-  // ---- Menu items (5 entries per UI-SPEC §Surface C) ----
   const items: MoreMenuItem[] = [
     {
       id: "reset_password",
@@ -85,13 +86,10 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     {
       id: "change_role",
       label: adminUsersT("admin.users.more_change_role", lang),
-      // Phase 15 D-2.9 — disable when this row is the logged-in admin to
-      // prevent self-role-change lockout. Backend ChangeUserRoleUseCase
-      // additionally raises PermissionError as defense in depth.
       disabled: isSelf,
       onClick: () => {
         if (isSelf) return
-        setRoleSubmenuOpen(true)
+        setRolePickerOpen(true)
       },
     },
     {
@@ -104,29 +102,12 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     {
       id: "delete",
       label: adminUsersT("admin.users.more_delete", lang),
-      // CONTEXT D-A6 enumerates 5 admin user endpoints. DELETE is NOT in the
-      // list — soft-disable with tooltip per threat T-14-03-06.
       disabled: true,
       destructive: true,
-      onClick: () => {
-        /* no-op while disabled (defense-in-depth) */
-      },
+      onClick: () => {},
     },
   ]
 
-  // ---- Role submenu items (Admin / PM / Member) ----
-  const roleSubmenuItems: MoreMenuItem[] = (
-    ["Admin", "Project Manager", "Member"] as AdminRole[]
-  ).map((role) => ({
-    id: `change_role_${role}`,
-    label: role,
-    onClick: () => {
-      changeRoleM.mutate({ userId: user.id, role })
-      setRoleSubmenuOpen(false)
-    },
-  }))
-
-  // Confirm dialog body uses TR/EN copy + name interpolation.
   const confirmTitle = isActive
     ? adminUsersT("admin.users.confirm_deactivate_title", lang)
     : adminUsersT("admin.users.confirm_reactivate_title", lang)
@@ -140,27 +121,30 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     if (isActive) {
       deactivateM.mutate(user.id)
     } else {
-      // Re-activate path: bulk-action with action="activate" on a single user.
-      bulkActionM.mutate({
-        user_ids: [user.id],
-        action: "activate",
-      })
+      bulkActionM.mutate({ user_ids: [user.id], action: "activate" })
     }
   }
 
+  const handlePickRole = (roleId: number) => {
+    changeRoleM.mutate({ userId: user.id, roleId })
+    setRolePickerOpen(false)
+  }
+
   return (
-    <span style={{ display: "inline-flex" }}>
+    <span ref={triggerRef} style={{ display: "inline-flex" }}>
       <MoreMenu
         items={items}
         ariaLabel={adminUsersT("admin.users.more_change_role", lang)}
       />
 
-      {/* Submenu — open as a portal-style overlay; reuses MoreMenu primitive
-          but pre-opened. We render it inline as a separate menu surface. */}
-      {roleSubmenuOpen && (
-        <RoleChangeSubmenu
-          items={roleSubmenuItems}
-          onDismiss={() => setRoleSubmenuOpen(false)}
+      {rolePickerOpen && (
+        <RoleChangePicker
+          anchorEl={triggerRef.current}
+          roles={rolesQ.data?.items ?? []}
+          isLoading={rolesQ.isLoading}
+          lang={lang}
+          onPick={handlePickRole}
+          onDismiss={() => setRolePickerOpen(false)}
         />
       )}
 
@@ -170,10 +154,6 @@ export function UserRowActions({ user }: UserRowActionsProps) {
         body={confirmBody}
         confirmLabel={adminUsersT("admin.users.confirm_confirm", lang)}
         cancelLabel={adminUsersT("admin.users.confirm_cancel", lang)}
-        // Both deactivate AND reactivate use tone="danger" because the
-        // mutation is irreversible-from-the-user's-side and the visual
-        // weight should match. (Reactivate is harmless to the user but the
-        // admin still deserves the same confirm gravity.)
         tone="danger"
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
@@ -183,18 +163,65 @@ export function UserRowActions({ user }: UserRowActionsProps) {
 }
 
 /**
- * Inline role-change submenu — a tiny wrapper that renders a popover-style
- * dropdown with the 3 role choices. Click-outside + ESC dismiss handled
- * via a wrapper div with a small useEffect.
+ * Searchable role picker — fixed-position popover anchored to the trigger.
+ *
+ * Positioning: computed from anchorEl.getBoundingClientRect(). When the
+ * trigger is near the right viewport edge we right-align the popover so it
+ * never overflows. Width 240, height capped at 320 with internal scroll.
+ *
+ * Search: case-insensitive substring match on role.name. Filtered list is
+ * capped at the natural list length; matches show in API order (system roles
+ * first, then custom alphabetical per backend Plan 15-06 ordering).
+ *
+ * Dismiss: click outside, ESC, or after pick.
  */
-function RoleChangeSubmenu({
-  items,
+function RoleChangePicker({
+  anchorEl,
+  roles,
+  isLoading,
+  lang,
+  onPick,
   onDismiss,
 }: {
-  items: MoreMenuItem[]
+  anchorEl: HTMLElement | null
+  roles: Role[]
+  isLoading: boolean
+  lang: "tr" | "en"
+  onPick: (roleId: number) => void
   onDismiss: () => void
 }) {
+  const [query, setQuery] = React.useState("")
   const wrapperRef = React.useRef<HTMLDivElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  // Compute fixed position from anchor rect with right-edge fallback.
+  const position = React.useMemo(() => {
+    const POPOVER_W = 240
+    const POPOVER_H = 320
+    const MARGIN = 8
+    if (!anchorEl) {
+      return { top: 0, left: 0, right: undefined as number | undefined }
+    }
+    const rect = anchorEl.getBoundingClientRect()
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    let top = rect.bottom + 4
+    if (top + POPOVER_H > vh - MARGIN) {
+      top = Math.max(MARGIN, rect.top - POPOVER_H - 4)
+    }
+    let left: number | undefined = rect.left
+    let right: number | undefined
+    if (rect.left + POPOVER_W > vw - MARGIN) {
+      // Anchor to right edge so popover stays inside viewport
+      left = undefined
+      right = Math.max(MARGIN, vw - rect.right)
+    }
+    return { top, left, right }
+  }, [anchorEl])
+
+  React.useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -216,51 +243,150 @@ function RoleChangeSubmenu({
     }
   }, [onDismiss])
 
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return roles
+    return roles.filter((r) => r.name.toLowerCase().includes(q))
+  }, [roles, query])
+
+  const placeholder = lang === "tr" ? "Rol ara..." : "Search role..."
+  const emptyText = lang === "tr" ? "Eşleşen rol yok" : "No matching role"
+  const loadingText = lang === "tr" ? "Yükleniyor..." : "Loading..."
+
   return (
     <div
       ref={wrapperRef}
-      role="menu"
+      role="dialog"
+      aria-label={lang === "tr" ? "Rol seç" : "Pick role"}
       style={{
-        position: "absolute",
-        // Anchor a bit further to the left so the submenu doesn't overlap the
-        // primary MoreH menu. 28px width of the icon + 4px gap → 32px.
-        marginTop: 4,
-        marginLeft: -32,
-        minWidth: 160,
+        position: "fixed",
+        top: position.top,
+        left: position.left,
+        right: position.right,
+        width: 240,
+        maxHeight: 320,
         background: "var(--surface)",
         borderRadius: "var(--radius)",
         boxShadow: "var(--shadow-lg)",
-        padding: 4,
-        zIndex: 60,
         border: "1px solid var(--border)",
+        zIndex: 9999,
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitem"
-          onClick={item.onClick}
+      <div
+        style={{
+          padding: 8,
+          borderBottom: "1px solid var(--border)",
+          background: "var(--surface)",
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
             width: "100%",
-            textAlign: "left",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "6px 10px",
+            padding: "6px 8px",
+            border: "1px solid var(--border)",
             borderRadius: "var(--radius-sm)",
             fontSize: 12.5,
+            background: "var(--surface-2)",
             color: "var(--fg)",
+            outline: "none",
           }}
-        >
-          {item.label}
-        </button>
-      ))}
+        />
+      </div>
+
+      <div
+        role="listbox"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: 4,
+        }}
+      >
+        {isLoading ? (
+          <div
+            style={{
+              padding: "8px 10px",
+              fontSize: 12,
+              color: "var(--fg-muted)",
+            }}
+          >
+            {loadingText}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              padding: "8px 10px",
+              fontSize: 12,
+              color: "var(--fg-muted)",
+            }}
+          >
+            {emptyText}
+          </div>
+        ) : (
+          filtered.map((role) => (
+            <button
+              key={role.id}
+              type="button"
+              role="option"
+              aria-selected="false"
+              onClick={() => onPick(role.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+                width: "100%",
+                textAlign: "left",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "6px 10px",
+                borderRadius: "var(--radius-sm)",
+                fontSize: 12.5,
+                color: "var(--fg)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--surface-2)"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent"
+              }}
+            >
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {role.name}
+              </span>
+              {role.is_system_role && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "var(--fg-muted)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "1px 5px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {lang === "tr" ? "Sistem" : "System"}
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
     </div>
   )
 }

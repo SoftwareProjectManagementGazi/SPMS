@@ -151,6 +151,7 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         )
         self.session.add(log)
         await self.session.flush()
+        await self.session.commit()
         return log
 
     async def get_project_activity(

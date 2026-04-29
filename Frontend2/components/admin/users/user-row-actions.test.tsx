@@ -1,4 +1,7 @@
 // Phase 15 Plan 15-11 Task 2 — UserRowActions self-edit prevention RTL tests.
+// Phase 15 hotfix — searchable role picker (replaces hardcoded
+// [Admin / PM / Member] submenu); D-1.17 frontend contract migrate
+// {role: name} → {roleId: int}.
 //
 // D-2.9 — When the row's user is the logged-in admin, the "Rolü değiştir"
 // menuitem must be disabled to prevent self-role-change lockout. Backend
@@ -8,8 +11,8 @@
 // 4 cases:
 //   1. Self (currentUser.id === row user.id) → "Rolü değiştir" disabled.
 //   2. Not self (different ids) → "Rolü değiştir" enabled.
-//   3. Self + click on the disabled item → no submenu / no mutation.
-//   4. Not self + click → submenu opens (Admin / PM / Member items render).
+//   3. Self + click on the disabled item → no role-picker / no mutation.
+//   4. Not self + click → role-picker dialog opens with all roles + search.
 
 import * as React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
@@ -58,6 +61,25 @@ vi.mock("@/hooks/use-bulk-action", () => ({
   useBulkAction: () => ({ mutate: bulkActionMutateMock, isPending: false }),
 }))
 
+// Phase 15 hotfix — useRoles drives the role-picker dialog. Mock returns the
+// 4 system roles + 1 custom role so tests can exercise dynamic + searchable
+// behaviour.
+vi.mock("@/hooks/use-roles", () => ({
+  useRoles: () => ({
+    data: {
+      items: [
+        { id: 1, name: "Admin", is_system_role: true },
+        { id: 2, name: "Project Manager", is_system_role: true },
+        { id: 3, name: "Member", is_system_role: true },
+        { id: 4, name: "Guest", is_system_role: true },
+        { id: 242, name: "Kodlamacı", is_system_role: false },
+      ],
+      total: 5,
+    },
+    isLoading: false,
+  }),
+}))
+
 import { UserRowActions } from "./user-row-actions"
 
 describe("UserRowActions self-edit prevention (Plan 15-11 — D-2.9)", () => {
@@ -95,33 +117,58 @@ describe("UserRowActions self-edit prevention (Plan 15-11 — D-2.9)", () => {
     expect(changeRole).not.toBeDisabled()
   })
 
-  it("Case 3 — clicking disabled 'Rolü değiştir' for self does NOT open submenu", () => {
+  it("Case 3 — clicking disabled 'Rolü değiştir' for self does NOT open the role-picker", () => {
     mockCurrentUserRef.current = { id: 42 }
     render(<UserRowActions user={{ id: 42, full_name: "Self User" }} />)
     openMoreMenu()
     const items = screen.getAllByRole("menuitem")
     const changeRole = items.find((el) => /Rolü değiştir/.test(el.textContent ?? ""))!
-    // The MoreMenu primitive short-circuits disabled items in handleItemClick.
     fireEvent.click(changeRole)
-    // The role submenu would expose Admin / Project Manager / Member as
-    // additional menuitems if it had opened. Because the click was a no-op,
-    // no extra menuitem with that label is rendered.
-    expect(screen.queryByRole("menuitem", { name: /^Admin$/ })).toBeNull()
-    expect(screen.queryByRole("menuitem", { name: /^Project Manager$/ })).toBeNull()
-    // changeRoleMutate must not be called either.
+    // The role-picker dialog should NOT be in the document.
+    expect(screen.queryByRole("dialog", { name: /Rol seç/i })).toBeNull()
     expect(changeRoleMutateMock).not.toHaveBeenCalled()
   })
 
-  it("Case 4 — clicking enabled 'Rolü değiştir' for another user opens the submenu", () => {
+  it("Case 4 — clicking 'Rolü değiştir' for another user opens the searchable role-picker with custom roles included", () => {
     mockCurrentUserRef.current = { id: 42 }
     render(<UserRowActions user={{ id: 999, full_name: "Other User" }} />)
     openMoreMenu()
     const items = screen.getAllByRole("menuitem")
     const changeRole = items.find((el) => /Rolü değiştir/.test(el.textContent ?? ""))!
     fireEvent.click(changeRole)
-    // Submenu opens with the 3 role choices.
-    expect(screen.getByRole("menuitem", { name: /^Admin$/ })).toBeInTheDocument()
-    expect(screen.getByRole("menuitem", { name: /^Project Manager$/ })).toBeInTheDocument()
-    expect(screen.getByRole("menuitem", { name: /^Member$/ })).toBeInTheDocument()
+    // Picker dialog opens with all roles (system + custom).
+    const dialog = screen.getByRole("dialog", { name: /Rol seç/i })
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /^Admin/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /^Project Manager/ })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: /^Member/ })).toBeInTheDocument()
+    // Custom Plan 15-11 role appears too — the bug this hotfix addresses.
+    expect(screen.getByRole("option", { name: /^Kodlamacı/ })).toBeInTheDocument()
+  })
+
+  it("Case 5 — picking a role fires useChangeRole.mutate({userId, roleId}) per D-1.17 contract", () => {
+    mockCurrentUserRef.current = { id: 42 }
+    render(<UserRowActions user={{ id: 999, full_name: "Other User" }} />)
+    openMoreMenu()
+    const items = screen.getAllByRole("menuitem")
+    const changeRole = items.find((el) => /Rolü değiştir/.test(el.textContent ?? ""))!
+    fireEvent.click(changeRole)
+    const member = screen.getByRole("option", { name: /^Member/ })
+    fireEvent.click(member)
+    expect(changeRoleMutateMock).toHaveBeenCalledTimes(1)
+    expect(changeRoleMutateMock).toHaveBeenCalledWith({ userId: 999, roleId: 3 })
+  })
+
+  it("Case 6 — search filter narrows roles to substring match", () => {
+    mockCurrentUserRef.current = { id: 42 }
+    render(<UserRowActions user={{ id: 999, full_name: "Other User" }} />)
+    openMoreMenu()
+    const items = screen.getAllByRole("menuitem")
+    const changeRole = items.find((el) => /Rolü değiştir/.test(el.textContent ?? ""))!
+    fireEvent.click(changeRole)
+    const search = screen.getByPlaceholderText(/Rol ara/i)
+    fireEvent.change(search, { target: { value: "kodla" } })
+    expect(screen.queryByRole("option", { name: /^Admin/ })).toBeNull()
+    expect(screen.getByRole("option", { name: /^Kodlamacı/ })).toBeInTheDocument()
   })
 })

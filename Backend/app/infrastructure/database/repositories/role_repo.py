@@ -26,6 +26,7 @@ class SqlAlchemyRoleRepository(IRoleRepository):
         )
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit()
         return self._to_entity(model)
 
     async def get_by_id(self, role_id: int) -> Optional[Role]:
@@ -63,6 +64,7 @@ class SqlAlchemyRoleRepository(IRoleRepository):
             )
         )
         await self.session.flush()
+        await self.session.commit()
         return await self.get_by_id(role.id) or role
 
     async def delete(self, role_id: int) -> bool:
@@ -70,4 +72,5 @@ class SqlAlchemyRoleRepository(IRoleRepository):
             delete(RoleModel).where(RoleModel.id == role_id)
         )
         await self.session.flush()
+        await self.session.commit()
         return (result.rowcount or 0) > 0
