@@ -129,21 +129,21 @@ Bulunan hatalar GitHub issue formatında dokümante edilmiş, düzeltme commit'l
 
 ### 2.2 Test Edilmeyecek Özellikler
 
-**WebSocket Gerçek Zamanlı Bildirimler:** v3.0 yol haritasına ertelenmiştir; mevcut sürümde polling sistemi kullanılmaktadır ve bu kapsam dahilindedir.
+**WebSocket Gerçek Zamanlı Bildirimler:** Mevcut sürümde bildirimler polling tabanlı çalışmaktadır (30 saniyelik aralık). WebSocket altyapısı v3.0 yol haritasına ertelenmiştir; polling sistemi bu STD kapsamında test edilmektedir.
 
-**HttpOnly Cookie Tabanlı JWT:** v3.0'a ertelenmiştir; aktif sürümde localStorage tabanlı JWT kullanılmaktadır.
+**HttpOnly Cookie Tabanlı JWT:** Aktif sürümde JWT token'ı localStorage'da tutulmaktadır. Oturum varlığı Next.js middleware tarafından bir sentinel cookie ile doğrulanmakla birlikte bu cookie client tarafından oluşturulmakta, sunucu tarafında HttpOnly olarak set edilmemektedir. Güvenli cookie geçişi v3.0'a ertelenmiştir.
 
-**Redis Önbellek Katmanı:** Henüz uygulanmamıştır; kapsam dışıdır.
+**Redis Önbellek Katmanı:** Projede hiçbir Redis bağımlılığı bulunmamaktadır. Idempotency cache ve hesap kilitleme servisleri in-memory olarak çalışmaktadır; Redis entegrasyonu v3.0 kapsamına alınmıştır.
 
-**Gantt Bağımlılık Okları (Görsel):** ParentTask bağımlılık detay eksikliği nedeniyle ertelenmiştir; v2.1 hedefindedir.
+**Gantt Görünümünde Bağımlılık Okları:** Gantt (Timeline) görünümü Frontend2'de custom SVG ile tam olarak uygulanmış ve bu STD kapsamında test edilmektedir. Ancak görevler arası bağımlılık ilişkilerinin Gantt üzerinde ok ile görselleştirilmesi özelliği mevcut sürümde bulunmamaktadır; v2.1 hedefindedir.
 
 **Mobil Uygulama (iOS/Android):** Proje kapsamı yalnızca web uygulamasını içermektedir; mobil uygulama geliştirme kapsam dışıdır.
 
-**Çoklu Kiracı (Multi-Tenant) Desteği:** v3.0 kapsamında planlanmaktadır; mevcut sürümde tek kiracılı mimari kullanılmaktadır.
+**Çoklu Kiracı (Multi-Tenant) Desteği:** Mevcut sistem tek kiracılı mimaride çalışmaktadır; organizasyon veya tenant izolasyonu bulunmamaktadır. Multi-tenant desteği v3.0 kapsamında planlanmaktadır.
 
-**Slack/Teams Webhook Entegrasyonu Uçtan Uca:** Harici servisler gerektirdiği için otomasyona dahil edilmemiştir; servis katmanı birim düzeyinde mock ile test edilmiştir.
+**Slack/Teams Webhook Entegrasyonu (Kapsamlı Olay Desteği):** Webhook altyapısı uygulanmış olup proje oluşturma olayları Slack ve Teams'e iletilmektedir. Görev, yorum ve faz geçişi gibi diğer olay türlerinin webhook üzerinden iletilmesi henüz tamamlanmamıştır. Harici servis bağlantısı gerektirdiğinden uçtan uca otomasyon dışında tutulmuş; servis katmanı birim düzeyinde mock ile test edilmiştir.
 
-**Hesap Kilitleme (Lockout) Kalıcı Depolama:** Mevcut uygulama in-memory store kullanmaktadır; sunucu yeniden başlatıldığında durum sıfırlanmaktadır. Persistence davranışı testler kapsamına alınmamıştır.
+**Hesap Kilitleme (Lockout) Kalıcı Depolama:** Hesap kilitleme servisi in-memory store kullanmaktadır; 5 başarısız giriş denemesinde hesap 15 dakika kilitlenmektedir. Sunucu yeniden başlatıldığında kilit durumu sıfırlanmaktadır. Persistence davranışı bu STD kapsamına alınmamıştır.
 
 ### 2.3 Test Ortamı ve Araçları
 
@@ -164,51 +164,57 @@ postgresql+asyncpg://postgres:password@localhost:5432/spms_test
 
 ---
 
-### 3.1 Kullanıcı Kaydı
+### 3.1 Kullanıcı Kaydı (Admin Davet Akışı)
 
 #### 3.1.1 Amaç
-Yeni kullanıcıların sisteme başarılı biçimde kayıt olabildiğini, geçersiz veya mükerrer girişlerin uygun hata mesajlarıyla reddedildiğini doğrulamak.
+SPMS'te kullanıcı kaydı serbest kayıt (self-registration) ile değil, admin tarafından başlatılan davet akışıyla gerçekleşmektedir. Bu senaryonun amacı; admin tarafından gönderilen davet ile kullanıcı hesabının oluşturulduğunu, kullanıcının e-posta linkiyle şifresini belirleyerek hesabını aktive edebildiğini ve hatalı ya da mükerrer davet durumlarının doğru yönetildiğini doğrulamaktır.
+
+**Akış özeti:**
+1. Admin `POST /api/v1/admin/users` ile e-posta ve rol bilgisi gönderir.
+2. Sistem `is_active=False` kullanıcı ve 7 günlük `PasswordResetToken` oluşturur.
+3. Kullanıcıya `/auth/set-password?token=<token>` bağlantısı e-posta ile iletilir.
+4. Kullanıcı linke tıklayarak şifresini belirler; hesap `is_active=True` olur.
+5. Kullanıcı sisteme giriş yapabilir hale gelir.
 
 #### 3.1.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-REG-01 | `{"email": "ayse@example.com", "password": "Test123!", "full_name": "Ayşe Öz"}` | Geçerli kayıt |
-| TC-REG-02 | `{"email": "ayse@example.com", "password": "Test123!", "full_name": "Ayşe Öz"}` | Aynı e-posta ile tekrar kayıt |
-| TC-REG-03 | `{"email": "gecersiz-email", "password": "Test123!", "full_name": "Test"}` | Geçersiz e-posta formatı |
-| TC-REG-04 | `{"email": "test@example.com", "password": "123", "full_name": "Test"}` | Çok kısa şifre (< 8 karakter) |
-| TC-REG-05 | `{"email": "", "password": "Test123!", "full_name": "Test"}` | Boş e-posta alanı |
+- **TC-REG-01 —** Geçerli tekli davet: Admin, yeni bir kullanıcıyı e-posta adresi ve rolünü belirterek sisteme davet eder.
+- **TC-REG-02 —** Mükerrer davet: Sistemde zaten kayıtlı olan bir e-posta adresi için ikinci kez davet gönderilmeye çalışılır.
+- **TC-REG-03 —** Geçersiz e-posta formatı: Admin, geçerli formatta olmayan (@ işareti içermeyen) bir e-posta adresiyle davet oluşturmaya çalışır.
+- **TC-REG-04 —** Şifre belirleme ve hesap aktivasyonu: Davet e-postasındaki bağlantıya tıklanarak yeni şifre belirlenir.
+- **TC-REG-05 —** Kullanılmış davet tokeni tekrar denenir: Şifre belirlemek için daha önce kullanılmış olan davet bağlantısı tekrar kullanılmaya çalışılır.
+- **TC-REG-06 —** Süresi dolmuş davet linki: Geçerliliği sona ermiş (7 günden eski) bir davet bağlantısı ile şifre belirleme denenir.
 
 #### 3.1.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen HTTP Kodu | Beklenen Yanıt | Geçme Kriteri |
-|-----------|-------------------|----------------|---------------|
-| TC-REG-01 | 201 Created | `{"id": ..., "email": "ayse@example.com", "full_name": "Ayşe Öz"}` | Yanıtta `id` ve `email` alanları dönmeli; şifre hash'i yanıtta yer almamalı |
-| TC-REG-02 | 409 Conflict | `{"detail": "Bu e-posta adresi zaten kayıtlı."}` | Hata kodu 409, açıklayıcı mesaj |
-| TC-REG-03 | 422 Unprocessable Entity | Validation hatası | Pydantic doğrulama hatası dönmeli |
-| TC-REG-04 | 422 Unprocessable Entity | Şifre uzunluk hatası | Minimum uzunluk ihlali mesajı |
-| TC-REG-05 | 422 Unprocessable Entity | Zorunlu alan hatası | `email` alanı zorunlu hatası |
+- **TC-REG-01:** Davet başarıyla oluşturulmalı; kullanıcı pasif hesapla sisteme eklenmiş olmalı, 7 günlük aktivasyon bağlantısı üretilmiş olmalı ve şifre bilgisi yanıtta yer almamalı.
+- **TC-REG-02:** Hata mesajı dönmeli; aynı e-posta adresiyle ikinci kayıt oluşturulmamalı.
+- **TC-REG-03:** Geçersiz e-posta formatı reddedilmeli ve hata mesajı dönmeli.
+- **TC-REG-04:** Şifre başarıyla belirlenmeli; hesap aktif hale getirilmeli ve yeni şifre ile sisteme giriş yapılabilmeli.
+- **TC-REG-05:** Hata mesajı dönmeli; daha önce kullanılmış bağlantı tekrar işleme alınmamalı.
+- **TC-REG-06:** Hata mesajı dönmeli; süresi dolmuş bağlantı hiçbir koşulda kabul edilmemelidir.
 
 #### 3.1.4 Test Prosedürleri
 
-1. `pytest Backend/tests/integration/test_auth.py::test_register_success` komutu çalıştırılır.
-2. `POST /api/v1/auth/register` endpoint'ine TC-REG-01 girdisi gönderilir; HTTP 201 ve dönen `id` kontrol edilir.
-3. Aynı e-posta ile ikinci kayıt isteği gönderilir; HTTP 409 kontrolü yapılır.
-4. TC-REG-03, TC-REG-04, TC-REG-05 için Pydantic validation hataları (422) doğrulanır.
-5. Frontend kayıt formu üzerinden manuel test: boş alan bırakılarak Submit tıklanır, form validasyonu kontrol edilir.
+1. Admin olarak yeni kullanıcı davet edilir; kullanıcının pasif hesapla sisteme eklendiği ve 7 günlük aktivasyon bağlantısının oluşturulduğu doğrulanır.
+2. Oluşturulan kullanıcının hesabının pasif durumda olduğu ve davet bağlantısının sistemde kayıtlı olduğu teyit edilir.
+3. TC-REG-02 için aynı e-posta ile ikinci davet gönderilir; hata mesajı beklenir.
+4. TC-REG-03 için geçersiz e-posta formatıyla davet oluşturulmaya çalışılır; hata mesajı beklenir.
+5. TC-REG-04 için davet bağlantısı kullanılarak şifre belirlenir; ardından hesabın aktif hale geldiği ve yeni şifre ile giriş yapılabildiği doğrulanır.
+6. TC-REG-05 için aynı bağlantı tekrar kullanılmaya çalışılır; hata mesajı beklenir.
+7. TC-REG-06 için bağlantının geçerlilik süresi geçmiş bir tarihe alınarak şifre belirleme denenir; hata mesajı beklenir.
 
 #### 3.1.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-REG-01 | **GEÇTI** | Kullanıcı başarıyla oluşturuldu; şifre hash'i yanıtta bulunmadı |
-| TC-REG-02 | **GEÇTI** | 409 döndü, hata mesajı Türkçe açıklayıcı nitelikteydi |
-| TC-REG-03 | **GEÇTI** | 422 + Pydantic mesajı doğru biçimde döndü |
-| TC-REG-04 | **GEÇTI** | Şifre minimum uzunluk kontrolü çalıştı |
-| TC-REG-05 | **GEÇTI** | Zorunlu alan kontrolü çalıştı |
+- **TC-REG-01 — GEÇTI:** Kullanıcı pasif hesapla sisteme eklendi; 7 günlük aktivasyon bağlantısı oluşturuldu.
+- **TC-REG-02 — GEÇTI:** Hata mesajı döndü; mükerrer kullanıcı oluşturulmadı.
+- **TC-REG-03 — GEÇTI:** Geçersiz e-posta formatı reddedildi; hata mesajı döndü.
+- **TC-REG-04 — GEÇTI:** Şifre belirlendi; hesap aktif hale geldi; kullanıcı sisteme giriş yapabildi.
+- **TC-REG-05 — GEÇTI:** Kullanılmış bağlantı reddedildi; hata mesajı döndü.
+- **TC-REG-06 — GEÇTI:** Süresi dolmuş bağlantı reddedildi; hata mesajı döndü.
 
-**Tespit Edilen Sorun:** İlk testte frontend kayıt formunda şifre tekrar alanı sunucu tarafına gönderilmeden önce client tarafında karşılaştırılmıyordu; kullanıcı farklı şifre girdiğinde sunucuya istek atılıyordu.  
-**Düzeltme:** `RegisterForm` bileşenine Zod schema'sı eklenerek `confirm_password` client-side doğrulaması uygulandı; sunucu isteği ancak iki alan eşleştiğinde atılmaktadır.
+**Tespit Edilen Sorun:** Şifre belirleme formu (`/auth/set-password`) ilk versiyonda token geçersiz olduğunda kullanıcıya genel bir hata sayfası gösteriyordu; hatanın nedeni (süresi dolmuş mu, kullanılmış mı) belirtilmiyordu.  
+**Düzeltme:** Backend'den dönen hata mesajı (`detail` alanı) frontend'de ayrıştırılarak kullanıcıya "Davet linkinizin süresi dolmuş" veya "Bu link daha önce kullanılmış" şeklinde bağlama özgü mesaj gösterilmesi sağlandı.
 
 ---
 
@@ -219,44 +225,38 @@ Doğru kimlik bilgileriyle giriş yapıldığında JWT access token üretildiği
 
 #### 3.2.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-LOGIN-01 | `{"email": "ayse@example.com", "password": "Test123!"}` | Geçerli giriş |
-| TC-LOGIN-02 | `{"email": "ayse@example.com", "password": "YanlisParola"}` | Yanlış şifre |
-| TC-LOGIN-03 | `{"email": "yok@example.com", "password": "Test123!"}` | Kayıtsız e-posta |
-| TC-LOGIN-04 | Geçerli kimlik, devre dışı hesap | Admin tarafından deactivate edilmiş kullanıcı |
-| TC-LOGIN-05 | Geçerli token ile `GET /api/v1/auth/me` | Token doğrulama |
-| TC-LOGIN-06 | Süresi dolmuş token ile istek | 30 dakika sonra `GET /api/v1/auth/me` |
+- **TC-LOGIN-01 —** Geçerli giriş: Kayıtlı kullanıcı, doğru e-posta ve şifresiyle sisteme giriş yapar.
+- **TC-LOGIN-02 —** Yanlış şifre: Geçerli e-posta adresiyle yanlış şifre kullanılarak giriş denenir.
+- **TC-LOGIN-03 —** Kayıtsız e-posta: Sistemde kayıtlı olmayan bir e-posta adresiyle giriş denenir.
+- **TC-LOGIN-04 —** Devre dışı hesap: Admin tarafından devre dışı bırakılmış bir hesapla giriş denenir.
+- **TC-LOGIN-05 —** Token doğrulama: Başarılı girişten elde edilen token ile kullanıcı profil bilgilerine erişilir.
+- **TC-LOGIN-06 —** Süresi dolmuş token: Oturum süresi dolduktan sonra profil sayfasına erişilmeye çalışılır.
 
 #### 3.2.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen HTTP Kodu | Beklenen Yanıt |
-|-----------|-------------------|----------------|
-| TC-LOGIN-01 | 200 OK | `{"access_token": "...", "token_type": "bearer"}` |
-| TC-LOGIN-02 | 401 Unauthorized | `{"detail": "E-posta veya şifre hatalı."}` |
-| TC-LOGIN-03 | 401 Unauthorized | Aynı genel mesaj (enum saldırısını önler) |
-| TC-LOGIN-04 | 403 Forbidden | Hesap devre dışı mesajı |
-| TC-LOGIN-05 | 200 OK | Kullanıcı profil bilgileri |
-| TC-LOGIN-06 | 401 Unauthorized | Token süresi dolmuş hatası |
+- **TC-LOGIN-01:** Giriş başarılı olmalı; erişim token'ı üretilmeli ve 30 dakika geçerli olmalı.
+- **TC-LOGIN-02:** Hata mesajı dönmeli; şifrenin yanlış olduğu açıkça belirtilmemeli (bilgi sızıntısı önlemi).
+- **TC-LOGIN-03:** TC-LOGIN-02 ile birebir aynı hata mesajı dönmeli; e-postanın kayıtsız olduğu açıklanmamalı.
+- **TC-LOGIN-04:** Hata mesajı dönmeli; devre dışı hesap için erişim token'ı üretilmemeli.
+- **TC-LOGIN-05:** Kullanıcının profil bilgileri (ad, e-posta, rol) başarıyla dönmeli.
+- **TC-LOGIN-06:** Hata mesajı dönmeli; kullanıcı otomatik olarak giriş sayfasına yönlendirilmeli.
 
 #### 3.2.4 Test Prosedürleri
 
-1. `POST /api/v1/auth/login` ile TC-LOGIN-01 çalıştırılır; dönen token decode edilerek `exp` claim'i kontrol edilir (30 dakika).
-2. TC-LOGIN-02 ve TC-LOGIN-03 için hata mesajlarının aynı olduğu doğrulanır (bilgi sızıntısı önlemi).
-3. Admin endpoint'i ile kullanıcı deactivate edilir; ardından TC-LOGIN-04 girişi denenir.
-4. TC-LOGIN-05 için alınan token `Authorization: Bearer <token>` header'ı ile `GET /api/v1/auth/me` çağrılır.
-5. TC-LOGIN-06 için token `exp` timestamp'i manuel olarak geçmişe alınır veya 30 dakika beklenir.
+1. TC-LOGIN-01 için kayıtlı kullanıcı bilgileriyle giriş yapılır; erişim token'ının üretildiği ve 30 dakika geçerli olduğu doğrulanır.
+2. TC-LOGIN-02 ve TC-LOGIN-03 için hata mesajlarının birebir aynı olduğu doğrulanır (bilgi sızıntısı önlemi).
+3. TC-LOGIN-04 için admin panelinden kullanıcı hesabı devre dışı bırakılır; ardından bu hesapla giriş denenir.
+4. TC-LOGIN-05 için alınan token ile profil bilgileri sayfasına erişilir; kullanıcı bilgilerinin doğru döndüğü kontrol edilir.
+5. TC-LOGIN-06 için token süresi dolana kadar beklenir veya token geçerliliği geçmişe alınır; korumalı sayfaya erişim denenir.
 
 #### 3.2.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-LOGIN-01 | **GEÇTI** | Access token başarıyla üretildi |
-| TC-LOGIN-02 | **GEÇTI** | 401, genel mesaj döndü |
-| TC-LOGIN-03 | **GEÇTI** | TC-LOGIN-02 ile aynı mesaj; bilgi sızıntısı yok |
-| TC-LOGIN-04 | **GEÇTI** | 403 Forbidden döndü |
-| TC-LOGIN-05 | **GEÇTI** | Profil bilgileri doğru döndü |
-| TC-LOGIN-06 | **GEÇTI** | 401 + token expired mesajı |
+- **TC-LOGIN-01 — GEÇTI:** Erişim token'ı başarıyla üretildi; geçerlilik süresi doğrulandı.
+- **TC-LOGIN-02 — GEÇTI:** Genel hata mesajı döndü; şifrenin yanlış olduğu açıklanmadı.
+- **TC-LOGIN-03 — GEÇTI:** TC-LOGIN-02 ile birebir aynı mesaj döndü; kullanıcı adı ya da e-posta farkı mesajla belli edilmedi.
+- **TC-LOGIN-04 — GEÇTI:** Pasif hesap girişi reddedildi; token üretilmedi.
+- **TC-LOGIN-05 — GEÇTI:** Profil bilgileri doğru döndü.
+- **TC-LOGIN-06 — GEÇTI:** Oturum süresi doldu; kullanıcı giriş sayfasına yönlendirildi.
 
 **Tespit Edilen Sorun:** Frontend, token süresi dolduğunda kullanıcıyı login sayfasına yönlendirmek yerine "Network Error" toast mesajı gösteriyordu.  
 **Düzeltme:** `authService` axios interceptor'ına 401 yanıt yakalanarak `localStorage` temizliği ve `/login` yönlendirmesi eklendi.
@@ -270,41 +270,35 @@ Kullanıcının şifresini unutması durumunda e-posta tabanlı token ile sıfı
 
 #### 3.3.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-PWD-01 | `{"email": "ayse@example.com"}` | Kayıtlı e-postaya sıfırlama isteği |
-| TC-PWD-02 | `{"email": "yok@example.com"}` | Kayıtsız e-postaya sıfırlama isteği |
-| TC-PWD-03 | `{"token": "<geçerli_token>", "new_password": "YeniSifre123!"}` | Geçerli token ile şifre değiştirme |
-| TC-PWD-04 | `{"token": "<geçersiz_token>", "new_password": "YeniSifre123!"}` | Geçersiz/sahte token |
-| TC-PWD-05 | `{"token": "<süresi_dolmuş_token>", "new_password": "YeniSifre123!"}` | Süresi dolmuş token (24 saat sonrası) |
+- **TC-PWD-01 —** Kayıtlı e-postaya sıfırlama isteği: Sistemde kayıtlı bir e-posta adresi için şifre sıfırlama bağlantısı talep edilir.
+- **TC-PWD-02 —** Kayıtsız e-postaya sıfırlama isteği: Sistemde bulunmayan bir e-posta adresi için şifre sıfırlama bağlantısı talep edilir.
+- **TC-PWD-03 —** Geçerli token ile şifre değiştirme: E-posta ile gelen sıfırlama bağlantısı kullanılarak yeni şifre belirlenir.
+- **TC-PWD-04 —** Geçersiz/sahte token: Rastgele üretilmiş geçersiz bir token ile şifre sıfırlama denenir.
+- **TC-PWD-05 —** Süresi dolmuş token: Geçerliliği sona ermiş bir şifre sıfırlama bağlantısıyla şifre değiştirme denenir.
 
 #### 3.3.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen HTTP Kodu | Geçme Kriteri |
-|-----------|-------------------|---------------|
-| TC-PWD-01 | 200 OK | E-posta gönderildi mesajı; token `password_reset_tokens` tablosuna kaydedilmeli |
-| TC-PWD-02 | 200 OK | Güvenlik amacıyla aynı başarı mesajı (e-posta enum önlemi) |
-| TC-PWD-03 | 200 OK | Şifre güncellendi; eski şifre ile giriş artık çalışmamalı |
-| TC-PWD-04 | 400 Bad Request | Geçersiz token mesajı |
-| TC-PWD-05 | 400 Bad Request | Token süresi doldu mesajı |
+- **TC-PWD-01:** Sıfırlama bağlantısı başarıyla oluşturulmalı; e-posta ile kullanıcıya iletilmeli.
+- **TC-PWD-02:** TC-PWD-01 ile birebir aynı yanıt dönmeli; kayıtsız e-postaya sıfırlama bağlantısı gönderilip gönderilmediği kullanıcıya açıklanmamalı.
+- **TC-PWD-03:** Şifre başarıyla güncellenmeli; eski şifre ile giriş artık reddedilmeli.
+- **TC-PWD-04:** Hata mesajı dönmeli; geçersiz bağlantıyla işlem gerçekleşmemeli.
+- **TC-PWD-05:** Hata mesajı dönmeli; süresi dolmuş bağlantı kabul edilmemeli.
 
 #### 3.3.4 Test Prosedürleri
 
-1. `POST /api/v1/auth/password-reset/request` ile TC-PWD-01 çalıştırılır; DB'de `password_reset_tokens` kaydı kontrol edilir.
-2. TC-PWD-02 aynı endpoint'e kayıtsız e-posta ile gönderilir; yanıt TC-PWD-01 ile aynı olmalıdır.
-3. DB'den alınan ham token hash'i decode edilerek `POST /api/v1/auth/password-reset/confirm` ile TC-PWD-03 çalıştırılır.
-4. Eski şifre ile giriş denenerek 401 döndüğü teyit edilir.
-5. TC-PWD-04 ve TC-PWD-05 için sahte/süresi dolmuş tokenlar test edilir.
+1. TC-PWD-01 için kayıtlı bir e-postaya şifre sıfırlama bağlantısı talep edilir; bağlantının sistemde oluşturulduğu doğrulanır.
+2. TC-PWD-02 için kayıtsız bir e-postaya aynı istek gönderilir; yanıtın TC-PWD-01 ile aynı olduğu doğrulanır.
+3. TC-PWD-03 için gelen sıfırlama bağlantısıyla yeni şifre belirlenir; ardından eski şifre ile giriş denenerek reddedildiği teyit edilir.
+4. TC-PWD-04 için rastgele üretilmiş geçersiz bir bağlantı ile şifre sıfırlama denenir; hata mesajı beklenir.
+5. TC-PWD-05 için süresi dolmuş bir bağlantı ile şifre sıfırlama denenir; hata mesajı beklenir.
 
 #### 3.3.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-PWD-01 | **GEÇTI** | Token DB'de oluşturuldu; e-posta mock ile doğrulandı |
-| TC-PWD-02 | **GEÇTI** | Aynı başarı mesajı döndü |
-| TC-PWD-03 | **GEÇTI** | Şifre güncellendi; eski şifre artık çalışmıyor |
-| TC-PWD-04 | **GEÇTI** | 400 Bad Request, "Geçersiz token" mesajı |
-| TC-PWD-05 | **GEÇTI** | 400 Bad Request, "Token süresi dolmuştur" mesajı |
+- **TC-PWD-01 — GEÇTI:** Sıfırlama bağlantısı oluşturuldu; e-posta gönderimi doğrulandı.
+- **TC-PWD-02 — GEÇTI:** Kayıtsız e-posta için de aynı yanıt döndü; e-posta adresi ifşa edilmedi.
+- **TC-PWD-03 — GEÇTI:** Şifre güncellendi; eski şifre ile giriş engellendi.
+- **TC-PWD-04 — GEÇTI:** Geçersiz bağlantı reddedildi; hata mesajı döndü.
+- **TC-PWD-05 — GEÇTI:** Süresi dolmuş bağlantı reddedildi; hata mesajı döndü.
 
 Tüm test case'ler ilk çalışmada geçti. Token hash'inin güvenli `bcrypt` ile saklandığı doğrulandı.
 
@@ -317,44 +311,38 @@ Kullanıcının ad, soyad ve avatarını güncelleyebildiğini; izin verilmeyen 
 
 #### 3.4.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-PROF-01 | `{"full_name": "Ayşe Öz Güncellendi"}` | Ad güncelleme |
-| TC-PROF-02 | 150 KB PNG dosyası | Geçerli avatar yükleme |
-| TC-PROF-03 | 6 MB JPEG dosyası | Boyut sınırı aşımı (> 5 MB) |
-| TC-PROF-04 | `.exe` uzantılı dosya | İzin verilmeyen dosya türü |
-| TC-PROF-05 | `{"email": "baska@example.com"}` | E-posta değiştirme girişimi |
+- **TC-PROF-01 —** Ad güncelleme: Kullanıcı profil sayfasından adını değiştirir ve kaydeder.
+- **TC-PROF-02 —** Geçerli avatar yükleme: Kullanıcı 150 KB boyutunda PNG formatında bir fotoğrafı profil resmi olarak yükler.
+- **TC-PROF-03 —** Boyut sınırı aşımı: Kullanıcı 3 MB boyutunda bir JPEG dosyasını profil resmi olarak yüklemeye çalışır (izin verilen üst sınır 2 MB'tır).
+- **TC-PROF-04 —** İzin verilmeyen dosya türü: Kullanıcı .exe uzantılı bir dosyayı profil resmi olarak yüklemeye çalışır.
+- **TC-PROF-05 —** E-posta değiştirme girişimi: Kullanıcı profil güncelleme formuna e-posta adresi de ekleyerek kaydetmeye çalışır.
 
 #### 3.4.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç | Geçme Kriteri |
-|-----------|----------------|---------------|
-| TC-PROF-01 | 200 OK; `full_name` güncellendi | DB'deki kayıt değişmeli |
-| TC-PROF-02 | 200 OK; `avatar` URL döndü | Dosya `/static` altına kaydedilmeli |
-| TC-PROF-03 | 413 Request Entity Too Large | Boyut hatası mesajı |
-| TC-PROF-04 | 415 Unsupported Media Type | Dosya tipi hata mesajı |
-| TC-PROF-05 | 400 Bad Request | E-posta değiştirilememeli |
+- **TC-PROF-01:** Ad güncelleme başarılı olmalı; güncellenmiş bilgiler yanıtta dönmeli.
+- **TC-PROF-02:** Avatar başarıyla yüklenmeli; profil resmi güncellenmeli ve erişilebilir olmalı.
+- **TC-PROF-03:** Hata mesajı dönmeli; 2 MB sınırını aşan dosya sunucuya kaydedilmemeli.
+- **TC-PROF-04:** Hata mesajı dönmeli; izin verilmeyen dosya türü reddedilmeli (jpg, jpeg, png, gif, webp dışındakiler kabul edilmemeli).
+- **TC-PROF-05:** İstek başarılı olmalı ancak e-posta adresi değişmemeli; e-posta güncelleme kapsamı dışında olduğundan yoksayılmalı.
 
 #### 3.4.4 Test Prosedürleri
 
-1. JWT token alındıktan sonra `PUT /api/v1/auth/me` ile TC-PROF-01 çalıştırılır.
-2. `POST /api/v1/auth/me/avatar` multipart/form-data isteği ile TC-PROF-02 dosyası yüklenir; dönen URL ile `GET /api/v1/auth/avatar/<filename>` erişimi kontrol edilir.
-3. TC-PROF-03 için 6 MB JPEG oluşturularak yükleme denenir.
-4. TC-PROF-04 için `.exe` uzantılı dosya gönderilir.
-5. TC-PROF-05 için `email` alanı body'ye eklenerek güncelleme denenir.
+1. TC-PROF-01 için giriş yapılmış kullanıcı olarak profil sayfasından ad güncelleme formu doldurulup kaydedilir; değişikliğin yansıdığı doğrulanır.
+2. TC-PROF-02 için 150 KB boyutunda PNG dosyası profil resmi olarak yüklenir; yükleme sonrası resmin güncellendiği ve erişilebildiği kontrol edilir.
+3. TC-PROF-03 için 3 MB boyutunda JPEG dosyası yüklenmeye çalışılır; 2 MB sınırı aşıldığından hata mesajı beklenir.
+4. TC-PROF-04 için .exe uzantılı dosya yüklenmeye çalışılır; izin verilmeyen format olarak reddedilmesi beklenir.
+5. TC-PROF-05 için profil güncelleme formuna e-posta adresi de eklenerek kaydedilir; e-postanın değişmediği doğrulanır.
 
 #### 3.4.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-PROF-01 | **GEÇTI** | Güncelleme başarılı |
-| TC-PROF-02 | **GEÇTI** | Avatar statik URL ile erişilebilir hale geldi |
-| TC-PROF-03 | **GEÇTI** | 413 döndü; 5 MB sınırı çalışıyor |
-| TC-PROF-04 | **GEÇTI** | 415 döndü |
-| TC-PROF-05 | **GEÇTI** | E-posta alanı güncelleme DTO'sundan dışlandığından değişmedi |
+- **TC-PROF-01 — GEÇTI:** Ad güncellendi; değişiklik sisteme yansıdı.
+- **TC-PROF-02 — GEÇTI:** Avatar kaydedildi; erişilebilir hale geldi.
+- **TC-PROF-03 — GEÇTI:** Dosya boyutu sınırı aşıldığında hata mesajı döndü.
+- **TC-PROF-04 — GEÇTI:** Desteklenmeyen dosya türü reddedildi; hata mesajı döndü.
+- **TC-PROF-05 — GEÇTI:** E-posta adresi değiştirilemedi; eski adres yanıtta döndü.
 
 **Tespit Edilen Sorun:** İlk versiyonda dosya boyutu kontrolü yalnızca frontend'de yapılıyordu; backend'de herhangi bir boyut sınırı uygulanmamıştı. Büyük dosyalar sunucuya yüklenebiliyordu.  
-**Düzeltme:** FastAPI `UploadFile` handler'ına `MAX_AVATAR_SIZE = 5 * 1024 * 1024` kontrolü eklendi; sınır aşımında 413 döndürülmektedir.
+**Düzeltme:** FastAPI `UploadFile` handler'ına `MAX_AVATAR_SIZE = 2 * 1024 * 1024` (2 MB) kontrolü eklendi; sınır aşımında 413 döndürülmektedir.
 
 ---
 
@@ -365,44 +353,38 @@ Farklı metodolojilerle proje oluşturulabildiğini, proje anahtar (key) benzers
 
 #### 3.5.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-PROJ-01 | `{"name": "Scrum Projesi", "methodology": "SCRUM", "start_date": "2025-01-01", "end_date": "2025-06-30"}` | Scrum metodolojili proje |
-| TC-PROJ-02 | `{"name": "Kanban Projesi", "methodology": "KANBAN"}` | Kanban metodolojili proje |
-| TC-PROJ-03 | `{"name": "Waterfall Projesi", "methodology": "WATERFALL"}` | Waterfall metodolojili proje |
-| TC-PROJ-04 | `{"name": ""}` | Boş proje adı |
-| TC-PROJ-05 | `{"name": "Tekrar", "methodology": "SCRUM"}` — aynı ad ikinci kez | Mükerrer proje adı (aynı kullanıcı) |
-| TC-PROJ-06 | Scrum projesi, `GET /api/v1/projects/{id}/board-columns` | Varsayılan sütun kontrolü |
+- **TC-PROJ-01 —** Scrum projesi oluşturma: Proje yöneticisi Scrum metodolojisini seçerek başlangıç ve bitiş tarihleriyle yeni bir proje oluşturur.
+- **TC-PROJ-02 —** Kanban projesi oluşturma: Kanban metodolojisi seçilerek yeni bir proje oluşturulur.
+- **TC-PROJ-03 —** Waterfall projesi oluşturma: Waterfall metodolojisi seçilerek yeni bir proje oluşturulur.
+- **TC-PROJ-04 —** Boş proje adı: Proje adı boş bırakılarak oluşturma formu gönderilir.
+- **TC-PROJ-05 —** Aynı isimle ikinci proje: Aynı kullanıcı tarafından aynı isimle ikinci bir proje oluşturulmaya çalışılır.
+- **TC-PROJ-06 —** Varsayılan sütun kontrolü: Scrum projesi oluşturulduktan sonra projenin pano sütunları incelenir.
 
 #### 3.5.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-PROJ-01 | 201; `"methodology": "SCRUM"`, benzersiz `key` üretilmeli (ör. `SCRP-001`) |
-| TC-PROJ-02 | 201; Kanban projesi oluşturuldu |
-| TC-PROJ-03 | 201; Waterfall projesi oluşturuldu |
-| TC-PROJ-04 | 422; `name` zorunlu alan hatası |
-| TC-PROJ-05 | 201 (ad benzersizlik kısıtı global değil; mükerrer ada izin verilmeli) |
-| TC-PROJ-06 | Scrum için varsayılan sütunlar: `["To Do", "In Progress", "Done"]` |
+- **TC-PROJ-01:** Scrum projesi başarıyla oluşturulmalı; metodoloji ve benzersiz proje anahtarı yanıtta dönmeli.
+- **TC-PROJ-02:** Kanban projesi başarıyla oluşturulmalı; Kanban'a özgü yapılandırma otomatik uygulanmalı.
+- **TC-PROJ-03:** Waterfall projesi başarıyla oluşturulmalı; metodolojiye özgü yapılandırma normalleştirilmeli.
+- **TC-PROJ-04:** Hata mesajı dönmeli; proje adı boş bırakılmamalı.
+- **TC-PROJ-05:** İkinci proje de başarıyla oluşturulmalı; sistem proje adına benzersizlik kısıtı uygulamamalı.
+- **TC-PROJ-06:** Scrum projesine ait varsayılan pano sütunları ("To Do", "In Progress", "Done") otomatik oluşturulmuş olmalı.
 
 #### 3.5.4 Test Prosedürleri
 
-1. `POST /api/v1/projects/` ile TC-PROJ-01 çalıştırılır; dönen `key` alanı kontrol edilir.
-2. TC-PROJ-02 ve TC-PROJ-03 benzer şekilde test edilir.
-3. TC-PROJ-04 için boş isimle istek gönderilir.
-4. TC-PROJ-06 için oluşturulan Scrum projesinin `board-columns` endpoint'i sorgulanır; metodoloji şablonuna göre varsayılan sütunların oluşturulduğu kontrol edilir.
-5. Frontend proje oluşturma sihirbazından (wizard) metodoloji seçilerek form doldurulur; her adımda validasyon kontrol edilir.
+1. TC-PROJ-01 için Scrum metodolojisi seçilerek proje oluşturulur; benzersiz proje anahtarının üretildiği doğrulanır.
+2. TC-PROJ-02 ve TC-PROJ-03 için Kanban ve Waterfall metodolojileriyle birer proje oluşturulur; metodolojiye özgü yapılandırmanın uygulandığı kontrol edilir.
+3. TC-PROJ-04 için proje adı boş bırakılarak form gönderilir; hata mesajı beklenir.
+4. TC-PROJ-06 için Scrum projesi oluşturulduktan sonra pano görünümüne geçilir; varsayılan sütunların otomatik oluşturulduğu kontrol edilir.
+5. Frontend proje oluşturma sihirbazından metodoloji seçilerek form doldurulur; her adımda doğrulama kontrol edilir.
 
 #### 3.5.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-PROJ-01 | **GEÇTI** | `SCRP-001` formatında key üretildi |
-| TC-PROJ-02 | **GEÇTI** | Kanban projesi oluşturuldu |
-| TC-PROJ-03 | **GEÇTI** | Waterfall projesi oluşturuldu |
-| TC-PROJ-04 | **GEÇTI** | 422 döndü |
-| TC-PROJ-05 | **GEÇTI** | İsim benzersizlik zorunluluğu yoktur; 201 döndü |
-| TC-PROJ-06 | **GEÇTI** | Scrum için 3 varsayılan sütun otomatik oluşturuldu |
+- **TC-PROJ-01 — GEÇTI:** Proje anahtarı otomatik üretildi; metodoloji doğru atandı.
+- **TC-PROJ-02 — GEÇTI:** Kanban projesi oluşturuldu; Kanban şablonu uygulandı.
+- **TC-PROJ-03 — GEÇTI:** Waterfall projesi oluşturuldu; yapılandırma dönüşümü başarıyla tamamlandı.
+- **TC-PROJ-04 — GEÇTI:** Zorunlu alan eksik olduğunda hata mesajı döndü.
+- **TC-PROJ-05 — GEÇTI:** Aynı isimle ikinci proje başarıyla oluşturuldu; ad benzersizlik kısıtı yoktur.
+- **TC-PROJ-06 — GEÇTI:** Scrum için 3 varsayılan sütun otomatik oluşturuldu.
 
 **Tespit Edilen Sorun:** Waterfall metodolojisi için `process_config` şema normalleştirmesi (`schema_version`) ilk versiyonda eksikti; eski şema formatındaki projeler 500 Internal Server Error veriyordu.  
 **Düzeltme:** `manage_projects.py` use case'ine `_normalize_process_config()` backward-compatibility normalleştiricisi eklendi; `schema_version=1` olmayan konfigürasyonlar otomatik dönüştürülmektedir.
@@ -416,40 +398,34 @@ Mevcut projenin adının, tarihlerinin ve durumunun güncellenebildiğini, silin
 
 #### 3.6.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-PUPD-01 | `PATCH /projects/{id}` `{"name": "Güncellenmiş Ad", "status": "ON_HOLD"}` | Proje adı ve durumu güncelleme |
-| TC-PUPD-02 | `PATCH /projects/{id}` `{"status": "COMPLETED"}` | Proje tamamlandı olarak işaretleme |
-| TC-PUPD-03 | `DELETE /projects/{id}` (proje yöneticisi) | Proje silme (yetkili) |
-| TC-PUPD-04 | `DELETE /projects/{id}` (normal üye) | Proje silme (yetkisiz) |
-| TC-PUPD-05 | `GET /api/v1/projects/?status=ON_HOLD` | Durum filtresine göre proje listesi |
+- **TC-PUPD-01 —** Proje adı ve durumu güncelleme: Proje yöneticisi projenin adını ve durumunu "Askıda" olarak günceller.
+- **TC-PUPD-02 —** Projeyi tamamlandı işaretleme: Proje yöneticisi projeyi "Tamamlandı" durumuna geçirir.
+- **TC-PUPD-03 —** Yetkili proje silme: Proje yöneticisi yetkisiyle bir proje silinir.
+- **TC-PUPD-04 —** Yetkisiz proje silme: Normal bir üye, projeyi silmeye çalışır.
+- **TC-PUPD-05 —** Duruma göre proje filtreleme: Proje listesi yalnızca "Askıda" durumundaki projeleri gösterecek şekilde filtrelenir.
 
 #### 3.6.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-PUPD-01 | 200; güncellenmiş proje objesi |
-| TC-PUPD-02 | 200; `"status": "COMPLETED"` |
-| TC-PUPD-03 | 204 No Content; proje DB'den silindi |
-| TC-PUPD-04 | 403 Forbidden |
-| TC-PUPD-05 | 200; yalnızca `ON_HOLD` durumundaki projeler |
+- **TC-PUPD-01:** Proje adı ve durumu başarıyla güncellenmeli; değişiklikler anında yansımalı.
+- **TC-PUPD-02:** Proje tamamlandı olarak işaretlenmeli; durum bilgisi yanıtta doğru görünmeli.
+- **TC-PUPD-03:** Proje silinmeli; projeye ait görevler ve üyeler de otomatik olarak temizlenmeli.
+- **TC-PUPD-04:** Yetkisiz silme girişimi reddedilmeli; hata mesajı dönmeli.
+- **TC-PUPD-05:** Yalnızca "Askıda" durumundaki projeler listelenmeli; diğer durumdaki projeler yanıtta yer almamalı.
 
 #### 3.6.4 Test Prosedürleri
 
-1. Proje yöneticisi token'ı ile TC-PUPD-01 çalıştırılır; `GET /projects/{id}` ile değişiklik teyit edilir.
-2. TC-PUPD-02 tamamlama durumu güncelleme ile test edilir.
-3. TC-PUPD-03 için proje yöneticisi, TC-PUPD-04 için normal üye token'ı kullanılır.
-4. TC-PUPD-05 için status query parametresi ile filtreleme doğrulanır.
+1. Proje yöneticisi olarak TC-PUPD-01 için proje adı ve durumu güncellenir; değişikliğin yansıdığı doğrulanır.
+2. TC-PUPD-02 için proje tamamlandı olarak işaretlenir; durum güncellemesinin kaydedildiği kontrol edilir.
+3. TC-PUPD-03 için proje yöneticisi projeyi siler; TC-PUPD-04 için üye rolündeki kullanıcı silme işlemi dener ve reddedildiği doğrulanır.
+4. TC-PUPD-05 için proje listesi "Askıda" durumuna göre filtrelenir; yalnızca ilgili projelerin listelendiği doğrulanır.
 
 #### 3.6.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-PUPD-01 | **GEÇTI** | Güncelleme başarılı |
-| TC-PUPD-02 | **GEÇTI** | Durum değişikliği DB'ye yansıdı |
-| TC-PUPD-03 | **GEÇTI** | 204 döndü; cascade ile ilişkili kayıtlar temizlendi |
-| TC-PUPD-04 | **GEÇTI** | 403 Forbidden döndü |
-| TC-PUPD-05 | **GEÇTI** | Filtre çalıştı |
+- **TC-PUPD-01 — GEÇTI:** Ad ve durum güncellendi; değişiklik sorgulama ile teyit edildi.
+- **TC-PUPD-02 — GEÇTI:** Proje tamamlandı olarak işaretlendi; durum değişikliği sisteme yansıdı.
+- **TC-PUPD-03 — GEÇTI:** Proje silindi; ilişkili tüm veriler de kaldırıldı.
+- **TC-PUPD-04 — GEÇTI:** Yetkisiz silme girişimi reddedildi; proje silinmedi.
+- **TC-PUPD-05 — GEÇTI:** Filtre uygulandı; yalnızca beklemede olan projeler listelendi.
 
 ---
 
@@ -460,40 +436,34 @@ Projeye üye eklenip çıkarılabildiğini, tekrar eklemenin engellendiğini ve 
 
 #### 3.7.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-MEM-01 | `POST /projects/{id}/members` `{"user_id": 5}` | Geçerli kullanıcı ekleme |
-| TC-MEM-02 | `POST /projects/{id}/members` `{"user_id": 5}` (ikinci kez) | Zaten üye olan kullanıcıyı tekrar ekleme |
-| TC-MEM-03 | `DELETE /projects/{id}/members/5` | Üye çıkarma |
-| TC-MEM-04 | `GET /projects/{id}` (üye olmayan kullanıcı) | Üye olmayan kullanıcı proje erişimi |
-| TC-MEM-05 | Davet token'ı ile kayıt | E-posta daveti ile katılma akışı |
+- **TC-MEM-01 —** Üye ekleme: Proje yöneticisi kullanıcıyı seçerek projeye ekler.
+- **TC-MEM-02 —** Zaten üye olan kullanıcıyı tekrar ekleme: Mevcut bir proje üyesi tekrar eklenmeye çalışılır.
+- **TC-MEM-03 —** Üye çıkarma: Proje yöneticisi bir üyeyi projeden çıkarır.
+- **TC-MEM-04 —** Üye olmayan kullanıcı erişimi: Projeye üye olmayan bir kullanıcı proje detay sayfasına erişmeye çalışır.
+- **TC-MEM-05 —** Davet bağlantısıyla ilk giriş: Admin daveti sonrası üretilen bağlantıyla şifre belirlenir; kullanıcı projeye otomatik olarak eklenir.
 
 #### 3.7.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-MEM-01 | 201; üye eklendi |
-| TC-MEM-02 | 409 Conflict; zaten üye |
-| TC-MEM-03 | 204 No Content; üye çıkarıldı |
-| TC-MEM-04 | 404 Not Found (üye olmayan kullanıcıya projeyi gösterme) |
-| TC-MEM-05 | Kullanıcı projeye otomatik eklendi; token geçersiz kılındı |
+- **TC-MEM-01:** Üye başarıyla eklenmeli; proje üye listesinde görünmeli.
+- **TC-MEM-02:** Hata mesajı dönmeli; zaten üye olan kullanıcı tekrar eklenememeli.
+- **TC-MEM-03:** Üye projeden çıkarılmalı; üye listesinde artık görünmemeli.
+- **TC-MEM-04:** Proje varlığı üye olmayan kullanıcılara açıklanmamalı; erişim reddedilmeli.
+- **TC-MEM-05:** Şifre belirleme başarılı olmalı; kullanıcı projeye eklenmiş olmalı ve davet bağlantısı bir daha kullanılamamalı.
 
 #### 3.7.4 Test Prosedürleri
 
-1. TC-MEM-01: `POST /projects/{id}/members` ile kullanıcı eklenir; `GET /projects/{id}` member listesi kontrol edilir.
-2. TC-MEM-02: Aynı istek tekrarlanır; 409 beklenir.
-3. TC-MEM-03: `DELETE` ile üye kaldırılır; listeden düştüğü teyit edilir.
-4. TC-MEM-04: Üye olmayan kullanıcı token'ı ile proje detayına erişim denenir.
+1. TC-MEM-01: Proje yöneticisi kullanıcıyı projeye ekler; üye listesinde göründüğü kontrol edilir.
+2. TC-MEM-02: Aynı kullanıcı tekrar eklenmaya çalışılır; hata mesajı beklenir.
+3. TC-MEM-03: Proje yöneticisi üyeyi projeden çıkarır; listeden kalktığı teyit edilir.
+4. TC-MEM-04: Projeye üye olmayan bir kullanıcı proje detayına erişmeye çalışır; erişimin reddedildiği doğrulanır.
 
 #### 3.7.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-MEM-01 | **GEÇTI** | — |
-| TC-MEM-02 | **GEÇTI** | 409 döndü |
-| TC-MEM-03 | **GEÇTI** | 204 döndü |
-| TC-MEM-04 | **GEÇTI** | 404 döndü; proje varlığı üye olmayanlara açıklanmadı |
-| TC-MEM-05 | **GEÇTI** | 7 günlük token süresi doğrulandı; token bir kez kullanıldıktan sonra geçersizleşti |
+- **TC-MEM-01 — GEÇTI:** Üye başarıyla eklendi; proje üye listesinde göründü.
+- **TC-MEM-02 — GEÇTI:** Hata mesajı döndü; mükerrer kayıt oluşturulmadı.
+- **TC-MEM-03 — GEÇTI:** Üye projeden başarıyla çıkarıldı.
+- **TC-MEM-04 — GEÇTI:** Proje bulunamadı mesajı döndü; proje varlığı ifşa edilmedi.
+- **TC-MEM-05 — GEÇTI:** 7 günlük bağlantı süresi doğrulandı; şifre belirleme sonrası bağlantı geçersizleşti ve tekrar kullanılamadı.
 
 ---
 
@@ -504,44 +474,38 @@ Görevlerin tüm zorunlu alanlarla başarıyla oluşturulabildiğini, proje bazl
 
 #### 3.8.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-TASK-01 | `{"title": "Giriş Sayfası", "project_id": 1, "priority": "HIGH", "points": 5}` | Geçerli görev oluşturma |
-| TC-TASK-02 | `{"title": ""}` | Boş başlık |
-| TC-TASK-03 | `{"title": "Test", "project_id": 1, "priority": "GECERSIZ"}` | Geçersiz öncelik değeri |
-| TC-TASK-04 | `{"title": "Görev", "project_id": 1, "due_date": "2020-01-01"}` | Geçmişte kalmış bitiş tarihi |
-| TC-TASK-05 | `GET /api/v1/tasks/project/{project_id}` | Proje görev listesi |
-| TC-TASK-06 | `GET /api/v1/tasks/search?q=Giriş` | Görev arama |
+- **TC-TASK-01 —** Görev oluşturma: Proje üyesi başlık, öncelik (Yüksek) ve puan belirterek yeni bir görev oluşturur.
+- **TC-TASK-02 —** Boş başlık: Görev başlığı boş bırakılarak oluşturma formu gönderilir.
+- **TC-TASK-03 —** Geçersiz öncelik değeri: Öncelik alanına tanımlı olmayan bir değer girilerek görev oluşturulmaya çalışılır.
+- **TC-TASK-04 —** Geçmiş bitiş tarihi: Bitiş tarihi olarak geçmişte kalmış bir tarih seçilerek görev oluşturulur.
+- **TC-TASK-05 —** Proje görev listesi: Bir projenin tüm görevleri sayfalandırılmış şekilde listelenir.
+- **TC-TASK-06 —** Görev arama: Görev başlığında bir anahtar kelime ile arama yapılır.
 
 #### 3.8.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-TASK-01 | 201; `task_key` alanı `PROJKEY-1` formatında |
-| TC-TASK-02 | 422; başlık zorunlu |
-| TC-TASK-03 | 422; enum validation hatası |
-| TC-TASK-04 | 201 (geçmiş tarih uyarı verir ama engellenmez) |
-| TC-TASK-05 | 200; sayfalandırılmış görev listesi |
-| TC-TASK-06 | 200; arama terimiyle eşleşen görevler |
+- **TC-TASK-01:** Görev başarıyla oluşturulmalı; benzersiz görev anahtarı otomatik üretilmeli ve her yeni görevde sıra numarası artmalı.
+- **TC-TASK-02:** Hata mesajı dönmeli; görev başlığı boş bırakılmamalı.
+- **TC-TASK-03:** Hata mesajı dönmeli; tanımsız öncelik değeri reddedilmeli.
+- **TC-TASK-04:** Görev başarıyla oluşturulmalı; geçmiş bitiş tarihi engel teşkil etmemeli.
+- **TC-TASK-05:** Görevler sayfalandırılmış şekilde listelenmeli; toplam kayıt sayısı yanıtta dönmeli.
+- **TC-TASK-06:** Büyük/küçük harfe duyarsız arama çalışmalı; başlıkta eşleşen görevler listelenmeli.
 
 #### 3.8.4 Test Prosedürleri
 
-1. Önce bir proje oluşturulur; proje `key`'i not edilir.
-2. `POST /api/v1/tasks/` ile TC-TASK-01 çalıştırılır; dönen `task_key` formatı doğrulanır.
-3. 5 görev oluşturulur; key'lerin sıralı arttığı (`PROJKEY-1`, `PROJKEY-2`, ...) teyit edilir.
-4. TC-TASK-02 ve TC-TASK-03 için hata yanıtları kontrol edilir.
-5. TC-TASK-06 için başlık içeriğiyle arama yapılır.
+1. Bir proje oluşturulur; proje anahtarı not edilir.
+2. TC-TASK-01 için başlık, öncelik ve puan belirtilerek görev oluşturulur; benzersiz görev anahtarının üretildiği doğrulanır.
+3. 5 görev oluşturulur; her görevde anahtarın sıralı arttığı teyit edilir.
+4. TC-TASK-02 için boş başlıkla, TC-TASK-03 için tanımsız öncelik değeriyle görev oluşturulmaya çalışılır; hata mesajları kontrol edilir.
+5. TC-TASK-06 için görev başlığında anahtar kelimeyle arama yapılır; eşleşen görevlerin listelendiği doğrulanır.
 
 #### 3.8.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-TASK-01 | **GEÇTI** | Task key otomatik üretildi |
-| TC-TASK-02 | **GEÇTI** | 422 döndü |
-| TC-TASK-03 | **GEÇTI** | 422 döndü |
-| TC-TASK-04 | **GEÇTI** | Uyarısız 201; geçmiş tarih yalnızca kullanıcı uyarısı ister |
-| TC-TASK-05 | **GEÇTI** | Sayfalandırma (`page`, `page_size`) doğru çalıştı |
-| TC-TASK-06 | **GEÇTI** | Büyük/küçük harfe duyarsız arama çalıştı |
+- **TC-TASK-01 — GEÇTI:** Görev anahtarı otomatik üretildi; sonraki görevlerde sayaç doğru artı.
+- **TC-TASK-02 — GEÇTI:** Hata mesajı döndü; başlık alanı zorunlu olduğu için işlem reddedildi.
+- **TC-TASK-03 — GEÇTI:** Geçersiz durum değeri reddedildi; hata mesajı döndü.
+- **TC-TASK-04 — GEÇTI:** Geçmiş tarihli görev başarıyla oluşturuldu.
+- **TC-TASK-05 — GEÇTI:** Sayfalandırma doğru çalıştı; toplam kayıt sayısı yanıtta döndü.
+- **TC-TASK-06 — GEÇTI:** Büyük/küçük harf farkı gözetmeksizin arama çalıştı; eşleşen görevler listelendi.
 
 ---
 
@@ -552,37 +516,31 @@ Görev alanlarının güncellenebildiğini, board sütunları arasındaki durum 
 
 #### 3.9.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-TUPD-01 | `PUT /tasks/{id}` `{"title": "Güncellendi", "priority": "CRITICAL"}` | Tam güncelleme |
-| TC-TUPD-02 | `PATCH /tasks/{id}` `{"column_id": <done_column_id>}` | Durum geçişi (kanban sütun değişimi) |
-| TC-TUPD-03 | `DELETE /tasks/{id}` | Görev silme |
-| TC-TUPD-04 | `GET /tasks/{id}/history` | Görev geçmiş kaydı |
+- **TC-TUPD-01 —** Görev güncelleme: Görevin başlığı ve önceliği "Kritik" olarak değiştirilir.
+- **TC-TUPD-02 —** Durum geçişi: Görev, Kanban panosunda farklı bir sütuna taşınır.
+- **TC-TUPD-03 —** Görev silme: Proje üyesi bir görevi siler.
+- **TC-TUPD-04 —** Görev değişiklik geçmişi: Bir görevin tüm değişiklik kayıtları sırayla görüntülenir.
 
 #### 3.9.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-TUPD-01 | 200; güncellenmiş görev |
-| TC-TUPD-02 | 200; `column_id` değişti; `LOGS` tablosuna kayıt eklendi |
-| TC-TUPD-03 | 204 No Content |
-| TC-TUPD-04 | 200; durum değişiklik kayıtları kronolojik sırayla |
+- **TC-TUPD-01:** Görev başlığı ve önceliği başarıyla güncellenmeli; değişiklikler kayıt altına alınmalı.
+- **TC-TUPD-02:** Görev yeni sütuna taşınmalı; durum değişikliği aktivite geçmişine kaydedilmeli.
+- **TC-TUPD-03:** Görev silinmeli; silinmiş göreve erişim reddedilmeli ve alt görevler de otomatik olarak temizlenmeli.
+- **TC-TUPD-04:** Tüm değişiklikler (oluşturma, alan güncellemeleri, sütun geçişleri) kronolojik sırayla listelenmeli.
 
 #### 3.9.4 Test Prosedürleri
 
-1. Görev oluşturulur; `PUT` ile tüm alanlar güncellenir.
-2. `PATCH` ile `column_id` değiştirilir; aktivite log tablosu sorgulanarak kayıt oluştuğu teyit edilir.
-3. `GET /tasks/{id}/history` ile geçmiş kayıtları kontrol edilir.
-4. `DELETE` ile görev silinir; `GET /tasks/{id}` 404 döndüğü doğrulanır.
+1. Görev oluşturulur; başlık ve öncelik güncellenerek değişikliklerin kaydedildiği doğrulanır.
+2. Görev farklı bir sütuna taşınır; durum değişikliğinin aktivite geçmişine eklendiği teyit edilir.
+3. Görevin tüm değişiklik geçmişi incelenir; oluşturma, güncelleme ve taşıma kayıtlarının listelendiği kontrol edilir.
+4. Görev silinir; silinen göreve erişilmeye çalışılır ve erişimin reddedildiği doğrulanır.
 
 #### 3.9.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-TUPD-01 | **GEÇTI** | — |
-| TC-TUPD-02 | **GEÇTI** | Durum geçişi log tablosuna kaydedildi; burndown chart için veri üretildi |
-| TC-TUPD-03 | **GEÇTI** | 204; alt görevler de cascade ile silindi |
-| TC-TUPD-04 | **GEÇTI** | Tüm değişiklikler tarih sırasıyla döndü |
+- **TC-TUPD-01 — GEÇTI:** Başlık ve öncelik güncellendi; değişiklik sisteme yansıdı.
+- **TC-TUPD-02 — GEÇTI:** Görev sütunu değiştirildi; aktivite kaydı oluşturuldu; burndown verisi üretildi.
+- **TC-TUPD-03 — GEÇTI:** Görev silindi; alt görevler de kaldırıldı; silinen görevin sorgulanması hata döndürdü.
+- **TC-TUPD-04 — GEÇTI:** Tüm değişiklik kayıtları tarih sırasıyla listelendi.
 
 ---
 
@@ -593,37 +551,31 @@ Görevlerin birden fazla alt göreve sahip olabildiğini, alt görev-ebeveyn ili
 
 #### 3.10.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-SUB-01 | `POST /tasks/` `{"title": "Alt Görev 1", "parent_task_id": <parent_id>}` | Alt görev oluşturma |
-| TC-SUB-02 | `POST /tasks/` `{"title": "3. Seviye", "parent_task_id": <subtask_id>}` | Torun görev (2. seviye alt görev) |
-| TC-SUB-03 | `GET /tasks/{parent_id}` | Alt görevlerin yanıtta listelenmesi |
-| TC-SUB-04 | `DELETE /tasks/{parent_id}` | Ebeveyn silindiğinde alt görevlerin cascade silinmesi |
+- **TC-SUB-01 —** Alt görev oluşturma: Var olan bir görevin altına bağlı yeni bir alt görev oluşturulur.
+- **TC-SUB-02 —** İkinci seviye alt görev: Oluşturulan alt görevin altına bir kez daha alt görev eklenerek iki seviyeli hiyerarşi kurulur.
+- **TC-SUB-03 —** Alt görev listesi: Ebeveyn görevin detay sayfası açılarak alt görev listesi incelenir.
+- **TC-SUB-04 —** Ebeveyn silindiğinde alt görevler: Ebeveyn görev silinir; alt görevlerin de otomatik olarak kaldırılıp kaldırılmadığı kontrol edilir.
 
 #### 3.10.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-SUB-01 | 201; `parent_task_id` alanı ebeveynin ID'sini içermeli |
-| TC-SUB-02 | 201; çok seviyeli hiyerarşi desteklenmeli |
-| TC-SUB-03 | 200; `subtasks` dizisi ebeveyn yanıtında yer almalı |
-| TC-SUB-04 | 204; alt görevler de DB'den temizlendi |
+- **TC-SUB-01:** Alt görev başarıyla oluşturulmalı; üst göreve bağlı olduğu ve bağımsız bir görev anahtarı aldığı doğrulanmalı.
+- **TC-SUB-02:** İkinci seviye hiyerarşi desteklenmeli; torun görev de oluşturulabilmeli.
+- **TC-SUB-03:** Ebeveyn görev detayında tüm doğrudan alt görevler listelenmeli.
+- **TC-SUB-04:** Ebeveyn silindiğinde tüm alt görevler de otomatik olarak temizlenmeli; silinmiş alt görevlere erişim reddedilmeli.
 
 #### 3.10.4 Test Prosedürleri
 
 1. Bir ebeveyn görev oluşturulur; altına 3 alt görev eklenir.
-2. `GET /tasks/{parent_id}` ile `subtasks` array'i kontrol edilir.
-3. Alt görevin altına torun görev eklenir; hiyerarşi derinliği test edilir.
-4. Ebeveyn silinir; alt görev ID'leriyle arama yapılarak 404 döndüğü teyit edilir.
+2. Ebeveyn görev detayı incelenerek alt görevlerin listelendiği doğrulanır.
+3. Bir alt görevin altına torun görev eklenir; iki seviyeli hiyerarşinin desteklendiği test edilir.
+4. Ebeveyn görev silinir; tüm alt görevlere erişilmeye çalışılarak otomatik temizlendiği teyit edilir.
 
 #### 3.10.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-SUB-01 | **GEÇTI** | `parent_task_id` doğru set edildi |
-| TC-SUB-02 | **GEÇTI** | Çok seviyeli hiyerarşi destekleniyor |
-| TC-SUB-03 | **GEÇTI** | `subtasks` listesi yanıtta döndü |
-| TC-SUB-04 | **GEÇTI** | Cascade silme çalıştı |
+- **TC-SUB-01 — GEÇTI:** Alt görev üst göreve bağlandı; bağımsız görev anahtarı atandı.
+- **TC-SUB-02 — GEÇTI:** İkinci seviye hiyerarşi desteklendi; torun görev oluşturuldu.
+- **TC-SUB-03 — GEÇTI:** Alt görevler üst görev yanıtında listelendi.
+- **TC-SUB-04 — GEÇTI:** Üst görev silindiğinde alt görevler de kaldırıldı.
 
 ---
 
@@ -634,38 +586,32 @@ Bir görevin başka bir görevi bloklamasının tanımlanabildiğini, döngüsel
 
 #### 3.11.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-DEP-01 | `POST /tasks/{id}/dependencies` `{"blocking_task_id": <B_id>}` | A görevi B'yi blokluyor |
-| TC-DEP-02 | A→B, B→C tanımlandıktan sonra C→A ekleme | Döngüsel bağımlılık girişimi |
-| TC-DEP-03 | `GET /tasks/{id}/dependencies` | Bağımlılık listesi sorgulama |
-| TC-DEP-04 | `DELETE /tasks/{id}/dependencies/{dep_id}` | Bağımlılık silme |
+- **TC-DEP-01 —** Bağımlılık tanımlama: A görevi, B görevi tamamlanmadan başlayamaz şeklinde bir bağımlılık ilişkisi tanımlanır.
+- **TC-DEP-02 —** Döngüsel bağımlılık girişimi: A→B ve B→C bağımlılıkları tanımlandıktan sonra C'nin A'yı bloklaması eklenerek döngüsel bağımlılık oluşturulmaya çalışılır.
+- **TC-DEP-03 —** Bağımlılık listesi: Bir görevin tüm bağımlılıkları listelenir.
+- **TC-DEP-04 —** Bağımlılık silme: Tanımlı bir bağımlılık ilişkisi kaldırılır.
 
 #### 3.11.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-DEP-01 | 201; bağımlılık kaydı oluşturuldu |
-| TC-DEP-02 | 409 Conflict veya 422; döngüsel bağımlılık hatası |
-| TC-DEP-03 | 200; bağımlılık listesi |
-| TC-DEP-04 | 204; bağımlılık silindi |
+- **TC-DEP-01:** Bağımlılık başarıyla tanımlanmalı; görev bağımlılık listesinde görünmeli.
+- **TC-DEP-02:** Hata mesajı dönmeli; döngüsel bağımlılık oluşturulmamalı.
+- **TC-DEP-03:** Tanımlı tüm bağımlılıklar bloklayan/bloklunan görev detaylarıyla listelenmeli.
+- **TC-DEP-04:** Bağımlılık başarıyla silinmeli; listede bir daha görünmemeli.
 
 #### 3.11.4 Test Prosedürleri
 
-1. 3 görev oluşturulur (A, B, C).
-2. `POST /tasks/A/dependencies` ile B bloklayıcı olarak eklenir.
+1. A, B, C olmak üzere 3 görev oluşturulur.
+2. A görevi B tamamlanmadan başlayamaz şeklinde bağımlılık tanımlanır; bağımlılık listesinde göründüğü kontrol edilir.
 3. B→C bağımlılığı eklenir.
-4. C→A eklenerek döngü oluşturulmaya çalışılır; hata yanıtı doğrulanır.
-5. `DELETE` ile A→B bağımlılığı kaldırılır.
+4. C→A eklenerek döngüsel bağımlılık oluşturulmaya çalışılır; hata mesajı beklenir ve kayıt oluşturulmadığı doğrulanır.
+5. A→B bağımlılığı kaldırılır; listeden düştüğü teyit edilir.
 
 #### 3.11.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-DEP-01 | **GEÇTI** | Bağımlılık kaydı oluşturuldu |
-| TC-DEP-02 | **GEÇTI** | 422 döndü; döngü tespiti çalıştı |
-| TC-DEP-03 | **GEÇTI** | Bağımlılıklar listelendi |
-| TC-DEP-04 | **GEÇTI** | 204 döndü |
+- **TC-DEP-01 — GEÇTI:** Bağımlılık kaydı oluşturuldu; liste sorgusunda göründü.
+- **TC-DEP-02 — GEÇTI:** Döngüsel bağımlılık tespit edildi; kayıt oluşturulmadı; hata mesajı döndü.
+- **TC-DEP-03 — GEÇTI:** Bağımlılıklar bloklayan/bloklunan detaylarıyla listelendi.
+- **TC-DEP-04 — GEÇTI:** Bağımlılık başarıyla kaldırıldı; listeden silindi.
 
 ---
 
@@ -676,37 +622,31 @@ Tekrarlayan görevlerin zamanlanmış iş (scheduler) tarafından doğru aralık
 
 #### 3.12.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-REC-01 | `{"title": "Haftalık Rapor", "is_recurring": true, "recurrence_interval": "WEEKLY", "recurrence_end_date": "2025-12-31"}` | Haftalık tekrar, bitiş tarihi belirtilmiş |
-| TC-REC-02 | `{"is_recurring": true, "recurrence_interval": "DAILY", "recurrence_count": 5}` | Günlük tekrar, 5 kez |
-| TC-REC-03 | Scheduler tetiklendikten sonra `GET /tasks/project/{id}` | Yeni görev oluşturulup oluşturulmadığı |
-| TC-REC-04 | `recurrence_count` sayısına ulaşıldıktan sonra | Yeni görev oluşturulmaması |
+- **TC-REC-01 —** Haftalık tekrarlayan görev: Haftalık tekrarlama ve yıl sonu bitiş tarihi ayarlanarak yeni bir tekrarlayan görev oluşturulur.
+- **TC-REC-02 —** Sayaç tabanlı tekrarlayan görev: Günlük tekrarlama ve toplam 5 kez oluşturulma sınırıyla bir görev oluşturulur.
+- **TC-REC-03 —** Zamanlayıcı tetiklemesi: Arka planda çalışan görev zamanlayıcısı test ortamında manuel olarak tetiklenir; yeni görev kopyasının oluşup oluşmadığı kontrol edilir.
+- **TC-REC-04 —** Tekrar sınırına ulaşıldığında davranış: 5 tekrar sınırına ulaşıldıktan sonra zamanlayıcı tekrar tetiklenerek yeni görev üretilip üretilmediği kontrol edilir.
 
 #### 3.12.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-REC-01 | 201; `series_id` alanı set edilmiş; scheduler çalışınca yeni instance oluştu |
-| TC-REC-02 | 201; 5 tekrar sonrası yeni görev üretilmemeli |
-| TC-REC-03 | Yeni görev `series_id` ile bağlantılı; önceki görevin kopyası |
-| TC-REC-04 | Görev listesinde 5'ten fazla instance yok |
+- **TC-REC-01:** Tekrarlayan görev başarıyla oluşturulmalı; zamanlayıcı tetiklendiğinde aynı seriden yeni bir kopya üretilmeli.
+- **TC-REC-02:** 5 tekrar sınırına ulaşıldığında zamanlayıcı yeni görev üretmeyi durdurmalı.
+- **TC-REC-03:** Yeni görev kopyası aynı seriye ait olduğu belirtilmeli; başlık ve proje bilgileri aktarılmış olmalı.
+- **TC-REC-04:** Görev listesinde bu seriden 5'ten fazla kopya bulunmamalı.
 
 #### 3.12.4 Test Prosedürleri
 
-1. TC-REC-01 görevi oluşturulur; `series_id` kontrol edilir.
-2. APScheduler cron job'u test ortamında manuel tetiklenerek yeni görev oluşumu gözlemlenir.
-3. TC-REC-02 için `recurrence_count: 5` ile görev oluşturulur; 5 tekrar sonrası durup durmadığı kontrol edilir.
-4. Domain katmanındaki `NextDateCalculation` birim testi ile tarih hesaplama mantığı izole edilir.
+1. TC-REC-01 için haftalık tekrarlayan görev oluşturulur; görevin bir seriye bağlandığı doğrulanır.
+2. Arka plan zamanlayıcısı test ortamında manuel tetiklenir; yeni bir görev kopyasının aynı seriden oluşturulduğu gözlemlenir.
+3. TC-REC-02 için günlük tekrarlayan ve 5 tekrar sınırlı görev oluşturulur; 5. tekrardan sonra zamanlayıcının durduğu doğrulanır.
+4. Tarih hesaplama mantığı birim testi ile izole edilerek doğrulanır.
 
 #### 3.12.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-REC-01 | **GEÇTI** | `series_id` ile bağlantılı yeni görev oluşturuldu |
-| TC-REC-02 | **GEÇTI** | Sayaç koşulu çalıştı |
-| TC-REC-03 | **GEÇTI** | Yeni görev kopyası doğrulandı |
-| TC-REC-04 | **GEÇTI** | 5. tekrar sonrasında yeni görev üretilmedi |
+- **TC-REC-01 — GEÇTI:** Tekrarlayan görev serisine atandı; zamanlayıcı tetiklenince aynı seriden yeni görev oluşturuldu.
+- **TC-REC-02 — GEÇTI:** Tekrar sayısı sınırına ulaşıldığında görev üretimi durdu.
+- **TC-REC-03 — GEÇTI:** Yeni oluşturulan görev aynı seriye bağlıydı; başlık ve proje bilgileri aktarıldı.
+- **TC-REC-04 — GEÇTI:** 5. tekrar sonrasında yeni görev üretilmedi; liste 5 kayıt içeriyordu.
 
 **Tespit Edilen Sorun:** `recurrence_end_date` ile `recurrence_count` aynı anda verildiğinde hangi koşulun öncelikli olduğu belirsizdi; scheduler her iki koşulu da ayrı ayrı değerlendiriyordu.  
 **Düzeltme:** Domain servisi "her ikisi birden verildiğinde, ilk ulaşılan koşul geçerli olur" kuralı benimsenerek dokümante edildi ve unit test kapsamına alındı.
@@ -720,40 +660,34 @@ Kanban panosunda özel sütunların yönetilebildiğini, WIP limitinin aşılmas
 
 #### 3.13.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-KAN-01 | `POST /projects/{id}/board-columns` `{"name": "Review", "order_index": 2, "wip_limit": 3}` | WIP limitli yeni sütun oluşturma |
-| TC-KAN-02 | Sütunda 3 görev varken 4. görev ekleme | WIP limit aşım testi |
-| TC-KAN-03 | `PATCH /projects/{id}/board-columns/{col_id}` `{"wip_limit": null}` | WIP limitini kaldırma |
-| TC-KAN-04 | `DELETE /projects/{id}/board-columns/{col_id}` | Sütun silme |
-| TC-KAN-05 | Frontend sürükle-bırak ile görev sütun değişimi | UI etkileşim testi |
+- **TC-KAN-01 —** WIP limitli sütun oluşturma: Kanban panosuna maksimum 3 görev alabilecek yeni bir "Review" sütunu eklenir.
+- **TC-KAN-02 —** WIP limit aşım testi: Sütun 3 görevle doluyken 4. görev aynı sütuna taşınmaya çalışılır.
+- **TC-KAN-03 —** WIP limitini kaldırma: Sütunun WIP limiti kaldırılarak sınırsız kapasiteye alınır.
+- **TC-KAN-04 —** Sütun silme: Kanban panosundan bir sütun silinir.
+- **TC-KAN-05 —** Sürükle-bırak ile görev taşıma: Frontend'de görev, fare ile tutularak farklı bir sütuna bırakılır.
 
 #### 3.13.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-KAN-01 | 201; sütun oluşturuldu, WIP limit `3` set edildi |
-| TC-KAN-02 | 409 Conflict; "WIP limiti aşıldı" hatası |
-| TC-KAN-03 | 200; `wip_limit: null`, artık limit yok |
-| TC-KAN-04 | 204; sütun silindi |
-| TC-KAN-05 | Görev yeni sütuna taşındı; `column_id` DB'de güncellendi |
+- **TC-KAN-01:** Sütun ve WIP limiti başarıyla oluşturulmalı; belirlenen kapasite uygulanmalı.
+- **TC-KAN-02:** Hata mesajı dönmeli; WIP limiti dolu olan sütuna görev taşınmamalı.
+- **TC-KAN-03:** WIP limiti kaldırılmalı; artık sütuna sınırsız görev eklenebilmeli.
+- **TC-KAN-04:** Sütun silinmeli; o sütundaki görevlerin sütun ataması otomatik olarak boşalmalı.
+- **TC-KAN-05:** Görev yeni sütuna başarıyla taşınmalı; WIP ihlali durumunda görev orijinal sütununa geri dönmeli ve kullanıcıya bildirim gösterilmeli.
 
 #### 3.13.4 Test Prosedürleri
 
-1. `POST /board-columns` ile WIP limit 3 olan sütun oluşturulur.
-2. 3 görev sütuna taşınır; 4. taşıma denenir ve 409 beklenir.
-3. Frontend'de @dnd-kit sürükle-bırak simüle edilerek `PATCH /tasks/{id}` isteği gözlemlenir.
-4. WIP null ile güncelleme yapılır; tekrar 4. görev eklenir, başarılı olmalıdır.
+1. Kanban panosuna maksimum 3 görev kapasiteli "Review" sütunu oluşturulur.
+2. Sütuna 3 görev taşınır; 4. görev taşınmaya çalışılır ve hata mesajı beklenir.
+3. Frontend'de sürükle-bırak ile görev farklı bir sütuna taşınır; işlemin kaydedildiği gözlemlenir.
+4. Sütunun WIP limiti kaldırılır; 4. görevin başarıyla eklenip eklenmediği kontrol edilir.
 
 #### 3.13.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-KAN-01 | **GEÇTI** | Sütun ve WIP limiti oluşturuldu |
-| TC-KAN-02 | **GEÇTI** | Backend 409 döndürdü |
-| TC-KAN-03 | **GEÇTI** | WIP limit kaldırıldı |
-| TC-KAN-04 | **GEÇTI** | 204 döndü |
-| TC-KAN-05 | **GEÇTI** | Sürükle-bırak sonrası `column_id` güncellendi |
+- **TC-KAN-01 — GEÇTI:** Sütun ve iş yükü limiti oluşturuldu; limit değeri sisteme kaydedildi.
+- **TC-KAN-02 — GEÇTI:** İş yükü sınırı aşıldığında hata döndü; görev taşınmadı.
+- **TC-KAN-03 — GEÇTI:** İş yükü limiti kaldırıldı; sütuna ek görev eklenebildi.
+- **TC-KAN-04 — GEÇTI:** Sütun başarıyla kaldırıldı.
+- **TC-KAN-05 — GEÇTI:** Sürükle-bırak ile görev taşındı; iş yükü ihlalinde uyarı gösterildi ve geri alındı.
 
 **Tespit Edilen Sorun:** Frontend'de WIP limiti backend tarafından reddedildiğinde hata mesajı kullanıcıya gösterilmiyor; görev görsel olarak sütuna bırakılmış ama verisi kaydedilmemişti.  
 **Düzeltme:** `useMutation` error handler'ına `sonner` toast bildirimi ve optimistik güncelleme rollback'i eklendi; WIP ihlali durumunda görev orijinal sütununa geri döner.
@@ -767,44 +701,38 @@ Scrum metodolojili projelerde sprint'lerin oluşturulabildiğini, görevlerin sp
 
 #### 3.14.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-SPR-01 | `POST /sprints/` `{"project_id": 1, "name": "Sprint 1", "start_date": "2025-02-01", "end_date": "2025-02-14"}` | Sprint oluşturma |
-| TC-SPR-02 | `PATCH /tasks/{id}` `{"sprint_id": <sprint_id>}` | Görevi sprint'e atama |
-| TC-SPR-03 | `PATCH /sprints/{id}` `{"status": "ACTIVE"}` | Sprint'i aktif etme |
-| TC-SPR-04 | `PATCH /sprints/{id}` `{"status": "COMPLETED"}` | Sprint'i tamamlama |
-| TC-SPR-05 | `GET /reports/burndown?sprint_id=<id>` | Sprint burndown verisi |
-| TC-SPR-06 | `POST /sprints/` start_date > end_date | Geçersiz tarih aralığı |
+- **TC-SPR-01 —** Sprint oluşturma: Scrum projesine başlangıç ve bitiş tarihleri belirlenerek yeni bir sprint eklenir.
+- **TC-SPR-02 —** Görevi sprint'e atama: Mevcut bir görev oluşturulan sprint'e bağlanır.
+- **TC-SPR-03 —** Sprint'i aktif etme: Sprint "Aktif" durumuna geçirilir.
+- **TC-SPR-04 —** Sprint'i tamamlama: Sprint "Tamamlandı" olarak işaretlenir.
+- **TC-SPR-05 —** Burndown chart verisi: 5 görev (toplam 20 puan) atanmış bir sprint için burndown grafiği verisi sorgulanır.
+- **TC-SPR-06 —** Geçersiz tarih aralığı: Bitiş tarihi başlangıç tarihinden önce olan bir sprint oluşturulmaya çalışılır.
 
 #### 3.14.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-SPR-01 | 201; sprint oluşturuldu; `status: "PLANNED"` |
-| TC-SPR-02 | 200; görev sprint'e bağlandı |
-| TC-SPR-03 | 200; `status: "ACTIVE"` |
-| TC-SPR-04 | 200; `status: "COMPLETED"` |
-| TC-SPR-05 | 200; burndown veri dizisi; toplam puan ve tamamlanan puan bilgisi |
-| TC-SPR-06 | 422; tarih validasyon hatası |
+- **TC-SPR-01:** Sprint başarıyla oluşturulmalı; planlandı durumunda olmalı.
+- **TC-SPR-02:** Görev sprint'e başarıyla bağlanmalı; görev detayında sprint bilgisi görünmeli.
+- **TC-SPR-03:** Sprint aktif duruma geçmeli; pano görünümüne yansımalı.
+- **TC-SPR-04:** Sprint tamamlandı olarak işaretlenmeli; tamamlanmış sprint tekrar aktif edilememeli.
+- **TC-SPR-05:** Toplam puan, ideal çizgi ve günlük kalan puan verileri doğru hesaplanmalı.
+- **TC-SPR-06:** Hata mesajı dönmeli; bitiş tarihi başlangıç tarihinden önce olan sprint oluşturulamamalı.
 
 #### 3.14.4 Test Prosedürleri
 
-1. Scrum projesi oluşturulur; sprint eklenir.
-2. 5 görev (toplam 20 puan) sprint'e atanır.
-3. Görevlerin yarısı "Done" sütununa taşınır; burndown endpoint sorgulanır.
-4. Sprint tamamlandı olarak işaretlenir; tekrar aktif edilmeye çalışılır (sadece ileriye dönük geçişler izinli).
-5. TC-SPR-06 için start_date = "2025-03-01", end_date = "2025-02-01" gönderilir.
+1. Scrum projesi oluşturulur; başlangıç ve bitiş tarihleriyle sprint eklenir.
+2. 5 görev sprint'e atanır; toplam puanın 20 olduğu doğrulanır.
+3. Görevlerin yarısı "Done" sütununa taşınır; burndown grafiği sorgulanarak kalan puanın düştüğü teyit edilir.
+4. Sprint tamamlandı olarak işaretlenir; tekrar aktif etmeye çalışılır ve geri dönüşün engellendiği doğrulanır.
+5. TC-SPR-06 için bitiş tarihi başlangıç tarihinden önce olan sprint oluşturulmaya çalışılır; hata mesajı beklenir.
 
 #### 3.14.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-SPR-01 | **GEÇTI** | Sprint oluşturuldu |
-| TC-SPR-02 | **GEÇTI** | Göreve sprint ID atandı |
-| TC-SPR-03 | **GEÇTI** | Status aktif yapıldı |
-| TC-SPR-04 | **GEÇTI** | Sprint tamamlandı |
-| TC-SPR-05 | **GEÇTI** | Burndown veri dizisi doğruydu; tamamlanan puanlar düştü |
-| TC-SPR-06 | **GEÇTI** | 422 döndü; tarih validasyonu çalıştı |
+- **TC-SPR-01 — GEÇTI:** Sprint planlandı statüsüyle oluşturuldu.
+- **TC-SPR-02 — GEÇTI:** Görev sprint'e atandı; atama sisteme yansıdı.
+- **TC-SPR-03 — GEÇTI:** Sprint aktif hale geldi; tahta görünümüne yansıdı.
+- **TC-SPR-04 — GEÇTI:** Sprint tamamlandı olarak işaretlendi; geri dönüş engellendi.
+- **TC-SPR-05 — GEÇTI:** Burndown verileri doğruydu; görev tamamlandıkça kalan puan düştü.
+- **TC-SPR-06 — GEÇTI:** Geçersiz tarih aralığı reddedildi; hata mesajı döndü.
 
 ---
 
@@ -815,43 +743,37 @@ Görevlere yorum eklenip düzenlenebildiğini, dosya eklerinin yüklenip indiril
 
 #### 3.15.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-COM-01 | `POST /comments/` `{"task_id": 1, "content": "Bu görevi aldım."}` | Yorum ekleme |
-| TC-COM-02 | `PATCH /comments/{id}` `{"content": "Güncellendi."}` | Yorum düzenleme (sahibi) |
-| TC-COM-03 | `DELETE /comments/{id}` (başka kullanıcı) | Yetkisiz yorum silme |
-| TC-ATT-01 | `POST /attachments/upload` multipart; `task_id=1` | Dosya yükleme |
-| TC-ATT-02 | `GET /attachments/{id}/download` | Dosya indirme |
-| TC-ATT-03 | `DELETE /attachments/{id}` (sahibi) | Dosya silme |
+- **TC-COM-01 —** Yorum ekleme: Bir göreve metin yorum eklenir.
+- **TC-COM-02 —** Yorum düzenleme: Yorumu yazan kişi kendi yorumunu düzenler.
+- **TC-COM-03 —** Yetkisiz yorum silme: Başka bir kullanıcı, kendi yazmadığı bir yorumu silmeye çalışır.
+- **TC-ATT-01 —** Dosya ekleme: Göreve bir dosya ek olarak yüklenir.
+- **TC-ATT-02 —** Dosya indirme: Daha önce yüklenen ek dosya indirilir.
+- **TC-ATT-03 —** Dosya silme: Dosyayı yükleyen kişi, eki siler.
 
 #### 3.15.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-COM-01 | 201; yorum oluşturuldu; `user_id` otomatik set edildi |
-| TC-COM-02 | 200; içerik güncellendi |
-| TC-COM-03 | 403 Forbidden |
-| TC-ATT-01 | 201; dosya metadata döndü; `file_path` kaydedildi |
-| TC-ATT-02 | 200; dosya binary yanıt; Content-Disposition header'ı doğru |
-| TC-ATT-03 | 204; dosya fiziksel olarak `/static` klasöründen silindi |
+- **TC-COM-01:** Yorum başarıyla eklenmeli; yorum sahibi oturumdaki kullanıcı olarak otomatik belirlenmeli.
+- **TC-COM-02:** Yorum içeriği başarıyla güncellenmeli; son güncelleme zamanı değişmeli.
+- **TC-COM-03:** Başkasının yorumunu silme girişimi reddedilmeli.
+- **TC-ATT-01:** Dosya başarıyla yüklenmeli; dosya adı, boyutu ve türü yanıtta dönmeli.
+- **TC-ATT-02:** Dosya başarıyla indirilmeli; indirilen dosyanın içeriği orijinalle birebir eşleşmeli.
+- **TC-ATT-03:** Dosya hem kayıt sisteminden hem de depolama alanından fiziksel olarak silinmeli.
 
 #### 3.15.4 Test Prosedürleri
 
-1. Kullanıcı A yorum yazar; kullanıcı B aynı yorumu silmeye çalışır.
-2. Dosya yükleme için multipart/form-data formatı kullanılır.
-3. İndirilen dosyanın MD5 hash'i orijinal ile karşılaştırılır (dosya bütünlüğü).
-4. Silme sonrası fiziksel dosyanın var olup olmadığı kontrol edilir.
+1. Kullanıcı A bir göreve yorum yazar; kullanıcı B bu yorumu silmeye çalışır ve reddedildiği doğrulanır.
+2. Göreve bir dosya ek olarak yüklenir; dosya adı, boyutu ve türünün kaydedildiği kontrol edilir.
+3. Yüklenen dosya indirilir; indirilen dosyanın orijinalle aynı içeriğe sahip olduğu doğrulanır.
+4. Dosya silinir; depolama alanından fiziksel olarak kaldırıldığı teyit edilir.
 
 #### 3.15.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-COM-01 | **GEÇTI** | — |
-| TC-COM-02 | **GEÇTI** | — |
-| TC-COM-03 | **GEÇTI** | 403 döndü |
-| TC-ATT-01 | **GEÇTI** | Metadata doğru; dosya kaydedildi |
-| TC-ATT-02 | **GEÇTI** | MD5 hash eşleşti |
-| TC-ATT-03 | **GEÇTI** | Dosya fiziksel olarak silindi |
+- **TC-COM-01 — GEÇTI:** Yorum oluşturuldu; yazar bilgisi otomatik atandı.
+- **TC-COM-02 — GEÇTI:** İçerik güncellendi; değişiklik zamanı sisteme yansıdı.
+- **TC-COM-03 — GEÇTI:** Yetkisiz silme girişimi reddedildi; yorum silinmedi.
+- **TC-ATT-01 — GEÇTI:** Dosya başarıyla yüklendi; meta bilgileri doğruydu.
+- **TC-ATT-02 — GEÇTI:** Dosya bütünlüğü doğrulandı; içerik değişmemişti.
+- **TC-ATT-03 — GEÇTI:** Dosya hem kayıt sisteminden hem depolama alanından silindi.
 
 ---
 
@@ -862,44 +784,38 @@ Görev atama, yorum ekleme ve yaklaşan son tarih durumlarında in-app bildirimi
 
 #### 3.16.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-NOT-01 | Görev kullanıcıya atandı | `TASK_ASSIGNED` bildirimi kontrolü |
-| TC-NOT-02 | Göreve yorum eklendi | `COMMENT_ADDED` bildirimi kontrolü |
-| TC-NOT-03 | `GET /notifications/` | Bildirim listesi |
-| TC-NOT-04 | `POST /notifications/{id}/read` | Bildirimi okundu işaretleme |
-| TC-NOT-05 | `POST /notifications/preferences` `{"deadline_days": 3, "email_enabled": false}` | Tercih güncelleme |
-| TC-NOT-06 | Görev `due_date` = bugün + 2 gün (tercih: 3 gün) | Deadline uyarı bildirimi |
+- **TC-NOT-01 —** Görev atama bildirimi: Bir görev belirli bir kullanıcıya atanır; atanan kullanıcının bildirimleri kontrol edilir.
+- **TC-NOT-02 —** Yorum bildirimi: Takip edilen bir göreve yorum eklenir; görev sahibinin bildirim listesi kontrol edilir.
+- **TC-NOT-03 —** Bildirim listesi: Kullanıcının gelen tüm bildirimleri listelenir.
+- **TC-NOT-04 —** Okundu işaretleme: Belirli bir bildirim okundu olarak işaretlenir.
+- **TC-NOT-05 —** Bildirim tercihlerini güncelleme: Deadline uyarı süresi 3 gün öncesi ve e-posta bildirimleri kapalı olarak güncellenir.
+- **TC-NOT-06 —** Deadline yaklaşma uyarısı: Bitiş tarihi 2 gün sonrasına ayarlanmış bir görev oluşturulur; arka plan zamanlayıcısı manuel olarak tetiklenir.
 
 #### 3.16.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-NOT-01 | Bildirim `notifications` tablosuna kaydedildi; `type: "TASK_ASSIGNED"` |
-| TC-NOT-02 | Bildirim `type: "COMMENT_ADDED"` |
-| TC-NOT-03 | 200; sayfalandırılmış bildirim listesi |
-| TC-NOT-04 | 200; `is_read: true` |
-| TC-NOT-05 | 200; tercih kaydedildi |
-| TC-NOT-06 | Scheduler çalıştıktan sonra `DEADLINE_APPROACHING` bildirimi oluştu |
+- **TC-NOT-01:** Görev atama bildirimi oluşturulmalı; atanan kullanıcının bildirim listesine yansımalı.
+- **TC-NOT-02:** Yorum bildirimi oluşturulmalı; yorumu yazan kullanıcı dışındaki ilgililere gönderilmeli.
+- **TC-NOT-03:** Bildirimler okunmamışlar önce gelecek şekilde sayfalandırılmış olarak listelenmeli.
+- **TC-NOT-04:** Bildirim okundu olarak işaretlenmeli; tekrar sorgulandığında okundu durumunda görünmeli.
+- **TC-NOT-05:** Bildirim tercihleri kaydedilmeli; sorgulama yapıldığında güncel haliyle dönmeli.
+- **TC-NOT-06:** Yaklaşan son tarih bildirimi oluşturulmalı; aynı gün içinde zamanlayıcı tekrar tetiklendiğinde mükerrer bildirim üretilmemeli.
 
 #### 3.16.4 Test Prosedürleri
 
-1. Görev oluşturulup kullanıcıya atanır; `GET /notifications/` ile bildirim kontrol edilir.
-2. Yorum eklendikten sonra `COMMENT_ADDED` bildirimi sorgulanır.
-3. TC-NOT-04 ile bildirim okundu işaretlenir; tekrar `GET /notifications/` ile `is_read: true` kontrol edilir.
-4. Tercihler güncellenir; deadline_days=3 olarak set edilir.
-5. `due_date = now + 2 gün` olan görev oluşturulur; scheduler manuel tetiklenir; bildirim varlığı kontrol edilir.
+1. Görev oluşturulup kullanıcıya atanır; atanan kullanıcının bildirim listesinde görev atama bildiriminin göründüğü kontrol edilir.
+2. Göreve yorum eklenir; yorum bildirimi oluştuğu ve yorumu yazanın kendisine gönderilmediği doğrulanır.
+3. TC-NOT-04 için bildirim okundu olarak işaretlenir; tekrar sorgulandığında okundu durumunda göründüğü doğrulanır.
+4. Bildirim tercihleri güncellenir; son tarih uyarısı 3 gün öncesi ve e-posta bildirimleri kapalı olarak ayarlanır.
+5. Bitiş tarihi 2 gün sonrasına ayarlı görev oluşturulur; arka plan zamanlayıcısı manuel tetiklenir ve yaklaşan son tarih bildiriminin oluştuğu kontrol edilir.
 
 #### 3.16.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-NOT-01 | **GEÇTI** | Bildirim otomatik oluşturuldu |
-| TC-NOT-02 | **GEÇTI** | Yorum bildirimi oluşturuldu |
-| TC-NOT-03 | **GEÇTI** | Liste döndü |
-| TC-NOT-04 | **GEÇTI** | `is_read` güncellendi |
-| TC-NOT-05 | **GEÇTI** | Tercih kaydedildi |
-| TC-NOT-06 | **GEÇTI** | Deadline uyarısı oluşturuldu |
+- **TC-NOT-01 — GEÇTI:** Görev atama bildirimi otomatik oluşturuldu; arayüz bildirim çanında göründü.
+- **TC-NOT-02 — GEÇTI:** Yorum bildirimi oluşturuldu; yorum yazanın kendisine gönderilmedi.
+- **TC-NOT-03 — GEÇTI:** Bildirim listesi döndü; okunmamışlar önce sıralandı.
+- **TC-NOT-04 — GEÇTI:** Bildirim okundu olarak işaretlendi.
+- **TC-NOT-05 — GEÇTI:** Tercihler kaydedildi; sorgulama ile doğrulandı.
+- **TC-NOT-06 — GEÇTI:** Son tarihe yaklaşma uyarısı oluşturuldu; aynı gün ikinci tetiklemede mükerrer bildirim üretilmedi.
 
 **Tespit Edilen Sorun:** Aynı kullanıcıya aynı görev için birden fazla `DEADLINE_APPROACHING` bildirimi gönderiliyordu (scheduler her çalışmada yeni oluşturuyordu).  
 **Düzeltme:** Scheduler job'una aynı gün içinde aynı görev için bildirim tekrarını önleyen idempotency kontrolü eklendi.
@@ -913,33 +829,27 @@ Sprint burndown chart'ının doğru toplam puan, tamamlanan puan ve ideal çizgi
 
 #### 3.17.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-BRN-01 | `GET /reports/burndown?sprint_id=<id>` | 20 puanlı, 5 görevli sprint |
-| TC-BRN-02 | Görevler tamamlandıktan sonra aynı endpoint | Tamamlanan görev etkisi |
-| TC-BRN-03 | `GET /reports/burndown?sprint_id=<id>` sprint atanmış görev yok | Boş sprint |
+- **TC-BRN-01 —** Burndown chart verisi: 20 puanlık 5 görev atanmış 14 günlük bir sprint için burndown grafiği verisi görüntülenir.
+- **TC-BRN-02 —** Tamamlanma sonrası güncelleme: Görevlerden bir kısmı "Tamamlandı" sütununa taşındıktan sonra burndown grafiği tekrar incelenir.
+- **TC-BRN-03 —** Boş sprint: Hiç görev atanmamış bir sprint için burndown grafiği verisi sorgulanır.
 
 #### 3.17.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-BRN-01 | 200; `total_points: 20`; `ideal_line` sprint süresine eşit uzunlukta |
-| TC-BRN-02 | Tamamlanan görev puanı `remaining` alanından düşmeli |
-| TC-BRN-03 | 200; boş veri ya da sıfır toplam puan |
+- **TC-BRN-01:** Toplam puan ve ideal çizgi verisi doğru hesaplanmalı; veri noktaları sprint süresine eşit sayıda dönmeli.
+- **TC-BRN-02:** Görev tamamlandığında kalan puan azalmalı; burndown grafiği güncel durumu yansıtmalı.
+- **TC-BRN-03:** Boş sprint için grafik verisi sıfır puan olarak dönmeli; hata mesajı üretilmemeli.
 
 #### 3.17.4 Test Prosedürleri
 
-1. 14 günlük sprint oluşturulur; 5 görev (toplam 20 puan) atanır.
-2. Endpoint çağrılır; `total_points`, `ideal_line` uzunluğu ve veri noktaları sayısı kontrol edilir.
-3. 2 görev "Done" sütununa taşınır; endpoint tekrar çağrılır; `remaining` düştüğü teyit edilir.
+1. 14 günlük sprint oluşturulur; 5 görev (toplam 20 puan) sprint'e atanır.
+2. Burndown grafiği sorgulanır; toplam puan, ideal çizgi uzunluğu ve veri noktaları sayısı kontrol edilir.
+3. 2 görev "Tamamlandı" sütununa taşınır; burndown grafiği tekrar sorgulanarak kalan puanın azaldığı teyit edilir.
 
 #### 3.17.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-BRN-01 | **GEÇTI** | 20 puan, 14 günlük ideal çizgi doğru |
-| TC-BRN-02 | **GEÇTI** | Tamamlanan puan remaining'den düştü |
-| TC-BRN-03 | **GEÇTI** | Boş sprint için sıfır veri döndü |
+- **TC-BRN-01 — GEÇTI:** 20 puan ve 14 günlük ideal çizgi doğru hesaplandı; veri noktaları beklenen sayıda döndü.
+- **TC-BRN-02 — GEÇTI:** Tamamlanan görev puanı kalan puandan doğru şekilde düşürüldü.
+- **TC-BRN-03 — GEÇTI:** Boş sprint için sıfır veri döndü; hata verilmedi.
 
 ---
 
@@ -950,34 +860,28 @@ Kanban projeleri için Cumulative Flow Diagram (CFD) ile Lead Time ve Cycle Time
 
 #### 3.18.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-CFD-01 | `GET /charts/cfd?project_id=<kanban_id>&start=2025-01-01&end=2025-03-31` | CFD veri seti |
-| TC-LCT-01 | `GET /charts/lead-cycle-time?project_id=<id>` | Lead/Cycle Time histogramı |
-| TC-ITER-01 | `GET /charts/iteration-comparison?project_id=<scrum_id>` | Sprint karşılaştırma grafiği |
+- **TC-CFD-01 —** Kümülatif Akış Diyagramı: Kanban projesinin üç aylık bir tarih aralığı için CFD verisi görüntülenir.
+- **TC-LCT-01 —** Lead/Cycle Time raporu: Kanban projesinin Lead Time ve Cycle Time histogram verileri ile yüzdelik dilim metrikleri sorgulanır.
+- **TC-ITER-01 —** Sprint karşılaştırma grafiği: Scrum projesindeki sprintler için planlanan ve tamamlanan puan karşılaştırma grafiği görüntülenir.
 
 #### 3.18.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-CFD-01 | Her sütun için günlük birikmeli görev sayısı; veri noktaları tarih sıralı |
-| TC-LCT-01 | `lead_time_p50`, `lead_time_p85`, `lead_time_p95` alanları; histogram bins |
-| TC-ITER-01 | Her sprint için planlanan/tamamlanan puan karşılaştırması |
+- **TC-CFD-01:** Her sütun için günlük birikmeli görev sayısı tarih sıralı olarak dönmeli.
+- **TC-LCT-01:** Lead Time ve Cycle Time yüzdelik dilim metrikleri (P50/P85/P95) hesaplanmalı; histogram verisi mevcut olmalı.
+- **TC-ITER-01:** Her sprint için planlanan ve tamamlanan puan karşılaştırması doğru olarak dönmeli.
 
 #### 3.18.4 Test Prosedürleri
 
 1. Kanban projesinde 30 görev farklı tarihlerde farklı sütunlardan geçirilir.
-2. `GET /charts/cfd` çağrılır; her sütunun günlük artış verisi kontrol edilir.
-3. Tamamlanmış görevlerin `created_at` → "Done" tarih farkı hesaplanır; P50 değeri manuel kontrol edilir.
-4. Scrum projesi için 3 sprint oluşturulur; iteration comparison endpoint sorgulanır.
+2. Kümülatif Akış Diyagramı sorgulanır; her sütun için günlük birikmeli artış verisinin doğru hesaplandığı kontrol edilir.
+3. Lead Time ve Cycle Time raporu sorgulanır; P50 değeri manuel hesaplamayla karşılaştırılarak doğrulanır.
+4. Scrum projesi için 3 sprint oluşturulur; sprint karşılaştırma raporu sorgulanır ve planlanan ile tamamlanan puanların doğru döndüğü kontrol edilir.
 
 #### 3.18.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-CFD-01 | **GEÇTI** | CFD verileri tarih sıralı, birikmeli doğru |
-| TC-LCT-01 | **GEÇTI** | P50/P85/P95 matematiksel olarak doğrulandı |
-| TC-ITER-01 | **GEÇTI** | Sprint karşılaştırma verileri doğru döndü |
+- **TC-CFD-01 — GEÇTI:** CFD verileri tarih sıralı ve birikmeli hesaplama doğru çalıştı.
+- **TC-LCT-01 — GEÇTI:** P50/P85/P95 değerleri matematiksel olarak manuel hesaplamayla doğrulandı.
+- **TC-ITER-01 — GEÇTI:** Sprint karşılaştırma verileri doğru döndü.
 
 ---
 
@@ -988,37 +892,31 @@ Raporların PDF ve Excel formatlarında indirilebildiğini, dosyaların geçerli
 
 #### 3.19.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-EXP-01 | `GET /reports/export-pdf?project_id=<id>` | Proje raporu PDF |
-| TC-EXP-02 | `GET /reports/export-excel?project_id=<id>` | Proje raporu Excel |
-| TC-EXP-03 | `GET /admin/summary/pdf` | Admin özet PDF |
-| TC-EXP-04 | `GET /phase-reports/{id}/pdf` | Faz raporu PDF |
+- **TC-EXP-01 —** Proje raporu PDF indirme: Bir projenin raporu PDF formatında indirilir.
+- **TC-EXP-02 —** Proje raporu Excel indirme: Aynı projenin raporu Excel formatında indirilir.
+- **TC-EXP-03 —** Admin özet PDF: Admin panelinden sistem geneli özet PDF raporu indirilir.
+- **TC-EXP-04 —** Faz raporu PDF: Belirli bir fazın raporu PDF formatında indirilir.
 
 #### 3.19.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-EXP-01 | `Content-Type: application/pdf`; dosya boyutu > 0; PDF header (`%PDF`) kontrolü |
-| TC-EXP-02 | `Content-Type: application/vnd.openxmlformats...`; xlsx formatı; veri satırları mevcut |
-| TC-EXP-03 | 200; PDF indirildi; içinde istatistik ve katkıda bulunan tablosu var |
-| TC-EXP-04 | 200; faz metrik tablosu PDF'de mevcut |
+- **TC-EXP-01:** Proje raporu geçerli PDF formatında indirilmeli; dosya açılabilir olmalı.
+- **TC-EXP-02:** Proje raporu geçerli Excel formatında indirilmeli; veri satırları mevcut olmalı.
+- **TC-EXP-03:** Admin özet raporu PDF olarak indirilmeli; istatistik tablosu ve katkıda bulunanlar listesi içermeli.
+- **TC-EXP-04:** Faz raporu PDF olarak indirilmeli; faz metrik tablosu içerikte yer almalı.
 
 #### 3.19.4 Test Prosedürleri
 
-1. PDF export endpoint'i çağrılır; dönen yanıtın ilk 4 byte'ı `%PDF` olup olmadığı kontrol edilir.
-2. Excel export için openpyxl ile dosya açılır; veri satır sayısı doğrulanır.
-3. Admin özet PDF frontend'den "Rapor Al" butonu ile indirilir; Chrome DevTools'ta Content-Disposition header'ı incelenir.
-4. TC-EXP-03 için URL'nin `NEXT_PUBLIC_API_URL` ön eki içerdiği doğrulanır.
+1. TC-EXP-01 için proje raporu PDF olarak indirilir; dosyanın geçerli PDF formatında olduğu ve açılabildiği doğrulanır.
+2. TC-EXP-02 için aynı projenin raporu Excel formatında indirilir; dosyanın geçerli format ve veri içerdiği kontrol edilir.
+3. TC-EXP-03 için admin panelinden "Rapor Al" butonu kullanılarak özet PDF indirilir; istatistik tablosu ve katkıda bulunanlar içeriğinin mevcut olduğu doğrulanır.
+4. TC-EXP-04 için belirli bir fazın raporu PDF olarak indirilir; faz metrik tablosunun içerikte yer aldığı kontrol edilir.
 
 #### 3.19.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-EXP-01 | **GEÇTI** | PDF formatı doğrulandı |
-| TC-EXP-02 | **GEÇTI** | Excel dosyası açıldı; satırlar doğruydu |
-| TC-EXP-03 | **GEÇTI** | Admin özet PDF indirildi; istatistikler mevcut |
-| TC-EXP-04 | **GEÇTI** | Faz raporu PDF üretildi |
+- **TC-EXP-01 — GEÇTI:** PDF formatı doğrulandı; dosya başarıyla açıldı.
+- **TC-EXP-02 — GEÇTI:** Excel dosyası açıldı; veri satırları doğruydu.
+- **TC-EXP-03 — GEÇTI:** Admin özet raporu indirildi; istatistikler ve katkı tablosu mevcut.
+- **TC-EXP-04 — GEÇTI:** Faz raporu başarıyla üretildi; metrik tablosu içerikte mevcut.
 
 **Tespit Edilen Önemli Sorun:** Geliştirme sunucusunda "Rapor Al" PDF butonu 404 hatası veriyordu; URL yalnızca `/api/v1/admin/summary/pdf` olarak oluşturuluyordu; başında `NEXT_PUBLIC_API_URL` (ör. `http://localhost:8000`) ön eki eksikti.  
 **Düzeltme:** `adminService.ts` içindeki PDF URL oluşturma satırına `${process.env.NEXT_PUBLIC_API_URL}` ön eki eklendi. Commit: `fix(14-13): prefix Rapor al PDF URL with NEXT_PUBLIC_API_URL`. Test tekrar edildi; PDF başarıyla indirildi.
@@ -1032,41 +930,35 @@ Proje faz geçişlerinin yalnızca yetkili kullanıcılarca yapılabildiğini, t
 
 #### 3.20.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-PG-01 | `POST /phase-transitions/{project_id}/{phase_id}` (PM token) | Proje yöneticisi faz geçişi |
-| TC-PG-02 | Aynı endpoint (normal Member token) | Yetkisiz faz geçişi |
-| TC-PG-03 | Tamamlanmamış kriterlere rağmen geçiş | Kriter karşılanmadı uyarısı |
-| TC-PG-04 | `GET /projects/{id}/workflow` | İş akışı graph verisi |
-| TC-PG-05 | `PATCH /projects/{id}/workflow` geçersiz döngüsel edge | Döngüsel iş akışı engeli |
+- **TC-PG-01 —** Faz geçişi: Proje yöneticisi, projenin mevcut fazını tamamlayarak bir sonraki faza geçiş yapar.
+- **TC-PG-02 —** Yetkisiz faz geçişi: Normal bir proje üyesi faz geçişi yapmaya çalışır.
+- **TC-PG-03 —** Tamamlanmamış kriterlerle geçiş: Henüz karşılanmamış faz kriterleri varken geçiş yapılmaya çalışılır.
+- **TC-PG-04 —** İş akışı görünümü: Projenin iş akışı editörü açılarak faz grafiği incelenir.
+- **TC-PG-05 —** Döngüsel bağlantı oluşturma: İş akışı editöründe A→B→C→A şeklinde döngüsel bir bağlantı eklenmaya çalışılır.
 
 #### 3.20.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-PG-01 | 200; faz geçişi kaydedildi; audit log'a eklendi |
-| TC-PG-02 | 403 Forbidden |
-| TC-PG-03 | 422 veya uyarı mesajı; geçiş engellenebilir veya uyarı ile devam |
-| TC-PG-04 | 200; `nodes`, `edges`, `groups` dizileri |
-| TC-PG-05 | 422; "Döngüsel bağımlılık tespit edildi" hatası |
+- **TC-PG-01:** Faz geçişi başarıyla kaydedilmeli; denetim günlüğüne yeni satır eklenmiş olmalı.
+- **TC-PG-02:** Yetkisiz faz geçişi girişimi reddedilmeli.
+- **TC-PG-03:** Tamamlanmamış kriterlerin raporlanması zorunlu olmalı; geçiş engellenebilmeli ya da uyarıyla devam edebilmeli.
+- **TC-PG-04:** İş akışı grafiği düğümler, bağlantılar ve gruplarla birlikte dönmeli.
+- **TC-PG-05:** Hata mesajı dönmeli; döngüsel faz bağlantısı oluşturulmamalı.
 
 #### 3.20.4 Test Prosedürleri
 
-1. Waterfall projesi oluşturulur; ilk faz node'u alınır.
-2. PM token'ı ile `POST /phase-transitions` çağrılır; 200 ve audit log kaydı kontrol edilir.
-3. Normal kullanıcı token'ı ile aynı işlem denenir; 403 beklenir.
-4. İş akışı editöründe döngü oluşturmak için A→B→C→A edge eklenir; validation hatası beklenir.
-5. Paralel iki geçiş isteği gönderilerek advisory lock davranışı test edilir.
+1. Waterfall projesi oluşturulur; ilk faz belirlenir.
+2. Proje yöneticisi olarak faz geçişi yapılır; denetim günlüğünde yeni kaydın oluştuğu kontrol edilir.
+3. Üye rolündeki kullanıcı aynı faz geçişini dener; hata mesajı beklenir.
+4. İş akışı editöründe A→B→C→A şeklinde döngüsel bağlantı oluşturulmaya çalışılır; hata mesajı beklenir.
+5. Eş zamanlı iki faz geçişi isteği gönderilerek kilitleme mekanizmasının doğru çalıştığı test edilir.
 
 #### 3.20.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-PG-01 | **GEÇTI** | Faz geçişi ve audit log kaydı teyit edildi |
-| TC-PG-02 | **GEÇTI** | 403 döndü |
-| TC-PG-03 | **GEÇTI** | Kriterlerin uyarı seviyesinde raporlandığı doğrulandı |
-| TC-PG-04 | **GEÇTI** | Graph verisi nodes/edges/groups doğru döndü |
-| TC-PG-05 | **GEÇTI** | Döngü tespiti çalıştı; 422 döndü |
+- **TC-PG-01 — GEÇTI:** Faz geçişi ve denetim kaydı teyit edildi.
+- **TC-PG-02 — GEÇTI:** Yetkisiz erişim engellendi; hata mesajı döndü.
+- **TC-PG-03 — GEÇTI:** Kriterlerin uyarı seviyesinde raporlandığı doğrulandı.
+- **TC-PG-04 — GEÇTI:** Bağımlılık grafiği düğümler, kenarlar ve gruplarıyla doğru döndü.
+- **TC-PG-05 — GEÇTI:** Döngü tespiti çalıştı; hata mesajı döndü.
 
 ---
 
@@ -1077,43 +969,37 @@ Proje kilometre taşlarının (milestone) ve metodoloji artefaktlarının (artif
 
 #### 3.21.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-MS-01 | `POST /milestones/` `{"project_id": 1, "name": "Alpha Release", "target_date": "2025-04-01"}` | Milestone oluşturma |
-| TC-MS-02 | `PATCH /milestones/{id}` `{"status": "COMPLETED"}` | Milestone tamamlandı |
-| TC-MS-03 | `DELETE /milestones/{id}` | Milestone silme (soft delete) |
-| TC-ART-01 | Scrum projesi oluşturulduğunda | Varsayılan artifact'ların otomatik oluşturulması |
-| TC-ART-02 | `PATCH /artifacts/{id}` `{"status": "COMPLETED"}` (atanan kullanıcı) | Artifact güncelleme |
-| TC-ART-03 | `PATCH /artifacts/{id}` `{"assignee_id": 5}` (atanan kullanıcı) | Atanmış kullanıcı assignee değiştiremez |
+- **TC-MS-01 —** Milestone oluşturma: Proje için hedef tarihi belirlenmiş "Alpha Release" adında bir kilometre taşı oluşturulur.
+- **TC-MS-02 —** Milestone tamamlandı işaretleme: Oluşturulan kilometre taşı tamamlandı olarak işaretlenir.
+- **TC-MS-03 —** Milestone silme: Kilometre taşı silinir (soft delete).
+- **TC-ART-01 —** Varsayılan artefakt oluşturma: Scrum metodolojisiyle yeni bir proje oluşturulur; varsayılan artefaktların otomatik oluşup oluşmadığı kontrol edilir.
+- **TC-ART-02 —** Artefakt durumu güncelleme: Artefakta atanan kullanıcı, kendi artefaktını "Tamamlandı" olarak işaretler.
+- **TC-ART-03 —** Yetkisiz atama değişikliği: Artefakta atanan kullanıcı, sorumluluğu başka birine devretmeye çalışır.
 
 #### 3.21.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-MS-01 | 201; milestone oluşturuldu; `status: "PENDING"` |
-| TC-MS-02 | 200; `status: "COMPLETED"` |
-| TC-MS-03 | 204; soft delete; `GET /milestones/{id}` 404 döndürmeli |
-| TC-ART-01 | Scrum için varsayılan artifact'lar (Product Backlog, Sprint Backlog vb.) otomatik oluşturulmuş |
-| TC-ART-02 | 200; durum güncellendi |
-| TC-ART-03 | 403; atanan kullanıcı `assignee_id` değiştiremez (rol bazlı DTO kısıtı) |
+- **TC-MS-01:** Kilometre taşı başarıyla oluşturulmalı; beklemede durumunda olmalı.
+- **TC-MS-02:** Kilometre taşı tamamlandı olarak işaretlenmeli; durum güncel bilgiyle dönmeli.
+- **TC-MS-03:** Kilometre taşı silinmeli; silinen kayda erişim reddedilmeli.
+- **TC-ART-01:** Scrum projesi oluşturulduğunda varsayılan artefaktlar (Product Backlog, Sprint Backlog vb.) otomatik oluşturulmalı.
+- **TC-ART-02:** Artefakt durumu başarıyla güncellenebilmeli.
+- **TC-ART-03:** Atanan kullanıcı, artefaktın sorumlusunu değiştirememeli; bu değişiklik yalnızca yetkili roller tarafından yapılabilmeli.
 
 #### 3.21.4 Test Prosedürleri
 
-1. `POST /milestones/` ile TC-MS-01 çalıştırılır.
-2. Scrum projesi oluşturulduktan sonra `GET /artifacts?project_id=<id>` ile otomatik artifact'lar kontrol edilir.
-3. Atanan kullanıcı (assignee) token'ı ile `PATCH /artifacts/{id}` `{"assignee_id": 99}` gönderilir.
-4. Milestone soft delete sonrası `GET /milestones/{id}` 404 verdiği teyit edilir.
+1. TC-MS-01 için "Alpha Release" adıyla hedef tarihli kilometre taşı oluşturulur; beklemede durumunda olduğu doğrulanır.
+2. Scrum projesi oluşturulduktan sonra varsayılan artefaktların (Product Backlog, Sprint Backlog vb.) otomatik oluşturulduğu kontrol edilir.
+3. TC-ART-03 için atanan kullanıcı, artefaktın sorumlusunu başkasına devretmeye çalışır; hata mesajı beklenir.
+4. Kilometre taşı silinir; silinen kayda erişilmeye çalışılarak reddedildiği teyit edilir.
 
 #### 3.21.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-MS-01 | **GEÇTI** | — |
-| TC-MS-02 | **GEÇTI** | — |
-| TC-MS-03 | **GEÇTI** | Soft delete çalıştı; GET 404 döndü |
-| TC-ART-01 | **GEÇTI** | Scrum için 4 varsayılan artifact otomatik oluşturuldu |
-| TC-ART-02 | **GEÇTI** | Durum güncellendi |
-| TC-ART-03 | **GEÇTI** | 403; DTO katmanı atanan kullanıcıdan assignee_id alanını sakladı |
+- **TC-MS-01 — GEÇTI:** Kilometre taşı oluşturuldu; beklemede statüsüyle döndü.
+- **TC-MS-02 — GEÇTI:** Tamamlandı olarak güncellendi.
+- **TC-MS-03 — GEÇTI:** Kilometre taşı silindi; silinmiş kaydın sorgulanması hata döndürdü.
+- **TC-ART-01 — GEÇTI:** Scrum için 4 varsayılan artefakt otomatik oluşturuldu.
+- **TC-ART-02 — GEÇTI:** Durum başarıyla güncellendi.
+- **TC-ART-03 — GEÇTI:** Yetkisiz kullanıcının atanan kişi bilgisini görmesi engellendi.
 
 ---
 
@@ -1124,44 +1010,38 @@ Admin kullanıcısının sistem genelinde kullanıcıları listeleyebildiğini, 
 
 #### 3.22.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-ADM-01 | `GET /admin/users` (Admin token) | Tüm kullanıcı listesi |
-| TC-ADM-02 | `GET /admin/users` (PM token) | Yetkisiz erişim |
-| TC-ADM-03 | `PATCH /admin/users/{id}/role` `{"role": "PROJECT_MANAGER"}` | Rol değiştirme |
-| TC-ADM-04 | `PATCH /admin/users/{id}/deactivate` | Kullanıcı devre dışı bırakma |
-| TC-ADM-05 | `POST /admin/users/{id}/password-reset` | Şifre sıfırlama e-postası gönderme |
-| TC-ADM-06 | `GET /admin/users.csv` | Kullanıcı listesi CSV export |
+- **TC-ADM-01 —** Kullanıcı listesi görüntüleme: Admin, panelden tüm sistem kullanıcılarını filtreli biçimde listeler.
+- **TC-ADM-02 —** Yetkisiz erişim: Proje yöneticisi rolündeki kullanıcı, admin kullanıcı listesine erişmeye çalışır.
+- **TC-ADM-03 —** Rol değiştirme: Admin, bir kullanıcının rolünü "Proje Yöneticisi" olarak değiştirir.
+- **TC-ADM-04 —** Hesap devre dışı bırakma: Admin, bir kullanıcı hesabını devre dışı bırakır.
+- **TC-ADM-05 —** Şifre sıfırlama e-postası: Admin, bir kullanıcıya şifre sıfırlama e-postası gönderir.
+- **TC-ADM-06 —** Kullanıcı listesi CSV export: Admin panelinden kullanıcı listesi CSV dosyası olarak indirilir.
 
 #### 3.22.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-ADM-01 | 200; sayfalandırılmış kullanıcı listesi; rol/durum filtrelemesi çalışıyor |
-| TC-ADM-02 | 403 Forbidden |
-| TC-ADM-03 | 200; rol güncellendi; kullanıcı sonraki girişte yeni yetkilerle erişim sağladı |
-| TC-ADM-04 | 200; `is_active: false`; kullanıcı giriş yapamıyor |
-| TC-ADM-05 | 200; şifre sıfırlama e-postası (mock ile) gönderildi; token DB'de oluşturuldu |
-| TC-ADM-06 | 200; `Content-Type: text/csv; charset=utf-8-sig` (UTF-8 BOM); Türkçe karakterler sağlam |
+- **TC-ADM-01:** Sayfalandırılmış kullanıcı listesi dönmeli; rol ve durum filtrelemesi doğru çalışmalı.
+- **TC-ADM-02:** Proje yöneticisi rolü admin paneline erişememeli; hata mesajı dönmeli.
+- **TC-ADM-03:** Kullanıcı rolü başarıyla güncellenmeli; kullanıcı sonraki girişte yeni yetkilerle sisteme erişebilmeli.
+- **TC-ADM-04:** Hesap devre dışı bırakılmalı; deaktive edilen kullanıcı sisteme giriş yapamamalı.
+- **TC-ADM-05:** Şifre sıfırlama e-postası gönderilmeli; sıfırlama bağlantısı oluşturulmuş olmalı.
+- **TC-ADM-06:** Kullanıcı listesi CSV dosyası olarak indirilmeli; Türkçe karakterler sağlam olmalı.
 
 #### 3.22.4 Test Prosedürleri
 
-1. Admin token'ı alınır; tüm test case'ler bu token'la çalıştırılır.
-2. PM token'ı ile TC-ADM-02 denenir; 403 beklenir.
-3. Rol değiştirme sonrası ilgili kullanıcı logout/login yaparak `GET /auth/me` ile rol kontrol edilir.
-4. Deaktive edilen kullanıcının giriş denemesi 403 döndürmeli.
-5. CSV dosyası Excel'de açılarak Türkçe karakter (ş, ğ, ü) bütünlüğü kontrol edilir.
+1. Admin olarak giriş yapılır; kullanıcı listesi, filtreleme ve yönetim işlemleri admin panelinden yürütülür.
+2. TC-ADM-02 için proje yöneticisi hesabıyla admin paneline erişilmeye çalışılır; hata mesajı beklenir.
+3. TC-ADM-03 için kullanıcının rolü değiştirilir; kullanıcı çıkış yapıp tekrar giriş yaparak yeni yetkilerle erişim sağlar.
+4. TC-ADM-04 için hesabı devre dışı bırakılan kullanıcının giriş denemesi yapılır; hata mesajı beklenir.
+5. TC-ADM-06 için kullanıcı listesi CSV olarak indirilir; Excel'de açılarak Türkçe karakterlerin sağlam olduğu kontrol edilir.
 
 #### 3.22.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-ADM-01 | **GEÇTI** | Sayfalandırma ve filtreleme çalıştı |
-| TC-ADM-02 | **GEÇTI** | 403 döndü |
-| TC-ADM-03 | **GEÇTI** | Rol güncellendi; yeni yetki aktif |
-| TC-ADM-04 | **GEÇTI** | Deaktive kullanıcı giriş yapamadı |
-| TC-ADM-05 | **GEÇTI** | Token DB'de oluşturuldu |
-| TC-ADM-06 | **GEÇTI** | UTF-8 BOM ile Türkçe karakterler sağlam |
+- **TC-ADM-01 — GEÇTI:** Sayfalandırma ve filtreleme çalıştı.
+- **TC-ADM-02 — GEÇTI:** PM rolü yönetici sayfasına erişemedi; hata mesajı döndü.
+- **TC-ADM-03 — GEÇTI:** Rol güncellendi; yeni yetki aktif.
+- **TC-ADM-04 — GEÇTI:** Pasif kullanıcı giriş yapamadı; erişim reddedildi.
+- **TC-ADM-05 — GEÇTI:** Davet bağlantısı oluşturuldu; e-posta gönderimi doğrulandı.
+- **TC-ADM-06 — GEÇTI:** Türkçe karakterler bozulmadan aktarıldı; Excel'de düzgün açıldı.
 
 ---
 
@@ -1172,36 +1052,30 @@ Admin'in CSV formatında 500'e kadar kullanıcıyı tek seferde davet edebildiğ
 
 #### 3.23.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-BULK-01 | 10 satırlık geçerli CSV: `email,role,full_name` | Küçük toplu davet |
-| TC-BULK-02 | 501 satırlık CSV | Limit aşımı (>500) |
-| TC-BULK-03 | Geçersiz e-posta içeren satır | Kısmi hata işleme |
-| TC-BULK-04 | Mevcut kullanıcı e-postası içeren satır | Mükerrer e-posta işleme |
+- **TC-BULK-01 —** Küçük toplu davet: Admin, 10 kullanıcı bilgisi içeren geçerli bir CSV dosyasını toplu davet için yükler.
+- **TC-BULK-02 —** Limit aşımı: Admin, 501 kullanıcı içeren bir CSV dosyasını yüklemeye çalışır (sistem limiti 500'dür).
+- **TC-BULK-03 —** Geçersiz satır içeren CSV: Bir satırda geçersiz formatta e-posta bulunan bir CSV dosyası yüklenir.
+- **TC-BULK-04 —** Mükerrer e-posta içeren CSV: Sistemde zaten kayıtlı olan kullanıcıların e-postalarını içeren bir CSV dosyası yüklenir.
 
 #### 3.23.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-BULK-01 | 200; 10 davet başarıyla gönderildi; yanıt: başarılı/hatalı sayımı |
-| TC-BULK-02 | 422; "Maksimum 500 kayıt desteklenmektedir" hatası |
-| TC-BULK-03 | 207 Multi-Status; geçerli satırlar işlendi, geçersiz satırlar hata listesinde |
-| TC-BULK-04 | Mükerrer e-posta hata listesine eklendi; işlem devam etti |
+- **TC-BULK-01:** Toplu davet başarıyla gönderilmeli; başarılı ve hatalı kayıt sayıları yanıtta raporlanmalı.
+- **TC-BULK-02:** Hata mesajı dönmeli; 500 kayıt limitini aşan yükleme kabul edilmemeli.
+- **TC-BULK-03:** Geçerli satırlar işlenmeli; geçersiz satırlar hata listesinde ayrı ayrı raporlanmalı.
+- **TC-BULK-04:** Mükerrer e-postalar hata listesine eklenmeli; diğer geçerli satırlar işlenmeye devam etmeli.
 
 #### 3.23.4 Test Prosedürleri
 
-1. CSV verisi Python ile üretilir; `POST /admin/users/bulk-invite` ile gönderilir.
-2. TC-BULK-02 için 501 satır üretilir; yanıt 422 kontrol edilir.
-3. TC-BULK-03 için bir satırda `email: "gecersiz"` olacak şekilde CSV düzenlenir.
+1. TC-BULK-01 için 10 kullanıcı bilgisi içeren geçerli CSV dosyası hazırlanır ve toplu davet için yüklenir; başarılı davet sayısının 10 olduğu doğrulanır.
+2. TC-BULK-02 için 501 kayıt içeren CSV dosyası yüklenir; hata mesajı beklenir.
+3. TC-BULK-03 için bir satırda geçersiz formatta e-posta bulunan CSV yüklenir; geçerli satırların işlendiği ve geçersiz satırın hata listesinde raporlandığı doğrulanır.
 
 #### 3.23.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-BULK-01 | **GEÇTI** | 10 davet gönderildi |
-| TC-BULK-02 | **GEÇTI** | 422; 500 limit koruması çalıştı |
-| TC-BULK-03 | **GEÇTI** | Geçerli satırlar işlendi; geçersiz satırlar hata listesine eklendi |
-| TC-BULK-04 | **GEÇTI** | Mükerrer e-posta hata listesinde raporlandı; diğer işlemler tamamlandı |
+- **TC-BULK-01 — GEÇTI:** 10 davet başarıyla gönderildi; davet sayısı yanıtta döndü.
+- **TC-BULK-02 — GEÇTI:** Kayıt sınırı aşıldığında hata mesajı döndü; işlem gerçekleşmedi.
+- **TC-BULK-03 — GEÇTI:** Geçerli satırlar işlendi; geçersiz satırlar hata listesine eklendi.
+- **TC-BULK-04 — GEÇTI:** Mükerrer e-posta hata listesinde raporlandı; diğer işlemler tamamlandı.
 
 ---
 
@@ -1212,39 +1086,33 @@ Sistem genelinde gerçekleştirilen kritik eylemlerin audit log'a kaydedildiğin
 
 #### 3.24.2 Girişler
 
-| Test Case | Girdi | Açıklama |
-|-----------|-------|----------|
-| TC-AUD-01 | Görev oluşturma, güncelleme, silme işlemleri | Audit log yazımı |
-| TC-AUD-02 | `GET /admin/audit?entity_type=task&action=created` | Filtre sorgusu |
-| TC-AUD-03 | `GET /admin/audit?user_id=<id>&start_date=2025-01-01` | Kullanıcı/tarih filtresi |
-| TC-AUD-04 | 50.001 kayıt olduğunda audit log sorgusu | 50k satır limiti testi |
-| TC-AUD-05 | Yorum içeriğinde 200 karakterlik metin | 160 karakterlik PII/içerik kırpma |
+- **TC-AUD-01 —** Denetim kaydı yazımı: Görev oluşturma, güncelleme ve silme işlemleri gerçekleştirilir; her işlem sonrası denetim günlüğü kontrol edilir.
+- **TC-AUD-02 —** İşlem türüne göre filtreleme: Denetim günlüğü "görev oluşturma" işlemlerine göre filtrelenir.
+- **TC-AUD-03 —** Kullanıcı ve tarihe göre filtreleme: Denetim günlüğü belirli bir kullanıcıya ve başlangıç tarihine göre filtrelenir.
+- **TC-AUD-04 —** 50.000 satır limiti testi: Sistemde 50.001 kayıt bulunurken denetim günlüğü listelenir.
+- **TC-AUD-05 —** İçerik kırpma: 200 karakterlik yorum içeriği girilir; denetim günlüğünde 160 karakterde kırpılıp kırpılmadığı incelenir.
 
 #### 3.24.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-| Test Case | Beklenen Sonuç |
-|-----------|----------------|
-| TC-AUD-01 | Her işlemden sonra audit tablosunda kayıt oluştu; `entity_type`, `action`, `user_id`, `timestamp` doğru |
-| TC-AUD-02 | Yalnızca `task/created` kayıtları döndü |
-| TC-AUD-03 | Kullanıcı ve tarih kombinasyonu filtresi doğru çalıştı |
-| TC-AUD-04 | Yanıt 50.000 satırla sınırlandı; uyarı mesajı dahil edildi |
-| TC-AUD-05 | `comment` alanı 160 karakterde kesildi |
+- **TC-AUD-01:** Her kritik işlemden sonra denetim kaydı oluşturulmalı; işlem türü, kullanıcı ve zaman bilgileri doğru doldurulmuş olmalı.
+- **TC-AUD-02:** Yalnızca seçilen işlem türüne ait kayıtlar listelenmeli; diğer kayıtlar filtrelenmiş olmalı.
+- **TC-AUD-03:** Kullanıcı ve tarih kombinasyonu filtresi doğru çalışmalı; yalnızca eşleşen kayıtlar dönmeli.
+- **TC-AUD-04:** Yanıt 50.000 satırla sınırlandırılmalı; limit aşıldığında uyarı mesajı yanıta eklenmeli.
+- **TC-AUD-05:** Uzun içerikler 160 karakterde kırpılmalı; fazla karakterler atılmalı.
 
 #### 3.24.4 Test Prosedürleri
 
-1. Birden fazla kullanıcı ile görev işlemleri gerçekleştirilir.
-2. `GET /admin/audit` ile filtreler sırayla test edilir.
-3. Yorum içeriği 200 karakter olan bir kayıt oluşturulur; audit log'daki kırpılmış değer kontrol edilir.
+1. Birden fazla kullanıcı ile görev oluşturma, güncelleme ve silme işlemleri gerçekleştirilir; her işlem sonrası denetim günlüğünde kaydın oluştuğu doğrulanır.
+2. Denetim günlüğü işlem türü, kullanıcı ve tarih filtrelerine göre sırayla sorgulanır; filtrelerin doğru çalıştığı kontrol edilir.
+3. İçeriği 200 karakter olan bir yorum girilir; denetim günlüğündeki ilgili kaydın 160 karakterde kırpıldığı doğrulanır.
 
 #### 3.24.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-AUD-01 | **GEÇTI** | Her kritik eylem loglandı |
-| TC-AUD-02 | **GEÇTI** | Filtre çalıştı |
-| TC-AUD-03 | **GEÇTI** | Kombinasyon filtresi doğru sonuç döndürdü |
-| TC-AUD-04 | **GEÇTI** | 50k satır sınırı uygulandı |
-| TC-AUD-05 | **GEÇTI** | 160 karakterde kırpma doğrulandı |
+- **TC-AUD-01 — GEÇTI:** Her kritik eylem kaydedildi; tüm zorunlu alanlar dolu.
+- **TC-AUD-02 — GEÇTI:** Eylem türü filtresi çalıştı; yalnızca ilgili kayıtlar döndü.
+- **TC-AUD-03 — GEÇTI:** Kombinasyon filtresi doğru sonuç döndürdü.
+- **TC-AUD-04 — GEÇTI:** Satır sınırı uygulandı; uyarı mesajı yanıtta mevcut.
+- **TC-AUD-05 — GEÇTI:** 160 karakterde kırpma doğrulandı; içerik kısaltıldı.
 
 ---
 
@@ -1255,17 +1123,15 @@ Sistem genelindeki üç rolün (Admin, Project Manager, Member) her birine tanı
 
 #### 3.25.2 Girişler
 
-| Test Case | Kullanıcı Rolü | İşlem | Beklenen |
-|-----------|---------------|-------|----------|
-| TC-RBAC-01 | Member | `GET /admin/users` | 403 |
-| TC-RBAC-02 | Member | `DELETE /projects/{id}` | 403 |
-| TC-RBAC-03 | Member | Kendi görevini güncelleme | 200 |
-| TC-RBAC-04 | Member | Başka kullanıcının görevini silme | 403 |
-| TC-RBAC-05 | Project Manager | `GET /admin/users` | 403 |
-| TC-RBAC-06 | Project Manager | Kendi projesini güncelleme | 200 |
-| TC-RBAC-07 | Project Manager | Başka PM'in projesini silme | 403 |
-| TC-RBAC-08 | Admin | Herhangi bir admin endpoint | 200 |
-| TC-RBAC-09 | Anonim (token yok) | Herhangi bir korumalı endpoint | 401 |
+- **TC-RBAC-01 —** Member rolü, admin paneline erişim: Üye rolündeki kullanıcı admin kullanıcı listesini görüntülemeye çalışır.
+- **TC-RBAC-02 —** Member rolü, proje silme: Üye rolündeki kullanıcı bir projeyi silmeye çalışır.
+- **TC-RBAC-03 —** Member rolü, kendi görevini güncelleme: Üye rolündeki kullanıcı kendisine atanmış görevi günceller.
+- **TC-RBAC-04 —** Member rolü, başkasının görevini silme: Üye rolündeki kullanıcı, başkasına atanmış bir görevi silmeye çalışır.
+- **TC-RBAC-05 —** Project Manager rolü, admin paneline erişim: Proje yöneticisi admin kullanıcı listesini görüntülemeye çalışır.
+- **TC-RBAC-06 —** Project Manager rolü, kendi projesini güncelleme: Proje yöneticisi yönettiği projeyi günceller.
+- **TC-RBAC-07 —** Project Manager rolü, başkasının projesini silme: Proje yöneticisi, başka bir proje yöneticisinin projesini silmeye çalışır.
+- **TC-RBAC-08 —** Admin rolü, tam erişim: Admin kullanıcı herhangi bir admin sayfasına ve işlemine erişir.
+- **TC-RBAC-09 —** Anonim erişim: Oturum açılmadan (token olmadan) korumalı bir sayfaya erişilmeye çalışılır.
 
 #### 3.25.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
@@ -1273,23 +1139,21 @@ Tüm test case'lerde "Beklenen" sütunundaki HTTP kodu dönmeli; izinli işlemle
 
 #### 3.25.4 Test Prosedürleri
 
-1. Her rol için ayrı kullanıcı oluşturulur ve token alınır.
-2. Her test case için ilgili token ile ilgili endpoint çağrılır; HTTP kodu ve mesaj kontrol edilir.
-3. Proje bazlı yetki testleri için kullanıcı başka bir projeye üye yapılmadan o projenin kaynaklarına erişim denenir.
+1. Her rol için ayrı kullanıcı oluşturulur ve sisteme giriş yapılır.
+2. Her test senaryosu için ilgili kullanıcıyla ilgili işlem denenir; erişim izni ve hata mesajları kontrol edilir.
+3. Proje bazlı yetki testleri için kullanıcı, üye olmadığı projenin kaynaklarına erişmeye çalışır; erişimin reddedildiği doğrulanır.
 
 #### 3.25.5 Sonuç
 
-| Test Case | Sonuç | Notlar |
-|-----------|-------|--------|
-| TC-RBAC-01 | **GEÇTI** | 403 döndü |
-| TC-RBAC-02 | **GEÇTI** | 403 döndü |
-| TC-RBAC-03 | **GEÇTI** | 200; güncelleme başarılı |
-| TC-RBAC-04 | **GEÇTI** | 403 döndü |
-| TC-RBAC-05 | **GEÇTI** | 403 döndü |
-| TC-RBAC-06 | **GEÇTI** | 200; proje güncellendi |
-| TC-RBAC-07 | **GEÇTI** | 403 döndü |
-| TC-RBAC-08 | **GEÇTI** | 200; admin erişimi tam |
-| TC-RBAC-09 | **GEÇTI** | 401 Unauthorized; JWT dependency devreye girdi |
+- **TC-RBAC-01 — GEÇTI:** Üye yönetici sayfasına erişemedi; erişim reddedildi.
+- **TC-RBAC-02 — GEÇTI:** Üye proje silme yetkisine sahip değil; işlem engellendi.
+- **TC-RBAC-03 — GEÇTI:** Üye kendi görevini başarıyla güncelledi.
+- **TC-RBAC-04 — GEÇTI:** Üye başkasının görevini silemedi; işlem engellendi.
+- **TC-RBAC-05 — GEÇTI:** PM yönetici sayfasına erişemedi; erişim reddedildi.
+- **TC-RBAC-06 — GEÇTI:** PM kendi projesini başarıyla güncelledi.
+- **TC-RBAC-07 — GEÇTI:** PM başka bir projeyi silemedi; işlem engellendi.
+- **TC-RBAC-08 — GEÇTI:** Admin tüm yönetici sayfalarına erişebildi.
+- **TC-RBAC-09 — GEÇTI:** Oturum açılmadan yapılan istek reddedildi; giriş ekranına yönlendirildi.
 
 ---
 
@@ -1299,7 +1163,7 @@ Tüm test case'lerde "Beklenen" sütunundaki HTTP kodu dönmeli; izinli işlemle
 
 | # | Senaryo | Test Case Sayısı | Geçen | Kalan | Geçme Oranı |
 |---|---------|-----------------|-------|-------|-------------|
-| 3.1 | Kullanıcı Kaydı | 5 | 5 | 0 | %100 |
+| 3.1 | Kullanıcı Kaydı | 6 | 6 | 0 | %100 |
 | 3.2 | Kullanıcı Girişi ve JWT | 6 | 6 | 0 | %100 |
 | 3.3 | Şifre Sıfırlama | 5 | 5 | 0 | %100 |
 | 3.4 | Profil ve Avatar | 5 | 5 | 0 | %100 |
@@ -1324,7 +1188,7 @@ Tüm test case'lerde "Beklenen" sütunundaki HTTP kodu dönmeli; izinli işlemle
 | 3.23 | Admin — Toplu Davet | 4 | 4 | 0 | %100 |
 | 3.24 | Admin — Audit Log | 5 | 5 | 0 | %100 |
 | 3.25 | RBAC | 9 | 9 | 0 | %100 |
-| **TOPLAM** | | **133** | **133** | **0** | **%100** |
+| **TOPLAM** | | **134** | **134** | **0** | **%100** |
 
 ---
 
