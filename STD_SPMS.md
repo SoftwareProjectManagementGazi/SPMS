@@ -1135,7 +1135,15 @@ Sistem genelindeki üç rolün (Admin, Project Manager, Member) her birine tanı
 
 #### 3.25.3 Beklenen Sonuçlar & Geçme/Kalma Kriterleri
 
-Tüm test case'lerde "Beklenen" sütunundaki HTTP kodu dönmeli; izinli işlemler gerçek veriyle, izinsiz işlemler hata mesajıyla yanıtlanmalıdır.
+- **TC-RBAC-01:** Erişim reddedilmeli; üye rolündeki kullanıcı admin kullanıcı listesini görüntüleyememeli.
+- **TC-RBAC-02:** Erişim reddedilmeli; üye rolündeki kullanıcı projeyi silememeli.
+- **TC-RBAC-03:** İşlem başarılı olmalı; üye kendi görevini güncelleyebilmeli.
+- **TC-RBAC-04:** Erişim reddedilmeli; üye rolündeki kullanıcı başkasına atanmış görevi silememeli.
+- **TC-RBAC-05:** Erişim reddedilmeli; proje yöneticisi admin kullanıcı listesini görüntüleyememeli.
+- **TC-RBAC-06:** İşlem başarılı olmalı; proje yöneticisi yönettiği projeyi güncelleyebilmeli.
+- **TC-RBAC-07:** Erişim reddedilmeli; proje yöneticisi başka bir proje yöneticisinin projesini silememeli.
+- **TC-RBAC-08:** Tüm admin sayfalarına ve işlemlerine erişim sağlanmalı; admin rolü tam yetkiyle çalışmalı.
+- **TC-RBAC-09:** Erişim reddedilmeli; token olmadan yapılan istek giriş ekranına yönlendirmeyle sonuçlanmalı.
 
 #### 3.25.4 Test Prosedürleri
 
@@ -1224,18 +1232,15 @@ Aşağıdaki durumlar mevcut sürüm kapsamı dışındadır ve sonraki sürüml
 
 ### 4.4 Genel Değerlendirme
 
-SPMS v1.0 için yürütülen 25 test senaryosu ve 133 test case'in tamamı başarıyla tamamlanmıştır. Testler sırasında 7 sorun tespit edilmiş; bunların 7'si de test döngüsü içinde giderilmiştir.
+SPMS v1.0 için yürütülen 25 test senaryosu ve 133 test case'in tamamı başarıyla tamamlanmıştır. Testler sırasında 7 sorun tespit edilmiş; bunların 7'si de test döngüsü içinde giderilmiş olup kapanmamış herhangi bir hata kalmamıştır. Bu bölüm, test sürecinin bütünü değerlendirilerek sistemin güçlü yönlerini ve gelecek sürümler için göz önünde bulundurulması gereken iyileştirme alanlarını ortaya koymaktadır.
 
-**Güçlü Yönler:**
-- Clean Architecture uygulaması, birim testlerinde domain mantığının izole edilmesini sağlamış ve test güvenilirliğini artırmıştır.
-- RBAC uygulaması kapsamlı biçimde test edilmiş; tüm yetki sınırları beklenen şekilde çalışmıştır.
-- WIP limiti, görev bağımlılıkları ve faz geçişlerindeki advisory lock mekanizmaları eşzamanlılık senaryolarında doğru sonuç vermiştir.
-- PDF/Excel dışa aktarım özellikleri tüm metodoloji ve rapor türleri için başarıyla çalışmaktadır.
+SPMS v1.0, kimlik doğrulama ve yetkilendirme akışlarında yüksek bir olgunluk düzeyi sergilemiştir. Kullanıcı kaydının serbest kayıt yerine admin daveti akışıyla yönetilmesi, sisteme erişim üzerinde tam kontrol sağlamış; şifre sıfırlama ve hesap aktivasyonu senaryolarında token güvenliği, süre sınırı ve tek kullanımlık bağlantı mekanizmaları beklenen şekilde çalışmıştır. Bilgi sızıntısını önlemeye yönelik tasarım kararları (yanlış şifre ile kayıtsız e-posta için aynı hata mesajının döndürülmesi, proje varlığının üye olmayan kullanıcılara ifşa edilmemesi) test sürecinde tutarlı biçimde doğrulanmıştır.
 
-**İyileştirme Alanları:**
-- Frontend'de hata durumlarının kullanıcıya bildirilmesi başlangıçta eksikti; test sürecinde güçlendirilmiştir.
-- Backend boyut validasyonlarının tüm upload endpoint'lerinde tutarlı biçimde uygulanması gözden geçirilmelidir.
-- Entegrasyon testlerinde izole veritabanı kullanımı sonraki sürümde önceliklendirilmelidir.
+Clean Architecture uygulaması test edilebilirlik açısından önemli bir avantaj sağlamıştır. Domain katmanının altyapıdan tam izolasyonu sayesinde use case mantığı bağımlılıklar mock'lanarak birim düzeyinde test edilebilmiş; bu durum hata tespitini kolaylaştırmış ve test güvenilirliğini artırmıştır. Repository soyutlamaları aracılığıyla sağlanan bağımsızlık, entegrasyon testlerinde de temiz bir sınır çizilmesine imkân tanımıştır. Rol tabanlı erişim kontrolü (RBAC) üç farklı rol düzeyinde ve dokuz ayrı senaryo üzerinden kapsamlı biçimde test edilmiş; hem yatay hem de dikey ayrıcalık yükseltme girişimleri tüm senaryolarda doğru şekilde engellenmiştir. Eşzamanlılık gerektiren senaryolarda da sistem güvenilir sonuçlar üretmiş; Kanban WIP limiti, Waterfall bağımlılık sıralaması ve faz geçişlerindeki advisory lock mekanizması tutarlı biçimde çalışmıştır.
+
+Öte yandan test süreci bazı yapısal eksiklikleri de gün yüzüne çıkarmıştır. Dosya yükleme boyut kontrolünün başlangıçta yalnızca istemci tarafında uygulanması, büyük dosyaların backend'e ulaşmasına zemin hazırlamıştır; bu durum, validasyon sorumluluğunun backend'de birincil güvence katmanı olarak kurgulanması gerektiğini açıkça ortaya koymuştur. Frontend hata yönetiminde de benzer bir olgunluk eksikliği gözlemlenmiştir: token süresi dolduğunda anlamlı yönlendirme yerine teknik hata gösterilmesi, set-password sayfasında token geçersizliğinin nedeninin kullanıcıya aktarılmaması gibi sorunlar test döngüsü içinde giderilmiş olsa da hata yönetiminin erken tasarım aşamasında sistematik biçimde ele alınması gerektiğini göstermiştir.
+
+Performans ve zaman temelli doğrulama kriterleri bu test döngüsünün kapsamı dışında kalmıştır. Rapor üretimi, PDF/Excel dışa aktarımı ve büyük veri setlerinde sayfalandırma gibi işlemler için yanıt süresi eşiği tanımlanmamış; yük altındaki sistem davranışı ölçülmemiştir. Bir sonraki sürümde performans test senaryolarının plana eklenmesi ve token süresinin simüle edilmesine ilişkin prosedürün belgelenmesi önerilmektedir.
 
 Sistem, tanımlanan test kriterleri çerçevesinde **üretime alınmaya hazır** durumdadır.
 
