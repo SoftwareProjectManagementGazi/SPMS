@@ -257,7 +257,10 @@ export function EditorPage({ project }: EditorPageProps) {
 
   const history = useEditorHistory()
   const cycleQuery = useCycleCounters(project.id)
-  const cycleMap: Map<string, number> = cycleQuery.data ?? new Map()
+  const cycleMap = React.useMemo(
+    () => cycleQuery.data ?? new Map<string, number>(),
+    [cycleQuery.data],
+  )
   const canvasControlsRef = React.useRef<CanvasControlsHandle | null>(null)
 
   // Phase 12 Plan 12-10 (Bug 2 UAT fix) — drag-history coalescing refs.
@@ -309,7 +312,10 @@ export function EditorPage({ project }: EditorPageProps) {
     queryFn: () => lifecycleService.getPhaseTransitions(project.id),
     enabled: !!project.id && mode === "lifecycle",
   })
-  const transitions: PhaseTransitionEntry[] = transitionsQuery.data ?? []
+  const transitions = React.useMemo(
+    () => transitionsQuery.data ?? ([] as PhaseTransitionEntry[]),
+    [transitionsQuery.data],
+  )
 
   // BFS-driven node states (EDIT-04 / EDIT-05). Memo dependency excludes
   // position fields — node coordinates do not affect reachability, so we
