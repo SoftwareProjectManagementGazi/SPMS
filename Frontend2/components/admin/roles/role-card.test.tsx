@@ -263,7 +263,7 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
     ).toBeInTheDocument()
   })
 
-  it("Case 6 — useAdminUsers called with {limit: 1000} (count source fix)", () => {
+  it("Case 6 — useAdminUsers called with {limit: 500} (count source fix)", () => {
     adminUsersStateRef.current = {
       data: { items: [], total: 0 },
       isLoading: false,
@@ -271,13 +271,12 @@ describe("AdminRolesPage (Plan 14-17 — count source + AlertBanner)", () => {
     }
     render(<AdminRolesPage />)
 
-    // The count fix bumps useAdminUsers from default-paginated to limit=1000
-    // so per-role counts cover the entire user table (defensive ceiling per
-    // Approach 1 in the plan).
+    // The count fix bumps useAdminUsers from default-paginated to limit=500
+    // (the backend hard cap) so per-role counts cover the entire user table.
     expect(useAdminUsersSpy).toHaveBeenCalled()
     const args = useAdminUsersSpy.mock.calls[0]
     expect(args).toBeDefined()
-    // First arg should be a filter object containing limit: 1000.
-    expect(args?.[0]).toMatchObject({ limit: 1000 })
+    // First arg should be a filter object containing limit: 500.
+    expect(args?.[0]).toMatchObject({ limit: 500 })
   })
 })

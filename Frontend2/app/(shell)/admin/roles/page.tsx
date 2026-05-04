@@ -22,13 +22,13 @@
 //
 //   A. Count source fix (Approach 1). The default useAdminUsers() returned
 //      the FIRST PAGE (~50 users), making per-role counts undercount past
-//      page 1. We now request `{limit: 1000}` so counts cover the full
-//      typical population. This is a defensive ceiling — past 1000 users
-//      counts truncate silently, which is why concern B is mandatory.
+//      page 1. We now request `{limit: 500}` (backend hard cap) so counts
+//      cover the full typical population. Past 500 users counts truncate
+//      silently, which is why concern B is mandatory.
 //
 //   B. MANDATORY truncation AlertBanner (N-3). When the response's `total`
-//      field exceeds 1000, render an AlertBanner WARNING that the per-role
-//      counts are based on the first 1000 users. Without this banner the
+//      field exceeds 500, render an AlertBanner WARNING that the per-role
+//      counts are based on the first 500 users. Without this banner the
 //      counts silently lie. v2.1 candidate: dedicated /admin/users/role-counts
 //      endpoint (Approach 2) bypasses the limit entirely.
 //
@@ -59,11 +59,11 @@ interface AdminUserShape {
 
 export default function AdminRolesPage() {
   const { language } = useApp()
-  // Plan 14-17 — limit=1000 defensive ceiling so per-role counts cover the
+  // Plan 14-17 — limit=500 (backend hard cap) so per-role counts cover the
   // full typical population (the default page size of ~50 was the gap that
   // produced UAT Test 19's "Kullanıcı: 0 / Kullanıcı: ?" symptoms). Past
-  // 1000 users the truncation AlertBanner kicks in (N-3 below).
-  const usersQ = useAdminUsers({ limit: 1000 })
+  // 500 users the truncation AlertBanner kicks in (N-3 below).
+  const usersQ = useAdminUsers({ limit: 500 })
 
   // Defensive shape extraction — useAdminUsers may return either the legacy
   // /auth/users array shape OR the Plan 14-03 /admin/users {items, total}
@@ -83,7 +83,7 @@ export default function AdminRolesPage() {
     if (Array.isArray(data)) return (data as unknown[]).length
     return (data as { total?: number } | undefined)?.total ?? 0
   }, [usersQ.data])
-  const isCountTruncated = totalUsers > 1000
+  const isCountTruncated = totalUsers > 500
 
   // Plan 14-17 — when isLoading we want RoleCard's em-dash fallback to
   // render. Passing `undefined` (instead of 0) makes the loading state
