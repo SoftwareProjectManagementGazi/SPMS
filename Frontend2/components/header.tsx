@@ -18,6 +18,7 @@ import { useApp } from "@/context/app-context"
 
 import { Breadcrumb } from "./breadcrumb"
 import { CreateButton } from "./header/create-button"
+import { NotificationBell } from "./shell/notification-bell"
 import { SearchAutocomplete } from "./header/search-autocomplete"
 import { AvatarDropdown } from "./shell/avatar-dropdown"
 
@@ -99,6 +100,9 @@ export function Header({ statusBadge }: HeaderProps) {
 
       {/* Primary Create action — Plan 11 D-07 opens Task Create Modal. */}
       <CreateButton />
+
+      {/* Notification bell — polls /notifications every 30s */}
+      <NotificationBell />
 
       <button
         onClick={() => app.setMode(app.mode === "light" ? "dark" : "light")}
