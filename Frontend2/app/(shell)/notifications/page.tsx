@@ -1,7 +1,7 @@
 "use client"
 
-import * as React from "react"
 import { Bell, Check, Trash2, X } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useApp } from "@/context/app-context"
 import { useNotifications } from "@/hooks/use-notifications"
 import type { NotificationItem } from "@/services/notification-service"
@@ -22,8 +22,20 @@ function timeAgo(dateStr: string, lang: string): string {
 
 export default function NotificationsPage() {
   const { language: lang } = useApp()
+  const router = useRouter()
   const { notifications, unreadCount, isLoading, markRead, markAllRead, deleteNotif, clearRead } =
     useNotifications()
+  const handleRowClick = (n: NotificationItem) => {
+    markRead(n.id)
+
+    if (!n.related_entity_id || n.type === "TASK_DELETED") return
+
+    if (n.related_entity_type === "project") {
+      router.push(`/projects/${n.related_entity_id}`)
+    } else if (n.related_entity_type === "task") {
+      router.push(`/tasks/${n.related_entity_id}`)
+    }
+  }
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px" }}>
@@ -130,90 +142,97 @@ export default function NotificationsPage() {
             overflow: "hidden",
           }}
         >
-          {notifications.map((n: NotificationItem, idx) => (
-            <div
-              key={n.id}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 12,
-                padding: "12px 16px",
-                borderBottom:
-                  idx < notifications.length - 1 ? "1px solid var(--border)" : "none",
-                background: n.is_read
-                  ? "var(--bg)"
-                  : "var(--bg-subtle, rgba(99,102,241,.04))",
-              }}
-            >
-              {/* Unread dot */}
+          {notifications.map((n: NotificationItem, idx) => {
+            const isClickable = !!n.related_entity_id && n.type !== "TASK_DELETED"
+            return (
               <div
+                key={n.id}
+                onClick={() => handleRowClick(n)}
                 style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: n.is_read
-                    ? "transparent"
-                    : "var(--accent, #6366f1)",
-                  flexShrink: 0,
-                  marginTop: 6,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  padding: "12px 16px",
+                  borderBottom:
+                    idx < notifications.length - 1 ? "1px solid var(--border)" : "none",
+                  background: n.is_read ? "var(--bg)" : "var(--bg-subtle, rgba(99,102,241,.04))",
+                  cursor: isClickable ? "pointer" : "default",
+                  transition: "background 0.1s",
                 }}
-              />
+                onMouseEnter={(e) => {
+                  if (isClickable) e.currentTarget.style.background = "var(--bg-subtle, rgba(0,0,0,.05))"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = n.is_read ? "var(--bg)" : "var(--bg-subtle, rgba(99,102,241,.04))"
+                }}
+              >
+                {/* Unread dot */}
+                <div style={{ flexShrink: 0, marginTop: 5 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: n.is_read ? "transparent" : "var(--accent, #6366f1)",
+                  }} />
+                </div>
 
-              {/* Message + time */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "var(--fg)",
-                    margin: "0 0 3px",
-                    lineHeight: 1.5,
-                    fontWeight: n.is_read ? 400 : 500,
-                  }}
-                >
-                  {n.message}
-                </p>
-                <span style={{ fontSize: 11, color: "var(--fg-muted)" }}>
-                  {timeAgo(n.created_at, lang)}
-                </span>
-              </div>
+                {/* Message + time */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "var(--fg)",
+                      margin: "0 0 3px",
+                      lineHeight: 1.5,
+                      fontWeight: n.is_read ? 400 : 500,
+                    }}
+                  >
+                    {n.message}
+                  </p>
+                  <span style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+                    {timeAgo(n.created_at, lang)}
+                  </span>
+                </div>
 
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                {!n.is_read && (
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {!n.is_read && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); markRead(n.id) }}
+                      title={lang === "tr" ? "Okundu işaretle" : "Mark as read"}
+                      style={{
+                        color: "var(--fg-muted)",
+                        padding: 4,
+                        borderRadius: "var(--radius-sm)",
+                        display: "inline-flex",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Check size={15} />
+                    </button>
+                  )}
                   <button
-                    onClick={() => markRead(n.id)}
-                    title={lang === "tr" ? "Okundu işaretle" : "Mark as read"}
+                    onClick={(e) => { e.stopPropagation(); deleteNotif(n.id) }}
+                    title={lang === "tr" ? "Sil" : "Delete"}
                     style={{
                       color: "var(--fg-muted)",
                       padding: 4,
                       borderRadius: "var(--radius-sm)",
                       display: "inline-flex",
                       background: "transparent",
+                      border: "none",
                       cursor: "pointer",
                     }}
                   >
-                    <Check size={15} />
+                    <X size={15} />
                   </button>
-                )}
-                <button
-                  onClick={() => deleteNotif(n.id)}
-                  title={lang === "tr" ? "Sil" : "Delete"}
-                  style={{
-                    color: "var(--fg-muted)",
-                    padding: 4,
-                    borderRadius: "var(--radius-sm)",
-                    display: "inline-flex",
-                    background: "transparent",
-                    cursor: "pointer",
-                  }}
-                >
-                  <X size={15} />
-                </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
+
     </div>
   )
 }

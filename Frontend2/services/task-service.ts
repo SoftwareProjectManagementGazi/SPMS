@@ -195,7 +195,11 @@ export const taskService = {
     return resp.data
   },
   create: async (dto: CreateTaskDTO): Promise<Task> => {
-    const resp = await apiClient.post<TaskResponseDTO>(`/tasks`, dto)
+    const payload = {
+      ...dto,
+      ...(dto.priority ? { priority: dto.priority.toUpperCase() } : {}),
+    }
+    const resp = await apiClient.post<TaskResponseDTO>(`/tasks`, payload)
     return mapTask(resp.data)
   },
   patchField: async (id: number, field: string, value: unknown): Promise<Task> => {
@@ -213,8 +217,11 @@ export const taskService = {
       cycle_id: "sprint_id",
     }
     const backendField = FIELD_MAP[field] ?? field
+    const backendValue = backendField === "priority" && typeof value === "string"
+      ? value.toUpperCase()
+      : value
     const resp = await apiClient.patch<TaskResponseDTO>(`/tasks/${id}`, {
-      [backendField]: value,
+      [backendField]: backendValue,
     })
     return mapTask(resp.data)
   },
