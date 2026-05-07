@@ -33,7 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authService.getCurrentUser()
         .then(setUser)
         .catch(() => {
-          // Token expired — interceptor will handle redirect on next API call
+          // Stale token from a previous session — clear it so the next page
+          // load doesn't fire a doomed /auth/me request.
+          localStorage.removeItem(AUTH_TOKEN_KEY)
+          document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          setToken(null)
         })
         .finally(() => setIsLoading(false))
     } else {
