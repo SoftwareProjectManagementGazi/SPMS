@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const resp = await authService.login({ email, password })
     localStorage.setItem(AUTH_TOKEN_KEY, resp.access_token)
     // D-03: set lightweight presence cookie for Next.js middleware
-    document.cookie = `auth_session=1; path=/; SameSite=Lax`
+    document.cookie = `auth_session=1; path=/; SameSite=Lax; max-age=28800` // 8 hours — must match ACCESS_TOKEN_EXPIRE_MINUTES
     setToken(resp.access_token)
     const me = await authService.getCurrentUser()
     setUser(me)
