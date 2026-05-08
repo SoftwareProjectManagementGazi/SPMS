@@ -20,10 +20,10 @@ export interface SprintCreateData {
 
 const sprintService = {
   list: (projectId: number): Promise<Sprint[]> =>
-    apiClient.get('/sprints', { params: { project_id: projectId } }).then(r => r.data),
+    apiClient.get('/sprints/', { params: { project_id: projectId } }).then(r => r.data),
 
   create: (data: SprintCreateData): Promise<Sprint> =>
-    apiClient.post('/sprints', data).then(r => r.data),
+    apiClient.post('/sprints/', data).then(r => r.data),
 
   update: (sprintId: number, data: Partial<Sprint>): Promise<Sprint> =>
     apiClient.patch(`/sprints/${sprintId}`, data).then(r => r.data),

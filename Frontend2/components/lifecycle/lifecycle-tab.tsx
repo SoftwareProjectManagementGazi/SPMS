@@ -45,6 +45,7 @@ import { OverviewSubTab } from "./overview-subtab"
 import { HistorySubTab } from "./history-subtab"
 import { MilestonesSubTab } from "./milestones-subtab"
 import { ArtifactsSubTab } from "./artifacts-subtab"
+import { SprintsSubTab } from "./sprints-subtab"
 import { WorkflowEmptyState } from "./workflow-empty-state"
 import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
 import { unmapWorkflowConfig } from "@/services/lifecycle-service"
@@ -247,7 +248,8 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
   // Sub-tab state. Default = Overview. The Kanban methodology hides
   // History + Artifacts per CONTEXT D-59. Milestones + Artifacts ship as
   // placeholders in Plan 12-04; Plan 12-05 + 12-06 land them.
-  type SubTabId = "overview" | "milestones" | "history" | "artifacts"
+  type SubTabId = "overview" | "milestones" | "history" | "artifacts" | "sprints"
+  const isScrum = project.methodology === "SCRUM"
   const [subTab, setSubTab] = React.useState<SubTabId>("overview")
   const isKanban =
     project.methodology === "KANBAN" || workflow?.mode === "continuous"
@@ -369,17 +371,19 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
             isKanban
               ? ([
                   { id: "overview", label: T("Genel Bakış", "Overview") },
-                  {
-                    id: "milestones",
-                    label: T("Kilometre Taşları", "Milestones"),
-                  },
+                  { id: "milestones", label: T("Kilometre Taşları", "Milestones") },
+                ] as TabItem[])
+              : isScrum
+              ? ([
+                  { id: "overview", label: T("Genel Bakış", "Overview") },
+                  { id: "sprints", label: T("Sprintler", "Sprints") },
+                  { id: "milestones", label: T("Kilometre Taşları", "Milestones") },
+                  { id: "history", label: T("Geçmiş", "History") },
+                  { id: "artifacts", label: T("Artefaktlar", "Artifacts") },
                 ] as TabItem[])
               : ([
                   { id: "overview", label: T("Genel Bakış", "Overview") },
-                  {
-                    id: "milestones",
-                    label: T("Kilometre Taşları", "Milestones"),
-                  },
+                  { id: "milestones", label: T("Kilometre Taşları", "Milestones") },
                   { id: "history", label: T("Geçmiş", "History") },
                   { id: "artifacts", label: T("Artefaktlar", "Artifacts") },
                 ] as TabItem[])
@@ -396,6 +400,9 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
               activePhase={activePhase}
               tasks={(rawTasks ?? []) as never}
             />
+          )}
+          {subTab === "sprints" && isScrum && (
+            <SprintsSubTab project={project} />
           )}
           {subTab === "milestones" && (
             <MilestonesSubTab project={project} workflow={workflow} />

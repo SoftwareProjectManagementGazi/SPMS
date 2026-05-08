@@ -29,6 +29,7 @@ import { useTaskModal } from "@/context/task-modal-context"
 import { useProjects } from "@/hooks/use-projects"
 import { useCreateTask, useTasks } from "@/hooks/use-tasks"
 import { useProjectLabels, useCreateLabel } from "@/hooks/use-labels"
+import { useSprints } from "@/hooks/use-sprints"
 import { useToast } from "@/components/toast"
 import { resolveCycleLabel, isCycleFieldEnabled } from "@/lib/methodology-matrix"
 
@@ -159,6 +160,9 @@ export function TaskCreateModal() {
   // Methodology-driven visibility for cycle + phase rows
   const cycleLabel = selectedProject ? resolveCycleLabel(selectedProject, lang) : null
   const cycleEnabled = selectedProject ? isCycleFieldEnabled(selectedProject.methodology) : false
+
+  // Sprint list — only fetched for SCRUM projects (cycleEnabled === true)
+  const { data: sprints = [] } = useSprints(cycleEnabled ? projectId : null)
   // cycleLabel === null means field is hidden entirely (Kanban per D-45)
   const showCycleField = cycleLabel !== null
   const phaseEnabled = !!(
@@ -585,7 +589,12 @@ export function TaskCreateModal() {
                   <option value="">
                     {lang === "tr" ? "Seçin…" : "Select…"}
                   </option>
-                  {/* Scrum sprint list wires in Plan 11-05 — ships empty here */}
+                  {sprints.map((sprint) => (
+                    <option key={sprint.id} value={sprint.id}>
+                      {sprint.name}
+                      {sprint.is_active ? (lang === "tr" ? " (Aktif)" : " (Active)") : ""}
+                    </option>
+                  ))}
                 </select>
               </ModalField>
             )}

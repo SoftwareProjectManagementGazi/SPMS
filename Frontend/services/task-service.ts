@@ -19,14 +19,14 @@ export interface TaskResponseDTO {
     due_date: string | null;
     points: number | null;
     is_recurring: boolean;
-    
+
     project_id: number;
     project?: {
         id: number;
         name: string;
         key: string;
     };
-    
+
     sprint_id: number | null;
     recurrence_interval: string | null;
     recurrence_end_date: string | null;
@@ -38,7 +38,7 @@ export interface TaskResponseDTO {
         email: string;
         username: string;
         avatar_url?: string;
-    } | null;   
+    } | null;
     reporter_id: number | null;
     parent_task_id: number | null;
 
@@ -71,6 +71,7 @@ export interface CreateTaskDTO {
     due_date?: string;
     points?: number;
     project_id: number;
+    sprint_id?: number;
     parent_task_id?: number;
     assignee_id?: number;
     column_id?: number; // Status yerine Column ID gönderiyoruz
@@ -107,7 +108,7 @@ const mapTaskResponseToParentTask = (data: TaskResponseDTO): ParentTask => {
         reporter: null, // İsteğe bağlı
         points: data.points || 0,
         projectId: data.project_id.toString(),
-        
+
         project: data.project ? {
             id: data.project.id.toString(),
             name: data.project.name,

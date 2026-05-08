@@ -23,12 +23,13 @@ import { cn } from "@/lib/utils"
 import { taskService, CreateTaskDTO } from "@/services/task-service"
 import { userService } from "@/services/user-service"
 import { projectService } from "@/services/project-service"
+import sprintService from "@/services/sprint-service"
 import { ParentTask, TaskPriority } from "@/lib/types"
 
 interface CreateTaskModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultProjectId?: string 
+  defaultProjectId?: string
 }
 
 const priorityColors: Record<string, string> = {
@@ -40,7 +41,7 @@ const priorityColors: Record<string, string> = {
 
 export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: CreateTaskModalProps) {
   const queryClient = useQueryClient()
-  
+
   // --- FORM STATE ---
   const [title, setTitle] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -56,6 +57,7 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
   const [assigneeId, setAssigneeId] = React.useState<string>("")
   const [parentTaskId, setParentTaskId] = React.useState<string>("")
   const [points, setPoints] = React.useState<string>("")
+  const [sprintId, setSprintId] = React.useState<string>("")
 
   // --- SIMILAR TASK WARNING ---
   const [similarTasks, setSimilarTasks] = React.useState<ParentTask[]>([])
@@ -83,13 +85,18 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
     }
   }, [])
 
+  // Reset sprint selection when project changes
+  React.useEffect(() => {
+    setSprintId("")
+  }, [selectedProjectId])
+
   // --- DATA FETCHING ---
-  
+
   // 1. Projeleri Çek
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
     queryFn: () => projectService.getAll(),
-    enabled: open 
+    enabled: open
   })
 
   // 2. Kullanıcıları Çek
@@ -104,6 +111,25 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
     queryKey: ['project-tasks', selectedProjectId],
     queryFn: () => taskService.getByProjectId(selectedProjectId),
     enabled: open && taskType === "sub-task" && !!selectedProjectId
+  })
+
+  // 4. Seçili projenin metodolojisini bul
+  const selectedProject = projects.find((p: any) => p.id.toString() === selectedProjectId)
+  const isScrum = selectedProject?.methodology?.toUpperCase() === "SCRUM"
+  // eslint-disable-next-line no-console
+  console.log('[CreateTaskModal] projectId:', selectedProjectId, 'methodology:', selectedProject?.methodology, 'isScrum:', isScrum)
+
+  // 5. Scrum projesiyse sprintleri çek
+  const { data: sprints = [], isLoading: isLoadingSprints, isError: isSprintError } = useQuery({
+    queryKey: ['sprints', selectedProjectId],
+    queryFn: () => {
+      // eslint-disable-next-line no-console
+      console.log('[CreateTaskModal] fetching sprints for project', selectedProjectId)
+      return sprintService.list(parseInt(selectedProjectId))
+    },
+    enabled: open && isScrum && !!selectedProjectId,
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
   // --- MUTATION ---
@@ -130,6 +156,7 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
     setAssigneeId("")
     setDueDate(undefined)
     setPoints("")
+    setSprintId("")
     setIsRecurring(false)
     setRecurrenceInterval('weekly')
     setEndCriteria('never')
@@ -155,7 +182,9 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
       description,
       priority,
       project_id: parseInt(selectedProjectId),
-      // Backend column_id gelmezse varsayılan olarak null kaydeder ve "todo" olarak gösterir.
+
+      // Sprint (Scrum projeleri için)
+      sprint_id: isScrum && sprintId && sprintId !== "0" ? parseInt(sprintId) : undefined,
 
       // Opsiyonel alanlar
       assignee_id: assigneeId && assigneeId !== "0" ? parseInt(assigneeId) : undefined,
@@ -185,8 +214,8 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Project</Label>
-              <Select 
-                value={selectedProjectId} 
+              <Select
+                value={selectedProjectId}
                 onValueChange={setSelectedProjectId}
                 disabled={!!defaultProjectId}
               >
@@ -219,6 +248,43 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
             </div>
           </div>
 
+          {/* Sprint Selection — only visible for Scrum projects */}
+          {isScrum && selectedProjectId && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+              <Label className="text-blue-600">Sprint</Label>
+              <Select
+                value={sprintId}
+                onValueChange={setSprintId}
+                disabled={isLoadingSprints}
+              >
+                <SelectTrigger className="border-blue-200 bg-blue-50">
+                  <SelectValue placeholder={isLoadingSprints ? "Loading sprints..." : "Select sprint (optional)"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">No sprint (Backlog)</SelectItem>
+                  {sprints.map((sprint: any) => (
+                    <SelectItem key={sprint.id} value={sprint.id.toString()}>
+                      {sprint.name}
+                      {sprint.is_active && (
+                        <Badge className="ml-2 text-xs bg-green-500 text-white">Active</Badge>
+                      )}
+                    </SelectItem>
+                  ))}
+                  {isSprintError && (
+                    <div className="p-2 text-sm text-red-500 text-center">
+                      Sprint yüklenemedi — lütfen sayfayı yenileyin
+                    </div>
+                  )}
+                  {!isLoadingSprints && !isSprintError && sprints.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No sprints found for this project
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Main Info */}
           <div className="space-y-2">
             <Label>Title</Label>
@@ -239,7 +305,7 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
                          className="underline font-mono text-xs">{t.key ?? t.id}</a>
                       {' — '}{t.title}
                       <a href={`/tasks/${t.id}`} target="_blank" rel="noreferrer"
-                         className="ml-1 underline text-xs">View ↗</a>
+                         className="ml-1 underline text-xs">View</a>
                     </span>
                   ))}
                 </div>
@@ -249,8 +315,8 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
 
           <div className="space-y-2">
             <Label>Description</Label>
-            <Textarea 
-              placeholder="Describe the task in detail..." 
+            <Textarea
+              placeholder="Describe the task in detail..."
               className="min-h-[100px] resize-none"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -350,10 +416,10 @@ export function CreateTaskModal({ open, onOpenChange, defaultProjectId }: Create
 
             <div className="space-y-2">
               <Label>Points</Label>
-              <Input 
-                type="number" 
-                placeholder="0" 
-                min={0} 
+              <Input
+                type="number"
+                placeholder="0"
+                min={0}
                 max={100}
                 value={points}
                 onChange={(e) => setPoints(e.target.value)}

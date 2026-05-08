@@ -38,10 +38,11 @@ function useCurrentCycle(projectId: number, methodology: string) {
     queryKey: ["sprints", "current", projectId],
     queryFn: async () => {
       try {
-        const resp = await apiClient.get<CurrentCycleDTO[]>("/sprints", {
-          params: { project_id: projectId, current: true },
+        const resp = await apiClient.get<CurrentCycleDTO[]>("/sprints/", {
+          params: { project_id: projectId },
         })
-        return resp.data[0] ?? null
+        // Prefer the active sprint; fall back to the last one if none is active
+        return resp.data.find((s) => s.is_active) ?? resp.data[resp.data.length - 1] ?? null
       } catch {
         // A 404/500 on a missing sprints endpoint should NOT break the toolbar.
         return null
