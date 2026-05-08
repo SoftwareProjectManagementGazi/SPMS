@@ -1,15 +1,8 @@
 "use client"
 
-// Members tab — Phase 11 ships a minimal Manager + info-row stub.
-//
-// The full member list requires a dedicated `GET /api/v1/projects/{id}/members`
-// endpoint which is not yet implemented (per plan 11-04: "Additional members
-// require GET /api/v1/projects/{id}/members (Phase 12+)."). Until that lands,
-// this tab surfaces the project manager from the existing project DTO plus a
-// helpful message so the 8-tab shell has a non-empty Members slot.
-
 import { Avatar, Badge, Card, Section } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useProjectMembers } from "@/hooks/use-projects"
 import type { Project } from "@/services/project-service"
 
 /**
@@ -24,13 +17,20 @@ function deriveInitials(name: string | null | undefined): string {
   return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase()
 }
 
+// Avatar colour index cycles through the palette (1–8) by member list position
+// so each member gets a distinct colour without storing preferences.
+function avatarColor(index: number): number {
+  return (index % 8) + 1
+}
+
 export function MembersTab({ project }: { project: Project }) {
   const { language: lang } = useApp()
-  const managerName = project.managerName ?? (project.managerId ? `#${project.managerId}` : null)
+  const { data: members = [], isLoading, isError } = useProjectMembers(project.id)
 
   return (
     <Section title={lang === "tr" ? "Üyeler" : "Members"}>
       <Card padding={0}>
+        {/* Header row */}
         <div
           style={{
             padding: "12px 16px",
@@ -42,61 +42,98 @@ export function MembersTab({ project }: { project: Project }) {
             textTransform: "uppercase",
           }}
         >
-          {lang === "tr" ? "PROJE YÖNETİCİSİ" : "PROJECT MANAGER"}
+          {lang === "tr"
+            ? `PROJE ÜYELERİ · ${members.length}`
+            : `PROJECT MEMBERS · ${members.length}`}
         </div>
 
-        {managerName ? (
-          <div
-            style={{
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <Avatar
-              user={{ initials: deriveInitials(managerName), avColor: 1 }}
-              size={28}
-              // Phase 13 Plan 13-03 (D-D4) — manager avatar links to profile.
-              href={project.managerId != null ? `/users/${project.managerId}` : undefined}
-            />
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
-                {managerName}
-              </div>
-              <div>
-                <Badge size="xs" tone="info">
-                  {lang === "tr" ? "Yönetici" : "Manager"}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        ) : (
+        {/* Loading state */}
+        {isLoading && (
           <div
             style={{
               padding: 20,
-              color: "var(--fg-subtle)",
+              color: "var(--fg-muted)",
               fontSize: 12,
               textAlign: "center",
             }}
           >
-            {lang === "tr" ? "Yönetici atanmamış" : "No manager assigned"}
+            {lang === "tr" ? "Yükleniyor..." : "Loading..."}
           </div>
         )}
 
-        <div
-          style={{
-            padding: "12px 16px",
-            fontSize: 11.5,
-            color: "var(--fg-muted)",
-            borderTop: "1px solid var(--border)",
-            lineHeight: 1.5,
-          }}
-        >
-          {lang === "tr"
-            ? "Ek üyeler için GET /api/v1/projects/{id}/members uç noktası Faz 12+ kapsamında."
-            : "Additional members require GET /api/v1/projects/{id}/members (Phase 12+)."}
-        </div>
+        {/* Error state */}
+        {isError && !isLoading && (
+          <div
+            style={{
+              padding: 20,
+              color: "var(--fg-muted)",
+              fontSize: 12,
+              textAlign: "center",
+            }}
+          >
+            {lang === "tr"
+              ? "Üyeler yüklenemedi."
+              : "Could not load members."}
+          </div>
+        )}
+
+        {/* Member list */}
+        {!isLoading && !isError && members.length === 0 && (
+          <div
+            style={{
+              padding: 20,
+              color: "var(--fg-muted)",
+              fontSize: 12,
+              textAlign: "center",
+            }}
+          >
+            {lang === "tr" ? "Bu projede henüz üye yok." : "No members in this project yet."}
+          </div>
+        )}
+
+        {!isLoading &&
+          !isError &&
+          members.map((member, index) => {
+            const isManager = member.roleName?.toLowerCase() === "manager" ||
+              member.id === project.managerId
+
+            return (
+              <div
+                key={member.id}
+                style={{
+                  padding: "10px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  borderBottom:
+                    index < members.length - 1
+                      ? "1px solid var(--border)"
+                      : undefined,
+                }}
+              >
+                <Avatar
+                  user={{
+                    initials: deriveInitials(member.fullName),
+                    avColor: avatarColor(index),
+                  }}
+                  size={28}
+                  href={`/users/${member.id}`}
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
+                    {member.fullName}
+                  </div>
+                  <div>
+                    <Badge size="xs" tone={isManager ? "info" : "neutral"}>
+                      {isManager
+                        ? lang === "tr" ? "Yönetici" : "Manager"
+                        : member.roleName || (lang === "tr" ? "Üye" : "Member")}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
       </Card>
     </Section>
   )
