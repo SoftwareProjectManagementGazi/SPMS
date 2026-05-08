@@ -25,7 +25,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
     # 1. Status Hesaplama
     status_slug = "todo"
     if task.column:
-        status_slug = task.column.name.lower().replace(" ", "-")
+        status_slug = task.column.name.lower()
     
     # 2. Project Key (Key oluşturmak için gerekli)
     project_key = "TASK"
@@ -37,7 +37,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
     if task.parent:
         p_status = "todo"
         if task.parent.column:
-            p_status = task.parent.column.name.lower().replace(" ", "-")
+            p_status = task.parent.column.name.lower()
 
         # Parent'ın projesi farklı olabilir mi? Genelde hayır ama kontrol etmekte fayda var
         p_key_prefix = task.parent.project.key if task.parent.project else project_key
@@ -58,7 +58,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
         for sub in task.subtasks:
             s_status = "todo"
             if sub.column:
-                s_status = sub.column.name.lower().replace(" ", "-")
+                s_status = sub.column.name.lower()
             sub_key = sub.task_key if sub.task_key else f"{project_key}-{sub.id}"
             sub_task_dtos.append(SubTaskSummaryDTO(
                 id=sub.id,

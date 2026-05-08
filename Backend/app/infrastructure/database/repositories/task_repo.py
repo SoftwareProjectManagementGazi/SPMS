@@ -94,7 +94,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                     id=sub.id,
                     title=sub.title,
                     priority=sub.priority,
-                    status=sub.column.name.lower().replace(" ", "-") if sub.column else "todo",
+                    status=sub.column.name.lower() if sub.column else "todo",
                     project_id=sub.project_id,
                     column=sub.column,
                     assignee=sub.assignee,

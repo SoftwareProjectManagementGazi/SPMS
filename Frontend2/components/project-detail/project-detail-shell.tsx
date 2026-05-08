@@ -151,12 +151,23 @@ export function ProjectDetailShell({
   // another different column id": source !== target so `moved: true`.
   const handleDropped = React.useCallback(
     (taskId: number, sourceColumnId: string, targetColumnId: string) => {
-      // Target column name lookup is case-insensitive — status strings in the
-      // task DTO may diverge slightly from column.name casing (matches the
-      // BoardTab fallback behaviour).
+      // Target column lookup — case-insensitive. Primary source: dedicated
+      // /columns query (has wip_limit + task_count). Fallback: project.boardColumns
+      // (join-loaded with the project response) for projects whose /columns query
+      // hasn't populated yet or where the board_columns table was seeded via the
+      // project create path rather than the columns endpoint.
       const targetCol = columns.find(
         (c) => c.name.toLowerCase() === targetColumnId.toLowerCase()
-      )
+      ) ?? (() => {
+        const bc = project.boardColumns.find(
+          (c) => c.name.toLowerCase() === targetColumnId.toLowerCase()
+        )
+        if (!bc || bc.id === 0) return undefined
+        // Synthesize a minimal ColumnMetaDTO — wip_limit unknown here so WIP
+        // check is skipped (no warning shown, drop still succeeds per D-20).
+        return { id: bc.id, name: bc.name, order_index: 0, wip_limit: 0, task_count: 0 }
+      })()
+
       const currentCount = currentTasks.filter(
         (t) => (t.status ?? "").toLowerCase() === targetColumnId.toLowerCase()
       ).length
@@ -174,6 +185,12 @@ export function ProjectDetailShell({
       })
       if (!result.moved) return
 
+      if (!targetCol) {
+        // Column ID is unknown — board_columns not seeded for this project.
+        // Cannot send a valid column_id to the backend; skip silently.
+        return
+      }
+
       if (result.wipExceeded) {
         showToast({
           variant: "warning",
@@ -184,7 +201,10 @@ export function ProjectDetailShell({
         })
       }
 
-      moveTask.mutate({ id: taskId, status: targetColumnId.toLowerCase() })
+      // Send column_id (integer FK) — TaskUpdateDTO has no `status` field so
+      // sending a status string is silently ignored by the backend. The optimistic
+      // `status` string is used for immediate board re-grouping only.
+      moveTask.mutate({ id: taskId, columnId: targetCol.id, status: targetColumnId.toLowerCase() })
 
       // Cross-container invalidation (Plan 11-06): when the drop source was
       // the backlog, the move changes status which may no longer match the
@@ -194,7 +214,7 @@ export function ProjectDetailShell({
       // invalidate it explicitly here to refetch the backlog list.
       qc.invalidateQueries({ queryKey: ["tasks", "backlog", project.id] })
     },
-    [columns, currentTasks, moveTask, showToast, lang, qc, project.id]
+    [columns, currentTasks, moveTask, showToast, lang, qc, project.id, project.boardColumns]
   )
 
   const renderGhost = React.useCallback(

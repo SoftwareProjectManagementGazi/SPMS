@@ -114,13 +114,17 @@ export function useChangeTaskStatus() {
 }
 
 /**
- * Board drag-drop status change. Optimistic on both project task list + single task.
+ * Board drag-drop status change. Sends column_id (integer FK) which is what
+ * TaskUpdateDTO expects — sending `status` (string) is silently ignored by
+ * the backend because TaskUpdateDTO has no such field. Optimistic update uses
+ * the status string for immediate board re-grouping; the settled invalidation
+ * will re-fetch the authoritative value from the backend.
  */
 export function useMoveTask(projectId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      taskService.patchField(id, "status", status),
+    mutationFn: ({ id, columnId }: { id: number; columnId: number; status: string }) =>
+      taskService.patchField(id, "column_id", columnId),
     onMutate: async ({ id, status }) => {
       const key = ["tasks", "project", projectId] as const
       await qc.cancelQueries({ queryKey: key })
@@ -130,8 +134,10 @@ export function useMoveTask(projectId: number) {
       })
       return { prev }
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
       ctx?.prev?.forEach(([k, data]) => qc.setQueryData(k, data))
+      // Log so network errors surface in the browser console during debugging.
+      console.error("[useMoveTask] PATCH failed:", err)
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["tasks", "project", projectId] })

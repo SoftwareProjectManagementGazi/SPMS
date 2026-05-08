@@ -115,11 +115,14 @@ function normalizePriority(raw: unknown): Task["priority"] {
 
 function normalizeStatus(raw: unknown): string {
   const s = String(raw ?? "").toLowerCase()
-  // Map backend's "in_progress" to the prototype's "progress" token used by
-  // StatusDot / dueBucket comparisons. Other unknown values pass through
-  // lowercased so consumers can decide how to treat them.
-  if (s === "in_progress") return "progress"
-  return s
+  // Map backend's underscore/hyphen variants for the built-in TaskStatus enum
+  // values ("IN_PROGRESS", "in_progress") to the "progress" token that
+  // StatusDot / dueBucket compare against.
+  if (s === "in_progress" || s === "in-progress") return "progress"
+  // Backend used to slugify column names with hyphens ("To Do" → "to-do").
+  // The board groups tasks by matching t.status against column name lowercased
+  // (space preserved). Strip hyphens → spaces so the two sides always agree.
+  return s.replace(/-/g, " ")
 }
 
 function mapTask(d: TaskResponseDTO): Task {
