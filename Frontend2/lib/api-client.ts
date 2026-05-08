@@ -40,12 +40,17 @@ const AUTH_FREE_URL_SUFFIXES = ['/auth/login', '/auth/password-reset'];
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url ?? '';
+
+    // Determine auth-free context once so both the redirect guard and the
+    // log-suppression check below can reference it without re-computing.
+    let onAuthFreePath = false;
+    if (status === 401 && typeof window !== 'undefined') {
       const pathname = window.location.pathname;
-      const onAuthFreePath = AUTH_FREE_PATHS.some(
+      onAuthFreePath = AUTH_FREE_PATHS.some(
         (p) => pathname === p || pathname.startsWith(p + '/')
       );
-      const requestUrl = error.config?.url ?? '';
       const isAuthFreeUrl = AUTH_FREE_URL_SUFFIXES.some((u) =>
         requestUrl.endsWith(u)
       );
@@ -71,13 +76,21 @@ apiClient.interceptors.response.use(
     // console for any non-admin user opening the dashboard. The opt-in
     // model keeps the noisy default for surprises (real bugs) while letting
     // known-benign expected failures stay quiet.
+    //
+    // Session-init probe: AuthProvider calls /auth/me on mount to validate a
+    // token that may have expired since the last session. A 401 here on an
+    // auth-free page (/login, /session-expired, etc.) is fully expected —
+    // the catch block in auth-context.tsx already handles it by clearing the
+    // stale token. Logging it as an error is misleading noise.
     const expectedCodes: number[] | undefined =
       error.config?.expectedFailureCodes;
-    const status = error.response?.status;
+    const isSessionProbe401 =
+      status === 401 && requestUrl.endsWith('/auth/me') && onAuthFreePath;
     const isExpected =
-      Array.isArray(expectedCodes) &&
-      typeof status === 'number' &&
-      expectedCodes.includes(status);
+      isSessionProbe401 ||
+      (Array.isArray(expectedCodes) &&
+        typeof status === 'number' &&
+        expectedCodes.includes(status));
 
     if (!isExpected) {
       console.error('API Error:', error.response?.data || error.message);
