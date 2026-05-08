@@ -33,6 +33,7 @@ class TaskModel(TimestampedMixin, Base):
     task_key = Column(String(20), nullable=True, index=True)
     series_id = Column(String(36), nullable=True)
 
+    start_date = Column(DateTime(timezone=True), nullable=True)
     due_date = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # updated_at provided by TimestampedMixin

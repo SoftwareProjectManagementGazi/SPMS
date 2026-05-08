@@ -22,9 +22,9 @@ class ProjectSummaryDTO(BaseModel):
 class UserSummaryDTO(BaseModel):
     id: int
     email: str
-    username: str 
+    username: str
     avatar_url: Optional[str] = None
-    model_config = ConfigDict(from_attributes=True)    
+    model_config = ConfigDict(from_attributes=True)
 
 class ParentTaskSummaryDTO(BaseModel):
     id: int
@@ -48,6 +48,7 @@ class TaskCreateDTO(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[TaskPriority] = TaskPriority.MEDIUM
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool = False
@@ -65,6 +66,7 @@ class TaskUpdateDTO(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[TaskPriority] = None
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: Optional[bool] = None
@@ -80,14 +82,15 @@ class TaskResponseDTO(BaseModel):
     description: Optional[str] = None
     priority: TaskPriority
     status: str = "todo"  # Computed by UseCase from column name; default avoids validation errors when model_validate is called directly on Task entities
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool
     task_key: Optional[str] = None
-    
+
     project_id: int
     project: Optional[ProjectSummaryDTO] = None
-    
+
     sprint_id: Optional[int] = None
     column_id: Optional[int] = None
     assignee_id: Optional[int] = None
@@ -101,7 +104,7 @@ class TaskResponseDTO(BaseModel):
 
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
     # compute_data validatörü TAMAMEN SİLİNDİ.

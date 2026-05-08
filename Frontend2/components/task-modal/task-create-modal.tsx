@@ -134,6 +134,7 @@ export function TaskCreateModal() {
   const [description, setDescription] = React.useState("")
   const [priority, setPriority] = React.useState<Priority>("medium")
   const [assigneeId, setAssigneeId] = React.useState<number | null>(null)
+  const [startDate, setStartDate] = React.useState("")
   const [dueDate, setDueDate] = React.useState("")
   const [cycleId, setCycleId] = React.useState<number | null>(null)
   const [phaseId, setPhaseId] = React.useState<string | null>(null)
@@ -178,6 +179,7 @@ export function TaskCreateModal() {
     setDescription("")
     setPriority("medium")
     setAssigneeId(null)
+    setStartDate("")
     setDueDate("")
     setCycleId(null)
     setPhaseId(null)
@@ -212,6 +214,7 @@ export function TaskCreateModal() {
         cycle_id: showCycleField && cycleEnabled ? cycleId : null,
         phase_id: phaseEnabled ? phaseId : null,
         points: points ? Number(points) : null,
+        start_date: startDate || null,
         due: dueDate || null,
         type: taskType,
         label_ids: selectedLabels,
@@ -257,6 +260,7 @@ export function TaskCreateModal() {
     phaseEnabled,
     phaseId,
     points,
+    startDate,
     dueDate,
     selectedLabels,
     recurringOn,
@@ -480,7 +484,7 @@ export function TaskCreateModal() {
             />
           </ModalField>
 
-          {/* 2-column grid: Priority / Due / Assignee / Cycle / Points / Phase */}
+          {/* 2-column grid: Priority / Start Date / Due Date / Assignee / Cycle / Points / Phase */}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
@@ -504,15 +508,6 @@ export function TaskCreateModal() {
                   {lang === "tr" ? "Kritik" : "Critical"}
                 </option>
               </select>
-            </ModalField>
-
-            <ModalField label={lang === "tr" ? "Bitiş Tarihi" : "Due Date"}>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                style={inputStyle}
-              />
             </ModalField>
 
             <ModalField label={lang === "tr" ? "Atanan Kişi" : "Assignee"}>
@@ -541,6 +536,24 @@ export function TaskCreateModal() {
                     <option value={user.id}>{user.name}</option>
                   )}
               </select>
+            </ModalField>
+
+            <ModalField label={lang === "tr" ? "Başlangıç Tarihi" : "Start Date"}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={inputStyle}
+              />
+            </ModalField>
+
+            <ModalField label={lang === "tr" ? "Bitiş Tarihi" : "Due Date"}>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                style={inputStyle}
+              />
             </ModalField>
 
             {/* Cycle — hidden entirely for Kanban (D-45);

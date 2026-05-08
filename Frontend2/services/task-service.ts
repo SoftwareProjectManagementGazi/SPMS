@@ -56,7 +56,9 @@ interface TaskResponseDTO {
   cycle_id: number | null
   phase_id: string | null
   points: number | null
-  start: string | null
+  /** Backend ships start_date (added in migration 007). Optional for backward
+   *  compat with older API responses that predate the column. */
+  start_date?: string | null
   /** Same backend rename as task_key — was `due`, current DTO ships
    *  `due_date`. Both supported for safe fall-through. */
   due?: string | null
@@ -92,8 +94,8 @@ export interface CreateTaskDTO {
   cycle_id?: number | null
   phase_id?: string | null
   points?: number | null
+  start_date?: string | null
   due?: string | null
-  start?: string | null
   type?: "task" | "subtask" | "bug"
   label_ids?: number[]
   recurring?: { frequency: string; end: string | number } | null
@@ -147,7 +149,9 @@ function mapTask(d: TaskResponseDTO): Task {
     cycleId: d.cycle_id,
     phaseId: d.phase_id,
     points: d.points,
-    start: d.start,
+    // Backend ships start_date (migration 007). Fall back to null for older
+    // API responses that predate the column.
+    start: d.start_date ?? null,
     // Same fallback pattern as task_key: backend renamed `due` -> `due_date`.
     due: d.due_date ?? d.due ?? null,
     labels: d.labels ?? [],
@@ -198,8 +202,12 @@ export const taskService = {
     return resp.data
   },
   create: async (dto: CreateTaskDTO): Promise<Task> => {
+    // Map frontend CreateTaskDTO to backend field names.
+    // `due` → `due_date`, `start_date` passes through directly.
+    const { due, ...rest } = dto
     const payload = {
-      ...dto,
+      ...rest,
+      due_date: due ?? null,
       ...(dto.priority ? { priority: dto.priority.toUpperCase() } : {}),
     }
     const resp = await apiClient.post<TaskResponseDTO>(`/tasks`, payload)

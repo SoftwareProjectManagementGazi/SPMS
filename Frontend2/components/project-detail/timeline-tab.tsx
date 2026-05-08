@@ -104,15 +104,17 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
     return m
   }, [project.processConfig])
 
-  // Filter to scheduled tasks (both start + due) and sort by start ascending.
+  // Filter to tasks with a due date; tasks without an explicit start_date fall
+  // back to createdAt so existing tasks appear even before start_date is set.
   const scheduled = React.useMemo(
     () =>
       tasks
-        .filter((t) => t.start && t.due)
+        .filter((t) => t.due)
+        .map((t) => ({ ...t, effectiveStart: t.start ?? t.createdAt }))
         .sort(
           (a, b) =>
-            new Date(a.start as string).getTime() -
-            new Date(b.start as string).getTime()
+            new Date(a.effectiveStart).getTime() -
+            new Date(b.effectiveStart).getTime()
         ),
     [tasks]
   )
@@ -123,7 +125,7 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
     if (scheduled.length === 0) {
       return { min: new Date(), totalDays: 0 }
     }
-    const starts = scheduled.map((t) => new Date(t.start as string).getTime())
+    const starts = scheduled.map((t) => new Date(t.effectiveStart).getTime())
     const ends = scheduled.map((t) => new Date(t.due as string).getTime())
     const minT = Math.min(...starts)
     const maxT = Math.max(...ends)
@@ -145,8 +147,8 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
         }}
       >
         {language === "tr"
-          ? "Zaman çizelgesinde görüntülenecek görev yok (başlangıç ve bitiş tarihi olan görevler listelenir)."
-          : "No tasks to display on the timeline (tasks need both start and due dates)."}
+          ? "Zaman çizelgesinde görüntülenecek görev yok (bitiş tarihi olan görevler listelenir)."
+          : "No tasks to display on the timeline (tasks need a due date)."}
       </div>
     )
   }
@@ -258,7 +260,7 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
           {scheduled.map((t, i) => {
             const rowY = HEADER_HEIGHT + i * ROW_HEIGHT
             const startDay =
-              (new Date(t.start as string).getTime() - min.getTime()) /
+              (new Date(t.effectiveStart).getTime() - min.getTime()) /
               MS_PER_DAY
             const endDay =
               (new Date(t.due as string).getTime() - min.getTime()) /

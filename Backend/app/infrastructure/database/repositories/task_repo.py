@@ -49,6 +49,7 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             "title": model.title,
             "description": model.description,
             "priority": model.priority,
+            "start_date": model.start_date,
             "due_date": model.due_date,
             "points": model.points,
             "is_recurring": model.is_recurring,

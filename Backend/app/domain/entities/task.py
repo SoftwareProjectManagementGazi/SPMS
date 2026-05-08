@@ -29,6 +29,7 @@ class Task(BaseModel):
     title: str
     description: Optional[str] = None
     priority: TaskPriority = TaskPriority.MEDIUM
+    start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     points: Optional[int] = None
     is_recurring: bool = False
@@ -45,17 +46,17 @@ class Task(BaseModel):
     assignee_id: Optional[int] = None
     reporter_id: Optional[int] = None
     parent_task_id: Optional[int] = None
-    
+
     # --- İLİŞKİSEL ALANLAR ---
-    parent: Optional['Task'] = None 
-    
+    parent: Optional['Task'] = None
+
     # EKSİK ALAN 1: Subtasks (Alt Görevler)
     # Repository'de manuel mapping ile dolduruyoruz, burada tanımlı olmalı.
     subtasks: List['Task'] = Field(default_factory=list)
 
-    column: Optional[BoardColumn] = None 
+    column: Optional[BoardColumn] = None
     project: Optional[Project] = None
-    
+
     # EKSİK ALAN 2: Assignee (Atanan Kişi)
     # Repository'de "assignee": model.assignee ile gönderiyoruz.
     assignee: Optional[User] = None

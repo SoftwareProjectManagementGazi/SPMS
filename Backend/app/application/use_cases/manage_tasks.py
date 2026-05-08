@@ -26,7 +26,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
     status_slug = "todo"
     if task.column:
         status_slug = task.column.name.lower()
-    
+
     # 2. Project Key (Key oluşturmak için gerekli)
     project_key = "TASK"
     if task.project:
@@ -74,9 +74,9 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
             id=task.assignee.id,
             email=task.assignee.email,
             # Entity'de full_name var ama DTO'da username dediysek burada çeviriyoruz
-            username=task.assignee.full_name, 
+            username=task.assignee.full_name,
             avatar_url=task.assignee.avatar
-        )        
+        )
 
     # 5. Project Summary
     project_summary = None
@@ -93,6 +93,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
         description=task.description,
         priority=task.priority,
         status=status_slug,
+        start_date=task.start_date,
         due_date=task.due_date,
         points=task.points,
         is_recurring=task.is_recurring,
@@ -156,7 +157,7 @@ class GetTaskUseCase:
         task = await self.task_repo.get_by_id(task_id)
         if not task:
             raise TaskNotFoundError(f"Task with id {task_id} not found")
-        
+
         # Yeni mapper fonksiyonunu kullanıyoruz
         return map_task_to_response_dto(task)
 
