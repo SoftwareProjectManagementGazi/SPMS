@@ -15,7 +15,7 @@ from app.application.use_cases.manage_teams import (
 from app.application.dtos.team_dtos import TeamCreateDTO, TeamResponseDTO, TeamMemberDTO, TeamLeaderUpdateDTO
 from app.application.dtos.auth_dtos import UserListDTO
 from app.api.dependencies import get_current_user, get_user_repo, get_team_repo
-from app.api.deps.auth import require_admin
+from app.api.deps.auth import require_admin, require_admin_or_project_manager
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -46,7 +46,7 @@ async def list_my_teams(
 @router.post("", response_model=TeamResponseDTO, status_code=201)
 async def create_team(
     dto: TeamCreateDTO,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin_or_project_manager),
     team_repo: ITeamRepository = Depends(get_team_repo),
 ):
     use_case = CreateTeamUseCase(team_repo)

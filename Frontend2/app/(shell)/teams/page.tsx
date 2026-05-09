@@ -25,6 +25,9 @@ export default function TeamsPage() {
   const { user } = useAuth()
   const T = (tr: string, en: string) => (lang === "tr" ? tr : en)
 
+  const userRole = user?.role?.name?.toLowerCase() ?? ""
+  const canCreateTeam = userRole === "admin" || userRole === "project manager"
+
   const [teams, setTeams] = React.useState<Team[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
@@ -110,18 +113,20 @@ export default function TeamsPage() {
             {T("Takımlarını yönet ve üyelerle iş birliği yap.", "Manage your teams and collaborate with members.")}
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={showCreateForm ? <X size={14} /> : <Plus size={14} />}
-          onClick={() => (showCreateForm ? cancelCreate() : setShowCreateForm(true))}
-        >
-          {showCreateForm ? T("İptal", "Cancel") : T("Takım Oluştur", "Create Team")}
-        </Button>
+        {canCreateTeam && (
+          <Button
+            variant="primary"
+            size="sm"
+            icon={showCreateForm ? <X size={14} /> : <Plus size={14} />}
+            onClick={() => (showCreateForm ? cancelCreate() : setShowCreateForm(true))}
+          >
+            {showCreateForm ? T("İptal", "Cancel") : T("Takım Oluştur", "Create Team")}
+          </Button>
+        )}
       </div>
 
       {/* Create form */}
-      {showCreateForm && (
+      {canCreateTeam && showCreateForm && (
         <div
           style={{
             border: "1px solid var(--border)",
@@ -202,9 +207,11 @@ export default function TeamsPage() {
             <p style={{ fontSize: 13, color: "var(--fg-muted)", marginBottom: 16 }}>
               {T("Herhangi bir takımda değilsin. İlk takımını oluştur.", "You're not in any teams yet. Create your first team.")}
             </p>
-            <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowCreateForm(true)}>
-              {T("Takım Oluştur", "Create Team")}
-            </Button>
+            {canCreateTeam && (
+              <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowCreateForm(true)}>
+                {T("Takım Oluştur", "Create Team")}
+              </Button>
+            )}
           </div>
         }
       >

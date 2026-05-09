@@ -50,6 +50,13 @@ def _is_admin(user: User) -> bool:
     )
 
 
+def _is_project_manager(user: User) -> bool:
+    return (
+        user.role is not None
+        and user.role.name.lower() == "project manager"
+    )
+
+
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Raises HTTP 403 if the current user is not an admin."""
     if not _is_admin(current_user):
@@ -60,7 +67,23 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-__all__ = ["oauth2_scheme", "get_db", "get_current_user", "_is_admin", "require_admin"]
+async def require_admin_or_project_manager(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Raises HTTP 403 if the user is neither admin nor project manager."""
+    if not (_is_admin(current_user) or _is_project_manager(current_user)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or Project Manager role required",
+        )
+    return current_user
+
+
+__all__ = [
+    "oauth2_scheme", "get_db", "get_current_user",
+    "_is_admin", "_is_project_manager",
+    "require_admin", "require_admin_or_project_manager",
+]
 
 
 # ---------------------------------------------------------------------------
