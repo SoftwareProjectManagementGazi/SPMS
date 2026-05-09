@@ -3,16 +3,56 @@ from app.domain.entities.team import Team
 from app.domain.entities.user import User
 from app.domain.repositories.team_repository import ITeamRepository
 from app.domain.repositories.user_repository import IUserRepository
-from app.application.dtos.team_dtos import TeamCreateDTO, TeamResponseDTO
+from app.application.dtos.team_dtos import TeamCreateDTO, TeamUpdateDTO, TeamResponseDTO
 from fastapi import HTTPException
 
 
 class CreateTeamUseCase:
+    def __init__(self, team_repo: ITeamRepository, user_repo: Optional[IUserRepository] = None):
+        self._team_repo = team_repo
+        self._user_repo = user_repo
+
+    async def execute(self, current_user: User, dto: TeamCreateDTO) -> Team:
+        team = await self._team_repo.create(
+            name=dto.name,
+            description=dto.description,
+            owner_id=current_user.id,
+            color=dto.color or "#3b82f6",
+            department=dto.department,
+            leader_id=dto.leader_id,
+        )
+        # Opsiyonel: oluşturma anında gelen üyeleri ekle (owner zaten dahil)
+        for uid in (dto.member_ids or []):
+            if uid != current_user.id:
+                await self._team_repo.add_member(team.id, uid)
+        return team
+
+
+class UpdateTeamUseCase:
+    """PATCH /teams/{id} — Admin veya team owner partial update yapabilir."""
+
     def __init__(self, team_repo: ITeamRepository):
         self._team_repo = team_repo
 
-    async def execute(self, current_user: User, dto: TeamCreateDTO) -> Team:
-        return await self._team_repo.create(dto.name, dto.description, current_user.id)
+    async def execute(self, current_user: User, team_id: int, dto: TeamUpdateDTO) -> Team:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+
+        is_admin = current_user.role and current_user.role.name.lower() == "admin"
+        if not is_admin and team.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only the team owner or an admin can update this team")
+
+        if dto.name is not None:
+            team.name = dto.name
+        if dto.description is not None:
+            team.description = dto.description
+        if dto.color is not None:
+            team.color = dto.color
+        if dto.department is not None:
+            team.department = dto.department
+
+        return await self._team_repo.update(team)
 
 
 class AddTeamMemberUseCase:
@@ -136,3 +176,43 @@ class GetLedTeamsUseCase:
             "teams": [{"id": t.id, "name": t.name, "description": t.description} for t in teams],
             "project_ids": sorted(project_ids),
         }
+
+
+# ---------------------------------------------------------------
+# Yeni use case'ler — Teams sayfası stats / projects / activity
+# ---------------------------------------------------------------
+
+class GetTeamsStatsUseCase:
+    """GET /teams/stats — sayfa üst stats stripi için tek seferde toplu sayım."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User) -> dict:
+        return await self._team_repo.get_stats_for_user(current_user.id)
+
+
+class GetTeamProjectsUseCase:
+    """GET /teams/{team_id}/projects — detay sayfası Projeler sekmesi."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int) -> list:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        return await self._team_repo.get_projects(team_id)
+
+
+class GetTeamActivityUseCase:
+    """GET /teams/{team_id}/activity — detay sayfası Aktivite sekmesi."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int, limit: int = 50) -> list:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        return await self._team_repo.get_activity(team_id, limit)
