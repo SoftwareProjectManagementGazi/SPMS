@@ -178,20 +178,14 @@ async def leave_team(
 async def set_team_leader(
     team_id: int,
     dto: TeamLeaderUpdateDTO,
-    _admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
     team_repo: ITeamRepository = Depends(get_team_repo),
 ):
-    """D-17: set or clear team leader_id. Admin-only (T-09-09-05 mitigation).
+    """Set or clear team leader_id. Allowed for team owner or admin.
 
     Body: ``{"leader_id": int | null}``
-    ``TeamLeaderUpdateDTO`` uses ``extra="forbid"`` to reject unknown keys (T-09-09-06).
-    Path: ``/teams/{team_id}/leader`` — dedicated sub-path to avoid conflict with any
-    future PATCH on the team resource itself.
+    ``TeamLeaderUpdateDTO`` uses ``extra="forbid"`` to reject unknown keys.
     """
-    from app.domain.exceptions import DomainError
     uc = SetTeamLeaderUseCase(team_repo)
-    try:
-        team = await uc.execute(team_id, dto.leader_id)
-    except DomainError as exc:
-        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=str(exc))
+    team = await uc.execute(current_user, team_id, dto.leader_id)
     return {"id": team.id, "name": team.name, "leader_id": team.leader_id}

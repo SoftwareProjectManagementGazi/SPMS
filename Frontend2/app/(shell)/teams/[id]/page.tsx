@@ -43,6 +43,9 @@ export default function TeamDetailPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [addingUserId, setAddingUserId] = React.useState<number | null>(null)
 
+  // Leader state
+  const [settingLeaderId, setSettingLeaderId] = React.useState<number | null | "clear">(null)
+
   // Confirm modal
   const [confirmAction, setConfirmAction] = React.useState<ConfirmAction | null>(null)
   const [memberToRemove, setMemberToRemove] = React.useState<TeamMember | null>(null)
@@ -86,6 +89,20 @@ export default function TeamDetailPage() {
       .filter((u) => u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
       .slice(0, 10)
   }, [searchQuery, allUsers, team, currentUserId])
+
+  // --- Set / clear leader ---
+  const handleSetLeader = async (memberId: number | null) => {
+    const key = memberId ?? "clear"
+    setSettingLeaderId(key)
+    try {
+      await teamService.setLeader(teamId, memberId)
+      await loadTeam()
+    } catch (err) {
+      console.error("Failed to set leader", err)
+    } finally {
+      setSettingLeaderId(null)
+    }
+  }
 
   // --- Add member ---
   const handleAddMember = async (member: TeamMember) => {
@@ -306,30 +323,85 @@ export default function TeamDetailPage() {
                           </div>
                         </div>
 
-                        {/* Remove button — owner can remove non-owners */}
-                        {isOwner && !isTeamOwner && (
-                          <button
-                            onClick={() => openRemove(member)}
-                            title={T("Çıkar", "Remove")}
-                            style={{
-                              display: "inline-flex", alignItems: "center", gap: 5,
-                              fontSize: 12, color: "var(--danger, #e53e3e)",
-                              background: "transparent", border: "1px solid transparent",
-                              borderRadius: "var(--radius-sm)", padding: "4px 8px",
-                              cursor: "pointer", transition: "background 0.1s",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = "color-mix(in srgb, var(--danger, #e53e3e) 8%, transparent)"
-                              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--danger, #e53e3e) 30%, transparent)"
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = "transparent"
-                              e.currentTarget.style.borderColor = "transparent"
-                            }}
-                          >
-                            <UserMinus size={13} />
-                            {T("Çıkar", "Remove")}
-                          </button>
+                        {/* Owner actions */}
+                        {isOwner && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {/* Set / clear leader */}
+                            {isLeader ? (
+                              <button
+                                onClick={() => handleSetLeader(null)}
+                                disabled={settingLeaderId === "clear"}
+                                title={T("Liderliği Kaldır", "Remove Leader")}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  fontSize: 12, color: "#b45309",
+                                  background: "#fef3c7", border: "1px solid #fde68a",
+                                  borderRadius: "var(--radius-sm)", padding: "4px 8px",
+                                  cursor: "pointer", opacity: settingLeaderId === "clear" ? 0.6 : 1,
+                                }}
+                              >
+                                {settingLeaderId === "clear"
+                                  ? <Loader2 size={11} className="animate-spin" />
+                                  : <Shield size={11} />}
+                                {T("Kaldır", "Unset")}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSetLeader(member.id)}
+                                disabled={settingLeaderId === member.id}
+                                title={T("Lider Yap", "Make Leader")}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  fontSize: 12, color: "var(--fg-muted)",
+                                  background: "transparent", border: "1px solid transparent",
+                                  borderRadius: "var(--radius-sm)", padding: "4px 8px",
+                                  cursor: "pointer", transition: "background 0.1s, color 0.1s",
+                                  opacity: settingLeaderId === member.id ? 0.6 : 1,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#fef3c7"
+                                  e.currentTarget.style.color = "#b45309"
+                                  e.currentTarget.style.borderColor = "#fde68a"
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "transparent"
+                                  e.currentTarget.style.color = "var(--fg-muted)"
+                                  e.currentTarget.style.borderColor = "transparent"
+                                }}
+                              >
+                                {settingLeaderId === member.id
+                                  ? <Loader2 size={11} className="animate-spin" />
+                                  : <Shield size={11} />}
+                                {T("Lider Yap", "Make Leader")}
+                              </button>
+                            )}
+
+                            {/* Remove member — only for non-owners */}
+                            {!isTeamOwner && (
+                              <button
+                                onClick={() => openRemove(member)}
+                                title={T("Çıkar", "Remove")}
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 4,
+                                  fontSize: 12, color: "var(--danger, #e53e3e)",
+                                  background: "transparent", border: "1px solid transparent",
+                                  borderRadius: "var(--radius-sm)", padding: "4px 8px",
+                                  cursor: "pointer", transition: "background 0.1s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "color-mix(in srgb, var(--danger, #e53e3e) 8%, transparent)"
+                                  e.currentTarget.style.borderColor = "color-mix(in srgb, var(--danger, #e53e3e) 30%, transparent)"
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "transparent"
+                                  e.currentTarget.style.borderColor = "transparent"
+                                }}
+                              >
+                                <UserMinus size={13} />
+                                {T("Çıkar", "Remove")}
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )

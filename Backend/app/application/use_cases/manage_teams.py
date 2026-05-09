@@ -54,16 +54,28 @@ class ListTeamsUseCase:
 
 
 class SetTeamLeaderUseCase:
-    """D-17: PATCH /teams/{id}/leader leader_id. Admin-only at router layer."""
+    """PATCH /teams/{id}/leader — Admin or team owner can set/clear leader."""
 
-    def __init__(self, team_repo):
+    def __init__(self, team_repo: ITeamRepository):
         self.team_repo = team_repo
 
-    async def execute(self, team_id: int, leader_id):
+    async def execute(self, current_user: User, team_id: int, leader_id) -> Team:
         team = await self.team_repo.get_by_id(team_id)
         if team is None:
-            from app.domain.exceptions import DomainError
-            raise DomainError(f"Team {team_id} not found")
+            raise HTTPException(status_code=404, detail="Team not found")
+
+        is_admin = current_user.role and current_user.role.name.lower() == "admin"
+        if not is_admin and team.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only the team owner or an admin can set the leader")
+
+        # leader_id must be a current member (or None to clear)
+        if leader_id is not None:
+            member_ids = await self.team_repo.get_members(team_id)
+            # owner is not in members table but is still part of the team
+            valid_ids = set(member_ids) | {team.owner_id}
+            if leader_id not in valid_ids:
+                raise HTTPException(status_code=400, detail="Leader must be a member of the team")
+
         team.leader_id = leader_id
         return await self.team_repo.update(team)
 

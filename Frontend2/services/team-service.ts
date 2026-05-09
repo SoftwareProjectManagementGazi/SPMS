@@ -90,6 +90,11 @@ export const teamService = {
     await apiClient.delete(`/teams/${teamId}/members/${userId}`);
   },
 
+  /** Set or clear the team leader. Pass null to clear. Owner or admin only. */
+  setLeader: async (teamId: number, leaderId: number | null): Promise<void> => {
+    await apiClient.patch(`/teams/${teamId}/leader`, { leader_id: leaderId });
+  },
+
   /** Server-side search — used as fallback when users/all is not yet loaded. */
   searchUsers: async (query: string): Promise<TeamMember[]> => {
     const res = await apiClient.get<RawUserListDTO[]>('/teams/users/search', {
