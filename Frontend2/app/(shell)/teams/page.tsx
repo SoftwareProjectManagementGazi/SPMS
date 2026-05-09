@@ -2,11 +2,13 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Plus, Users, X, Loader2 } from "lucide-react"
+import { Plus, Users, X, Loader2, Trash2 } from "lucide-react"
 import { useApp } from "@/context/app-context"
+import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/primitives/button"
 import { Input } from "@/components/primitives/input"
 import { DataState } from "@/components/primitives/data-state"
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/primitives/modal"
 import { teamService, type Team } from "@/services/team-service"
 
 function getInitials(name: string): string {
@@ -20,11 +22,16 @@ function getInitials(name: string): string {
 
 export default function TeamsPage() {
   const { language: lang } = useApp()
+  const { user } = useAuth()
   const T = (tr: string, en: string) => (lang === "tr" ? tr : en)
 
   const [teams, setTeams] = React.useState<Team[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
+
+  // Delete confirm
+  const [deleteTarget, setDeleteTarget] = React.useState<Team | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
 
   const [showCreateForm, setShowCreateForm] = React.useState(false)
   const [createName, setCreateName] = React.useState("")
@@ -67,6 +74,20 @@ export default function TeamsPage() {
       setCreateError((err as Error).message || T("Takım oluşturulamadı.", "Failed to create team."))
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await teamService.deleteTeam(deleteTarget.id)
+      setTeams((prev) => prev.filter((t) => t.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (err) {
+      console.error("Failed to delete team", err)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -194,16 +215,55 @@ export default function TeamsPage() {
             gap: 12,
           }}
         >
-          {teams.map((team) => (
-            <TeamCard key={team.id} team={team} lang={lang} />
-          ))}
+          {teams.map((team) => {
+            const currentUserId = user ? parseInt(user.id, 10) : null
+            const isOwner = currentUserId != null && team.owner_id === currentUserId
+            return (
+              <TeamCard
+                key={team.id}
+                team={team}
+                lang={lang}
+                isOwner={isOwner}
+                onDelete={() => setDeleteTarget(team)}
+              />
+            )
+          })}
         </div>
       </DataState>
+
+      {/* Delete confirm modal */}
+      <Modal open={!!deleteTarget} onClose={() => !isDeleting && setDeleteTarget(null)}>
+        <ModalHeader>{T("Takımı Sil", "Delete Team")}</ModalHeader>
+        <ModalBody>
+          <p style={{ fontSize: 13, color: "var(--fg)", margin: 0, lineHeight: 1.6 }}>
+            {deleteTarget
+              ? T(
+                  `"${deleteTarget.name}" takımını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
+                  `Are you sure you want to delete "${deleteTarget.name}"? This action cannot be undone.`
+                )
+              : ""}
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+            {T("Vazgeç", "Cancel")}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteConfirm}
+            disabled={isDeleting}
+            icon={isDeleting ? <Loader2 size={13} className="animate-spin" /> : undefined}
+          >
+            {isDeleting ? T("Siliniyor…", "Deleting…") : T("Sil", "Delete")}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
 
-function TeamCard({ team, lang }: { team: Team; lang: string }) {
+function TeamCard({ team, lang, isOwner, onDelete }: { team: Team; lang: string; isOwner: boolean; onDelete: () => void }) {
   const T = (tr: string, en: string) => (lang === "tr" ? tr : en)
   const [hovered, setHovered] = React.useState(false)
 
@@ -223,7 +283,7 @@ function TeamCard({ team, lang }: { team: Team; lang: string }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
                 fontSize: 14,
@@ -251,6 +311,30 @@ function TeamCard({ team, lang }: { team: Team; lang: string }) {
               </p>
             )}
           </div>
+          {/* Delete button — owner only, stops link navigation */}
+          {isOwner && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete() }}
+              title={T("Takımı Sil", "Delete Team")}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 28, height: 28, borderRadius: "var(--radius-sm)",
+                color: "var(--fg-muted)", background: "transparent",
+                border: "none", cursor: "pointer", transition: "color 0.1s, background 0.1s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--danger, #e53e3e)"
+                e.currentTarget.style.background = "color-mix(in srgb, var(--danger, #e53e3e) 8%, transparent)"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--fg-muted)"
+                e.currentTarget.style.background = "transparent"
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
         {/* Member avatars */}

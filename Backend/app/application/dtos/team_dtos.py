@@ -17,6 +17,7 @@ class TeamResponseDTO(BaseModel):
     name: str
     description: Optional[str] = None
     owner_id: int
+    leader_id: Optional[int] = None
     members: List[UserListDTO] = []
     model_config = ConfigDict(from_attributes=True)
 

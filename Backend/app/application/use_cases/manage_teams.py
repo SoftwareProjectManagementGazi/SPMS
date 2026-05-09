@@ -68,6 +68,39 @@ class SetTeamLeaderUseCase:
         return await self.team_repo.update(team)
 
 
+class DeleteTeamUseCase:
+    """Owner-only: soft-delete a team."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int) -> None:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only team owner can delete this team")
+        await self._team_repo.soft_delete(team_id)
+
+
+class LeaveTeamUseCase:
+    """Any non-owner member can leave a team."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int) -> None:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if team.owner_id == current_user.id:
+            raise HTTPException(status_code=400, detail="Team owner cannot leave. Delete the team instead.")
+        member_ids = await self._team_repo.get_members(team_id)
+        if current_user.id not in member_ids:
+            raise HTTPException(status_code=400, detail="You are not a member of this team")
+        await self._team_repo.remove_member(team_id, current_user.id)
+
+
 class GetLedTeamsUseCase:
     """D-17: GET /users/me/led-teams — teams the user leads + project_ids via TeamProjects."""
 

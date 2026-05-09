@@ -13,6 +13,7 @@ export interface Team {
   name: string;
   description?: string;
   owner_id: number;
+  leader_id?: number | null;
   members: TeamMember[];
 }
 
@@ -42,6 +43,7 @@ type RawTeamDTO = {
   name: string;
   description?: string;
   owner_id: number;
+  leader_id?: number | null;
   members: RawUserListDTO[];
 };
 
@@ -51,6 +53,7 @@ function mapRawTeam(d: RawTeamDTO): Team {
     name: d.name,
     description: d.description,
     owner_id: d.owner_id,
+    leader_id: d.leader_id ?? null,
     members: d.members.map(mapRawUser),
   };
 }
@@ -71,6 +74,14 @@ export const teamService = {
     return mapRawTeam(res.data);
   },
 
+  deleteTeam: async (teamId: number): Promise<void> => {
+    await apiClient.delete(`/teams/${teamId}`);
+  },
+
+  leaveTeam: async (teamId: number): Promise<void> => {
+    await apiClient.post(`/teams/${teamId}/leave`);
+  },
+
   addMember: async (teamId: number, userId: number): Promise<void> => {
     await apiClient.post(`/teams/${teamId}/members`, { user_id: userId });
   },
@@ -79,10 +90,17 @@ export const teamService = {
     await apiClient.delete(`/teams/${teamId}/members/${userId}`);
   },
 
+  /** Server-side search — used as fallback when users/all is not yet loaded. */
   searchUsers: async (query: string): Promise<TeamMember[]> => {
     const res = await apiClient.get<RawUserListDTO[]>('/teams/users/search', {
       params: { q: query },
     });
+    return res.data.map(mapRawUser);
+  },
+
+  /** Fetch all users once for client-side filtering (faster UX than per-keystroke search). */
+  listAllUsers: async (): Promise<TeamMember[]> => {
+    const res = await apiClient.get<RawUserListDTO[]>('/teams/users/all');
     return res.data.map(mapRawUser);
   },
 };

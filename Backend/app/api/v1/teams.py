@@ -9,6 +9,8 @@ from app.application.use_cases.manage_teams import (
     RemoveTeamMemberUseCase,
     ListTeamsUseCase,
     SetTeamLeaderUseCase,
+    DeleteTeamUseCase,
+    LeaveTeamUseCase,
 )
 from app.application.dtos.team_dtos import TeamCreateDTO, TeamResponseDTO, TeamMemberDTO, TeamLeaderUpdateDTO
 from app.application.dtos.auth_dtos import UserListDTO
@@ -34,6 +36,7 @@ async def list_my_teams(
                 name=team.name,
                 description=team.description,
                 owner_id=team.owner_id,
+                leader_id=team.leader_id,
                 members=[],  # member details loaded on-demand via search flow
             )
         )
@@ -53,6 +56,7 @@ async def create_team(
         name=team.name,
         description=team.description,
         owner_id=team.owner_id,
+        leader_id=team.leader_id,
         members=[],
     )
 
@@ -143,8 +147,31 @@ async def get_team(
         name=team.name,
         description=team.description,
         owner_id=team.owner_id,
+        leader_id=team.leader_id,
         members=members,
     )
+
+
+@router.delete("/{team_id}", status_code=204)
+async def delete_team(
+    team_id: int,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """Owner-only: soft-delete a team."""
+    use_case = DeleteTeamUseCase(team_repo)
+    await use_case.execute(current_user, team_id)
+
+
+@router.post("/{team_id}/leave", status_code=204)
+async def leave_team(
+    team_id: int,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """Any non-owner member can leave a team."""
+    use_case = LeaveTeamUseCase(team_repo)
+    await use_case.execute(current_user, team_id)
 
 
 @router.patch("/{team_id}/leader")
