@@ -97,3 +97,11 @@ class TeamActivityItemDTO(BaseModel):
 class TeamProjectAssignDTO(BaseModel):
     """POST /teams/{id}/projects — takıma proje ata."""
     project_id: int
+
+
+class TeamMemberStatDTO(BaseModel):
+    """GET /teams/{id}/member-stats — per-member task completion stats."""
+    user_id: int
+    full_name: str
+    total_count: int
+    done_count: int

@@ -78,6 +78,13 @@ export interface TeamActivityItem {
   created_at: string;               // ISO
 }
 
+export interface TeamMemberStat {
+  user_id: number;
+  full_name: string;
+  total_count: number;
+  done_count: number;
+}
+
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
@@ -224,6 +231,14 @@ export const teamService = {
       silentFailure: true,
     } as any);
     return res.data;
+  },
+
+  /** GET /teams/{id}/member-stats — per-member done-task count. */
+  getMemberStats: async (teamId: number): Promise<TeamMemberStat[]> => {
+    const res = await apiClient.get<TeamMemberStat[]>(`/teams/${teamId}/member-stats`, {
+      silentFailure: true,
+    } as any);
+    return res.data ?? [];
   },
 
   /** POST /teams/{id}/projects — takıma proje ata. Owner veya admin. */

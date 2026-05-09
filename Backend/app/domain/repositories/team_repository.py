@@ -76,3 +76,8 @@ class ITeamRepository(ABC):
     async def unassign_project(self, team_id: int, project_id: int) -> None:
         """team_projects tablosundan (team_id, project_id) satırını sil."""
         ...
+
+    @abstractmethod
+    async def get_member_stats(self, team_id: int) -> list:
+        """Takım üyelerinin tamamlanan görev sayıları."""
+        ...

@@ -28,6 +28,7 @@ from app.application.dtos.team_dtos import (
     TeamProjectDTO,
     TeamActivityItemDTO,
     TeamProjectAssignDTO,
+    TeamMemberStatDTO,
 )
 from app.application.dtos.auth_dtos import UserListDTO
 from app.api.dependencies import get_current_user, get_user_repo, get_team_repo
@@ -273,6 +274,17 @@ async def get_team_activity(
     use_case = GetTeamActivityUseCase(team_repo)
     rows = await use_case.execute(current_user, team_id, limit)
     return [TeamActivityItemDTO(**r) for r in rows]
+
+
+@router.get("/{team_id}/member-stats", response_model=List[TeamMemberStatDTO])
+async def get_team_member_stats(
+    team_id: int,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """Takım üyelerinin tamamlanan görev sayıları (En Aktif Üyeler paneli için)."""
+    rows = await team_repo.get_member_stats(team_id)
+    return [TeamMemberStatDTO(**r) for r in rows]
 
 
 @router.post("/{team_id}/projects", status_code=204)

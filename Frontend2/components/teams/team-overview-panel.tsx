@@ -13,13 +13,14 @@ import {
   Activity as ActivityIcon,
 } from "lucide-react"
 import Link from "next/link"
-import type { Team, TeamProject, TeamActivityItem } from "@/services/team-service"
+import type { Team, TeamProject, TeamActivityItem, TeamMemberStat } from "@/services/team-service"
 
 interface Props {
   team: Team
   lang: string
   projects: TeamProject[]
   activity: TeamActivityItem[]
+  memberStats: TeamMemberStat[]
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -88,7 +89,7 @@ function getActivityMeta(action: string): {
   return { Icon: ActivityIcon, color: "#6366f1", bg: "#e0e7ff" }
 }
 
-export function TeamOverviewPanel({ team, lang, projects, activity }: Props) {
+export function TeamOverviewPanel({ team, lang, projects, activity, memberStats }: Props) {
   const T = (tr: string, en: string) => (lang === "tr" ? tr : en)
   const teamColor = team.color || "#1e40af"
 
@@ -290,7 +291,7 @@ export function TeamOverviewPanel({ team, lang, projects, activity }: Props) {
 
       {/* ============ RIGHT SIDEBAR ============ */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-        {/* Üyeler */}
+        {/* En Aktif Üyeler */}
         <div
           style={{
             border: "1px solid var(--border)",
@@ -311,65 +312,79 @@ export function TeamOverviewPanel({ team, lang, projects, activity }: Props) {
           >
             {T("Üyeler", "Members")}
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {team.members.slice(0, 6).map((m) => {
-              const c = colorForId(m.id)
-              const isLeader = team.leader_id === m.id
-              return (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      background: c,
-                      color: "#fff",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {getInitials(m.full_name)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p
+          {memberStats.length === 0 ? (
+            <p style={{ fontSize: 12, color: "var(--fg-muted)", margin: 0 }}>
+              {T("Henüz görev yok.", "No tasks yet.")}
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {memberStats.slice(0, 6).map((s) => {
+                const c = colorForId(s.user_id)
+                const pct = s.total_count > 0
+                  ? Math.round((s.done_count / s.total_count) * 100)
+                  : 0
+                return (
+                  <div key={s.user_id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
                       style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: "var(--fg)",
-                        margin: 0,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        width: 30,
+                        height: 30,
+                        borderRadius: "50%",
+                        background: c,
+                        color: "#fff",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
-                      {m.full_name}
-                    </p>
-                    {isLeader && (
-                      <p
+                      {getInitials(s.full_name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: "var(--fg)",
+                            margin: 0,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {s.full_name}
+                        </p>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)", flexShrink: 0, marginLeft: 6 }}>
+                          {s.done_count}/{s.total_count}
+                        </span>
+                      </div>
+                      <div
                         style={{
-                          fontSize: 10,
-                          color: "#b45309",
-                          margin: "1px 0 0",
-                          fontWeight: 600,
+                          height: 4,
+                          background: "var(--bg-subtle, #f1f1ee)",
+                          borderRadius: 999,
+                          overflow: "hidden",
                         }}
                       >
-                        {T("Lider", "Lead")}
-                      </p>
-                    )}
+                        <div
+                          style={{
+                            width: `${pct}%`,
+                            height: "100%",
+                            background: c,
+                            borderRadius: 999,
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-            {team.members.length > 6 && (
-              <p style={{ fontSize: 12, color: "var(--fg-muted)", margin: "4px 0 0" }}>
-                +{team.members.length - 6} {T("daha", "more")}
-              </p>
-            )}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Son aktivite */}

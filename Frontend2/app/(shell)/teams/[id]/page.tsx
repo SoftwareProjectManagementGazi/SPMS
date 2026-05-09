@@ -27,6 +27,7 @@ import {
   type TeamMember,
   type TeamProject,
   type TeamActivityItem,
+  type TeamMemberStat,
 } from "@/services/team-service"
 import { projectService, type Project } from "@/services/project-service"
 import { TeamDetailHero } from "@/components/teams/team-detail-hero"
@@ -108,6 +109,7 @@ export default function TeamDetailPage() {
 
   const [projects, setProjects] = React.useState<TeamProject[]>([])
   const [activity, setActivity] = React.useState<TeamActivityItem[]>([])
+  const [memberStats, setMemberStats] = React.useState<TeamMemberStat[]>([])
 
   // Proje atama için — tüm sistem projeleri (picker'da gösterilir)
   const [allProjects, setAllProjects] = React.useState<Project[]>([])
@@ -149,12 +151,14 @@ export default function TeamDetailPage() {
   }, [teamId])
 
   const loadExtras = React.useCallback(async () => {
-    const [proj, act] = await Promise.allSettled([
+    const [proj, act, stats] = await Promise.allSettled([
       teamService.getProjects(teamId),
       teamService.getActivity(teamId),
+      teamService.getMemberStats(teamId),
     ])
     setProjects(proj.status === "fulfilled" ? proj.value : [])
     setActivity(act.status === "fulfilled" ? act.value : [])
+    setMemberStats(stats.status === "fulfilled" ? stats.value : [])
   }, [teamId])
 
   const loadProjects = React.useCallback(async () => {
@@ -324,6 +328,7 @@ export default function TeamDetailPage() {
                 lang={lang}
                 projects={projects}
                 activity={activity}
+                memberStats={memberStats}
               />
             )}
 

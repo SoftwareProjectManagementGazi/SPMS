@@ -289,37 +289,146 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         await self.session.execute(stmt)
         await self.session.commit()
 
-    async def get_activity(self, team_id: int, limit: int = 50) -> list:
-        """Detay sayfası → Aktivite sekmesi: audit log'tan takıma ait son olaylar.
+    async def get_member_stats(self, team_id: int) -> list:
+        """Takım üyelerinin takıma bağlı projelerdeki toplam ve tamamlanan görev sayıları.
 
-        NOT: AuditLogModel alan adları senin modeline göre değişebilir.
-        Aşağıdaki entity_type/entity_id/action alanları yoksa modeline uydur.
+        Returns list of {user_id, full_name, total_count, done_count} sorted by total_count DESC.
+        """
+        from app.infrastructure.database.models.task import TaskModel
+        from app.infrastructure.database.models.board_column import BoardColumnModel
+        from app.infrastructure.database.models.user import UserModel
+        from app.infrastructure.database.repositories.project_repo import DONE_COLUMN_NAMES
+
+        # 1. Bu takıma bağlı proje id'leri
+        proj_stmt = select(TeamProjectModel.project_id).where(
+            TeamProjectModel.team_id == team_id
+        )
+        proj_ids = list((await self.session.execute(proj_stmt)).scalars().all())
+        if not proj_ids:
+            return []
+
+        # 2. Üye başına toplam görev sayısı
+        total_stmt = (
+            select(
+                TaskModel.assignee_id,
+                UserModel.full_name,
+                func.count(TaskModel.id).label("total_count"),
+            )
+            .join(UserModel, UserModel.id == TaskModel.assignee_id)
+            .where(
+                TaskModel.project_id.in_(proj_ids),
+                TaskModel.is_deleted == False,  # noqa: E712
+                TaskModel.assignee_id.is_not(None),
+            )
+            .group_by(TaskModel.assignee_id, UserModel.full_name)
+        )
+        total_rows = (await self.session.execute(total_stmt)).all()
+        total_map = {row[0]: (row[1], row[2]) for row in total_rows}
+
+        if not total_map:
+            return []
+
+        # 3. Üye başına tamamlanan görev sayısı
+        done_stmt = (
+            select(
+                TaskModel.assignee_id,
+                func.count(TaskModel.id).label("done_count"),
+            )
+            .join(BoardColumnModel, BoardColumnModel.id == TaskModel.column_id, isouter=True)
+            .where(
+                TaskModel.project_id.in_(proj_ids),
+                TaskModel.is_deleted == False,  # noqa: E712
+                TaskModel.assignee_id.in_(list(total_map.keys())),
+                func.lower(BoardColumnModel.name).in_(DONE_COLUMN_NAMES),
+            )
+            .group_by(TaskModel.assignee_id)
+        )
+        done_rows = (await self.session.execute(done_stmt)).all()
+        done_map = {row[0]: row[1] for row in done_rows}
+
+        # 4. Birleştir, toplam göreve göre sırala
+        result = []
+        for user_id, (full_name, total_count) in total_map.items():
+            result.append({
+                "user_id": user_id,
+                "full_name": full_name,
+                "total_count": total_count,
+                "done_count": done_map.get(user_id, 0),
+            })
+        result.sort(key=lambda x: x["total_count"], reverse=True)
+        return result
+
+    async def get_activity(self, team_id: int, limit: int = 50) -> list:
+        """Detay sayfası → Aktivite sekmesi: takıma bağlı projelerdeki görev aktiviteleri.
+
+        Takıma atanmış projelerin görevlerindeki audit log olaylarını döndürür.
+        Takım üyelerinin proje içindeki aktivitelerini göstermek için task event'leri kullanılır.
         """
         from app.infrastructure.database.models.audit_log import AuditLogModel
         from app.infrastructure.database.models.user import UserModel
+        from app.infrastructure.database.models.task import TaskModel
 
+        # 1. Bu takıma bağlı proje id'lerini bul
+        proj_stmt = select(TeamProjectModel.project_id).where(
+            TeamProjectModel.team_id == team_id
+        )
+        proj_ids = list((await self.session.execute(proj_stmt)).scalars().all())
+
+        if not proj_ids:
+            return []
+
+        # 2. O projelerdeki görev id'lerini subquery olarak kullan
+        task_ids_subq = select(TaskModel.id).where(TaskModel.project_id.in_(proj_ids))
+
+        # 3. Audit log'tan görev olaylarını çek
         stmt = (
             select(AuditLogModel, UserModel)
             .join(UserModel, UserModel.id == AuditLogModel.user_id, isouter=True)
             .where(
-                or_(
-                    (AuditLogModel.entity_type == "team") & (AuditLogModel.entity_id == team_id),
-                    (AuditLogModel.entity_type == "team_member") & (AuditLogModel.entity_id == team_id),
-                )
+                AuditLogModel.entity_type == "task",
+                AuditLogModel.entity_id.in_(task_ids_subq),
             )
             .order_by(AuditLogModel.timestamp.desc())
             .limit(limit)
         )
         rows = (await self.session.execute(stmt)).all()
+
+        def _action_label(action: str, field_name: str | None, metadata: dict | None) -> str:
+            """Human-readable action label for the activity feed."""
+            md = metadata or {}
+            if action == "created":
+                title = md.get("task_title") or md.get("new_value") or ""
+                return f"görev oluşturdu: {title}" if title else "görev oluşturdu"
+            if action == "updated":
+                if field_name == "column_id":
+                    old = md.get("old_value_label", "")
+                    new = md.get("new_value_label", "")
+                    if old and new:
+                        return f"görevi taşıdı: {old} → {new}"
+                    return "görevi taşıdı"
+                if field_name == "assignee_id":
+                    return "görevi atadı"
+                return f"güncelledi: {field_name or 'alan'}"
+            if action == "deleted":
+                return "görevi sildi"
+            return action
+
         return [
             {
                 "id": log.id,
                 "actor_id": log.user_id,
                 "actor_name": (user.full_name if user else None),
-                "action": log.action,
+                "action": _action_label(
+                    log.action,
+                    log.field_name,
+                    log.extra_metadata if isinstance(log.extra_metadata, dict) else None,
+                ),
                 "target_type": log.entity_type,
                 "target_id": log.entity_id,
-                "target_label": getattr(log, "summary", None),
+                "target_label": (
+                    (log.extra_metadata or {}).get("task_title")
+                    or (log.extra_metadata or {}).get("task_key")
+                ),
                 "created_at": log.timestamp,
             }
             for log, user in rows
