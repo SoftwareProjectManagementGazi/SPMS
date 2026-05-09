@@ -66,3 +66,13 @@ class ITeamRepository(ABC):
     async def get_activity(self, team_id: int, limit: int = 50) -> list:
         """Detay sayfası → Aktivite sekmesi: takıma ait son audit log olayları."""
         ...
+
+    @abstractmethod
+    async def assign_project(self, team_id: int, project_id: int) -> None:
+        """team_projects tablosuna (team_id, project_id) satırı ekle. Idempotent."""
+        ...
+
+    @abstractmethod
+    async def unassign_project(self, team_id: int, project_id: int) -> None:
+        """team_projects tablosundan (team_id, project_id) satırını sil."""
+        ...

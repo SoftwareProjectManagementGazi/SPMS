@@ -209,12 +209,38 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         await self.session.flush()
         # Generate and store task_key atomically if not already set
         if not model.task_key:
-            # Need to load project to get key
             proj_stmt = select(ProjectModel).where(ProjectModel.id == model.project_id)
             proj_result = await self.session.execute(proj_stmt)
             project = proj_result.scalar_one_or_none()
             project_key = project.key if project else "TASK"
+            project_name = project.name if project else None
             model.task_key = await self.generate_task_key(model.project_id, project_key)
+        else:
+            proj_stmt = select(ProjectModel).where(ProjectModel.id == model.project_id)
+            proj_result = await self.session.execute(proj_stmt)
+            project = proj_result.scalar_one_or_none()
+            project_key = project.key if project else None
+            project_name = project.name if project else None
+
+        # Audit log — task oluşturuldu
+        audit_entry = AuditLogModel(
+            entity_type="task",
+            entity_id=model.id,
+            field_name="title",
+            old_value=None,
+            new_value=model.title,
+            user_id=model.reporter_id,
+            action="created",
+            extra_metadata={
+                "task_id": model.id,
+                "task_key": model.task_key,
+                "task_title": model.title,
+                "project_id": model.project_id,
+                "project_key": project_key,
+                "project_name": project_name,
+            },
+        )
+        self.session.add(audit_entry)
         await self.session.commit()
         # ARCH-04: fetch full entity with eager loading in a single query (no separate get_by_id call)
         stmt = self._get_base_query().where(TaskModel.id == model.id)

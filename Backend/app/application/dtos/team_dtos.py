@@ -78,6 +78,8 @@ class TeamProjectDTO(BaseModel):
     status: Optional[str] = None
     progress: Optional[float] = None  # 0..1
     member_count: int = 0
+    task_count: int = 0   # toplam görev sayısı
+    done_count: int = 0   # tamamlanan görev sayısı
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -90,3 +92,8 @@ class TeamActivityItemDTO(BaseModel):
     target_id: Optional[int] = None
     target_label: Optional[str] = None
     created_at: datetime
+
+
+class TeamProjectAssignDTO(BaseModel):
+    """POST /teams/{id}/projects — takıma proje ata."""
+    project_id: int

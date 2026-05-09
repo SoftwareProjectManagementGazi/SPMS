@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.entities.team import Team
 from app.domain.repositories.team_repository import ITeamRepository
-from app.infrastructure.database.models.team import TeamModel, TeamMemberModel
+from app.infrastructure.database.models.team import TeamModel, TeamMemberModel, TeamProjectModel
 
 
 class SqlAlchemyTeamRepository(ITeamRepository):
@@ -171,6 +171,8 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         toplam takım, toplam üye, aktif görev, tamamlanma oranı."""
         from app.infrastructure.database.models.team import TeamProjectModel
         from app.infrastructure.database.models.task import TaskModel
+        from app.infrastructure.database.models.board_column import BoardColumnModel
+        from app.infrastructure.database.repositories.project_repo import DONE_COLUMN_NAMES
 
         teams = await self.list_by_user(user_id)
         team_ids = [t.id for t in teams]
@@ -201,19 +203,23 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         active_tasks = 0
         completion_rate = 0.0
         if project_ids:
-            # Aktif görev = tamamlanmamış (status != 'done')
-            active_stmt = select(func.count(TaskModel.id)).where(
-                TaskModel.project_id.in_(project_ids),
-                TaskModel.status != "done",
+            # "Aktif" = column adı DONE_COLUMN_NAMES içinde olmayan görevler
+            done_stmt = (
+                select(func.count(TaskModel.id))
+                .join(BoardColumnModel, TaskModel.column_id == BoardColumnModel.id, isouter=True)
+                .where(
+                    TaskModel.project_id.in_(project_ids),
+                    func.lower(BoardColumnModel.name).in_(DONE_COLUMN_NAMES),
+                )
             )
-            active_tasks = (await self.session.execute(active_stmt)).scalar() or 0
-
             total_stmt = select(func.count(TaskModel.id)).where(
                 TaskModel.project_id.in_(project_ids)
             )
+            done_tasks = (await self.session.execute(done_stmt)).scalar() or 0
             total_tasks = (await self.session.execute(total_stmt)).scalar() or 0
+            active_tasks = total_tasks - done_tasks
             if total_tasks > 0:
-                completion_rate = (total_tasks - active_tasks) / total_tasks
+                completion_rate = done_tasks / total_tasks
 
         return {
             "total_teams": len(teams),
@@ -227,6 +233,9 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         from app.infrastructure.database.models.team import TeamProjectModel
         from app.infrastructure.database.models.project import ProjectModel
         from app.infrastructure.database.models.task import TaskModel
+        from app.infrastructure.database.models.board_column import BoardColumnModel
+        from sqlalchemy import case
+        from app.infrastructure.database.repositories.project_repo import DONE_COLUMN_NAMES
 
         stmt = (
             select(ProjectModel)
@@ -238,8 +247,13 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         out = []
         for p in projects:
             total_q = select(func.count(TaskModel.id)).where(TaskModel.project_id == p.id)
-            done_q = select(func.count(TaskModel.id)).where(
-                TaskModel.project_id == p.id, TaskModel.status == "done"
+            done_q = (
+                select(func.count(TaskModel.id))
+                .join(BoardColumnModel, TaskModel.column_id == BoardColumnModel.id, isouter=True)
+                .where(
+                    TaskModel.project_id == p.id,
+                    func.lower(BoardColumnModel.name).in_(DONE_COLUMN_NAMES),
+                )
             )
             total = (await self.session.execute(total_q)).scalar() or 0
             done = (await self.session.execute(done_q)).scalar() or 0
@@ -251,8 +265,29 @@ class SqlAlchemyTeamRepository(ITeamRepository):
                 "status": getattr(p, "status", None),
                 "progress": round(progress, 4),
                 "member_count": 0,
+                "task_count": total,
+                "done_count": done,
             })
         return out
+
+    async def assign_project(self, team_id: int, project_id: int) -> None:
+        """team_projects tablosuna satır ekle. Idempotent — duplicate'i yoksay."""
+        row = TeamProjectModel(team_id=team_id, project_id=project_id)
+        self.session.add(row)
+        try:
+            await self.session.flush()
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+
+    async def unassign_project(self, team_id: int, project_id: int) -> None:
+        """team_projects tablosundan satırı sil."""
+        stmt = delete(TeamProjectModel).where(
+            TeamProjectModel.team_id == team_id,
+            TeamProjectModel.project_id == project_id,
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
 
     async def get_activity(self, team_id: int, limit: int = 50) -> list:
         """Detay sayfası → Aktivite sekmesi: audit log'tan takıma ait son olaylar.
@@ -272,7 +307,7 @@ class SqlAlchemyTeamRepository(ITeamRepository):
                     (AuditLogModel.entity_type == "team_member") & (AuditLogModel.entity_id == team_id),
                 )
             )
-            .order_by(AuditLogModel.created_at.desc())
+            .order_by(AuditLogModel.timestamp.desc())
             .limit(limit)
         )
         rows = (await self.session.execute(stmt)).all()
@@ -285,7 +320,7 @@ class SqlAlchemyTeamRepository(ITeamRepository):
                 "target_type": log.entity_type,
                 "target_id": log.entity_id,
                 "target_label": getattr(log, "summary", None),
-                "created_at": log.created_at,
+                "created_at": log.timestamp,
             }
             for log, user in rows
         ]

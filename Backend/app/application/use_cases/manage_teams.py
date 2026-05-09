@@ -216,3 +216,35 @@ class GetTeamActivityUseCase:
         if team is None:
             raise HTTPException(status_code=404, detail="Team not found")
         return await self._team_repo.get_activity(team_id, limit)
+
+
+class AssignProjectToTeamUseCase:
+    """POST /teams/{team_id}/projects — takıma proje ata (owner veya admin)."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int, project_id: int) -> None:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        is_admin = current_user.role and current_user.role.name.lower() == "admin"
+        if not is_admin and team.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only the team owner or an admin can assign projects")
+        await self._team_repo.assign_project(team_id, project_id)
+
+
+class UnassignProjectFromTeamUseCase:
+    """DELETE /teams/{team_id}/projects/{project_id} — takımdan proje bağlantısını kaldır."""
+
+    def __init__(self, team_repo: ITeamRepository):
+        self._team_repo = team_repo
+
+    async def execute(self, current_user: User, team_id: int, project_id: int) -> None:
+        team = await self._team_repo.get_by_id(team_id)
+        if team is None:
+            raise HTTPException(status_code=404, detail="Team not found")
+        is_admin = current_user.role and current_user.role.name.lower() == "admin"
+        if not is_admin and team.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only the team owner or an admin can unassign projects")
+        await self._team_repo.unassign_project(team_id, project_id)

@@ -15,6 +15,8 @@ from app.application.use_cases.manage_teams import (
     GetTeamsStatsUseCase,
     GetTeamProjectsUseCase,
     GetTeamActivityUseCase,
+    AssignProjectToTeamUseCase,
+    UnassignProjectFromTeamUseCase,
 )
 from app.application.dtos.team_dtos import (
     TeamCreateDTO,
@@ -25,6 +27,7 @@ from app.application.dtos.team_dtos import (
     TeamsStatsDTO,
     TeamProjectDTO,
     TeamActivityItemDTO,
+    TeamProjectAssignDTO,
 )
 from app.application.dtos.auth_dtos import UserListDTO
 from app.api.dependencies import get_current_user, get_user_repo, get_team_repo
@@ -270,3 +273,27 @@ async def get_team_activity(
     use_case = GetTeamActivityUseCase(team_repo)
     rows = await use_case.execute(current_user, team_id, limit)
     return [TeamActivityItemDTO(**r) for r in rows]
+
+
+@router.post("/{team_id}/projects", status_code=204)
+async def assign_project_to_team(
+    team_id: int,
+    dto: TeamProjectAssignDTO,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """Owner veya admin: takıma proje ata (team_projects tablosuna kayıt ekle)."""
+    use_case = AssignProjectToTeamUseCase(team_repo)
+    await use_case.execute(current_user, team_id, dto.project_id)
+
+
+@router.delete("/{team_id}/projects/{project_id}", status_code=204)
+async def unassign_project_from_team(
+    team_id: int,
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    team_repo: ITeamRepository = Depends(get_team_repo),
+):
+    """Owner veya admin: takımdan proje bağlantısını kaldır."""
+    use_case = UnassignProjectFromTeamUseCase(team_repo)
+    await use_case.execute(current_user, team_id, project_id)

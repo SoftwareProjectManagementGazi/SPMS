@@ -233,7 +233,7 @@ class SqlAlchemyAuditRepository(IAuditRepository):
                 "action": row["action"],
                 "entity_type": row["entity_type"],
                 "entity_id": row["entity_id"],
-                "entity_label": None,  # Future: resolve from entity_type (task title, milestone name, etc.)
+                "entity_label": _resolve_entity_label(dict(row)),
                 "field_name": row["field_name"],
                 "old_value": row["old_value"],
                 "new_value": row["new_value"],

@@ -92,7 +92,12 @@ apiClient.interceptors.response.use(
         typeof status === 'number' &&
         expectedCodes.includes(status));
 
-    if (!isExpected) {
+    // Callers can pass `silentFailure: true` in the axios request config to
+    // suppress the global console.error for endpoints that are known to be
+    // optional or not yet implemented on the backend (e.g. /teams/:id/activity).
+    const isSilent = (error.config as any)?.silentFailure === true;
+
+    if (!isExpected && !isSilent) {
       console.error('API Error:', error.response?.data || error.message);
     }
     return Promise.reject(error);

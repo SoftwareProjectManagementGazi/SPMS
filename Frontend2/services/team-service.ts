@@ -63,6 +63,8 @@ export interface TeamProject {
   status?: string | null;
   progress?: number | null;         // 0..1
   member_count: number;
+  task_count: number;               // toplam görev
+  done_count: number;               // tamamlanan görev
 }
 
 export interface TeamActivityItem {
@@ -206,18 +208,31 @@ export const teamService = {
 
   /** GET /teams/{id}/projects — takıma bağlı projeler ve ilerleme. */
   getProjects: async (teamId: number): Promise<TeamProject[]> => {
-    const res = await apiClient.get<TeamProject[]>(`/teams/${teamId}/projects`);
+    const res = await apiClient.get<TeamProject[]>(`/teams/${teamId}/projects`, {
+      silentFailure: true,
+    } as any);
     return res.data;
   },
 
   /** GET /teams/{id}/activity — takıma ait son audit log olayları.
    *
-   * NOT: Backend audit log alan adları henüz doğrulanmadı. UI tarafında
-   * try/catch ile sarıp, hata gelirse boş feed göster. */
+   * NOT: Backend endpoint henüz implement edilmemiş olabilir; hata sessizce
+   * yutulur ve UI boş feed gösterir. */
   getActivity: async (teamId: number, limit: number = 50): Promise<TeamActivityItem[]> => {
     const res = await apiClient.get<TeamActivityItem[]>(`/teams/${teamId}/activity`, {
       params: { limit },
-    });
+      silentFailure: true,
+    } as any);
     return res.data;
+  },
+
+  /** POST /teams/{id}/projects — takıma proje ata. Owner veya admin. */
+  assignProject: async (teamId: number, projectId: number): Promise<void> => {
+    await apiClient.post(`/teams/${teamId}/projects`, { project_id: projectId });
+  },
+
+  /** DELETE /teams/{id}/projects/{projectId} — takımdan proje bağlantısını kaldır. */
+  unassignProject: async (teamId: number, projectId: number): Promise<void> => {
+    await apiClient.delete(`/teams/${teamId}/projects/${projectId}`);
   },
 };
