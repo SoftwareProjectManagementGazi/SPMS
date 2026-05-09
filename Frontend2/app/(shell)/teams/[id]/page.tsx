@@ -98,8 +98,8 @@ export default function TeamDetailPage() {
     if (!team) return
     setAddingId(userId)
     try {
-      const updated = await teamService.addMember(team.id, userId)
-      setTeam(updated)
+      await teamService.addMember(team.id, userId)
+      await loadTeam()
       setMemberQuery("")
     } catch (err) {
       console.error("Failed to add member", err)
@@ -112,8 +112,8 @@ export default function TeamDetailPage() {
     if (!team) return
     setRemovingId(memberId)
     try {
-      const updated = await teamService.removeMember(team.id, memberId)
-      setTeam(updated)
+      await teamService.removeMember(team.id, memberId)
+      await loadTeam()
     } catch (err) {
       console.error("Failed to remove member", err)
     } finally {
@@ -125,8 +125,8 @@ export default function TeamDetailPage() {
     if (!team) return
     setLeaderUpdatingId(memberId ?? -1)
     try {
-      const updated = await teamService.setLeader(team.id, memberId)
-      setTeam(updated)
+      await teamService.setLeader(team.id, memberId)
+      await loadTeam()
     } catch (err) {
       console.error("Failed to update leader", err)
     } finally {
