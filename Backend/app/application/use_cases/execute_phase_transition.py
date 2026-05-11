@@ -19,6 +19,8 @@ from app.application.dtos.phase_transition_dtos import (
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.audit_repository import IAuditRepository
+from app.domain.repositories.phase_report_repository import IPhaseReportRepository
+from app.domain.entities.phase_report import PhaseReport
 from app.domain.exceptions import (
     ProjectNotFoundError,
     CriteriaUnmetError,
@@ -35,11 +37,13 @@ class ExecutePhaseTransitionUseCase:
         task_repo: ITaskRepository,
         audit_repo: IAuditRepository,
         session: AsyncSession,
+        phase_report_repo: IPhaseReportRepository | None = None,
     ):
         self.project_repo = project_repo
         self.task_repo = task_repo
         self.audit_repo = audit_repo
         self.session = session
+        self.phase_report_repo = phase_report_repo
 
     async def execute(
         self, project_id: int, dto: PhaseTransitionRequestDTO, user_id: int
@@ -149,6 +153,61 @@ class ExecutePhaseTransitionUseCase:
             user_id=user_id,
             metadata=envelope,
         )
+
+        # Commit the main transaction (task moves + audit log) FIRST.
+        # The PhaseReport snapshot below is supplementary and must never
+        # roll back the already-durable audit entry.
+        await self.session.commit()
+
+        # 8. Auto-create PhaseReport snapshot in a separate transaction.
+        # Non-blocking: any failure here is silently skipped so the phase
+        # transition itself is always visible in the History tab.
+        if self.phase_report_repo is not None:
+            try:
+                # Snapshot task counts.  Include tasks explicitly assigned to
+                # the source phase AND tasks with phase_id=None (board backlog),
+                # because the frontend board shows backlog tasks inside the
+                # currently active phase.
+                phase_tasks = await self.task_repo.list_by_project_and_phase(
+                    project_id, dto.source_phase_id
+                )
+                # Null-phase tasks: call with None then filter — safe because
+                # the phase_id=None path passes Pydantic validation.
+                all_tasks = await self.task_repo.list_by_project_and_phase(
+                    project_id, None
+                )
+                null_tasks = [
+                    t for t in all_tasks
+                    if getattr(t, "phase_id", None) is None
+                ]
+                snapshot_tasks = phase_tasks + null_tasks
+                snapshot_total = len(snapshot_tasks)
+                # Task status lives in the associated board column name.
+                snapshot_done = sum(
+                    1 for t in snapshot_tasks
+                    if getattr(t, "column", None) is not None
+                    and str(getattr(t.column, "name", "")).upper() == "DONE"
+                )
+
+                existing = await self.phase_report_repo.get_latest_by_project_phase(
+                    project_id, dto.source_phase_id
+                )
+                next_cycle = (existing.cycle_number + 1) if existing else 1
+                auto_report = PhaseReport(
+                    project_id=project_id,
+                    phase_id=dto.source_phase_id,
+                    cycle_number=next_cycle,
+                    revision=1,
+                    summary_task_count=snapshot_total,
+                    summary_done_count=snapshot_done,
+                    summary_moved_count=moved_count,
+                    summary_duration_days=0,
+                    created_by=user_id,
+                )
+                await self.phase_report_repo.create(auto_report)
+                await self.session.commit()
+            except Exception:
+                await self.session.rollback()
 
         return PhaseTransitionResponseDTO(
             moved_count=moved_count,

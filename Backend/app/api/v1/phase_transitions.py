@@ -7,6 +7,7 @@ from app.api.deps.auth import require_project_transition_authority
 from app.api.deps.project import get_project_repo
 from app.api.deps.task import get_task_repo
 from app.api.deps.audit import get_audit_repo
+from app.api.deps.phase_report import get_phase_report_repo
 from app.infrastructure.database.database import get_db_session
 from app.application.use_cases.execute_phase_transition import ExecutePhaseTransitionUseCase
 from app.application.dtos.phase_transition_dtos import (
@@ -34,6 +35,7 @@ async def create_phase_transition(
     project_repo=Depends(get_project_repo),
     task_repo=Depends(get_task_repo),
     audit_repo=Depends(get_audit_repo),
+    phase_report_repo=Depends(get_phase_report_repo),
     session: AsyncSession = Depends(get_db_session),
 ) -> PhaseTransitionResponseDTO:
     """D-01..D-12 Phase Gate transition endpoint.
@@ -62,7 +64,7 @@ async def create_phase_transition(
     # Record request (for rate limit window)
     idempotency_cache.record_request(user.id, project_id)
 
-    use_case = ExecutePhaseTransitionUseCase(project_repo, task_repo, audit_repo, session)
+    use_case = ExecutePhaseTransitionUseCase(project_repo, task_repo, audit_repo, session, phase_report_repo)
     try:
         response = await use_case.execute(project_id, dto, user.id)
     except PhaseGateLockedError as e:

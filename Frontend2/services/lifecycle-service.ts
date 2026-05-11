@@ -241,8 +241,22 @@ export const lifecycleService = {
       ),
     ])
 
-    const data = activityResp.data
-    const activity = Array.isArray(data) ? data : (data.items ?? [])
+    interface RawActivityItem {
+      id?: number
+      user_id?: number
+      metadata?: Record<string, unknown>
+      extra_metadata?: Record<string, unknown>
+      timestamp?: string
+      created_at?: string
+    }
+    const data = activityResp.data as { items?: RawActivityItem[]; total?: number } | RawActivityItem[]
+    const rawItems = Array.isArray(data) ? data : (data.items ?? [])
+    const activity: PhaseTransitionEntry[] = rawItems.map((item) => ({
+      id: item.id,
+      user_id: item.user_id ?? 0,
+      created_at: item.timestamp ?? item.created_at ?? "",
+      extra_metadata: (item.extra_metadata ?? item.metadata ?? {}) as PhaseTransitionEntry["extra_metadata"],
+    }))
 
     const processConfig = (projectResp.data["process_config"] ??
       projectResp.data["processConfig"]) as { workflow?: WorkflowConfigDTO } | null
@@ -259,11 +273,28 @@ export const lifecycleService = {
 
   /** Activity feed only — used by the cycle counter hook. */
   getPhaseTransitions: async (projectId: number): Promise<PhaseTransitionEntry[]> => {
+    // Raw shape returned by ActivityItemDTO (Backend activity_dtos.py):
+    //   - field is `metadata`  (not `extra_metadata`)
+    //   - field is `timestamp` (not `created_at`)
+    interface RawActivityItem {
+      id?: number
+      user_id?: number
+      metadata?: Record<string, unknown>
+      extra_metadata?: Record<string, unknown>
+      timestamp?: string
+      created_at?: string
+    }
     const resp = await apiClient.get<
-      { items?: PhaseTransitionEntry[] } | PhaseTransitionEntry[]
+      { items?: RawActivityItem[]; total?: number } | RawActivityItem[]
     >(`/projects/${projectId}/activity`, {
       params: { "type[]": "phase_transition" },
     })
-    return Array.isArray(resp.data) ? resp.data : (resp.data.items ?? [])
+    const raw = Array.isArray(resp.data) ? resp.data : (resp.data.items ?? [])
+    return raw.map((item) => ({
+      id: item.id,
+      user_id: item.user_id ?? 0,
+      created_at: item.timestamp ?? item.created_at ?? "",
+      extra_metadata: (item.extra_metadata ?? item.metadata ?? {}) as PhaseTransitionEntry["extra_metadata"],
+    }))
   },
 }

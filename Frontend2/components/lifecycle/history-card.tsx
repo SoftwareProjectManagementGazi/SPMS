@@ -89,9 +89,11 @@ export function HistoryCard({ project, phase, summary }: HistoryCardProps) {
     filters,
   )
 
-  // The N in "Görev Detayları (N)" — once loaded, prefers actual fetched
-  // count; before first open, uses summary.done as the optimistic estimate.
-  const taskCount = open ? closedTasks.length : summary.done
+  // The N in "Görev Detayları (N)" — prefer the PhaseReport snapshot count
+  // (summary.done) because tasks may have been moved to the next phase on
+  // transition, making the live query return 0 even though work was done.
+  // Fall back to the live query count only when the snapshot is 0.
+  const taskCount = summary.done > 0 ? summary.done : (open ? closedTasks.length : 0)
 
   const closedAtLabel = formatDate(summary.closedAt, language)
 

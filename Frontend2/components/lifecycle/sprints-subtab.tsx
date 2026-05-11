@@ -12,6 +12,7 @@ import { useApp } from "@/context/app-context"
 import {
   useSprints,
   useCreateSprint,
+  useActivateSprint,
   useCloseSprint,
   useDeleteSprint,
   type Sprint,
@@ -27,8 +28,11 @@ type SprintStatus = "planned" | "active" | "closed"
 function getStatus(sprint: Sprint): SprintStatus {
   if (sprint.is_active) return "active"
   const today = new Date()
-  if (sprint.start_date && new Date(sprint.start_date) > today) return "planned"
-  return "closed"
+  if (sprint.end_date && new Date(sprint.end_date) < today) return "closed"
+  const started = sprint.start_date && new Date(sprint.start_date) <= today
+  const notEnded = !sprint.end_date || new Date(sprint.end_date) >= today
+  if (started && notEnded) return "active"
+  return "planned"
 }
 
 const inputStyle: React.CSSProperties = {
@@ -178,6 +182,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
 
   const { data: sprints = [], isLoading } = useSprints(project.id)
   const createSprint = useCreateSprint(project.id)
+  const activateSprint = useActivateSprint(project.id)
   const closeSprint = useCloseSprint(project.id)
   const deleteSprint = useDeleteSprint(project.id)
 
@@ -377,6 +382,16 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  {status === "planned" && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      disabled={activateSprint.isPending}
+                      onClick={() => activateSprint.mutate(sprint.id)}
+                    >
+                      {T("Başlat", "Start")}
+                    </Button>
+                  )}
                   {status !== "closed" && (
                     <Button size="sm" variant="secondary" onClick={() => setCloseDialog(sprint)}>
                       {T("Kapat", "Close")}

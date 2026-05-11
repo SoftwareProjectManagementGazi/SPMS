@@ -39,6 +39,9 @@ import type { Project } from "@/services/project-service"
 import { WorkflowCanvas } from "@/components/workflow-editor/workflow-canvas"
 import { useQuery } from "@tanstack/react-query"
 
+import { usePhaseReports } from "@/hooks/use-phase-reports"
+import type { PhaseReport } from "@/services/phase-report-service"
+
 import { SummaryStrip } from "./summary-strip"
 import { PhaseGateExpand, type PhaseGateCriteria } from "./phase-gate-expand"
 import { OverviewSubTab } from "./overview-subtab"
@@ -106,7 +109,7 @@ function readCriteria(project: Project, phaseId: string | null): PhaseGateCriter
 interface TaskShape {
   id: number
   status?: string
-  phase_id?: string | null
+  phaseId?: string | null
 }
 
 function findActivePhase(
@@ -209,8 +212,12 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
     queryFn: () => lifecycleService.getPhaseTransitions(project.id),
     enabled: !!project.id,
   })
+  // Sort oldest → newest — computeNodeStates BFS requires ASC order.
+  // Activity feed returns DESC (newest first), so we reverse here.
   const phaseTransitions: PhaseTransitionEntryShape[] = React.useMemo(() => {
-    return (phaseTransitionsRaw ?? []) as PhaseTransitionEntryShape[]
+    return [...(phaseTransitionsRaw ?? [])].sort((a, b) =>
+      (a.created_at ?? "").localeCompare(b.created_at ?? ""),
+    ) as PhaseTransitionEntryShape[]
   }, [phaseTransitionsRaw])
 
   const nodeStates = React.useMemo(() => {
@@ -234,7 +241,7 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
       return { total: 0, done: 0, open: 0, progress: 0 }
     }
     const inPhase = (rawTasks as TaskShape[]).filter(
-      (t) => t.phase_id == null || t.phase_id === activePhase.id,
+      (t) => t.phaseId == null || t.phaseId === activePhase.id,
     )
     const total = inPhase.length
     const done = inPhase.filter((t) => (t.status ?? "").toLowerCase() === "done").length
@@ -267,6 +274,39 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
     () => readCriteria(project, activePhase?.id ?? null),
     [project, activePhase],
   )
+
+  // Phase reports — used by HistorySubTab to show real task counts per phase.
+  const { data: phaseReports } = usePhaseReports(project.id)
+
+  const phaseDoneCounts = React.useMemo<Record<string, number>>(() => {
+    if (!phaseReports) return {}
+    return Object.fromEntries(
+      (phaseReports as PhaseReport[]).map((r) => [r.phaseId, r.summaryDoneCount]),
+    )
+  }, [phaseReports])
+
+  const phaseTotalCounts = React.useMemo<Record<string, number>>(() => {
+    if (!phaseReports) return {}
+    return Object.fromEntries(
+      (phaseReports as PhaseReport[]).map((r) => [r.phaseId, r.summaryTaskCount]),
+    )
+  }, [phaseReports])
+
+  const phaseMovedCounts = React.useMemo<Record<string, number>>(() => {
+    if (!phaseReports) return {}
+    return Object.fromEntries(
+      (phaseReports as PhaseReport[]).map((r) => [r.phaseId, r.summaryMovedCount]),
+    )
+  }, [phaseReports])
+
+  const phaseNotes = React.useMemo<Record<string, string>>(() => {
+    if (!phaseReports) return {}
+    return Object.fromEntries(
+      (phaseReports as PhaseReport[])
+        .filter((r) => r.issues)
+        .map((r) => [r.phaseId, r.issues]),
+    )
+  }, [phaseReports])
 
   // Phase 12 Plan 12-10 (LIFE-01 UAT fix) — apply-preset handler used by the
   // empty-state CTA so the lifecycle tab can persist a chosen preset without
@@ -414,6 +454,10 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
               activity={
                 (phaseTransitionsRaw ?? []) as PhaseTransitionEntry[]
               }
+              phaseDoneCounts={phaseDoneCounts}
+              phaseTotalCounts={phaseTotalCounts}
+              phaseMovedCounts={phaseMovedCounts}
+              phaseNotes={phaseNotes}
             />
           )}
           {subTab === "artifacts" && !isKanban && (

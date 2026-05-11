@@ -57,6 +57,8 @@ export function usePhaseTransition(projectId: number) {
       qc.invalidateQueries({ queryKey: ["projects", projectId] })
       qc.invalidateQueries({ queryKey: ["activity", projectId] })
       qc.invalidateQueries({ queryKey: ["cycle-counters", projectId] })
+      qc.invalidateQueries({ queryKey: ["phase-reports", "project", projectId] })
+      qc.invalidateQueries({ queryKey: ["tasks"] })
     },
   })
 

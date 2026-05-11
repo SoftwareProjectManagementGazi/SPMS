@@ -46,6 +46,17 @@ export function useCreateSprint(projectId: number) {
   });
 }
 
+export function useActivateSprint(projectId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sprintId: number) =>
+      apiClient.patch<Sprint>(`/sprints/${sprintId}`, { is_active: true }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sprints', projectId] });
+    },
+  });
+}
+
 export function useCloseSprint(projectId: number) {
   const qc = useQueryClient();
   return useMutation({

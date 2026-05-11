@@ -82,7 +82,10 @@ function computePhaseStats(tasks: Task[], phaseId: string | null): PhaseStats {
   if (!phaseId) {
     return { total: 0, done: 0, inProgress: 0, progress: 0 }
   }
-  const inPhase = tasks.filter((t) => t.phaseId === phaseId)
+  // Include tasks explicitly assigned to this phase AND tasks with no phase
+  // assignment (phaseId = null / undefined) — the board treats unassigned
+  // tasks as belonging to the currently active phase.
+  const inPhase = tasks.filter((t) => t.phaseId == null || t.phaseId === phaseId)
   const total = inPhase.length
   const done = inPhase.filter((t) => normalizeStatus(t.status) === "done").length
   const inProgress = inPhase.filter(
@@ -119,7 +122,12 @@ function buildPhaseSummary(
   return workflow.nodes
     .filter((n) => !n.isArchived)
     .map((n, i) => {
-      const inPhase = tasks.filter((t) => t.phaseId === n.id)
+      // Null-phaseId tasks count toward the active phase only.
+      const inPhase = tasks.filter(
+        (t) =>
+          t.phaseId === n.id ||
+          (n.id === activePhaseId && t.phaseId == null),
+      )
       const total = inPhase.length
       const done = inPhase.filter((t) => normalizeStatus(t.status) === "done").length
       const progress = total > 0 ? Math.round((done / total) * 100) : 0
