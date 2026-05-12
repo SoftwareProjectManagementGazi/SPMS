@@ -269,14 +269,31 @@ const MilestonesSubTab = ({ project, lang }) => {
 /* ---- History Sub-Tab ---- */
 const HistorySubTab = ({ project, lang }) => {
   const T = (tr, en) => lang === "tr" ? tr : en;
+  const router = useRouter();
   const history = window.SPMSData.PHASE_HISTORY.filter(h => h.projectId === project.id);
   const [expanded, setExpanded] = React.useState({});
   const [reportOpen, setReportOpen] = React.useState({});
+  const allProjectTasks = window.SPMSData.TASKS.filter(t => t.projectId === project.id);
+
+  // Distribute project tasks across phases by cumulative total counts
+  const getPhaseTasksFor = (ph, phIdx) => {
+    const startIdx = history.slice(0, phIdx).reduce((acc, h) => acc + h.total, 0);
+    const count = ph.total;
+    const slice = allProjectTasks.slice(startIdx, startIdx + count);
+    // If not enough tasks, wrap around
+    if (slice.length < count) {
+      return [...slice, ...allProjectTasks.slice(0, count - slice.length)];
+    }
+    return slice;
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Section title={T("Kapatılmış Fazlar", "Closed Phases")} subtitle={`${history.length} ${T("faz tamamlandı", "phases completed")}`}/>
-      {history.map(ph => (
+      {history.map((ph, phIdx) => {
+        const phaseTasks = getPhaseTasksFor(ph, phIdx);
+        const isExpanded = !!expanded[ph.id];
+        return (
         <Card key={ph.id} padding={14}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ flex: 1 }}>
@@ -288,6 +305,10 @@ const HistorySubTab = ({ project, lang }) => {
                 {new Date(ph.closedAt).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
               </div>
             </div>
+            <Button size="xs" variant="ghost" icon={isExpanded ? <Icons.ChevronUp size={12}/> : <Icons.List size={12}/>}
+              onClick={() => setExpanded({ ...expanded, [ph.id]: !isExpanded })}>
+              {T("Görevler", "Tasks")}
+            </Button>
             <Button size="xs" variant="ghost" icon={<Icons.Doc size={12}/>} onClick={() => setReportOpen({ ...reportOpen, [ph.id]: !reportOpen[ph.id] })}>{T("Rapor", "Report")}</Button>
           </div>
 
@@ -299,6 +320,50 @@ const HistorySubTab = ({ project, lang }) => {
           </div>
 
           {ph.note && <div style={{ marginTop: 10, fontSize: 12, color: "var(--fg-muted)", fontStyle: "italic", padding: "8px 10px", background: "var(--surface-2)", borderRadius: 6 }}>"{ph.note}"</div>}
+
+          {/* Tasks expand */}
+          {isExpanded && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-muted)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>
+                {T("Görevler", "Tasks")} ({phaseTasks.length})
+              </div>
+              {phaseTasks.length === 0 ? (
+                <div style={{ padding: "14px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12 }}>
+                  {T("Bu faza ait görev bulunamadı.", "No tasks found for this phase.")}
+                </div>
+              ) : (
+                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                  {phaseTasks.map((t, i) => {
+                    const a = window.SPMSData.getUser(t.assigneeId);
+                    const isCarried = i >= ph.completed;
+                    const priorityTone = t.priority === "critical" ? "danger" : t.priority === "high" ? "warning" : "neutral";
+                    return (
+                      <div key={t.id}
+                        onClick={() => router.go("task-detail", { taskId: t.id })}
+                        style={{
+                          display: "grid", gridTemplateColumns: "60px 1fr 90px 26px 70px",
+                          gap: 10, alignItems: "center", padding: "9px 12px",
+                          borderBottom: i < phaseTasks.length - 1 ? "1px solid var(--border)" : "0",
+                          cursor: "pointer", fontSize: 12.5,
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-2)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span className="mono" style={{ fontSize: 10.5, color: "var(--fg-muted)" }}>{t.key}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>{t.title}</span>
+                        {isCarried
+                          ? <Badge size="xs" tone="warning">{T("Taşındı", "Carried")}</Badge>
+                          : <Badge size="xs" tone="success">{T("Tamamlandı", "Done")}</Badge>
+                        }
+                        <Avatar user={a} size={20}/>
+                        <Badge size="xs" tone={priorityTone}>{t.priority}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Evaluation report expand (§11) */}
           {reportOpen[ph.id] && (
@@ -327,7 +392,8 @@ const HistorySubTab = ({ project, lang }) => {
             </div>
           )}
         </Card>
-      ))}
+        );
+      })}
       {history.length === 0 && (
         <div style={{ padding: 30, textAlign: "center", color: "var(--fg-subtle)", fontSize: 12.5, border: "1px dashed var(--border-strong)", borderRadius: 8 }}>
           {T("Henüz kapatılmış faz yok.", "No closed phases yet.")}

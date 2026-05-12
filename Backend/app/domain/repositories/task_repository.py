@@ -49,3 +49,12 @@ class ITaskRepository(ABC):
     async def count_completed_since(self, user_id: int, since: datetime) -> int:
         """Count tasks assigned to user updated since the given datetime."""
         pass
+
+    @abstractmethod
+    async def bulk_stamp_phase(
+        self, task_ids: List[int], new_phase_id: Optional[str]
+    ) -> None:
+        """Bulk-update phase_id for a list of task IDs (flush, no commit).
+        Passing new_phase_id=None clears the phase (moves to backlog).
+        """
+        pass

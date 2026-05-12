@@ -78,8 +78,9 @@ interface TaskShape {
   id: number
   title?: string
   status?: string
+  isDone?: boolean
   priority?: string
-  phase_id?: string | null
+  phaseId?: string | null
 }
 
 type ExceptionAction = "same" | "next" | "backlog" | "stay"
@@ -89,8 +90,7 @@ type ExceptionAction = "same" | "next" | "backlog" | "stay"
 // ----------------------------------------------------------------------------
 
 function isOpen(t: TaskShape): boolean {
-  const s = (t.status ?? "").toLowerCase()
-  return s !== "done"
+  return t.isDone !== true
 }
 
 function isCritical(t: TaskShape): boolean {
@@ -145,7 +145,7 @@ export function PhaseGateExpand({
   const phaseTasks: TaskShape[] = React.useMemo(() => {
     if (!Array.isArray(rawTasks)) return []
     return (rawTasks as TaskShape[]).filter(
-      (t) => t.phase_id == null || t.phase_id === currentPhase.id,
+      (t) => t.phaseId == null || t.phaseId === currentPhase.id,
     )
   }, [rawTasks, currentPhase.id])
 

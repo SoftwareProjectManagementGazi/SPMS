@@ -10,7 +10,7 @@ Single atomic transaction (D-10):
   7. Insert audit_log with full envelope (D-08)
 Commit releases advisory lock automatically.
 """
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.services.phase_gate_service import acquire_project_lock_or_fail
 from app.application.dtos.phase_transition_dtos import (
@@ -275,22 +275,78 @@ class ExecutePhaseTransitionUseCase:
         self, project_id: int, source_phase_id: str, target_phase_id: str,
         action: str, exceptions: list,
     ) -> int:
-        """D-04: bulk action with per-task exceptions."""
-        tasks = await self.task_repo.list_by_project_and_phase(project_id, source_phase_id)
+        """D-04: bulk action with per-task exceptions.
+
+        Processes two sets of tasks:
+        1. Tasks explicitly assigned to source_phase_id.
+        2. Tasks with phase_id=None (backlog) — the board treats them as part of
+           the active phase.  DONE backlog tasks are stamped with source_phase_id
+           so they don't bleed into future phases.  Non-DONE backlog tasks follow
+           the same open_tasks_action as phase-assigned tasks.
+        """
+        # Fetch phase-assigned tasks
+        phase_tasks = await self.task_repo.list_by_project_and_phase(
+            project_id, source_phase_id
+        )
+        # Fetch backlog tasks (phase_id=None) — filter in Python
+        all_tasks = await self.task_repo.list_by_project_and_phase(project_id, None)
+        backlog_tasks = [t for t in all_tasks if getattr(t, "phase_id", None) is None]
+
         exc_map = {e.task_id: e.action for e in exceptions}
-        moved = 0
-        for t in tasks:
+
+        # Buckets for bulk updates (task_id lists per destination)
+        to_source: List[int] = []   # stamp with source_phase_id (done backlog)
+        to_target: List[int] = []   # move to target_phase_id
+        to_backlog: List[int] = []  # clear phase (set to null)
+
+        def _is_done(t) -> bool:
+            """Task is done if it sits in the last board column (highest order_index).
+            Language-agnostic: works for both Turkish ("Tamamlandı") and English ("Done")
+            columns.  Falls back to column-name check if project columns not loaded.
+            """
+            col = getattr(t, "column", None)
+            if col is None:
+                return False
+            project = getattr(t, "project", None)
+            proj_cols = getattr(project, "columns", None) if project else None
+            if proj_cols:
+                max_order = max(
+                    (getattr(c, "order_index", 0) for c in proj_cols), default=0
+                )
+                return int(getattr(col, "order_index", -1)) == max_order
+            # Fallback: name-based (covers English "Done")
+            return str(getattr(col, "name", "")).upper() == "DONE"
+
+        # Phase-assigned tasks
+        for t in phase_tasks:
             eff_action = exc_map.get(t.id, action)
             if eff_action == "move_to_next":
-                t.phase_id = target_phase_id
-                moved += 1
+                to_target.append(t.id)
             elif eff_action == "move_to_backlog":
-                t.phase_id = None
-                # also clear sprint_id for backlog per D-04
-                if hasattr(t, "sprint_id"):
-                    t.sprint_id = None
-                moved += 1
-            # keep_in_source: no-op
-        # Persist moves — caller session already holds them; flush to send SQL
-        await self.session.flush()
+                to_backlog.append(t.id)
+            # keep_in_source: no-op — already has correct phase_id
+
+        # Backlog tasks
+        for t in backlog_tasks:
+            if _is_done(t):
+                # Stamp completed backlog tasks with the source phase so they
+                # don't appear in future phases.
+                to_source.append(t.id)
+            else:
+                eff_action = exc_map.get(t.id, action)
+                if eff_action == "move_to_next":
+                    to_target.append(t.id)
+                elif eff_action == "keep_in_source":
+                    to_source.append(t.id)
+                # move_to_backlog / default: leave as null (stay in backlog)
+
+        # Persist via bulk SQL UPDATE — no per-row ORM tracking
+        if to_source:
+            await self.task_repo.bulk_stamp_phase(to_source, source_phase_id)
+        if to_target:
+            await self.task_repo.bulk_stamp_phase(to_target, target_phase_id)
+        if to_backlog:
+            await self.task_repo.bulk_stamp_phase(to_backlog, None)
+
+        moved = len(to_source) + len(to_target) + len(to_backlog)
         return moved

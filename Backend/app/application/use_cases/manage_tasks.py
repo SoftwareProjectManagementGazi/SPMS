@@ -22,10 +22,23 @@ def extract_search_words(query: str) -> List[str]:
 
 # --- YARDIMCI MAPPER FONKSİYONU (Logic buraya taşındı) ---
 def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
-    # 1. Status Hesaplama
+    # 1. Status + is_done computation
+    # is_done: language-agnostic — task is done when its column has the
+    # highest order_index among all project columns (covers "Done", "Bitti",
+    # "Tamamlandı", and any custom last-column name).
     status_slug = "todo"
+    is_done = False
     if task.column:
         status_slug = task.column.name.lower()
+        if task.project and task.project.columns:
+            max_order = max(
+                (getattr(c, "order_index", 0) for c in task.project.columns),
+                default=0,
+            )
+            is_done = task.column.order_index == max_order
+        else:
+            # Fallback: name-based for English defaults
+            is_done = status_slug in ("done", "completed", "closed")
 
     # 2. Project Key (Key oluşturmak için gerekli)
     project_key = "TASK"
@@ -93,6 +106,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
         description=task.description,
         priority=task.priority,
         status=status_slug,
+        is_done=is_done,
         start_date=task.start_date,
         due_date=task.due_date,
         points=task.points,
@@ -102,6 +116,7 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
         project=project_summary,
         sprint_id=task.sprint_id,
         column_id=task.column_id,
+        phase_id=task.phase_id,
         assignee_id=task.assignee_id,
         assignee=assignee_dto,
         reporter_id=task.reporter_id,

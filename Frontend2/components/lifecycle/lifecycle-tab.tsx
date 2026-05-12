@@ -109,6 +109,7 @@ function readCriteria(project: Project, phaseId: string | null): PhaseGateCriter
 interface TaskShape {
   id: number
   status?: string
+  isDone?: boolean
   phaseId?: string | null
 }
 
@@ -244,7 +245,7 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
       (t) => t.phaseId == null || t.phaseId === activePhase.id,
     )
     const total = inPhase.length
-    const done = inPhase.filter((t) => (t.status ?? "").toLowerCase() === "done").length
+    const done = inPhase.filter((t) => t.isDone === true).length
     const open = total - done
     const progress = total > 0 ? Math.round((done / total) * 100) : 0
     return { total, done, open, progress }

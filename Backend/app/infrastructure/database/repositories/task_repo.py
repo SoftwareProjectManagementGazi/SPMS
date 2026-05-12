@@ -409,3 +409,21 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         stmt = stmt.values(assignee_id=None)
         await self.session.execute(stmt)
         await self.session.commit()
+
+    async def bulk_stamp_phase(
+        self, task_ids: List[int], new_phase_id
+    ) -> None:
+        """Bulk-update phase_id for a list of task IDs without committing.
+        Uses a single UPDATE statement for efficiency.
+        """
+        if not task_ids:
+            return
+        stmt = (
+            update(TaskModel)
+            .where(
+                TaskModel.id.in_(task_ids),
+                TaskModel.is_deleted == False,  # noqa: E712
+            )
+            .values(phase_id=new_phase_id)
+        )
+        await self.session.execute(stmt)

@@ -6,6 +6,8 @@ export interface Task {
   title: string
   description: string
   status: string
+  /** True when the task is in the last board column (order_index-based, language-agnostic). */
+  isDone?: boolean
   priority: "low" | "medium" | "high" | "critical"
   assigneeId: number | null
   /** Backend `assignee.username` when populated; optional so existing test
@@ -44,6 +46,7 @@ interface TaskResponseDTO {
   title: string
   description: string
   status: string
+  is_done?: boolean
   priority: "low" | "medium" | "high" | "critical"
   assignee_id: number | null
   /** Backend includes the populated assignee object on TaskResponseDTO. We
@@ -137,6 +140,7 @@ function mapTask(d: TaskResponseDTO): Task {
     title: d.title,
     description: d.description ?? "",
     status: normalizeStatus(d.status),
+    isDone: d.is_done ?? false,
     priority: normalizePriority(d.priority),
     assigneeId: d.assignee_id,
     // Prefer the populated assignee object's username (backend includes the

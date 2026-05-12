@@ -87,7 +87,7 @@ function computePhaseStats(tasks: Task[], phaseId: string | null): PhaseStats {
   // tasks as belonging to the currently active phase.
   const inPhase = tasks.filter((t) => t.phaseId == null || t.phaseId === phaseId)
   const total = inPhase.length
-  const done = inPhase.filter((t) => normalizeStatus(t.status) === "done").length
+  const done = inPhase.filter((t) => t.isDone).length
   const inProgress = inPhase.filter(
     (t) => normalizeStatus(t.status) === "progress",
   ).length
@@ -129,7 +129,7 @@ function buildPhaseSummary(
           (n.id === activePhaseId && t.phaseId == null),
       )
       const total = inPhase.length
-      const done = inPhase.filter((t) => normalizeStatus(t.status) === "done").length
+      const done = inPhase.filter((t) => t.isDone).length
       const progress = total > 0 ? Math.round((done / total) * 100) : 0
       const state: "active" | "past" | "future" =
         n.id === activePhaseId

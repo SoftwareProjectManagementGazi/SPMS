@@ -82,6 +82,7 @@ class TaskResponseDTO(BaseModel):
     description: Optional[str] = None
     priority: TaskPriority
     status: str = "todo"  # Computed by UseCase from column name; default avoids validation errors when model_validate is called directly on Task entities
+    is_done: bool = False  # True when task is in the last board column (order_index-based, language-agnostic)
     start_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
     points: Optional[int] = None
@@ -93,6 +94,7 @@ class TaskResponseDTO(BaseModel):
 
     sprint_id: Optional[int] = None
     column_id: Optional[int] = None
+    phase_id: Optional[str] = None
     assignee_id: Optional[int] = None
     assignee: Optional[UserSummaryDTO] = None
     reporter_id: Optional[int] = None
