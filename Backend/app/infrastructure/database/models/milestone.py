@@ -13,6 +13,7 @@ class MilestoneModel(Base):
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
+    start_date = Column(DateTime(timezone=True), nullable=True)
     target_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(20), nullable=False, server_default="pending")
     # D-38: JSONB + GIN index (index created by migration 005 raw DDL)

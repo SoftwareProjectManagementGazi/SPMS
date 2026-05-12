@@ -22,6 +22,7 @@ class Milestone(BaseModel):
     project_id: int
     name: str
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
     status: MilestoneStatus = MilestoneStatus.PENDING
     linked_phase_ids: List[str] = Field(default_factory=list)  # D-24

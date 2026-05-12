@@ -25,7 +25,9 @@ import type { WorkflowConfig, WorkflowNode } from "@/services/lifecycle-service"
 // Re-export the canonical Phase 12 milestone create DTO shape.
 export interface MilestoneCreateDraft {
   name: string
+  start_date?: string
   target_date: string
+  status?: string
   linked_phase_ids: string[]
 }
 
@@ -33,6 +35,8 @@ export interface MilestoneInlineAddRowProps {
   workflow: WorkflowConfig
   /** Optional seed when editing an existing milestone. */
   initial?: Partial<MilestoneCreateDraft>
+  /** True when editing an existing milestone — shows status selector. */
+  isEdit?: boolean
   /** Promise so the caller can await the mutation result before closing the row. */
   onSave: (draft: MilestoneCreateDraft) => Promise<void> | void
   onCancel: () => void
@@ -41,6 +45,7 @@ export interface MilestoneInlineAddRowProps {
 export function MilestoneInlineAddRow({
   workflow,
   initial,
+  isEdit = false,
   onSave,
   onCancel,
 }: MilestoneInlineAddRowProps) {
@@ -51,7 +56,9 @@ export function MilestoneInlineAddRow({
   )
 
   const [name, setName] = React.useState(initial?.name ?? "")
+  const [startDate, setStartDate] = React.useState(initial?.start_date ?? "")
   const [targetDate, setTargetDate] = React.useState(initial?.target_date ?? "")
+  const [status, setStatus] = React.useState(initial?.status ?? "pending")
   const [linkedPhaseIds, setLinkedPhaseIds] = React.useState<string[]>(
     initial?.linked_phase_ids ?? [],
   )
@@ -102,7 +109,9 @@ export function MilestoneInlineAddRow({
     try {
       await onSave({
         name: name.trim(),
+        start_date: startDate || undefined,
         target_date: targetDate,
+        status: isEdit ? status : undefined,
         linked_phase_ids: linkedPhaseIds,
       })
     } finally {
@@ -115,7 +124,7 @@ export function MilestoneInlineAddRow({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 140px",
+          gridTemplateColumns: "1fr 140px 140px",
           gap: 10,
           marginBottom: 10,
         }}
@@ -130,11 +139,46 @@ export function MilestoneInlineAddRow({
         <Input
           type="date"
           size="md"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          title={T("Başlangıç tarihi", "Start date")}
+          style={{ width: "100%" }}
+        />
+        <Input
+          type="date"
+          size="md"
           value={targetDate}
           onChange={(e) => setTargetDate(e.target.value)}
+          title={T("Bitiş tarihi", "Due date")}
           style={{ width: "100%" }}
         />
       </div>
+
+      {/* Status selector — edit mode only */}
+      {isEdit && (
+        <div style={{ marginBottom: 10 }}>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            style={{
+              width: "100%",
+              height: 36,
+              padding: "0 10px",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--fg)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            <option value="pending">{T("Bekliyor", "Pending")}</option>
+            <option value="in_progress">{T("Devam Ediyor", "In Progress")}</option>
+            <option value="completed">{T("Tamamlandı", "Completed")}</option>
+            <option value="delayed">{T("Gecikmeli", "Delayed")}</option>
+          </select>
+        </div>
+      )}
 
       {/* Chip picker — full width row */}
       <div ref={dropdownRef} style={{ position: "relative", marginBottom: 10 }}>

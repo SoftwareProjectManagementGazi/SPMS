@@ -25,6 +25,7 @@ import { Card, Tabs, type TabItem } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useCycleCounters } from "@/hooks/use-cycle-counters"
 import { useTasks } from "@/hooks/use-tasks"
+import type { Task } from "@/services/task-service"
 import { lifecycleService } from "@/services/lifecycle-service"
 import {
   mapWorkflowConfig,
@@ -446,7 +447,7 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
             <SprintsSubTab project={project} />
           )}
           {subTab === "milestones" && (
-            <MilestonesSubTab project={project} workflow={workflow} />
+            <MilestonesSubTab project={project} workflow={workflow} tasks={(rawTasks ?? []) as Task[]} />
           )}
           {subTab === "history" && !isKanban && (
             <HistorySubTab

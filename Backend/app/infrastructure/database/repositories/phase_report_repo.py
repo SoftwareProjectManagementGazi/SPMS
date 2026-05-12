@@ -27,6 +27,7 @@ class SqlAlchemyPhaseReportRepository(IPhaseReportRepository):
         model = self._to_model(report)
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit()
         return await self.get_by_id(model.id)  # type: ignore
 
     async def get_by_id(self, report_id: int) -> Optional[PhaseReport]:
@@ -76,6 +77,7 @@ class SqlAlchemyPhaseReportRepository(IPhaseReportRepository):
             setattr(m, k, v)
         m.updated_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return self._to_entity(m)
 
     async def delete(self, report_id: int) -> bool:
@@ -87,4 +89,5 @@ class SqlAlchemyPhaseReportRepository(IPhaseReportRepository):
         m.is_deleted = True
         m.deleted_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return True

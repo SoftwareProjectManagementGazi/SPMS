@@ -18,6 +18,7 @@ class MilestoneCreateDTO(BaseModel):
     project_id: int
     name: str = Field(min_length=1, max_length=200)
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
     status: MilestoneStatus = MilestoneStatus.PENDING
     linked_phase_ids: List[str] = Field(default_factory=list)
@@ -31,6 +32,7 @@ class MilestoneCreateDTO(BaseModel):
 class MilestoneUpdateDTO(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=200)
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
     status: Optional[MilestoneStatus] = None
     linked_phase_ids: Optional[List[str]] = None
@@ -48,6 +50,7 @@ class MilestoneResponseDTO(BaseModel):
     project_id: int
     name: str
     description: Optional[str] = None
+    start_date: Optional[datetime] = None
     target_date: Optional[datetime] = None
     status: MilestoneStatus
     linked_phase_ids: List[str]

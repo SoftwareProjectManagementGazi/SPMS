@@ -189,6 +189,43 @@ export function EvaluationReportCard({
 
   const handlePdf = async () => {
     if (!report || pdfCountdown != null) return
+
+    // Auto-save unsaved changes before generating the PDF so the downloaded
+    // file always reflects what the user has typed in the textareas.
+    const hasUnsaved =
+      issues !== (report.issues ?? "") ||
+      lessons !== (report.lessons ?? "") ||
+      recommendations !== (report.recommendations ?? "")
+
+    if (hasUnsaved && canEdit) {
+      setSaveError(null)
+      try {
+        await update.mutateAsync({
+          id: report.id,
+          dto: { issues, lessons, recommendations },
+        })
+      } catch (err: unknown) {
+        const code = (err as { response?: { status?: number } })?.response?.status
+        if (code === 409) {
+          setSaveError(
+            T(
+              "Başka bir kullanıcı raporu güncelledi. Yenileyin.",
+              "Another user updated the report. Refresh.",
+            ),
+          )
+        } else {
+          showToast({
+            variant: "error",
+            message: T(
+              "Kaydedilemedi, PDF indirme iptal edildi.",
+              "Save failed, PDF download cancelled.",
+            ),
+          })
+        }
+        return
+      }
+    }
+
     try {
       await downloadPdf.mutateAsync({
         reportId: report.id,
@@ -250,15 +287,17 @@ export function EvaluationReportCard({
     },
   ]
 
+  const saving = update.isPending || create.isPending
   const pdfLabel =
     pdfCountdown != null && pdfCountdown > 0
       ? T(`${pdfCountdown}s bekleyin`, `Wait ${pdfCountdown}s`)
-      : downloadPdf.isPending
-        ? T("PDF oluşturuluyor…", "Generating PDF…")
-        : "PDF"
+      : saving
+        ? T("Kaydediliyor…", "Saving…")
+        : downloadPdf.isPending
+          ? T("PDF oluşturuluyor…", "Generating PDF…")
+          : "PDF"
   const pdfDisabled =
-    pdfCountdown != null || downloadPdf.isPending || !report
-  const saving = update.isPending || create.isPending
+    pdfCountdown != null || saving || downloadPdf.isPending || !report
 
   return (
     <div

@@ -29,6 +29,7 @@ class SqlAlchemyMilestoneRepository(IMilestoneRepository):
         model = self._to_model(milestone)
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit()
         refreshed = await self.get_by_id(model.id)
         if refreshed is None:
             raise RuntimeError(f"Milestone {model.id} disappeared after flush")
@@ -71,6 +72,7 @@ class SqlAlchemyMilestoneRepository(IMilestoneRepository):
         model.linked_phase_ids = milestone.linked_phase_ids
         model.updated_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return self._to_entity(model)
 
     async def delete(self, milestone_id: int) -> bool:
@@ -82,4 +84,5 @@ class SqlAlchemyMilestoneRepository(IMilestoneRepository):
         model.is_deleted = True
         model.deleted_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return True

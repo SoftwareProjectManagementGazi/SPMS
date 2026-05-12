@@ -38,6 +38,7 @@ import {
 } from "@/hooks/use-milestones"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
 import type { Milestone } from "@/services/milestone-service"
+import type { Task } from "@/services/task-service"
 import type {
   WorkflowConfig,
   WorkflowNode,
@@ -61,23 +62,48 @@ export interface MilestonesSubTabProject {
 export interface MilestonesSubTabProps {
   project: MilestonesSubTabProject
   workflow: WorkflowConfig
+  tasks?: Task[]
 }
 
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
 
-function statusTone(status: string): "neutral" | "info" | "success" {
+// Derive the effective display status from stored status + start_date.
+// If stored status is PENDING but start_date is today or in the past →
+// treat as IN_PROGRESS for display purposes only (not persisted).
+function effectiveStatus(status: string, startDate?: string | null, targetDate?: string): string {
   const s = (status ?? "").toUpperCase()
+  // Manuel tamamlandı/gecikmeli → değiştirme
+  if (s === "COMPLETED" || s === "DONE") return s
+  const today = new Date().setHours(0, 0, 0, 0)
+  // Bitiş tarihi geçtiyse ve tamamlanmadıysa → Gecikmeli
+  if (targetDate) {
+    const end = new Date(targetDate).setHours(0, 0, 0, 0)
+    if (today > end) return "DELAYED"
+  }
+  // PENDING ise başlangıç tarihine bak
+  if (s === "PENDING") {
+    if (!startDate) return "IN_PROGRESS"
+    const start = new Date(startDate).setHours(0, 0, 0, 0)
+    return start <= today ? "IN_PROGRESS" : "PENDING"
+  }
+  return s
+}
+
+function statusTone(status: string, startDate?: string | null, targetDate?: string): "neutral" | "info" | "success" | "warning" {
+  const s = effectiveStatus(status, startDate, targetDate)
   if (s === "COMPLETED" || s === "DONE") return "success"
   if (s === "IN_PROGRESS" || s === "ACTIVE") return "info"
+  if (s === "DELAYED") return "warning"
   return "neutral"
 }
 
-function statusLabel(status: string, tr: boolean): string {
-  const s = (status ?? "").toUpperCase()
+function statusLabel(status: string, startDate: string | null | undefined, targetDate: string | undefined, tr: boolean): string {
+  const s = effectiveStatus(status, startDate, targetDate)
   if (s === "COMPLETED" || s === "DONE") return tr ? "Tamamlandı" : "Done"
   if (s === "IN_PROGRESS" || s === "ACTIVE") return tr ? "Devam Ediyor" : "In Progress"
+  if (s === "DELAYED") return tr ? "Gecikmeli" : "Delayed"
   return tr ? "Bekliyor" : "Pending"
 }
 
@@ -95,22 +121,13 @@ function formatTargetDate(targetDate: string, tr: boolean): string {
   })
 }
 
-// Project-progress derivation when linked phases are present. When
-// linkedPhaseIds is empty, return null so the caller renders an em-dash.
-function deriveMilestoneProgress(
-  milestone: Milestone,
-  workflow: WorkflowConfig,
-): number | null {
-  if (!milestone.linkedPhaseIds || milestone.linkedPhaseIds.length === 0) {
-    return null
-  }
-  // Without per-phase task counts here, we shape the value as a uniform
-  // percentage based on milestone status as a graceful fallback. The real
-  // per-phase progress lands when Plan 12-06 wires phase-task counts.
-  const s = (milestone.status ?? "").toUpperCase()
+// Progress derivation — status-based only.
+// Returns null when progress bar should not be shown (in-progress / delayed).
+function deriveMilestoneProgress(status: string, startDate?: string | null, targetDate?: string): number | null {
+  const s = effectiveStatus(status, startDate, targetDate)
   if (s === "COMPLETED" || s === "DONE") return 100
-  if (s === "IN_PROGRESS" || s === "ACTIVE") return 50
-  return 0
+  if (s === "PENDING") return 0
+  return null // IN_PROGRESS or DELAYED → no bar
 }
 
 // ----------------------------------------------------------------------------
@@ -120,6 +137,7 @@ function deriveMilestoneProgress(
 export function MilestonesSubTab({
   project,
   workflow,
+  tasks = [],
 }: MilestonesSubTabProps) {
   const { language } = useApp()
   const T = React.useCallback(
@@ -171,7 +189,9 @@ export function MilestonesSubTab({
           id,
           dto: {
             name: draft.name,
+            start_date: draft.start_date,
             target_date: draft.target_date,
+            status: draft.status,
             linked_phase_ids: draft.linked_phase_ids,
           },
         })
@@ -240,9 +260,12 @@ export function MilestonesSubTab({
               <MilestoneInlineAddRow
                 key={ms.id}
                 workflow={workflow}
+                isEdit
                 initial={{
                   name: ms.name,
+                  start_date: ms.startDate ?? undefined,
                   target_date: ms.targetDate,
+                  status: effectiveStatus(ms.status, ms.startDate, ms.targetDate).toLowerCase().replace("done", "completed").replace("active", "in_progress"),
                   linked_phase_ids: ms.linkedPhaseIds ?? [],
                 }}
                 onSave={(draft) => handleUpdate(ms.id, draft)}
@@ -251,10 +274,10 @@ export function MilestonesSubTab({
             )
           }
 
-          const status = (ms.status ?? "").toUpperCase()
+          const status = effectiveStatus(ms.status, ms.startDate, ms.targetDate)
           const dLeft = daysFromToday(ms.targetDate)
           const overdue = status !== "COMPLETED" && status !== "DONE" && dLeft < 0
-          const progress = deriveMilestoneProgress(ms, workflow)
+          const progress = deriveMilestoneProgress(ms.status, ms.startDate, ms.targetDate)
 
           return (
             <Card
@@ -294,8 +317,8 @@ export function MilestonesSubTab({
                     )}
                   </div>
                 </div>
-                <Badge tone={statusTone(ms.status)} dot>
-                  {statusLabel(ms.status, isTr)}
+                <Badge tone={statusTone(ms.status, ms.startDate, ms.targetDate)} dot>
+                  {statusLabel(ms.status, ms.startDate, ms.targetDate, isTr)}
                 </Badge>
                 {canEdit && (
                   <>
@@ -340,25 +363,27 @@ export function MilestonesSubTab({
               )}
 
               {/* ProgressBar derived from linked phases */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 10,
-                }}
-              >
-                <ProgressBar value={progress ?? 0} style={{ flex: 1 }} />
-                <span
+              {progress !== null && (
+                <div
                   style={{
-                    fontSize: 11,
-                    fontFamily: "var(--font-mono)",
-                    color: "var(--fg-muted)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 10,
                   }}
                 >
-                  {progress != null ? `%${progress}` : "—"}
-                </span>
-              </div>
+                  <ProgressBar value={progress} style={{ flex: 1 }} />
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                      color: "var(--fg-muted)",
+                    }}
+                  >
+                    {`%${progress}`}
+                  </span>
+                </div>
+              )}
             </Card>
           )
         })}

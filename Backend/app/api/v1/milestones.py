@@ -12,6 +12,7 @@ Note on inline authority check:
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from app.api.deps.auth import get_current_user, _is_admin
 from app.api.deps.milestone import get_milestone_repo
@@ -96,6 +97,44 @@ async def create_milestone(
     audit_repo=Depends(get_audit_repo),
 ):
     await _authorize_transition(user, dto.project_id, project_repo, milestone_repo)
+    uc = CreateMilestoneUseCase(milestone_repo, project_repo, audit_repo=audit_repo)
+    try:
+        return await uc.execute(dto, user.id)
+    except Exception as e:
+        raise _to_http(e)
+
+
+class _MilestoneCreateBody(BaseModel):
+    """Request body for POST /projects/{project_id}/milestones (project_id comes from path)."""
+    name: str = Field(min_length=1, max_length=200)
+    description: Optional[str] = None
+    start_date: Optional[str] = None
+    target_date: Optional[str] = None
+    status: Optional[str] = None
+    linked_phase_ids: list[str] = Field(default_factory=list)
+
+
+@router.post("/projects/{project_id}/milestones", response_model=MilestoneResponseDTO, status_code=201)
+async def create_milestone_for_project(
+    project_id: int,
+    body: _MilestoneCreateBody,
+    user=Depends(get_current_user),
+    milestone_repo=Depends(get_milestone_repo),
+    project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
+):
+    await _authorize_transition(user, project_id, project_repo, milestone_repo)
+    from datetime import datetime
+    from app.domain.entities.milestone import MilestoneStatus
+    dto = MilestoneCreateDTO(
+        project_id=project_id,
+        name=body.name,
+        description=body.description,
+        start_date=datetime.fromisoformat(body.start_date) if body.start_date else None,
+        target_date=datetime.fromisoformat(body.target_date) if body.target_date else None,
+        status=MilestoneStatus(body.status) if body.status else MilestoneStatus.PENDING,
+        linked_phase_ids=body.linked_phase_ids,
+    )
     uc = CreateMilestoneUseCase(milestone_repo, project_repo, audit_repo=audit_repo)
     try:
         return await uc.execute(dto, user.id)

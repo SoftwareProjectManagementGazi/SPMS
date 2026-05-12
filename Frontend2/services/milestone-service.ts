@@ -12,6 +12,7 @@ export interface Milestone {
   id: number
   projectId: number
   name: string
+  startDate?: string | null
   targetDate: string
   status: string
   linkedPhaseIds: string[]
@@ -23,6 +24,7 @@ interface MilestoneResponseDTO {
   id: number
   project_id: number
   name: string
+  start_date?: string | null
   target_date: string
   status: string
   linked_phase_ids?: string[]
@@ -32,6 +34,7 @@ interface MilestoneResponseDTO {
 
 export interface MilestoneCreateDTO {
   name: string
+  start_date?: string | null
   target_date: string
   linked_phase_ids?: string[]
 }
@@ -48,6 +51,7 @@ function mapMilestone(d: MilestoneResponseDTO): Milestone {
     id: d.id,
     projectId: d.project_id,
     name: d.name,
+    startDate: d.start_date ?? null,
     targetDate: d.target_date,
     status: d.status,
     linkedPhaseIds: d.linked_phase_ids ?? [],
