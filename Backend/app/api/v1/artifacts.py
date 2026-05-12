@@ -6,8 +6,11 @@ Permissions (D-36):
   PATCH /artifacts/{id}/mine — assignee only (status/note/file_id)
   PATCH /artifacts/{id} — Admin/PM/TL (all fields including assignee_id)
 """
+import uuid
+from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 
 from app.api.deps.auth import get_current_user, _is_admin
 from app.api.deps.artifact import get_artifact_repo
@@ -30,6 +33,34 @@ from app.application.dtos.artifact_dtos import (
 from app.domain.exceptions import ArchivedNodeReferenceError, ProjectNotFoundError, DomainError
 
 router = APIRouter()
+
+# ---------------------------------------------------------------------------
+# Methodology-based artifact templates (D-28 seed pattern)
+# ---------------------------------------------------------------------------
+_ARTIFACT_TEMPLATES: dict[str, list[str]] = {
+    "SCRUM": [
+        "Product Backlog",
+        "Sprint Backlog",
+        "Increment",
+        "Definition of Done",
+        "Sprint Goal",
+    ],
+    "KANBAN": [
+        "Kanban Board Tanımı",
+        "İş Öğesi Tipleri",
+        "Akış Politikaları",
+        "SLA Tanımları",
+        "Görsel Sinyaller Rehberi",
+    ],
+    "WATERFALL": [
+        "Gereksinimler Belgesi",
+        "Sistem Tasarım Belgesi",
+        "Uygulama Planı",
+        "Test Planı",
+        "Dağıtım Kılavuzu",
+        "Proje Kapanış Raporu",
+    ],
+}
 
 
 async def _authorize_transition(user, project_id: int, project_repo, artifact_repo):
@@ -101,6 +132,29 @@ async def create_artifact(
         raise _to_http(e)
 
 
+class _ArtifactCreateBody(ArtifactCreateDTO):
+    """Same as ArtifactCreateDTO but project_id is optional (supplied via path)."""
+    project_id: Optional[int] = None  # type: ignore[assignment]
+
+
+@router.post("/projects/{project_id}/artifacts", response_model=ArtifactResponseDTO, status_code=201)
+async def create_artifact_for_project(
+    project_id: int,
+    body: _ArtifactCreateBody,
+    user=Depends(get_current_user),
+    artifact_repo=Depends(get_artifact_repo),
+    project_repo=Depends(get_project_repo),
+    audit_repo=Depends(get_audit_repo),
+):
+    dto = ArtifactCreateDTO(**{**body.model_dump(), "project_id": project_id})
+    await _authorize_transition(user, project_id, project_repo, artifact_repo)
+    uc = CreateArtifactUseCase(artifact_repo, project_repo, audit_repo=audit_repo)
+    try:
+        return await uc.execute(dto, user.id)
+    except Exception as e:
+        raise _to_http(e)
+
+
 @router.patch("/artifacts/{artifact_id}/mine", response_model=ArtifactResponseDTO)
 async def update_artifact_as_assignee(
     artifact_id: int,
@@ -154,3 +208,124 @@ async def delete_artifact(
     uc = DeleteArtifactUseCase(artifact_repo, audit_repo=audit_repo, project_repo=project_repo)
     await uc.execute(artifact_id)
     return None
+
+
+@router.post("/projects/{project_id}/artifacts/seed", response_model=list[ArtifactResponseDTO], status_code=201)
+async def seed_artifacts_for_project(
+    project_id: int,
+    user=Depends(get_current_user),
+    artifact_repo=Depends(get_artifact_repo),
+    project_repo=Depends(get_project_repo),
+):
+    """Seed methodology-specific artifact templates for a project.
+    Idempotent: skips names that already exist (case-insensitive match).
+    """
+    await _authorize_transition(user, project_id, project_repo, artifact_repo)
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(404, f"Project {project_id} not found")
+
+    methodology = (project.methodology.value if hasattr(project.methodology, "value") else str(project.methodology)).upper()
+    templates = _ARTIFACT_TEMPLATES.get(methodology, [])
+    if not templates:
+        raise HTTPException(400, f"No artifact templates defined for methodology '{methodology}'")
+
+    existing = await artifact_repo.list_by_project(project_id)
+    existing_names_lower = {a.name.lower() for a in existing}
+
+    from app.domain.entities.artifact import Artifact, ArtifactStatus
+    new_artifacts = [
+        Artifact(project_id=project_id, name=name, status=ArtifactStatus.NOT_CREATED)
+        for name in templates
+        if name.lower() not in existing_names_lower
+    ]
+    if not new_artifacts:
+        return []
+
+    created = await artifact_repo.bulk_create(new_artifacts)
+    return [ArtifactResponseDTO.model_validate(a) for a in created]
+
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
+_BLOCKED_EXTENSIONS = {".exe", ".sh", ".bat", ".ps1", ".msi", ".dmg"}
+_MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post("/artifacts/{artifact_id}/file", response_model=ArtifactResponseDTO)
+async def upload_artifact_file(
+    artifact_id: int,
+    file: UploadFile = File(...),
+    user=Depends(get_current_user),
+    artifact_repo=Depends(get_artifact_repo),
+    project_repo=Depends(get_project_repo),
+):
+    """Upload (or replace) a single file attached to an artifact (D-41)."""
+    artifact = await artifact_repo.get_by_id(artifact_id)
+    if artifact is None:
+        raise HTTPException(404, "Artifact not found")
+    await _authorize_transition(user, artifact.project_id, project_repo, artifact_repo)
+
+    content = await file.read()
+
+    suffix = Path(file.filename or "file").suffix.lower()
+    if suffix in _BLOCKED_EXTENSIONS:
+        raise HTTPException(400, f"File type '{suffix}' is not allowed")
+    if len(content) > _MAX_SIZE_BYTES:
+        raise HTTPException(413, "File exceeds 10 MB limit")
+
+    # Write to disk
+    stored_name = f"{uuid.uuid4()}{suffix}"
+    upload_dir = _BACKEND_DIR / "static" / "uploads" / "artifacts"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    (upload_dir / stored_name).write_bytes(content)
+    relative_path = f"static/uploads/artifacts/{stored_name}"
+
+    # Insert into files table (task_id=NULL — D-41 artifact file)
+    from app.domain.entities.file import File as FileEntity
+    from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyAttachmentRepository
+    file_repo = SqlAlchemyAttachmentRepository(artifact_repo.session)
+
+    file_entity = FileEntity(
+        task_id=None,
+        uploader_id=user.id,
+        file_name=file.filename or stored_name,
+        file_path=relative_path,
+        file_size=len(content),
+    )
+    saved_file = await file_repo.create(file_entity)
+
+    # Update artifact's file_id
+    artifact.file_id = saved_file.id
+    updated = await artifact_repo.update(artifact)
+    return ArtifactResponseDTO.model_validate(updated)
+
+
+@router.get("/artifacts/{artifact_id}/file")
+async def download_artifact_file(
+    artifact_id: int,
+    user=Depends(get_current_user),
+    artifact_repo=Depends(get_artifact_repo),
+):
+    """Download the file attached to an artifact (D-41)."""
+    artifact = await artifact_repo.get_by_id(artifact_id)
+    if artifact is None:
+        raise HTTPException(404, "Artifact not found")
+    if artifact.file_id is None:
+        raise HTTPException(404, "No file attached to this artifact")
+
+    from app.infrastructure.database.repositories.attachment_repo import SqlAlchemyAttachmentRepository
+    file_repo = SqlAlchemyAttachmentRepository(artifact_repo.session)
+    file = await file_repo.get_by_id(artifact.file_id)
+    if file is None:
+        raise HTTPException(404, "File record not found")
+
+    # _BACKEND_DIR = Backend/ — artifacts are stored relative to this
+    abs_path = _BACKEND_DIR / file.file_path
+    if not abs_path.exists():
+        raise HTTPException(404, "File not found on disk")
+
+    return FileResponse(
+        path=str(abs_path),
+        filename=file.file_name,
+        media_type="application/octet-stream",
+    )

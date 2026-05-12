@@ -5,7 +5,7 @@ from datetime import datetime
 
 class File(BaseModel):
     id: Optional[int] = None
-    task_id: int
+    task_id: Optional[int] = None
     uploader_id: Optional[int] = None
     file_name: str
     file_path: str

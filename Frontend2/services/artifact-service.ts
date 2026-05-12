@@ -11,7 +11,7 @@
 
 import { apiClient } from "@/lib/api-client"
 
-export type ArtifactStatus = "not-created" | "draft" | "done"
+export type ArtifactStatus = "not_created" | "in_progress" | "completed" | "approved"
 
 export interface Artifact {
   id: number
@@ -94,6 +94,25 @@ export const artifactService = {
   },
   remove: async (id: number): Promise<void> => {
     await apiClient.delete(`/artifacts/${id}`)
+  },
+  downloadFile: async (artifactId: number, filename?: string): Promise<void> => {
+    const resp = await apiClient.get(`/artifacts/${artifactId}/file`, {
+      responseType: "blob",
+    })
+    const url = URL.createObjectURL(resp.data as Blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename || `artifact-${artifactId}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
+  seed: async (projectId: number): Promise<Artifact[]> => {
+    const resp = await apiClient.post<ArtifactResponseDTO[]>(
+      `/projects/${projectId}/artifacts/seed`,
+    )
+    return resp.data.map(mapArtifact)
   },
   uploadFile: async (id: number, file: File): Promise<Artifact> => {
     const formData = new FormData()

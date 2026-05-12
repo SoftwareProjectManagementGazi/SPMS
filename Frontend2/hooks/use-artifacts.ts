@@ -101,6 +101,16 @@ export function useDeleteArtifact(projectId: number) {
   })
 }
 
+export function useSeedArtifacts(projectId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => artifactService.seed(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["artifacts", "project", projectId] })
+    },
+  })
+}
+
 export function useUploadArtifactFile(projectId: number) {
   const qc = useQueryClient()
   return useMutation({

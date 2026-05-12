@@ -105,7 +105,7 @@ const SCRUM_ARTIFACTS = [
     id: 101,
     project_id: 7,
     name: "Sprint Planı",
-    status: "not-created",
+    status: "not_created",
     assignee_id: 1,
     file_id: null,
     note: "",
@@ -115,7 +115,7 @@ const SCRUM_ARTIFACTS = [
     id: 102,
     project_id: 7,
     name: "Sprint Backlog",
-    status: "draft",
+    status: "in_progress",
     assignee_id: 2,
     file_id: null,
     note: "",
@@ -125,7 +125,7 @@ const SCRUM_ARTIFACTS = [
     id: 103,
     project_id: 7,
     name: "Daily Notes",
-    status: "not-created",
+    status: "not_created",
     assignee_id: null,
     file_id: null,
     note: "",
@@ -135,7 +135,7 @@ const SCRUM_ARTIFACTS = [
     id: 104,
     project_id: 7,
     name: "Sprint Review",
-    status: "not-created",
+    status: "not_created",
     assignee_id: null,
     file_id: null,
     note: "",
@@ -145,7 +145,7 @@ const SCRUM_ARTIFACTS = [
     id: 105,
     project_id: 7,
     name: "Retrospective",
-    status: "not-created",
+    status: "not_created",
     assignee_id: null,
     file_id: null,
     note: "",
@@ -226,7 +226,7 @@ describe("ArtifactsSubTab", () => {
     apiPatch.mockResolvedValueOnce({
       data: {
         ...SCRUM_ARTIFACTS[2],
-        status: "done",
+        status: "completed",
         updated_at: "2026-04-25T00:00:00Z",
       },
     })
@@ -272,7 +272,7 @@ describe("ArtifactsSubTab", () => {
     // Artifact assignee_id=1 matches user.id=1 (mocked above) → assignee path expected
     apiGet.mockResolvedValueOnce({ data: SCRUM_ARTIFACTS })
     apiPatch.mockResolvedValueOnce({
-      data: { ...SCRUM_ARTIFACTS[0], status: "draft" },
+      data: { ...SCRUM_ARTIFACTS[0], status: "in_progress" },
     })
 
     render(

@@ -30,6 +30,7 @@ class SqlAlchemyArtifactRepository(IArtifactRepository):
         model = self._to_model(artifact)
         self.session.add(model)
         await self.session.flush()
+        await self.session.commit()
         refreshed = await self.get_by_id(model.id)
         if refreshed is None:
             raise RuntimeError(f"Artifact {model.id} disappeared after flush")
@@ -41,6 +42,7 @@ class SqlAlchemyArtifactRepository(IArtifactRepository):
         models = [self._to_model(a) for a in artifacts]
         self.session.add_all(models)
         await self.session.flush()
+        await self.session.commit()
         return [self._to_entity(m) for m in models]
 
     async def get_by_id(self, artifact_id: int) -> Optional[Artifact]:
@@ -78,6 +80,7 @@ class SqlAlchemyArtifactRepository(IArtifactRepository):
         model.file_id = artifact.file_id
         model.updated_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return self._to_entity(model)
 
     async def delete(self, artifact_id: int) -> bool:
@@ -89,4 +92,5 @@ class SqlAlchemyArtifactRepository(IArtifactRepository):
         model.is_deleted = True
         model.deleted_at = datetime.utcnow()
         await self.session.flush()
+        await self.session.commit()
         return True

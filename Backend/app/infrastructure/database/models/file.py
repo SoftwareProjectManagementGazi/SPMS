@@ -8,7 +8,7 @@ class FileModel(TimestampedMixin, Base):
     __tablename__ = "files"
 
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=True)
     uploader_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
