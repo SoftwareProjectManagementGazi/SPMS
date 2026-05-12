@@ -171,7 +171,7 @@ function buildUpcoming(
   today.setHours(0, 0, 0, 0)
 
   const taskEntries: UpcomingTaskEntry[] = tasks
-    .filter((t) => normalizeStatus(t.status) !== "done" && t.due)
+    .filter((t) => !t.isDone && t.due)
     .map((t) => {
       const due = String(t.due)
       const dueDate = new Date(due)
