@@ -11,6 +11,7 @@ from app.api.dependencies import (
     get_project_repo,
     _is_admin,
 )
+from app.api.deps.audit import get_audit_repo
 from app.application.dtos.sprint_dtos import SprintCreateDTO, SprintUpdateDTO, SprintResponseDTO
 from app.application.use_cases.manage_sprints import (
     CreateSprintUseCase,
@@ -18,17 +19,47 @@ from app.application.use_cases.manage_sprints import (
     UpdateSprintUseCase,
     DeleteSprintUseCase,
     CloseSprintUseCase,
+    StartSprintUseCase,
+)
+from app.domain.repositories.sprint_repository import ISprintRepository
+from app.domain.repositories.project_repository import IProjectRepository
+from app.domain.repositories.audit_repository import IAuditRepository
+from app.domain.entities.user import User
+from app.domain.entities.project import Methodology
+from app.domain.exceptions import (
+    SprintNotFoundError,
+    ActiveSprintAlreadyExistsError,
+    InvalidMethodologyForSprintError,
 )
 
 
 class CloseSprintDTO(BaseModel):
     move_tasks_to_sprint_id: Optional[int] = None
-from app.domain.repositories.sprint_repository import ISprintRepository
-from app.domain.repositories.project_repository import IProjectRepository
-from app.domain.entities.user import User
-from app.domain.exceptions import SprintNotFoundError
+
 
 router = APIRouter()
+
+
+async def _require_scrum_project(
+    project_id: int,
+    current_user: User,
+    project_repo: IProjectRepository,
+) -> None:
+    """Raise 422 if the project is not SCRUM methodology."""
+    project = await project_repo.get_by_id(project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found",
+        )
+    if project.methodology != Methodology.SCRUM:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Project uses '{project.methodology.value}' methodology. "
+                "Sprints are only supported for SCRUM projects."
+            ),
+        )
 
 
 @router.get("/", response_model=List[SprintResponseDTO])
@@ -48,7 +79,10 @@ async def create_sprint(
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
 ):
-    # Verify project membership for the project in the body
+    # Methodology guard
+    await _require_scrum_project(dto.project_id, current_user, project_repo)
+
+    # Membership check for non-admins
     if not _is_admin(current_user):
         project = await project_repo.get_by_id_and_user(dto.project_id, current_user.id)
         if not project:
@@ -58,6 +92,23 @@ async def create_sprint(
             )
     use_case = CreateSprintUseCase(sprint_repo)
     return await use_case.execute(dto)
+
+
+@router.post("/{sprint_id}/start", response_model=SprintResponseDTO)
+async def start_sprint(
+    sprint_id: int,
+    current_user: User = Depends(get_current_user),
+    sprint_repo: ISprintRepository = Depends(get_sprint_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
+):
+    """Activate a sprint. Raises 409 if the project already has an active sprint."""
+    try:
+        use_case = StartSprintUseCase(sprint_repo, audit_repo)
+        return await use_case.execute(sprint_id, current_user)
+    except SprintNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ActiveSprintAlreadyExistsError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 @router.patch("/{sprint_id}", response_model=SprintResponseDTO)
@@ -80,10 +131,15 @@ async def close_sprint(
     dto: CloseSprintDTO,
     current_user: User = Depends(get_current_user),
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
+    audit_repo: IAuditRepository = Depends(get_audit_repo),
 ):
     try:
-        use_case = CloseSprintUseCase(sprint_repo)
-        return await use_case.execute(sprint_id, dto.move_tasks_to_sprint_id)
+        use_case = CloseSprintUseCase(sprint_repo, audit_repo)
+        return await use_case.execute(
+            sprint_id,
+            user_id=current_user.id,
+            move_tasks_to_sprint_id=dto.move_tasks_to_sprint_id,
+        )
     except SprintNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

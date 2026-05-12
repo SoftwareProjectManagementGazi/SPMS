@@ -2,37 +2,26 @@
 
 // SprintsSubTab — sprint yönetimi için Yaşam Döngüsü altsekmesi.
 // Yalnızca SCRUM metodolojisindeki projelerde görünür.
-// Özellikler: sprint listesi, oluşturma formu, kapatma ve silme (görev taşıma ile).
+// Özellikler: sprint listesi, oluşturma formu, başlatma (409 guard), kapatma, silme.
 
 import * as React from "react"
-import { Plus, X } from "lucide-react"
+import { Plus, X, CheckCircle2, Circle, Layers } from "lucide-react"
 
 import { Badge, Button, Section } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import {
   useSprints,
   useCreateSprint,
-  useActivateSprint,
+  useStartSprint,
   useCloseSprint,
   useDeleteSprint,
   type Sprint,
+  type SprintStatus,
 } from "@/hooks/use-sprints"
 import type { Project } from "@/services/project-service"
 
 interface SprintsSubTabProps {
   project: Project
-}
-
-type SprintStatus = "planned" | "active" | "closed"
-
-function getStatus(sprint: Sprint): SprintStatus {
-  if (sprint.is_active) return "active"
-  const today = new Date()
-  if (sprint.end_date && new Date(sprint.end_date) < today) return "closed"
-  const started = sprint.start_date && new Date(sprint.start_date) <= today
-  const notEnded = !sprint.end_date || new Date(sprint.end_date) >= today
-  if (started && notEnded) return "active"
-  return "planned"
 }
 
 const inputStyle: React.CSSProperties = {
@@ -67,22 +56,27 @@ const labelStyle: React.CSSProperties = {
 }
 
 function statusBadgeTone(status: SprintStatus): "success" | "primary" | "neutral" {
-  if (status === "active") return "success"
-  if (status === "planned") return "primary"
+  if (status === "ACTIVE") return "success"
+  if (status === "PLANNED") return "primary"
   return "neutral"
+}
+
+function statusLabel(status: SprintStatus, lang: "tr" | "en"): string {
+  if (status === "ACTIVE") return lang === "tr" ? "Aktif" : "Active"
+  if (status === "PLANNED") return lang === "tr" ? "Planlandı" : "Planned"
+  return lang === "tr" ? "Kapalı" : "Closed"
 }
 
 function formatDate(d: string | null, lang: "tr" | "en") {
   if (!d) return null
-  const date = new Date(d)
-  return date.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB", {
+  return new Date(d).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   })
 }
 
-// ---- Confirm Dialog ----------------------------------------------------------
+// ---- Move/Confirm Dialog -----------------------------------------------------
 
 interface ConfirmDialogProps {
   open: boolean
@@ -174,6 +168,83 @@ function MoveConfirmDialog({
   )
 }
 
+// ---- Active sprint conflict dialog -------------------------------------------
+
+interface ActiveConflictDialogProps {
+  open: boolean
+  conflictMessage: string
+  lang: "tr" | "en"
+  onClose: () => void
+}
+
+function ActiveConflictDialog({ open, conflictMessage, lang, onClose }: ActiveConflictDialogProps) {
+  if (!open) return null
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "oklch(0 0 0 / 0.35)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+      }}
+    >
+      <div
+        style={{
+          background: "var(--surface)",
+          borderRadius: "var(--radius)",
+          boxShadow: "var(--shadow-xl)",
+          width: 400,
+          maxWidth: "calc(100vw - 32px)",
+          padding: 24,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>
+            {lang === "tr" ? "Aktif Sprint Mevcut" : "Active Sprint Exists"}
+          </span>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)" }}>
+            <X size={16} />
+          </button>
+        </div>
+        <p style={{ fontSize: 13, color: "var(--fg-muted)", marginBottom: 16 }}>{conflictMessage}</p>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button size="sm" variant="primary" onClick={onClose}>
+            {lang === "tr" ? "Anladım" : "Got it"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---- Sprint stats badge row --------------------------------------------------
+
+function SprintStats({ sprint, lang }: { sprint: Sprint; lang: "tr" | "en" }) {
+  if (sprint.task_count === 0) return null
+  const pct = Math.round((sprint.completed_count / sprint.task_count) * 100)
+  return (
+    <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, color: "var(--fg-muted)" }}>
+        <Layers size={12} />
+        {sprint.task_count} {lang === "tr" ? "görev" : "tasks"}
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, color: "var(--fg-muted)" }}>
+        <CheckCircle2 size={12} />
+        {sprint.completed_count} {lang === "tr" ? "tamamlandı" : "done"} ({pct}%)
+      </span>
+      {sprint.total_points > 0 && (
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, color: "var(--fg-muted)" }}>
+          <Circle size={12} />
+          {sprint.total_points} {lang === "tr" ? "puan" : "pts"}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // ---- Main Component ----------------------------------------------------------
 
 export function SprintsSubTab({ project }: SprintsSubTabProps) {
@@ -182,7 +253,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
 
   const { data: sprints = [], isLoading } = useSprints(project.id)
   const createSprint = useCreateSprint(project.id)
-  const activateSprint = useActivateSprint(project.id)
+  const startSprint = useStartSprint(project.id)
   const closeSprint = useCloseSprint(project.id)
   const deleteSprint = useDeleteSprint(project.id)
 
@@ -196,6 +267,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
   // Dialogs
   const [closeDialog, setCloseDialog] = React.useState<Sprint | null>(null)
   const [deleteDialog, setDeleteDialog] = React.useState<Sprint | null>(null)
+  const [conflictMessage, setConflictMessage] = React.useState<string | null>(null)
 
   function handleCreate() {
     if (!newName.trim()) return
@@ -217,6 +289,18 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
         },
       },
     )
+  }
+
+  function handleStart(sprint: Sprint) {
+    startSprint.mutate(sprint.id, {
+      onError: (err: unknown) => {
+        // 409 Conflict = another sprint already active
+        const msg =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          T("Bu sprint başlatılamadı.", "Could not start this sprint.")
+        setConflictMessage(msg)
+      },
+    })
   }
 
   function handleClose(targetId: number | null) {
@@ -338,7 +422,6 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {sprints.map((sprint) => {
-            const status = getStatus(sprint)
             const start = formatDate(sprint.start_date, lang)
             const end = formatDate(sprint.end_date, lang)
             return (
@@ -358,12 +441,8 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{sprint.name}</span>
-                    <Badge tone={statusBadgeTone(status)}>
-                      {status === "active"
-                        ? T("Aktif", "Active")
-                        : status === "planned"
-                        ? T("Planlandı", "Planned")
-                        : T("Kapalı", "Closed")}
+                    <Badge tone={statusBadgeTone(sprint.status)}>
+                      {statusLabel(sprint.status, lang)}
                     </Badge>
                   </div>
                   {(start || end) && (
@@ -380,19 +459,20 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
                       {sprint.goal}
                     </div>
                   )}
+                  <SprintStats sprint={sprint} lang={lang} />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  {status === "planned" && (
+                  {sprint.status === "PLANNED" && (
                     <Button
                       size="sm"
                       variant="primary"
-                      disabled={activateSprint.isPending}
-                      onClick={() => activateSprint.mutate(sprint.id)}
+                      disabled={startSprint.isPending}
+                      onClick={() => handleStart(sprint)}
                     >
                       {T("Başlat", "Start")}
                     </Button>
                   )}
-                  {status !== "closed" && (
+                  {sprint.status !== "CLOSED" && (
                     <Button size="sm" variant="secondary" onClick={() => setCloseDialog(sprint)}>
                       {T("Kapat", "Close")}
                     </Button>
@@ -411,6 +491,14 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
           })}
         </div>
       )}
+
+      {/* Active sprint conflict dialog */}
+      <ActiveConflictDialog
+        open={conflictMessage !== null}
+        conflictMessage={conflictMessage ?? ""}
+        lang={lang}
+        onClose={() => setConflictMessage(null)}
+      />
 
       {/* Close dialog */}
       {closeDialog && (

@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 
+export type SprintStatus = 'PLANNED' | 'ACTIVE' | 'CLOSED';
+
 export interface Sprint {
   id: number;
   project_id: number;
@@ -9,6 +11,10 @@ export interface Sprint {
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
+  status: SprintStatus;
+  task_count: number;
+  completed_count: number;
+  total_points: number;
 }
 
 export interface SprintCreateData {
@@ -46,15 +52,20 @@ export function useCreateSprint(projectId: number) {
   });
 }
 
-export function useActivateSprint(projectId: number) {
+export function useStartSprint(projectId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (sprintId: number) =>
-      apiClient.patch<Sprint>(`/sprints/${sprintId}`, { is_active: true }).then((r) => r.data),
+      apiClient.post<Sprint>(`/sprints/${sprintId}/start`).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sprints', projectId] });
     },
   });
+}
+
+export function useActivateSprint(projectId: number) {
+  // Legacy alias kept for backward compat — delegates to useStartSprint
+  return useStartSprint(projectId);
 }
 
 export function useCloseSprint(projectId: number) {

@@ -14,6 +14,9 @@ class SprintModel(TimestampedMixin, Base):
     start_date = Column(Date, nullable=True)
     end_date = Column(Date, nullable=True)
     is_active = Column(Boolean, default=False)
+    # status: canonical lifecycle state (PLANNED | ACTIVE | CLOSED)
+    # Added in migration 011_sprint_improvements
+    status = Column(String(20), nullable=False, default="PLANNED", server_default="PLANNED")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     # updated_at provided by TimestampedMixin
 

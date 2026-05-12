@@ -11,6 +11,11 @@ class ISprintRepository(ABC):
     async def get_by_project(self, project_id: int) -> List[Sprint]: ...
 
     @abstractmethod
+    async def get_active_sprint(self, project_id: int) -> Optional[Sprint]:
+        """Return the currently ACTIVE sprint for a project, or None."""
+        ...
+
+    @abstractmethod
     async def create(self, sprint: Sprint) -> Sprint: ...
 
     @abstractmethod
@@ -29,5 +34,19 @@ class ISprintRepository(ABC):
         """Move tasks from one sprint to another (or backlog if to_sprint_id is None).
         Returns the count of tasks moved.
         If incomplete_only is True, only moves tasks not in a 'Done' column.
+        """
+        ...
+
+    @abstractmethod
+    async def create_snapshot(
+        self,
+        sprint_id: int,
+        project_id: int,
+        task_count: int,
+        completed_count: int,
+        total_points: int,
+    ) -> None:
+        """Persist a point-in-time snapshot of sprint stats at close time.
+        Used by velocity reports to prevent retroactive data changes.
         """
         ...

@@ -3,6 +3,7 @@ from .role import RoleModel
 from .user import UserModel
 from .project import ProjectModel
 from .sprint import SprintModel
+from .sprint_snapshot import SprintSnapshotModel  # noqa: F401
 from .board_column import BoardColumnModel
 from .task import TaskModel
 from .comment import CommentModel

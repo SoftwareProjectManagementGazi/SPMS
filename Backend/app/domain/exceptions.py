@@ -37,6 +37,28 @@ class SprintNotFoundError(DomainError):
     def __init__(self, sprint_id: int):
         super().__init__(f"Sprint with id {sprint_id} not found")
 
+
+class ActiveSprintAlreadyExistsError(DomainError):
+    """Raised when trying to start a sprint while another is already active in the same project."""
+    def __init__(self, project_id: int, active_sprint_name: str):
+        self.project_id = project_id
+        self.active_sprint_name = active_sprint_name
+        super().__init__(
+            f"Project {project_id} already has an active sprint: '{active_sprint_name}'. "
+            "Close it before starting a new one."
+        )
+
+
+class InvalidMethodologyForSprintError(DomainError):
+    """Raised when sprint operations are attempted on non-Scrum projects."""
+    def __init__(self, project_id: int, methodology: str):
+        self.project_id = project_id
+        self.methodology = methodology
+        super().__init__(
+            f"Project {project_id} uses '{methodology}' methodology. "
+            "Sprints are only supported for SCRUM projects."
+        )
+
 class UserNotFoundError(DomainError):
     def __init__(self, user_id: int):
         super().__init__(f"User with id {user_id} not found")

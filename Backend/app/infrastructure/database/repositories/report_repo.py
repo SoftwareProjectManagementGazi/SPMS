@@ -18,6 +18,7 @@ from app.application.dtos.report_dtos import (
 )
 from app.infrastructure.database.models.task import TaskModel
 from app.infrastructure.database.models.sprint import SprintModel
+from app.infrastructure.database.models.sprint_snapshot import SprintSnapshotModel
 from app.infrastructure.database.models.board_column import BoardColumnModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
 from app.infrastructure.database.models.user import UserModel
@@ -132,20 +133,28 @@ class SqlAlchemyReportRepository(IReportRepository):
             current = sprint.start_date
             while current <= end:
                 if done_ids:
-                    # Hybrid: audit log entries OR current column status by updated_at.
-                    # Audit log is accurate for tasks moved via the API; updated_at
-                    # fallback handles seeded/imported tasks that have no audit history.
+                    # Strategy: prefer audit log (accurate API-driven moves).
+                    # For tasks with NO audit log entries for column_id, fall back
+                    # to updated_at. This prevents double-counting tasks that have
+                    # both an audit entry and a matching updated_at timestamp.
+                    tasks_with_audit = select(AuditLogModel.entity_id).where(
+                        AuditLogModel.entity_type == "task",
+                        AuditLogModel.field_name == "column_id",
+                    ).distinct()
+
                     via_audit = select(AuditLogModel.entity_id.label("tid")).where(
                         AuditLogModel.entity_type == "task",
                         AuditLogModel.field_name == "column_id",
                         AuditLogModel.new_value.in_([str(c) for c in done_ids]),
                         func.date(AuditLogModel.timestamp) <= current,
                     )
+                    # Only include updated_at fallback for tasks that have NO audit entries
                     via_column = select(TaskModel.id.label("tid")).where(
                         TaskModel.sprint_id == sprint.id,
                         TaskModel.column_id.in_(done_ids),
                         TaskModel.deleted_at.is_(None),
                         func.date(TaskModel.updated_at) <= current,
+                        TaskModel.id.notin_(tasks_with_audit),
                     )
                     combined = union(via_audit, via_column).subquery()
                     done_result = await self.session.execute(
@@ -176,7 +185,7 @@ class SqlAlchemyReportRepository(IReportRepository):
     ) -> VelocityDTO:
         done_ids = await self._get_done_column_ids(project_id)
 
-        # Check if project has sprints
+        # Fetch all sprints ordered chronologically
         sprints_stmt = (
             select(SprintModel)
             .where(SprintModel.project_id == project_id)
@@ -188,25 +197,46 @@ class SqlAlchemyReportRepository(IReportRepository):
         series: List[VelocityPointDTO] = []
 
         if sprints:
+            # Load all snapshots for closed sprints in one query
+            sprint_ids = [s.id for s in sprints]
+            snapshots_stmt = select(SprintSnapshotModel).where(
+                SprintSnapshotModel.sprint_id.in_(sprint_ids)
+            )
+            snapshots_result = await self.session.execute(snapshots_stmt)
+            snapshot_map = {
+                row.sprint_id: row
+                for row in snapshots_result.scalars().all()
+            }
+
             for sprint in sprints:
-                sprint_filters = [
-                    TaskModel.sprint_id == sprint.id,
-                    TaskModel.deleted_at.is_(None),
-                ]
-                if done_ids:
-                    sprint_filters.append(TaskModel.column_id.in_(done_ids))
+                snap = snapshot_map.get(sprint.id)
+                if snap is not None:
+                    # Closed sprint: use immutable snapshot (retroactive-safe)
+                    series.append(VelocityPointDTO(
+                        label=sprint.name[:12],
+                        completed_count=snap.completed_count,
+                        completed_points=snap.total_points,
+                    ))
+                else:
+                    # Active/planned sprint: fall back to live query
+                    sprint_filters = [
+                        TaskModel.sprint_id == sprint.id,
+                        TaskModel.deleted_at.is_(None),
+                    ]
+                    if done_ids:
+                        sprint_filters.append(TaskModel.column_id.in_(done_ids))
 
-                count_stmt = select(func.count(TaskModel.id)).where(and_(*sprint_filters))
-                points_stmt = select(func.coalesce(func.sum(TaskModel.points), 0)).where(and_(*sprint_filters))
+                    count_stmt = select(func.count(TaskModel.id)).where(and_(*sprint_filters))
+                    points_stmt = select(func.coalesce(func.sum(TaskModel.points), 0)).where(and_(*sprint_filters))
 
-                count_result = await self.session.execute(count_stmt)
-                points_result = await self.session.execute(points_stmt)
+                    count_result = await self.session.execute(count_stmt)
+                    points_result = await self.session.execute(points_stmt)
 
-                series.append(VelocityPointDTO(
-                    label=sprint.name[:12],
-                    completed_count=count_result.scalar() or 0,
-                    completed_points=points_result.scalar() or 0,
-                ))
+                    series.append(VelocityPointDTO(
+                        label=sprint.name[:12],
+                        completed_count=count_result.scalar() or 0,
+                        completed_points=points_result.scalar() or 0,
+                    ))
         else:
             # No sprints — group by calendar week
             week_filters = [
