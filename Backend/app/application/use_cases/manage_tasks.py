@@ -171,15 +171,24 @@ def _check_recurrence_should_continue(task: Task) -> bool:
 
 
 async def _create_next_recurrence_instance(task: Task, task_repo: ITaskRepository) -> None:
-    from dateutil.relativedelta import relativedelta
-    from datetime import datetime
-    intervals = {
-        "daily": relativedelta(days=1),
-        "weekly": relativedelta(weeks=1),
-        "monthly": relativedelta(months=1),
-    }
-    delta = intervals.get(task.recurrence_interval or "weekly", relativedelta(weeks=1))
-    next_due = (task.due_date or datetime.utcnow()) + delta
+    from datetime import datetime, timedelta
+    import calendar
+
+    def _add_months(dt: datetime, months: int) -> datetime:
+        month = dt.month - 1 + months
+        year = dt.year + month // 12
+        month = month % 12 + 1
+        day = min(dt.day, calendar.monthrange(year, month)[1])
+        return dt.replace(year=year, month=month, day=day)
+
+    base_dt = task.due_date or datetime.utcnow()
+    interval = task.recurrence_interval or "weekly"
+    if interval == "daily":
+        next_due = base_dt + timedelta(days=1)
+    elif interval == "monthly":
+        next_due = _add_months(base_dt, 1)
+    else:  # weekly default
+        next_due = base_dt + timedelta(weeks=1)
     next_count = (task.recurrence_count - 1) if task.recurrence_count else None
     new_task = Task(
         title=task.title,
