@@ -30,6 +30,28 @@ from app.domain.exceptions import (
 )
 
 
+def _task_is_done(t) -> bool:
+    """Language-agnostic done detection using order_index.
+
+    A task is done when its column has the highest order_index among all
+    project columns — covers 'Done' (English), 'Bitti' (Turkish), and any
+    custom last-column name.  Falls back to name-based check when project
+    columns are not loaded.
+    """
+    col = getattr(t, "column", None)
+    if col is None:
+        return False
+    project = getattr(t, "project", None)
+    proj_cols = getattr(project, "columns", None) if project else None
+    if proj_cols:
+        max_order = max(
+            (getattr(c, "order_index", 0) for c in proj_cols), default=0
+        )
+        return int(getattr(col, "order_index", -1)) == max_order
+    # Fallback: name-based (covers English defaults)
+    return str(getattr(col, "name", "")).upper() in ("DONE", "COMPLETED", "CLOSED")
+
+
 class ExecutePhaseTransitionUseCase:
     def __init__(
         self,
@@ -182,11 +204,13 @@ class ExecutePhaseTransitionUseCase:
                 ]
                 snapshot_tasks = phase_tasks + null_tasks
                 snapshot_total = len(snapshot_tasks)
-                # Task status lives in the associated board column name.
+                # Done detection: language-agnostic order_index approach
+                # (same logic as _is_done in _apply_task_moves). The last
+                # column by order_index is "done" regardless of column name
+                # ("Done", "Bitti", "Tamamlandı", …).
                 snapshot_done = sum(
                     1 for t in snapshot_tasks
-                    if getattr(t, "column", None) is not None
-                    and str(getattr(t.column, "name", "")).upper() == "DONE"
+                    if _task_is_done(t)
                 )
 
                 existing = await self.phase_report_repo.get_latest_by_project_phase(
@@ -299,24 +323,6 @@ class ExecutePhaseTransitionUseCase:
         to_target: List[int] = []   # move to target_phase_id
         to_backlog: List[int] = []  # clear phase (set to null)
 
-        def _is_done(t) -> bool:
-            """Task is done if it sits in the last board column (highest order_index).
-            Language-agnostic: works for both Turkish ("Tamamlandı") and English ("Done")
-            columns.  Falls back to column-name check if project columns not loaded.
-            """
-            col = getattr(t, "column", None)
-            if col is None:
-                return False
-            project = getattr(t, "project", None)
-            proj_cols = getattr(project, "columns", None) if project else None
-            if proj_cols:
-                max_order = max(
-                    (getattr(c, "order_index", 0) for c in proj_cols), default=0
-                )
-                return int(getattr(col, "order_index", -1)) == max_order
-            # Fallback: name-based (covers English "Done")
-            return str(getattr(col, "name", "")).upper() == "DONE"
-
         # Phase-assigned tasks
         for t in phase_tasks:
             eff_action = exc_map.get(t.id, action)
@@ -328,7 +334,7 @@ class ExecutePhaseTransitionUseCase:
 
         # Backlog tasks
         for t in backlog_tasks:
-            if _is_done(t):
+            if _task_is_done(t):
                 # Stamp completed backlog tasks with the source phase so they
                 # don't appear in future phases.
                 to_source.append(t.id)
