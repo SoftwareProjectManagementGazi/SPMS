@@ -15,6 +15,10 @@ export interface Project {
   status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD' | 'ARCHIVED';
   methodology: string;
   processTemplateId: number | null;
+  /** Optional — derived display field populated by the BE join (read-only).
+   *  Marked optional so test fixtures and pre-existing construction sites
+   *  compile without forcing every Project literal to carry the field. */
+  processTemplateName?: string | null;
   managerId: number | null;
   managerName: string | null;
   managerAvatar: string | null;
@@ -56,6 +60,7 @@ interface ProjectResponseDTO {
   status: string;
   methodology: string;
   process_template_id: number | null;
+  process_template_name?: string | null;
   manager_id: number | null;
   manager_name: string | null;
   manager_avatar: string | null;
@@ -80,6 +85,7 @@ function mapProject(data: ProjectResponseDTO): Project {
     status: (data.status as Project['status']) ?? 'ACTIVE',
     methodology: data.methodology,
     processTemplateId: data.process_template_id,
+    processTemplateName: data.process_template_name ?? null,
     managerId: data.manager_id,
     managerName: data.manager_name,
     managerAvatar: data.manager_avatar,

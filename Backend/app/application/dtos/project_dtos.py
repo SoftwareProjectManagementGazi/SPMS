@@ -54,6 +54,7 @@ class ProjectResponseDTO(BaseModel):
 
     status: ProjectStatus = ProjectStatus.ACTIVE
     process_template_id: Optional[int] = None
+    process_template_name: Optional[str] = None
     columns: List[BoardColumn] = []
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None

@@ -83,11 +83,13 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         if model.manager is not None:
             project.manager_name = model.manager.full_name
             project.manager_avatar = model.manager.avatar
+        if getattr(model, "process_template", None) is not None:
+            project.process_template_name = model.process_template.name
         return project
 
     def _to_model(self, entity: Project) -> ProjectModel:
         # Exclude columns to handle them manually as relationship objects
-        data = entity.model_dump(exclude={"id", "created_at", "columns", "manager_name", "manager_avatar"})
+        data = entity.model_dump(exclude={"id", "created_at", "columns", "manager_name", "manager_avatar", "process_template_name"})
         model = ProjectModel(**data)
 
         if entity.columns:
@@ -109,6 +111,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
             .options(
                 joinedload(ProjectModel.columns),
                 joinedload(ProjectModel.manager),  # ARCH-03: eager load manager user
+                joinedload(ProjectModel.process_template),
             )
         )
 

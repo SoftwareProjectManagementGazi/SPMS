@@ -222,8 +222,8 @@ export function AdminProjectRow({
 
       {/* 3) Methodology badge */}
       <div style={{ ...dimmed }}>
-        <Badge size="xs" tone={methodBadgeTone(project.methodology)}>
-          {project.methodology}
+        <Badge size="xs" tone={methodBadgeTone(project.processTemplateName ?? project.methodology)}>
+          {project.processTemplateName ?? project.methodology}
         </Badge>
       </div>
 

@@ -38,6 +38,7 @@ class ProjectModel(TimestampedMixin, Base):
     process_template_id = Column(Integer, ForeignKey("process_templates.id"), nullable=True, index=True)
 
     manager = relationship("UserModel", backref="managed_projects")
+    process_template = relationship("ProcessTemplateModel", foreign_keys=[process_template_id])
     sprints = relationship("SprintModel", back_populates="project", cascade="all, delete-orphan")
     columns = relationship("BoardColumnModel", back_populates="project", cascade="all, delete-orphan")
     members = relationship("UserModel", secondary=project_members, backref="projects")

@@ -103,6 +103,7 @@ class Project(BaseModel):
     # --- Phase 9 additions ---
     status: ProjectStatus = ProjectStatus.ACTIVE  # BACK-01
     process_template_id: Optional[int] = None  # D-45
+    process_template_name: Optional[str] = None  # populated from relationship in repo
 
     @model_validator(mode="before")
     @classmethod
