@@ -258,12 +258,16 @@ describe("MilestonesSubTab", () => {
     ) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Project-wide MS" } })
 
-    // Find the date input. There is only one date input.
-    const dateInput = document.querySelector(
+    // Ayşe's a6e3b858 added an optional start_date column to milestones,
+    // so the inline-add row now has two date inputs (startDate + targetDate).
+    // targetDate (Bitiş tarihi) is the second one — canSave gates on
+    // targetDate.length > 0, so we must populate that specific input.
+    const dateInputs = document.querySelectorAll(
       'input[type="date"]',
-    ) as HTMLInputElement
-    expect(dateInput).toBeTruthy()
-    fireEvent.change(dateInput, { target: { value: "2026-06-01" } })
+    )
+    expect(dateInputs.length).toBeGreaterThanOrEqual(1)
+    const targetDateInput = dateInputs[dateInputs.length - 1] as HTMLInputElement
+    fireEvent.change(targetDateInput, { target: { value: "2026-06-01" } })
 
     // No chip selections — leave linked_phase_ids empty.
     fireEvent.click(screen.getByText("Kaydet"))
@@ -313,10 +317,12 @@ describe("MilestonesSubTab", () => {
     ) as HTMLInputElement
     fireEvent.change(nameInput, { target: { value: "Bad Milestone" } })
 
-    const dateInput = document.querySelector(
+    // Ayşe's a6e3b858: select targetDate (last input), not startDate (first).
+    const dateInputs = document.querySelectorAll(
       'input[type="date"]',
-    ) as HTMLInputElement
-    fireEvent.change(dateInput, { target: { value: "2026-06-01" } })
+    )
+    const targetDateInput = dateInputs[dateInputs.length - 1] as HTMLInputElement
+    fireEvent.change(targetDateInput, { target: { value: "2026-06-01" } })
 
     fireEvent.click(screen.getByText("Kaydet"))
 

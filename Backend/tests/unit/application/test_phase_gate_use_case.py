@@ -45,6 +45,10 @@ def _mk_mocks(project, lock_acquired=True, tasks=None):
     project_repo.get_by_id = AsyncMock(return_value=project)
     task_repo = MagicMock()
     task_repo.list_by_project_and_phase = AsyncMock(return_value=tasks or [])
+    # Ayşe's d357b033 rewrote _apply_task_moves to use bulk_stamp_phase SQL
+    # UPDATE instead of per-row in-memory mutation. Stub as awaitable so the
+    # happy-path tests don't hit "MagicMock can't be awaited".
+    task_repo.bulk_stamp_phase = AsyncMock()
     audit_repo = MagicMock()
     audit_repo.create_with_metadata = AsyncMock()
     session = MagicMock()
@@ -53,6 +57,15 @@ def _mk_mocks(project, lock_acquired=True, tasks=None):
     lock_result.scalar_one = MagicMock(return_value=lock_acquired)
     session.execute = AsyncMock(return_value=lock_result)
     session.flush = AsyncMock()
+    # Ayşe's 418bc8a2 added in-use-case `await self.session.commit()` (and a
+    # rollback inside the phase_report try/except). Stub both as awaitable so
+    # unit tests can drive the happy path without hitting the same
+    # MagicMock-await failure. Architectural note: the use case's docstring
+    # at execute_phase_transition.py:11-12 still claims FastAPI Depends
+    # owns commit/rollback — that contract is stale and should be reconciled
+    # separately (either remove the in-use-case commit or update the doc).
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     return project_repo, task_repo, audit_repo, session
 
 
@@ -157,6 +170,10 @@ async def test_open_tasks_move_to_next_with_exceptions():
         exceptions=[TaskException(task_id=2, action="keep_in_source")],
     )
     resp = await uc.execute(1, dto, user_id=5)
-    assert t1.phase_id == "nd_Tgt456DXYZ"
-    assert t2.phase_id == "nd_Src123DXYZ"  # exception kept
+    # Ayşe's d357b033 replaced in-memory `t.phase_id = target` mutation with a
+    # bulk SQL `task_repo.bulk_stamp_phase(ids, phase_id)` UPDATE, so the
+    # original in-memory assertions (`t1.phase_id == "nd_Tgt456DXYZ"`) no
+    # longer hold — Python objects aren't touched by SQL UPDATE. The bulk
+    # call IS asserted instead: only t1's id was moved (t2 kept by exception).
+    task_repo.bulk_stamp_phase.assert_any_await([1], "nd_Tgt456DXYZ")
     assert resp.moved_count == 1

@@ -215,7 +215,12 @@ describe("HistorySubTab", () => {
       ),
     )
 
-    expect(screen.getByText(/Görev Detayları.*\(4\)/)).toBeInTheDocument()
+    // Ayşe's 5d25bb8f changed history-card.tsx:95 from
+    // `summary.done > 0 ? summary.done : ...` to
+    // `summary.total > 0 ? summary.total : ...` — the collapsible label now
+    // shows total phase tasks (broader context) instead of just done count.
+    // Fixture summary has total=5, so the label is "(5)" not "(4)".
+    expect(screen.getByText(/Görev Detayları.*\(5\)/)).toBeInTheDocument()
     void activity
   })
 
@@ -306,6 +311,11 @@ describe("HistorySubTab", () => {
           workflow={makeWorkflow()}
           activity={activity}
           phaseDoneCounts={{ planning: 3, execution: 3 }}
+          // Ayşe's 5d25bb8f — history-card prefers `summary.total` over
+          // `summary.done`. Without `phaseTotalCounts`, `summary.total` is 0
+          // and the label collapses to "(0)". Pass total counts to match the
+          // 3-done intent of this test.
+          phaseTotalCounts={{ planning: 3, execution: 3 }}
         />,
       ),
     )

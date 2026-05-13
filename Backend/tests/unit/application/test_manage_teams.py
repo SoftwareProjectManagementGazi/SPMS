@@ -25,7 +25,18 @@ async def test_create_team_sets_owner():
     use_case = CreateTeamUseCase(team_repo)
     result = await use_case.execute(owner, dto)
 
-    team_repo.create.assert_called_once_with("Dev Team", "Backend devs", 42)
+    # Ayşe's commits (b3085b96/bb422f10/084c7297) extended CreateTeamUseCase
+    # to pass color/department/leader_id from the DTO and switched to keyword
+    # arguments. DTO defaults: color None (use case fills "#3b82f6"),
+    # department None, leader_id None.
+    team_repo.create.assert_called_once_with(
+        name="Dev Team",
+        description="Backend devs",
+        owner_id=42,
+        color="#3b82f6",
+        department=None,
+        leader_id=None,
+    )
     assert result.owner_id == 42
 
 

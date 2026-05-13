@@ -102,6 +102,20 @@ class FakeSession:
     async def flush(self):
         self.flushes += 1
 
+    # Ayşe's commit 418bc8a2 added `await self.session.commit()` (line 182)
+    # and `await self.session.rollback()` (line 234) inside ExecutePhaseTransition
+    # use case for the new phase-report integration. The original use-case
+    # contract relied on FastAPI Depends lifecycle for commit; the new code
+    # opts into in-use-case transaction control instead. FakeSession needs to
+    # honor both as awaitable no-ops. (Architectural note: the docstring at
+    # execute_phase_transition.py:11-12 still claims router owns commit —
+    # that drift is a separate code-quality concern for Ayşe to reconcile.)
+    async def commit(self):
+        pass
+
+    async def rollback(self):
+        pass
+
 
 # ---------------------------------------------------------------------------
 # Helpers

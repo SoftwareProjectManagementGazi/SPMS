@@ -309,14 +309,22 @@ async def test_admin_delete_unowned_project_returns_204(
         r = await ac.delete(f"/api/v1/projects/{project_id}")
         assert r.status_code == 204, r.text
 
-    # Project gone from DB
-    remaining = (
+    # Project soft-deleted (Phase 01-04 contract — commit 9b3d4292): the row
+    # persists with is_deleted=True; all API reads filter via
+    # ProjectModel.is_deleted == False, so it is invisible to the rest of the
+    # system. Earlier assertion `remaining is None` was authored 7 weeks after
+    # soft-delete rolled out and incorrectly expected hard delete; the fake
+    # repo in this file (FakeProjectRepoForDelete) hard-deletes from a dict,
+    # which masked the contract drift in unit tests.
+    row = (
         await db_session.execute(
-            text("SELECT id FROM projects WHERE id=:pid"),
+            text("SELECT is_deleted, deleted_at FROM projects WHERE id=:pid"),
             {"pid": project_id},
         )
-    ).scalar()
-    assert remaining is None, "project row should be deleted"
+    ).first()
+    assert row is not None, "soft-deleted project row should persist"
+    assert row[0] is True, "is_deleted should be True after admin DELETE"
+    assert row[1] is not None, "deleted_at should be set after admin DELETE"
 
     # Audit row exists
     row = (
@@ -340,12 +348,29 @@ async def test_admin_delete_unowned_project_returns_204(
 
 
 @pytest.mark.asyncio
-async def test_pm_cannot_delete_unowned_project_returns_404(
+async def test_pm_cannot_delete_unowned_project_returns_403(
     authenticated_client, db_session
 ):
     """End-to-end — non-admin PM tries to DELETE a project they don't
-    manage. Backend returns 404 (info-disclosure-safe — same response
-    as a missing project). Project row remains in DB."""
+    manage. Phase 15 changed this from 404 to 403:
+
+    - Phase 14 (old): PM had `project.delete` permission, the
+      DeleteProjectUseCase.execute owner guard returned ProjectNotFoundError
+      for unowned projects → router translated to HTTP 404 (info-disclosure
+      -safe — same response as a missing project).
+    - Phase 15 (current): `project.delete` is intentionally absent from
+      PM_PERMS in migration 012 (see PM_PERMS at alembic/versions/
+      012_phase15_rbac.py:138-150). PMs use the ARCHIVE flow (`project.archive`)
+      to retire projects; only Admin can hard-delete. The
+      `require_permission("project.delete")` gate at projects.py:291 fires
+      BEFORE the use case, returning 403 PERMISSION_DENIED.
+
+    Info-disclosure safety is preserved: 403 also fires for non-existent
+    project IDs (perm gate runs before the existence check), so the response
+    still doesn't leak whether the project exists.
+
+    Project row remains live in DB either way.
+    """
     if not await _db_has_roles(db_session):
         pytest.skip("Roles not seeded — admin tests need role table populated")
 
@@ -355,13 +380,23 @@ async def test_pm_cannot_delete_unowned_project_returns_404(
 
     async with authenticated_client(role="Project Manager") as ac:
         r = await ac.delete(f"/api/v1/projects/{project_id}")
-        assert r.status_code == 404, r.text
+        assert r.status_code == 403, r.text
+        # Phase 15 D-1.11 error envelope: {error_code, missing_permission, message}
+        detail = r.json().get("detail", {})
+        assert detail.get("error_code") == "PERMISSION_DENIED", r.text
+        assert detail.get("missing_permission") == "project.delete", r.text
 
-    # Project still exists
-    remaining = (
+    # Project row must still be LIVE (not soft-deleted). The perm gate fires
+    # BEFORE repo.delete() can be called, so is_deleted must remain False.
+    # Strengthened from `remaining == project_id` so a future regression that
+    # grants PMs project.delete and lets them through to the soft-delete path
+    # is still caught.
+    row = (
         await db_session.execute(
-            text("SELECT id FROM projects WHERE id=:pid"),
+            text("SELECT id, is_deleted FROM projects WHERE id=:pid"),
             {"pid": project_id},
         )
-    ).scalar()
-    assert remaining == project_id, "project row should NOT be deleted"
+    ).first()
+    assert row is not None, "project row should still exist"
+    assert row[0] == project_id
+    assert row[1] is False, "project should NOT have been soft-deleted"

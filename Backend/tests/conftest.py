@@ -162,8 +162,14 @@ async def authenticated_client(db_session):
             stmt2 = select(RoleModel).limit(1)
             role_row = (await db_session.execute(stmt2)).scalar_one()
 
+        # Slugify role for email local-part — multi-word role names like
+        # "Project Manager" would otherwise produce invalid emails ('SPACE' in
+        # local-part fails pydantic EmailStr validation). The DB-side role
+        # lookup above still uses the verbatim role name via ilike(), so
+        # multi-word matches keep working.
+        role_slug = "".join(ch if ch.isalnum() else "_" for ch in role).lower()
         user = UserModel(
-            email=f"authclient+{role}@testexample.com",
+            email=f"authclient+{role_slug}@testexample.com",
             full_name=f"Test {role.capitalize()}",
             password_hash="$2b$12$fakehashfakehashfakehashfakehashfakehashfakehashfakehashfa",
             is_active=True,

@@ -125,11 +125,18 @@ interface SetupOpts {
 }
 
 function setupTasks(total: number, done: number) {
+  // Ayşe's d357b033 + 5d25bb8f switched task-completion detection from
+  // `normalizeStatus(t.status) === "done"` to the backend-supplied `t.isDone`
+  // boolean (read by phase-gate-expand.tsx:92-94 as the sole "open task"
+  // signal). The mock here bypasses the production task-service mapper that
+  // would convert `is_done` → `isDone`, so we set the camelCase field
+  // directly to match the component's read path.
   const out = Array.from({ length: total }, (_, i) => ({
     id: i + 1,
     project_id: 1,
     title: `Görev ${i + 1}`,
     status: i < done ? "done" : "todo",
+    isDone: i < done,
     priority: "medium",
     description: null,
   }))

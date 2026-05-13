@@ -68,7 +68,11 @@ const activePhase: WorkflowNode = { id: "n2", name: "Yürütme", x: 0, y: 0 }
 describe("OverviewSubTab", () => {
   it("Test 4: default (non-Kanban) variant renders 4 MiniMetrics — Toplam / Tamamlanan / Devam / İlerleme", () => {
     const tasks: Task[] = [
-      makeTask({ id: 1, status: "done", phaseId: "n2" }),
+      // Ayşe's d357b033 switched the "done count" source from
+      // normalizeStatus(t.status) === "done" to the backend-supplied t.isDone
+      // boolean. Test fixtures must opt-in explicitly — setting only
+      // status:"done" no longer makes a task count as done in the UI.
+      makeTask({ id: 1, status: "done", isDone: true, phaseId: "n2" }),
       makeTask({ id: 2, status: "in_progress", phaseId: "n2" }),
       makeTask({ id: 3, status: "todo", phaseId: "n2" }),
     ]

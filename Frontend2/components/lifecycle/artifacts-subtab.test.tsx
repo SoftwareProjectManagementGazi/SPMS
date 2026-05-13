@@ -267,7 +267,10 @@ describe("ArtifactsSubTab", () => {
 
     const [url, body] = apiPatch.mock.calls[0]
     expect(url).toBe("/artifacts/103")
-    expect(body).toMatchObject({ status: "done" })
+    // Ayşe's 7e161614 migrated the artifact status enum: done → completed.
+    // PATCH body now uses the new key. (mockResolvedValueOnce above already
+    // returns status: "completed" — only this assertion was stale.)
+    expect(body).toMatchObject({ status: "completed" })
     // Critical: revision NOT sent (T-12-06-03)
     expect((body as Record<string, unknown>).revision).toBeUndefined()
   })
@@ -298,9 +301,10 @@ describe("ArtifactsSubTab", () => {
       expect(screen.getByRole("button", { name: "Tamam" })).toBeInTheDocument()
     })
 
-    // Sprint Backlog row also shows "Taslak" as a status label, so disambiguate
-    // by selecting the SegmentedControl button (role=button) over the span label.
-    fireEvent.click(screen.getByRole("button", { name: "Taslak" }))
+    // Ayşe's 7e161614 removed the "Taslak" SegmentedControl option. The new
+    // options are Yok / Devam / Tamam / Onay. "Devam" maps to status
+    // "in_progress" — the mockResolvedValueOnce above returns that status.
+    fireEvent.click(screen.getByRole("button", { name: "Devam" }))
     fireEvent.click(screen.getByText("Kaydet"))
 
     await waitFor(() => {
@@ -435,7 +439,7 @@ describe("ArtifactsSubTab", () => {
     expect(apiDelete.mock.calls[0][0]).toBe("/artifacts/103")
   })
 
-  it("Test 8: PM delete on 'draft' shows soft warning ConfirmDialog", async () => {
+  it("Test 8: PM delete on non-not_created artifact shows ConfirmDialog", async () => {
     apiGet.mockResolvedValueOnce({ data: SCRUM_ARTIFACTS })
 
     render(
@@ -451,20 +455,21 @@ describe("ArtifactsSubTab", () => {
       expect(screen.getByText("Sprint Backlog")).toBeInTheDocument()
     })
 
-    // Sprint Backlog (id=102) is status='draft'. Open kebab → click Sil → ConfirmDialog appears
+    // Ayşe's 7e161614 removed the "draft" status entirely (Sprint Backlog is
+    // now `in_progress` per SCRUM_ARTIFACTS line 120). Production routes any
+    // non-`not_created` artifact through ConfirmDialog; only the body copy
+    // changed — it no longer mentions "taslak", just generic
+    // "X silinsin mi? Bu işlem geri alınamaz."
     const kebabs = screen.getAllByRole("button", {
       name: /Daha Fazla|Daha fazla|More|Kebab/i,
     })
-    // Index 1 = Sprint Backlog
     fireEvent.click(kebabs[1])
 
     const silBtn = await waitFor(() => screen.getByText("Sil"))
     fireEvent.click(silBtn)
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Bu artefakt taslak durumunda/i),
-      ).toBeInTheDocument()
+      expect(screen.getByText(/silinsin mi/i)).toBeInTheDocument()
     })
   })
 
@@ -484,9 +489,11 @@ describe("ArtifactsSubTab", () => {
       expect(screen.getByText("Sprint Planı")).toBeInTheDocument()
     })
 
-    // The Yeni Artefakt Ekle button (or "Özel Ekle" alias).
+    // Ayşe's 7e161614 renamed the toolbar CTA. When there are existing
+    // artifacts the toolbar button reads "Artefakt Ekle"; the empty-state
+    // CTA reads "Özel Artefakt Ekle". The /Artefakt Ekle/ regex covers both.
     const addBtn = screen.getByRole("button", {
-      name: /Yeni Artefakt|Özel Ekle/,
+      name: /Artefakt Ekle/,
     })
     fireEvent.click(addBtn)
 
@@ -511,9 +518,9 @@ describe("ArtifactsSubTab", () => {
     )
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Bu metodoloji için tanımlı artefakt bulunamadı/),
-      ).toBeInTheDocument()
+      // Ayşe's 7e161614 rewrote the empty-state copy. New text is
+      // "Henüz artefakt yok" with a methodology-aware sub-line.
+      expect(screen.getByText(/Henüz artefakt yok/)).toBeInTheDocument()
     })
   })
 })

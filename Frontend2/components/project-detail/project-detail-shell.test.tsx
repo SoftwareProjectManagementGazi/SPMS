@@ -19,9 +19,28 @@ vi.mock("./settings-tab", () => ({
 // Stub the HTTP client — Plan 11-05 BoardTab fires GET /tasks/project/{id}
 // and /projects/{id}/columns on mount. Return empty arrays so the BoardTab
 // can render columns with zero cards (no toolbar errors, no net requests).
+// Ayşe's 19e907f7 rewrote MembersTab to query /projects/{id}/members instead
+// of synthesising a single row from `project.managerName`. Default mock now
+// returns the project manager record when the URL targets /members, so the
+// "shows the project manager card" test still sees Ayşe. Other endpoints
+// keep returning empty arrays (BoardTab columns, ActivityTab feed, etc.).
 vi.mock("@/lib/api-client", () => ({
   apiClient: {
-    get: vi.fn().mockResolvedValue({ data: [] }),
+    get: vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/members")) {
+        return Promise.resolve({
+          data: [
+            {
+              id: 1,
+              full_name: "Ayşe",
+              avatar_path: null,
+              role_name: "manager",
+            },
+          ],
+        })
+      }
+      return Promise.resolve({ data: [] })
+    }),
     patch: vi.fn().mockResolvedValue({ data: {} }),
     post: vi.fn().mockResolvedValue({ data: {} }),
     delete: vi.fn().mockResolvedValue({ data: {} }),
@@ -103,13 +122,14 @@ describe("ProjectDetailShell", () => {
     expect(getByText("Artefaktlar")).toBeInTheDocument()
   })
 
-  it("shows the project manager card on the Üyeler tab", () => {
-    const { getByText } = renderWithProviders(
+  it("shows the project manager card on the Üyeler tab", async () => {
+    const { getByText, findByText } = renderWithProviders(
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("Üyeler"))
-    // mockProjects[0].managerName === "Ayşe"
-    expect(getByText("Ayşe")).toBeInTheDocument()
+    // Ayşe's 19e907f7 moved member rendering to async /members fetch. Use
+    // findByText to wait for the mocked API to resolve before asserting.
+    expect(await findByText("Ayşe")).toBeInTheDocument()
     expect(getByText("Yönetici")).toBeInTheDocument()
   })
 })

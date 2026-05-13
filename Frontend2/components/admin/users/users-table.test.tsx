@@ -69,6 +69,18 @@ vi.mock("@/hooks/use-change-role", () => ({
 vi.mock("@/hooks/use-bulk-action", () => ({
   useBulkAction: () => ({ mutate: vi.fn(), isPending: false }),
 }))
+// Phase 15 (15-09) added `useRoles()` consumption inside UserRowActions for
+// the role-picker submenu. The test file mocks every other sibling admin hook
+// identically; mocking useRoles keeps the table tests self-contained and
+// avoids needing a QueryClientProvider wrapper. Returns the RoleListResponse
+// shape that UserRowActions reads as `rolesQ.data?.items ?? []`.
+vi.mock("@/hooks/use-roles", () => ({
+  useRoles: () => ({
+    data: { items: [], total: 0 },
+    isLoading: false,
+    error: null,
+  }),
+}))
 
 // ---- Stub MoreMenu so the trigger renders a plain button ----
 vi.mock("@/components/admin/shared/more-menu", () => ({

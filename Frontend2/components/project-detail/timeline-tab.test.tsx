@@ -35,7 +35,11 @@ vi.mock("@/lib/api-client", () => ({
               cycle_id: null,
               phase_id: null,
               points: 5,
-              start: "2026-04-10",
+              // Migration 007 (Ayşe) added tasks.start_date. The task-service
+              // mapper (task-service.ts:161) now reads d.start_date (not d.start),
+              // so fixtures must use the snake_case key for the timeline filter
+              // to see a real start.
+              start_date: "2026-04-10",
               due: "2026-04-20",
               labels: [],
               watcher_count: 0,
@@ -56,7 +60,7 @@ vi.mock("@/lib/api-client", () => ({
               cycle_id: null,
               phase_id: null,
               points: 3,
-              start: "2026-04-15",
+              start_date: "2026-04-15",
               due: "2026-04-25",
               labels: [],
               watcher_count: 0,
@@ -83,7 +87,11 @@ vi.mock("@/lib/api-client", () => ({
               labels: [],
               watcher_count: 0,
               type: "task",
-              created_at: "2026-01-01T00:00:00Z",
+              // Ayşe's 1aabb447 relaxed the timeline filter to require only
+              // `due` (start optional, falls back to created_at as effectiveStart).
+              // Use a created_at close to MOBIL-1's start so it doesn't shift
+              // the chart's `min` and break Test M1's milestone x-position math.
+              created_at: "2026-04-08T00:00:00Z",
             },
           ],
         })
@@ -127,8 +135,11 @@ describe("TimelineTab", () => {
     const mobil3Bar = titleTexts.find((t) => t.includes("MOBIL-3"))
     expect(mobil1Bar).toBeTruthy()
     expect(mobil2Bar).toBeTruthy()
-    // MOBIL-3 has no start date — it must NOT appear in the chart.
-    expect(mobil3Bar).toBeFalsy()
+    // Ayşe's 1aabb447 relaxed the timeline filter from `t.start && t.due` to
+    // `t.due` only. Tasks without start fall back to `created_at` as
+    // effectiveStart. MOBIL-3 now SHOULD render (anchored to its created_at
+    // 2026-04-08, bar ending 2026-04-30). The old test asserted exclusion.
+    expect(mobil3Bar).toBeTruthy()
   })
 
   it("clicking Day toggles active view from default Week to Day", async () => {
@@ -182,8 +193,13 @@ describe("TimelineTab", () => {
     const { getByText } = renderWithProviders(
       <TimelineTab project={mockProjects[0]} />
     )
-    await waitFor(() => getByText(/başlangıç ve bitiş tarihi/))
-    expect(getByText(/başlangıç ve bitiş tarihi/)).toBeInTheDocument()
+    // Ayşe's 1aabb447 simplified the empty-state copy. Old text:
+    // "Görevler timeline'a çıkmak için hem başlangıç hem bitiş tarihi olmalı".
+    // New text: "...bitiş tarihi olan görevler listelenir".
+    await waitFor(() => getByText(/bitiş tarihi olan görevler listelenir/))
+    expect(
+      getByText(/bitiş tarihi olan görevler listelenir/)
+    ).toBeInTheDocument()
   })
 
   it("renders a today line when today falls inside the scheduled range", async () => {
@@ -236,10 +252,12 @@ describe("TimelineTab", () => {
     expect(flagLine).not.toBeNull()
     // Compute expected x using the same formula timeline-tab uses internally:
     //   ((target - min) / MS_PER_DAY) * DAY_WIDTH[view]
-    // Default view is week → DAY_WIDTH=24. The min equals the earliest task
-    // start (2026-04-10). 2026-04-15 → 5 days into range → x = 5 * 24 = 120.
+    // Default view is week → DAY_WIDTH=24. With Ayşe's 1aabb447, MOBIL-3 is
+    // now included and anchored to its created_at (2026-04-08), shifting
+    // `min` from MOBIL-1's start (2026-04-10) to 2026-04-08. The milestone
+    // target 2026-04-15 is now 7 days into range → x = 7 * 24 = 168.
     const x1 = Number(flagLine!.getAttribute("x1"))
-    expect(x1).toBeCloseTo(120, 0)
+    expect(x1).toBeCloseTo(168, 0)
   })
 
   it("Test M2: label chip renders with name + short date format", async () => {
