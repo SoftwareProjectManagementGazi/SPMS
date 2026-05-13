@@ -495,8 +495,8 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
                 }}
               >
                 {T(
-                  "Sütunlar ve yinelenen görevler v2.1'de ayrı bir editör ekranıyla düzenlenebilir hale gelecek. Şu an için sadece ad ve açıklama düzenlenebilir.",
-                  "Columns and recurring tasks will be editable through a dedicated editor in v2.1. For now only the name and description are editable.",
+                  "Sütunlar ve yinelenen görevler editör ekranıyla düzenlenebilir hale gelecek. Şu an için sadece ad ve açıklama düzenlenebilir.",
+                  "Columns and recurring tasks will be editable through a dedicated editor. For now only the name and description are editable.",
                 )}
               </div>
             </div>

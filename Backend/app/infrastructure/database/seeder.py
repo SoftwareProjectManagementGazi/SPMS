@@ -4,6 +4,8 @@ from datetime import date, timedelta, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.infrastructure.database.seeder_extended import seed_extended_data
+
 # --- Modeller ---
 from app.infrastructure.database.models.role import RoleModel
 from app.infrastructure.database.models.user import UserModel
@@ -289,6 +291,11 @@ async def seed_data(session: AsyncSession):
             await seed_milestones_and_artifacts(session, created_projects)
 
         await session.commit()
+        logger.info("SEEDER: Temel veriler commit edildi.")
+
+        # Genişletilmiş seeder: +92 kullanıcı, +15 proje, +12 yaşam döngüsü şablonu
+        await seed_extended_data(session)
+        await session.commit()
         logger.info("SEEDER: İşlem başarıyla tamamlandı.")
     except Exception as e:
         logger.error(f"SEEDER HATASI: {e}")
@@ -359,15 +366,39 @@ async def seed_process_templates(session: AsyncSession):
             "behavioral_flags": {"sprint_required": True, "wip_limits": False},
             "cycle_label_tr": "Sprint",
             "cycle_label_en": "Sprint",
+            # Fix (debug workflow-editor-seeder-schema-broken): node schema must match
+            # WorkflowNodeDTO (id, name, x, y, color, is_initial, is_final, description).
+            # Old shape used {id, label, order} — mapWorkflowNode reads `name` not `label`,
+            # so label was silently dropped producing undefined names on the canvas.
+            # Missing x/y stacked all nodes at (0,0). Short ids ("plan", "develop", etc.)
+            # fail the D-22 regex ^nd_[A-Za-z0-9_-]{10}$ and cause 422 on save.
+            # This block now mirrors _DEFAULT_WORKFLOW_SCRUM exactly.
             "default_workflow": {
                 "mode": "flexible",
                 "nodes": [
-                    {"id": "plan", "label": "Sprint Planning", "order": 0},
-                    {"id": "develop", "label": "Development", "order": 1},
-                    {"id": "review", "label": "Sprint Review", "order": 2},
-                    {"id": "retro", "label": "Retrospective", "order": 3},
+                    {"id": "nd_scinit0001", "name": "Başlatma", "description": "Vizyon ve hedefler",
+                     "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
+                    {"id": "nd_scplan0002", "name": "Planlama", "description": "Backlog ve sprint planning",
+                     "x": 280, "y": 120, "color": "status-todo"},
+                    {"id": "nd_scexec0003", "name": "Yürütme", "description": "Sprint'ler",
+                     "x": 500, "y": 120, "color": "status-progress"},
+                    {"id": "nd_scmoni0004", "name": "İzleme", "description": "Metrikler ve retro",
+                     "x": 720, "y": 120, "color": "status-review"},
+                    {"id": "nd_sccls00005", "name": "Kapanış", "description": "Teslim ve ders",
+                     "x": 940, "y": 120, "color": "status-done", "is_final": True},
                 ],
-                "edges": [],
+                "edges": [
+                    {"id": "e1", "source": "nd_scinit0001", "target": "nd_scplan0002", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e2", "source": "nd_scplan0002", "target": "nd_scexec0003", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e3", "source": "nd_scexec0003", "target": "nd_scmoni0004", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e4", "source": "nd_scmoni0004", "target": "nd_scexec0003", "type": "feedback",
+                     "label": "Retro", "bidirectional": False, "is_all_gate": False},
+                    {"id": "e5", "source": "nd_scmoni0004", "target": "nd_sccls00005", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                ],
                 "groups": [],
             },
         },
@@ -386,12 +417,15 @@ async def seed_process_templates(session: AsyncSession):
             "behavioral_flags": {"sprint_required": False, "wip_limits": True},
             "cycle_label_tr": "Döngü",
             "cycle_label_en": "Cycle",
+            # Fix: continuous mode requires a single node that is both initial and final.
+            # Old shape had three nodes {id, label, order} — wrong schema + wrong structure
+            # for continuous mode. Mirrors _DEFAULT_WORKFLOW_KANBAN exactly.
             "default_workflow": {
                 "mode": "continuous",
                 "nodes": [
-                    {"id": "todo", "label": "Yapılacak", "order": 0},
-                    {"id": "doing", "label": "Devam Ediyor", "order": 1},
-                    {"id": "done", "label": "Bitti", "order": 2},
+                    {"id": "nd_kbflow0001", "name": "Sürekli Akış", "description": "Tek aktif faz",
+                     "x": 400, "y": 120, "color": "status-progress",
+                     "is_initial": True, "is_final": True},
                 ],
                 "edges": [],
                 "groups": [],
@@ -413,28 +447,35 @@ async def seed_process_templates(session: AsyncSession):
             "behavioral_flags": {"sprint_required": False, "strict_dependencies": True},
             "cycle_label_tr": "Faz",
             "cycle_label_en": "Phase",
+            # Fix: mode corrected sequential -> sequential-locked. Node IDs fixed to
+            # nd_* (D-22 compliant). Old edge source/target refs ("req", "design" etc.)
+            # broken because node IDs changed. Mirrors _DEFAULT_WORKFLOW_WATERFALL exactly.
             "default_workflow": {
-                "mode": "sequential",
+                "mode": "sequential-locked",
                 "nodes": [
-                    {"id": "req", "label": "Gereksinim", "order": 0},
-                    {"id": "design", "label": "Tasarım", "order": 1},
-                    {"id": "impl", "label": "Uygulama", "order": 2},
-                    {"id": "test", "label": "Test", "order": 3},
-                    {"id": "maint", "label": "Bakım", "order": 4},
+                    {"id": "nd_wfreq00001", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
+                     "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
+                    {"id": "nd_wfdes00002", "name": "Tasarım", "description": "Mimari ve UI",
+                     "x": 280, "y": 120, "color": "status-progress"},
+                    {"id": "nd_wfimp00003", "name": "Uygulama", "description": "Geliştirme",
+                     "x": 500, "y": 120, "color": "status-progress"},
+                    {"id": "nd_wftst00004", "name": "Test", "description": "QA ve UAT",
+                     "x": 720, "y": 120, "color": "status-review"},
+                    {"id": "nd_wfdep00005", "name": "Yayın", "description": "Dağıtım",
+                     "x": 940, "y": 120, "color": "status-done"},
+                    {"id": "nd_wfmnt00006", "name": "Bakım", "description": "Destek",
+                     "x": 1160, "y": 120, "color": "status-done", "is_final": True},
                 ],
                 "edges": [
-                    # Phase 12 Plan 12-09 — emit canonical WorkflowEdge shape
-                    # (source/target naming + new D-16/D-17 fields explicit).
-                    # NOTE: legacy `from`/`to` keys replaced with `source`/`target`
-                    # so the seeder data round-trips through the WorkflowEdge
-                    # Pydantic model without surprises.
-                    {"id": "e1", "source": "req", "target": "design", "type": "flow",
+                    {"id": "e1", "source": "nd_wfreq00001", "target": "nd_wfdes00002", "type": "flow",
                      "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e2", "source": "design", "target": "impl", "type": "flow",
+                    {"id": "e2", "source": "nd_wfdes00002", "target": "nd_wfimp00003", "type": "flow",
                      "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e3", "source": "impl", "target": "test", "type": "flow",
+                    {"id": "e3", "source": "nd_wfimp00003", "target": "nd_wftst00004", "type": "flow",
                      "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e4", "source": "test", "target": "maint", "type": "flow",
+                    {"id": "e4", "source": "nd_wftst00004", "target": "nd_wfdep00005", "type": "flow",
+                     "label": None, "bidirectional": False, "is_all_gate": False},
+                    {"id": "e5", "source": "nd_wfdep00005", "target": "nd_wfmnt00006", "type": "flow",
                      "label": None, "bidirectional": False, "is_all_gate": False},
                 ],
                 "groups": [],
@@ -517,7 +558,7 @@ async def seed_projects(session: AsyncSession, users_map):
 
 async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectModel, sprints: list, col_map: dict):
     logger.info(f"   -> Görevler üretiliyor: {project.name}")
-    
+
     # Gerekli verileri çek
     await session.refresh(project, attribute_names=['members'])
     members = project.members
@@ -531,7 +572,7 @@ async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectMod
         template = PARENT_TASK_TEMPLATES[i % len(PARENT_TASK_TEMPLATES)]
         p_title = f"{template[0]} ({project.key})"
         p_desc = template[1]
-        
+
         # Parent genellikle Backlog veya Todo'da durur, ama bazen ilerlemiş olabilir
         p_status_name = random.choice(col_names[:3]) # İlk 3 kolon
         p_col = col_map[p_status_name]
@@ -559,12 +600,12 @@ async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectMod
         for j in range(num_subs):
             prefix = SUBTASK_PREFIXES[j % len(SUBTASK_PREFIXES)]
             s_title = f"{prefix}: {template[0]} - Parça {j+1}"
-            
+
             # Subtask'lar daha dağınık olabilir
             s_status_name = random.choice(col_names)
             s_col = col_map[s_status_name]
             s_assignee = random.choice(members)
-            
+
             # Subtask sprint'i parent ile aynı veya farklı olabilir (genelde aynı olur)
             s_sprint = p_sprint if p_sprint else (random.choice(sprints) if sprints else None)
 
@@ -588,9 +629,9 @@ async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectMod
             # Detaylar: Etiket, Log, Yorum
             if labels:
                 # Many-to-Many ilişkisi seeder'da zor olabilir, varsa ekle (TaskModel'de relationship tanimliysa)
-                # sub_task.labels.append(random.choice(labels)) 
+                # sub_task.labels.append(random.choice(labels))
                 pass
-            
+
             # AUDIT LOG (Create) — activity feed endpoint reads from audit_log table
             session.add(AuditLogModel(
                 entity_type="task", entity_id=sub_task.id,
@@ -649,7 +690,7 @@ async def seed_kanban_details(session: AsyncSession, project, users_map):
         session.add(c)
         col_map[name] = c
     await session.flush()
-    
+
     await generate_hierarchical_tasks(session, project, [], col_map)
 
 async def seed_waterfall_details(session: AsyncSession, project, users_map):
