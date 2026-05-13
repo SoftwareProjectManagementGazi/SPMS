@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPMS Bitirme Projesi Posteri — Grup 57</title>
+<style>
+  /* ===== A0 BOYUTU: 841mm × 1189mm ===== */
+  @page {
+    size: A0 portrait;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-dark:   #1B3A6B;
+    --blue-mid:    #2E6DA4;
+    --blue-light:  #BDD7EE;
+    --blue-pale:   #E8F1FA;
+    --accent:      #E8A020;
+    --text-dark:   #1A1A2E;
+    --text-mid:    #2C3E50;
+    --white:       #FFFFFF;
+    --border:      #A0BDD8;
+  }
+
+  body {
+    width: 841mm;
+    min-height: 1189mm;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    background: var(--white);
+    color: var(--text-dark);
+    font-size: 11.5pt;
+    line-height: 1.45;
+  }
+
+  /* ===== HEADER ===== */
+  .poster-header {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    padding: 14mm 18mm;
+    gap: 16mm;
+    border-bottom: 6px solid var(--accent);
+  }
+
+  .logo-box {
+    flex-shrink: 0;
+    width: 75mm;
+    height: 75mm;
+    background: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid var(--blue-light);
+    overflow: hidden;
+  }
+
+  .logo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 6px;
+  }
+
+  .logo-placeholder {
+    text-align: center;
+    color: var(--blue-dark);
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 8px;
+    line-height: 1.3;
+  }
+
+  .logo-gazi { font-size: 22pt; font-weight: 900; display: block; }
+  .logo-year { font-size: 28pt; font-weight: 900; display: block; color: var(--accent); }
+  .logo-sub  { font-size: 8pt; display: block; }
+
+  .header-center {
+    flex: 1;
+    text-align: center;
+  }
+
+  .dept-name {
+    font-size: 16pt;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 6mm;
+    color: var(--blue-light);
+    text-transform: uppercase;
+  }
+
+  .project-title {
+    font-size: 30pt;
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 5mm;
+    color: var(--white);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .header-meta {
+    font-size: 12pt;
+    line-height: 1.7;
+    color: var(--blue-light);
+  }
+
+  .header-meta .group-no {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--white);
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 11pt;
+    margin-bottom: 4px;
+  }
+
+  /* ===== MAIN CONTENT ===== */
+  .poster-body {
+    padding: 10mm 18mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8mm;
+  }
+
+  /* ===== SECTION CARDS ===== */
+  .card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    break-inside: avoid;
+  }
+
+  .card-full  { grid-column: 1 / -1; }
+  .card-half  { grid-column: span 2; }
+  .card-third { grid-column: span 1; }
+  .card-two-thirds { grid-column: span 2; }
+
+  .card-header {
+    background: var(--blue-dark);
+    color: var(--white);
+    padding: 3.5mm 6mm;
+    font-size: 13pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-header .icon {
+    font-size: 15pt;
+  }
+
+  .card-body {
+    padding: 5mm 6mm;
+  }
+
+  /* ===== ABSTRACT ===== */
+  .abstract-text {
+    font-size: 11.5pt;
+    line-height: 1.6;
+    text-align: justify;
+    color: var(--text-mid);
+  }
+
+  .keyword-row {
+    margin-top: 4mm;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .keyword {
+    background: var(--blue-pale);
+    border: 1px solid var(--border);
+    color: var(--blue-dark);
+    padding: 2px 10px;
+    border-radius: 14px;
+    font-size: 9.5pt;
+    font-weight: 600;
+  }
+
+  /* ===== ARCH DIAGRAM ===== */
+  .arch-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 3mm;
+  }
+
+  .arch-layer {
+    border-radius: 6px;
+    padding: 3.5mm 6mm;
+    display: flex;
+    align-items: center;
+    gap: 5mm;
+  }
+
+  .arch-layer .layer-label {
+    font-size: 10pt;
+    font-weight: 700;
+    min-width: 38mm;
+    color: var(--white);
+  }
+
+  .arch-layer .layer-content {
+    font-size: 9.5pt;
+    color: var(--white);
+    opacity: 0.92;
+  }
+
+  .layer-api         { background: #1B3A6B; }
+  .layer-application { background: #2E6DA4; }
+  .layer-domain      { background: #2874A6; }
+  .layer-infra       { background: #1A5276; }
+
+  .arch-arrow {
+    text-align: center;
+    font-size: 14pt;
+    color: var(--blue-mid);
+    margin: -1mm 0;
+  }
+
+  /* ===== FEATURES ===== */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4mm;
+  }
+
+  .feature-item {
+    background: var(--blue-pale);
+    border-left: 4px solid var(--blue-mid);
+    border-radius: 4px;
+    padding: 3.5mm 5mm;
+  }
+
+  .feature-item h4 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: var(--blue-dark);
+    margin-bottom: 1.5mm;
+  }
+
+  .feature-item p {
+    font-size: 9.5pt;
+    color: var(--text-mid);
+    line-height: 1.4;
+  }
+
+  /* ===== METHODOLOGY ===== */
+  .method-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4mm;
+  }
+
+  .method-card {
+    border-radius: 8px;
+    padding: 5mm;
+    text-align: center;
+    color: var(--white);
+  }
+
+  .method-card.scrum    { background: linear-gradient(135deg, #1a7fc1, #0e5a8a); }
+  .method-card.kanban   { background: linear-gradient(135deg, #27ae60, #1a7a42); }
+  .method-card.waterfall{ background: linear-gradient(135deg, #8e44ad, #5b2c6f); }
+
+  .method-card .m-icon  { font-size: 26pt; margin-bottom: 3mm; }
+  .method-card h4       { font-size: 12pt; font-weight: 800; margin-bottom: 2mm; }
+  .method-card ul       { text-align: left; padding-left: 4mm; font-size: 9pt; line-height: 1.6; }
+
+  /* ===== TECH STACK ===== */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3.5mm;
+  }
+
+  .tech-item {
+    background: var(--blue-pale);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 3.5mm 4mm;
+    text-align: center;
+  }
+
+  .tech-item .tech-icon  { font-size: 20pt; margin-bottom: 2mm; }
+  .tech-item .tech-name  { font-size: 9.5pt; font-weight: 700; color: var(--blue-dark); }
+  .tech-item .tech-desc  { font-size: 8pt; color: var(--text-mid); }
+
+  /* ===== UI SCREENS ===== */
+  .screens-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+  }
+
+  .screen-box {
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .screen-titlebar {
+    background: var(--blue-dark);
+    color: var(--white);
+    font-size: 8.5pt;
+    font-weight: 600;
+    padding: 2mm 4mm;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .screen-titlebar .dots span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 3px;
+  }
+  .dot-r { background:#e74c3c; }
+  .dot-y { background:#f39c12; }
+  .dot-g { background:#27ae60; }
+
+  .screen-content {
+    background: var(--blue-pale);
+    min-height: 52mm;
+    padding: 4mm;
+    display: flex;
+    flex-direction: column;
+    gap: 3mm;
+  }
+
+  /* Kanban mock */
+  .kanban-mock {
+    display: flex;
+    gap: 3mm;
+    height: 48mm;
+  }
+  .k-col {
+    flex: 1;
+    background: var(--white);
+    border-radius: 4px;
+    padding: 2.5mm;
+    border-top: 3px solid var(--blue-mid);
+  }
+  .k-col.done-col { border-top-color: #27ae60; }
+  .k-col.prog-col { border-top-color: #E8A020; }
+  .k-col-title { font-size: 7.5pt; font-weight: 700; color: var(--blue-dark); margin-bottom: 2mm; }
+  .k-card {
+    background: var(--blue-pale);
+    border-radius: 3px;
+    padding: 2mm;
+    margin-bottom: 2mm;
+    font-size: 7pt;
+    border-left: 2px solid var(--blue-mid);
+  }
+  .k-card.high { border-left-color: #e74c3c; }
+  .k-card.med  { border-left-color: #E8A020; }
+  .k-card.low  { border-left-color: #27ae60; }
+
+  /* Sprint mock */
+  .sprint-mock {
+    height: 48mm;
+    display: flex;
+    flex-direction: column;
+    gap: 2mm;
+  }
+  .sprint-header-m {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--blue-dark);
+    color: var(--white);
+    padding: 2mm 3mm;
+    border-radius: 4px;
+    font-size: 8pt;
+    font-weight: 600;
+  }
+  .sprint-badge {
+    background: var(--accent);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 7pt;
+  }
+  .task-row {
+    background: var(--white);
+    border-radius: 4px;
+    padding: 2mm 3mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7.5pt;
+  }
+  .status-pill {
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 6.5pt;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .sp-todo { background: #95a5a6; }
+  .sp-prog { background: var(--accent); }
+  .sp-done { background: #27ae60; }
+
+  /* Burndown mock */
+  .burndown-mock {
+    height: 48mm;
+    background: var(--white);
+    border-radius: 4px;
+    padding: 3mm;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+  }
+  .burndown-mock svg { width: 100%; height: 100%; }
+
+  /* Dashboard mock */
+  .dashboard-mock {
+    height: 48mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2mm;
+  }
+  .stat-box {
+    background: var(--white);
+    border-radius: 4px;
+    padding: 2.5mm;
+    text-align: center;
+    border-top: 3px solid var(--blue-mid);
+  }
+  .stat-box .s-num { font-size: 18pt; font-weight: 900; color: var(--blue-dark); }
+  .stat-box .s-lbl { font-size: 7pt; color: var(--text-mid); }
+
+  /* ===== RESULTS ===== */
+  .results-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4mm;
+    margin-bottom: 5mm;
+  }
+
+  .result-stat {
+    text-align: center;
+    background: var(--blue-pale);
+    border-radius: 8px;
+    padding: 4mm;
+    border: 1.5px solid var(--border);
+  }
+
+  .result-stat .r-num {
+    font-size: 28pt;
+    font-weight: 900;
+    color: var(--blue-dark);
+    line-height: 1;
+  }
+
+  .result-stat .r-unit {
+    font-size: 11pt;
+    color: var(--blue-mid);
+    font-weight: 600;
+  }
+
+  .result-stat .r-lbl {
+    font-size: 9pt;
+    color: var(--text-mid);
+    margin-top: 2mm;
+  }
+
+  .contrib-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+  .contrib-table th {
+    background: var(--blue-dark);
+    color: var(--white);
+    padding: 3mm 5mm;
+    text-align: left;
+    font-weight: 600;
+  }
+  .contrib-table td {
+    padding: 3mm 5mm;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .contrib-table tr:nth-child(even) td { background: var(--blue-pale); }
+
+  /* ===== FOOTER ===== */
+  .poster-footer {
+    background: var(--blue-dark);
+    color: var(--white);
+    padding: 5mm 18mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 4px solid var(--accent);
+    margin-top: 6mm;
+  }
+
+  .footer-left { font-size: 10pt; line-height: 1.6; }
+  .footer-mid  { text-align: center; font-size: 10pt; opacity: 0.7; }
+  .footer-right { text-align: right; font-size: 10pt; }
+
+  .footer-right .contact-line {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+    margin-bottom: 2px;
+  }
+
+  .section-divider {
+    grid-column: 1 / -1;
+    height: 0;
+  }
+
+  /* ===== BULLET LISTS ===== */
+  .styled-list {
+    list-style: none;
+    padding: 0;
+  }
+  .styled-list li {
+    padding: 2mm 0 2mm 6mm;
+    border-bottom: 1px solid var(--border);
+    font-size: 10pt;
+    color: var(--text-mid);
+    position: relative;
+  }
+  .styled-list li:last-child { border-bottom: none; }
+  .styled-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--blue-mid);
+    font-size: 9pt;
+  }
+
+  .highlight-box {
+    background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+    color: var(--white);
+    border-radius: 6px;
+    padding: 4mm 6mm;
+    margin-bottom: 3mm;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  .highlight-box strong {
+    color: var(--accent);
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="poster-header">
+
+  <!-- Sol logo: Gazi Üniversitesi -->
+  <div class="logo-box">
+    <!-- Eğer logo dosyası varsa: <img src="gazi_logo.png" alt="Gazi Üniversitesi"> -->
+    <div class="logo-placeholder">
+      <span class="logo-gazi">GAZİ</span>
+      <span class="logo-sub">ÜNİVERSİTESİ</span>
+      <span class="logo-sub">1926</span>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="dept-name">Bilgisayar Mühendisliği Bölümü</div>
+    <div class="project-title">Yazılım Projesi Yönetim Yazılımı<br>(SPMS)</div>
+    <div class="header-meta">
+      <span class="group-no">Grup 57</span><br>
+      <strong>Danışman:</strong> Prof. Dr. Hacer KARACAN<br>
+      <strong>Grup Üyeleri:</strong> Ayşe ÖZ &nbsp;|&nbsp; Yusuf Emre BAYRAKCI
+    </div>
+  </div>
+
+  <!-- Sağ logo: 100. Yıl -->
+  <div class="logo-box">
+    <!-- Eğer logo dosyası varsa: <img src="gazi_100.png" alt="Gazi 100. Yıl"> -->
+    <div class="logo-placeholder">
+      <span class="logo-year">100</span>
+      <span class="logo-sub">YILINDA</span>
+      <span class="logo-gazi" style="font-size:16pt;">GAZİ</span>
+    </div>
+  </div>
+
+</header>
+
+<!-- ============================================================
+     BODY
+     ============================================================ -->
+<main class="poster-body">
+
+  <!-- ── ÖZET ──────────────────────────────────────────────── -->
+  <section class="card card-full">
+    <div class="card-header"><span class="icon">📋</span> Özet / Abstract</div>
+    <div class="card-body">
+      <p class="abstract-text">
+        SPMS (Software Project Management System), yazılım geliştirme ekiplerine <strong>Scrum, Kanban ve Waterfall</strong> başta olmak üzere dokuz farklı proje yönetim metodolojisini tek bir platform üzerinden uygulama imkânı sunan web tabanlı bir yazılım projesi yönetim sistemidir. Sistem, <strong>Clean Architecture</strong> ve <strong>SOLID</strong> prensipleri doğrultusunda katmanlı bir mimariye sahip olup backend FastAPI (Python 3.12), frontend ise Next.js 16 ile geliştirilmiştir. Kullanıcılara görev yönetimi, sprint planlama, Kanban panosu, burndown chart gibi kapsamlı araçlar sunulmaktadır. Rol tabanlı erişim kontrolü (RBAC), denetim günlüğü ve PDF/Excel raporlama özellikleri ile kurumsal düzeyde proje yönetimi hedeflenmektedir.
+      </p>
+      <div class="keyword-row">
+        <span class="keyword">Proje Yönetimi</span>
+        <span class="keyword">Scrum</span>
+        <span class="keyword">Kanban</span>
+        <span class="keyword">Waterfall</span>
+        <span class="keyword">FastAPI</span>
+        <span class="keyword">Next.js</span>
+        <span class="keyword">Clean Architecture</span>
+        <span class="keyword">RBAC</span>
+        <span class="keyword">Sprint Yönetimi</span>
+        <span class="keyword">Burndown Chart</span>
+        <span class="keyword">PostgreSQL</span>
+        <span class="keyword">RESTful API</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MİMARİ ─────────────────────────────────────────────── -->
+  <section class="card card-third">
+    <div class="card-header"><span class="icon">🏛️</span> Sistem Mimarisi</div>
+    <div class="card-body">
+      <div class="arch-layers">
+        <div class="arch-layer layer-api">
+          <div class="layer-label">🔵 API Katmanı</div>
+          <div class="layer-content">FastAPI Routers · Dependency Injection · JWT Auth</div>
+        </div>
+        <div class="arch-arrow">↓ bağımlılık</div>
+        <div class="arch-layer layer-application">
+          <div class="layer-label">🟡 Uygulama Katmanı</div>
+          <div class="layer-content">Use Cases · DTOs · Port Interfaces</div>
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer layer-domain">
+          <div class="layer-label">🟢 Domain Katmanı</div>
+          <div class="layer-content">Entities · Repositories (ABC) · Domain Services</div>
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-layer layer-infra">
+          <div class="layer-label">🔴 Altyapı Katmanı</div>
+          <div class="layer-content">SQLAlchemy ORM · PostgreSQL · APScheduler · SMTP</div>
+        </div>
+      </div>
+      <br>
+      <div class="highlight-box">
+        <strong>SOLID Prensipleri:</strong> Strategy Pattern ile metodoloji bağımsız görev kuralları; DIP ile katmanlar arası izolasyon sağlanmaktadır.
+      </div>
+    </div>
+  </section>
+
+  <!-- ── METODOLOJILER ──────────────────────────────────────── -->
+  <section class="card card-half">
+    <div class="card-header"><span class="icon">⚙️</span> Desteklenen Metodolojiler</div>
+    <div class="card-body">
+      <div class="method-cols">
+        <div class="method-card scrum">
+          <div class="m-icon">🏃</div>
+          <h4>Scrum</h4>
+          <ul>
+            <li>Sprint oluşturma & yönetimi</li>
+            <li>Backlog yönetimi</li>
+            <li>Burndown chart</li>
+            <li>Sprint lifecycle takibi</li>
+            <li>Story point desteği</li>
+          </ul>
+        </div>
+        <div class="method-card kanban">
+          <div class="m-icon">📋</div>
+          <h4>Kanban</h4>
+          <ul>
+            <li>Sürükle-bırak panosu</li>
+            <li>WIP Limiti kontrolü</li>
+            <li>CFD raporu</li>
+            <li>Lead / Cycle Time</li>
+            <li>Sütun özelleştirme</li>
+          </ul>
+        </div>
+        <div class="method-card waterfall">
+          <div class="m-icon">🌊</div>
+          <h4>Waterfall</h4>
+          <ul>
+            <li>Faz yönetimi</li>
+            <li>Phase-gate geçişi</li>
+            <li>Milestone & artifact</li>
+            <li>Görev bağımlılıkları</li>
+            <li>Onay akışı</li>
+          </ul>
+        </div>
+      </div>
+      <br>
+      <p style="font-size:9.5pt; color:var(--text-mid); text-align:center;">
+        Ayrıca: <strong>V-Model · Spiral · Iterative · Incremental · RAD</strong> metodolojileri de desteklenmektedir.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── TEMEL ÖZELLİKLER ──────────────────────────────────── -->
+  <section class="card card-half">
+    <div class="card-header"><span class="icon">✨</span> Temel Özellikler</div>
+    <div class="card-body">
+      <div class="features-grid">
+        <div class="feature-item">
+          <h4>👥 Kullanıcı & RBAC</h4>
+          <p>JWT tabanlı kimlik doğrulama, rol bazlı erişim kontrolü (Admin / Manager / Developer / Viewer)</p>
+        </div>
+        <div class="feature-item">
+          <h4>📌 Görev Yönetimi</h4>
+          <p>Alt-görev desteği, görev bağımlılıkları, tekrarlayan görevler, öncelik seviyeleri</p>
+        </div>
+        <div class="feature-item">
+          <h4>📊 Raporlama</h4>
+          <p>Burndown Chart, CFD, Lead/Cycle Time analizleri, PDF & Excel dışa aktarım</p>
+        </div>
+        <div class="feature-item">
+          <h4>🔔 Bildirimler</h4>
+          <p>Gerçek zamanlı bildirimler, deadline uyarıları (APScheduler), e-posta bildirimleri</p>
+        </div>
+        <div class="feature-item">
+          <h4>📁 Dosya & Yorum</h4>
+          <p>Görevlere dosya ekleme, yorum sistemi, mention desteği, aktivite akışı</p>
+        </div>
+        <div class="feature-item">
+          <h4>🛡️ Denetim Günlüğü</h4>
+          <p>Her durum değişikliği log kaydı, tam denetim izi, admin panel erişimi</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TEKNOLOJİ YIĞINI ───────────────────────────────────── -->
+  <section class="card card-third">
+    <div class="card-header"><span class="icon">🛠️</span> Teknoloji Yığını</div>
+    <div class="card-body">
+      <div class="tech-grid">
+        <div class="tech-item">
+          <div class="tech-icon">⚡</div>
+          <div class="tech-name">FastAPI</div>
+          <div class="tech-desc">Python 3.12<br>80+ endpoint</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">⚛️</div>
+          <div class="tech-name">Next.js 16</div>
+          <div class="tech-desc">TypeScript<br>App Router</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🐘</div>
+          <div class="tech-name">PostgreSQL</div>
+          <div class="tech-desc">SQLAlchemy<br>Async ORM</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🎨</div>
+          <div class="tech-name">shadcn/ui</div>
+          <div class="tech-desc">Tailwind CSS<br>Radix UI</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🔐</div>
+          <div class="tech-name">JWT / OAuth</div>
+          <div class="tech-desc">python-jose<br>bcrypt</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">📄</div>
+          <div class="tech-name">fpdf2</div>
+          <div class="tech-desc">PDF rapor<br>openpyxl Excel</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── EKRAN GÖRÜNTÜLERİ ─────────────────────────────────── -->
+  <section class="card card-full">
+    <div class="card-header"><span class="icon">🖥️</span> Arayüz Ekranları</div>
+    <div class="card-body">
+      <div class="screens-grid">
+
+        <!-- Kanban Board -->
+        <div class="screen-box">
+          <div class="screen-titlebar">
+            <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            📋 Kanban Panosu
+          </div>
+          <div class="screen-content">
+            <div class="kanban-mock">
+              <div class="k-col">
+                <div class="k-col-title">📥 Backlog (5)</div>
+                <div class="k-card high">Login sayfası tasarımı<br><small>🔴 Yüksek • 3 SP</small></div>
+                <div class="k-card med">API entegrasyonu<br><small>🟡 Orta • 5 SP</small></div>
+                <div class="k-card low">Dokümantasyon<br><small>🟢 Düşük • 2 SP</small></div>
+              </div>
+              <div class="k-col prog-col">
+                <div class="k-col-title">⚡ Devam (2/3)</div>
+                <div class="k-card high">Sprint controller<br><small>🔴 Yüksek • 8 SP</small></div>
+                <div class="k-card med">RBAC yönetimi<br><small>🟡 Orta • 5 SP</small></div>
+              </div>
+              <div class="k-col done-col">
+                <div class="k-col-title">✅ Tamamlandı (8)</div>
+                <div class="k-card">Kullanıcı kaydı<br><small>✓ Tamamlandı</small></div>
+                <div class="k-card">JWT auth<br><small>✓ Tamamlandı</small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sprint View -->
+        <div class="screen-box">
+          <div class="screen-titlebar">
+            <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            🏃 Sprint Yönetimi
+          </div>
+          <div class="screen-content">
+            <div class="sprint-mock">
+              <div class="sprint-header-m">
+                <span>Sprint 3 — Backend Modülleri</span>
+                <span class="sprint-badge">Aktif</span>
+              </div>
+              <div class="task-row">
+                <span>📌 Task yönetimi API</span>
+                <span class="status-pill sp-done">Bitti</span>
+              </div>
+              <div class="task-row">
+                <span>📌 Sprint lifecycle</span>
+                <span class="status-pill sp-prog">Devam</span>
+              </div>
+              <div class="task-row">
+                <span>📌 Raporlama modülü</span>
+                <span class="status-pill sp-todo">Bekliyor</span>
+              </div>
+              <div class="task-row">
+                <span>📌 Bildirim sistemi</span>
+                <span class="status-pill sp-todo">Bekliyor</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Burndown Chart -->
+        <div class="screen-box">
+          <div class="screen-titlebar">
+            <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            📉 Burndown Chart
+          </div>
+          <div class="screen-content">
+            <div class="burndown-mock">
+              <svg viewBox="0 0 200 100" preserveAspectRatio="none">
+                <!-- Grid -->
+                <line x1="10" y1="5" x2="10" y2="90" stroke="#BDD7EE" stroke-width="1"/>
+                <line x1="10" y1="90" x2="195" y2="90" stroke="#BDD7EE" stroke-width="1"/>
+                <!-- Ideal line -->
+                <line x1="10" y1="10" x2="195" y2="90" stroke="#BDD7EE" stroke-width="1.5" stroke-dasharray="4,3"/>
+                <!-- Actual line -->
+                <polyline points="10,10 35,20 60,38 85,42 110,55 135,60 160,72 185,88" fill="none" stroke="#1B3A6B" stroke-width="2.5"/>
+                <!-- Points -->
+                <circle cx="10" cy="10" r="3" fill="#1B3A6B"/>
+                <circle cx="60" cy="38" r="3" fill="#1B3A6B"/>
+                <circle cx="110" cy="55" r="3" fill="#1B3A6B"/>
+                <circle cx="185" cy="88" r="3" fill="#27ae60"/>
+                <!-- Labels -->
+                <text x="12" y="9" font-size="7" fill="#2E6DA4">40 SP</text>
+                <text x="170" y="98" font-size="7" fill="#666">Sprint Sonu</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="screen-box">
+          <div class="screen-titlebar">
+            <div class="dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+            📊 Proje Dashboard
+          </div>
+          <div class="screen-content">
+            <div class="dashboard-mock">
+              <div class="stat-box">
+                <div class="s-num">24</div>
+                <div class="s-lbl">Aktif Görev</div>
+              </div>
+              <div class="stat-box" style="border-top-color:#27ae60;">
+                <div class="s-num" style="color:#27ae60;">87%</div>
+                <div class="s-lbl">Tamamlanma</div>
+              </div>
+              <div class="stat-box" style="border-top-color:#E8A020;">
+                <div class="s-num" style="color:#E8A020;">3</div>
+                <div class="s-lbl">Aktif Sprint</div>
+              </div>
+              <div class="stat-box" style="border-top-color:#8e44ad;">
+                <div class="s-num" style="color:#8e44ad;">6</div>
+                <div class="s-lbl">Ekip Üyesi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /screens-grid -->
+    </div>
+  </section>
+
+  <!-- ── SONUÇLAR ───────────────────────────────────────────── -->
+  <section class="card card-two-thirds">
+    <div class="card-header"><span class="icon">📈</span> Sonuçlar & Katkılar</div>
+    <div class="card-body">
+      <div class="results-row">
+        <div class="result-stat">
+          <div class="r-num">80<span class="r-unit">+</span></div>
+          <div class="r-lbl">REST API Endpoint</div>
+        </div>
+        <div class="result-stat">
+          <div class="r-num">9</div>
+          <div class="r-lbl">Desteklenen Metodoloji</div>
+        </div>
+        <div class="result-stat">
+          <div class="r-num">25</div>
+          <div class="r-lbl">Test Senaryosu</div>
+        </div>
+        <div class="result-stat">
+          <div class="r-num">4</div>
+          <div class="r-lbl">Mimari Katman</div>
+        </div>
+      </div>
+
+      <table class="contrib-table">
+        <thead>
+          <tr>
+            <th>Katkı Alanı</th>
+            <th>Detay</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Çoklu Metodoloji Desteği</strong></td>
+            <td>Strategy Pattern ile 9 farklı proje yönetim metodolojisi; if-else kodu olmadan genişletilebilir yapı</td>
+          </tr>
+          <tr>
+            <td><strong>Clean Architecture Uygulaması</strong></td>
+            <td>Domain, Application, Infrastructure, API katmanları; domain'in saf Python ile izolasyonu</td>
+          </tr>
+          <tr>
+            <td><strong>Kapsamlı Raporlama</strong></td>
+            <td>Burndown Chart, CFD, Lead/Cycle Time; PDF & Excel dışa aktarım; denetim günlüğü</td>
+          </tr>
+          <tr>
+            <td><strong>Kurumsal Güvenlik</strong></td>
+            <td>JWT, RBAC, denetim izi; role göre endpoint erişim kontrolü; audit log</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── GELECEK ÇALIŞMALAR ─────────────────────────────────── -->
+  <section class="card card-third">
+    <div class="card-header"><span class="icon">🔮</span> Gelecek Çalışmalar</div>
+    <div class="card-body">
+      <ul class="styled-list">
+        <li>AI destekli görev önceliklendirme</li>
+        <li>Gerçek zamanlı WebSocket bildirimleri</li>
+        <li>OAuth2 (Google / GitHub) entegrasyonu</li>
+        <li>Mobil uygulama (React Native)</li>
+        <li>Çoklu dil desteği (i18n)</li>
+        <li>Gelişmiş kaynak yönetimi modülü</li>
+        <li>CI/CD pipeline entegrasyonu</li>
+        <li>Docker / Kubernetes deployment</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="poster-footer">
+  <div class="footer-left">
+    <strong>Gazi Üniversitesi — Bilgisayar Mühendisliği Bölümü</strong><br>
+    Bitirme Projesi · Grup 57 · 2024–2025 Akademik Yılı
+  </div>
+  <div class="footer-mid">
+    Danışman: <strong>Prof. Dr. Hacer KARACAN</strong>
+  </div>
+  <div class="footer-right">
+    <div class="contact-line">👤 Ayşe ÖZ</div>
+    <div class="contact-line">👤 Yusuf Emre BAYRAKCI</div>
+  </div>
+</footer>
+
+</body>
+</html>
