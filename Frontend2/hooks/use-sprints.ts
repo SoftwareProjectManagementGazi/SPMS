@@ -58,7 +58,10 @@ export function useStartSprint(projectId: number) {
     mutationFn: (sprintId: number) =>
       apiClient.post<Sprint>(`/sprints/${sprintId}/start`).then((r) => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['sprints', projectId] });
+      // Invalidate sprint list + board toolbar's active-cycle badge
+      qc.invalidateQueries({ queryKey: ['sprints'] });
+      // Refresh task board so sprint-filtered views pick up the new active sprint
+      qc.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

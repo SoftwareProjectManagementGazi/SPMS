@@ -21,6 +21,9 @@ interface ProjectDetailState {
   setDensityMode: (d: DensityMode) => void
   phaseFilter: string | null
   setPhaseFilter: (id: string | null) => void
+  /** null = show all tasks; number = filter to that sprint's tasks */
+  sprintFilter: number | null
+  setSprintFilter: (id: number | null) => void
 }
 
 const Ctx = React.createContext<ProjectDetailState | null>(null)
@@ -67,6 +70,7 @@ export function ProjectDetailProvider({
     loadDensity(projectId)
   )
   const [phaseFilter, setPhaseFilter] = React.useState<string | null>(null)
+  const [sprintFilter, setSprintFilter] = React.useState<number | null>(null)
 
   // Persist density on every change — stable identity via useCallback.
   const setDensityMode = React.useCallback(
@@ -86,8 +90,10 @@ export function ProjectDetailProvider({
       setDensityMode,
       phaseFilter,
       setPhaseFilter,
+      sprintFilter,
+      setSprintFilter,
     }),
-    [projectId, searchQuery, densityMode, setDensityMode, phaseFilter]
+    [projectId, searchQuery, densityMode, setDensityMode, phaseFilter, sprintFilter]
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

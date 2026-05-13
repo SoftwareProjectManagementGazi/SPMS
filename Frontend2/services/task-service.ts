@@ -56,7 +56,10 @@ interface TaskResponseDTO {
   reporter_id: number | null
   parent_task_id: number | null
   project_id: number
-  cycle_id: number | null
+  /** Backend TaskResponseDTO field name is sprint_id; cycle_id kept for
+   *  backward compat with any cached responses using the old name. */
+  sprint_id?: number | null
+  cycle_id?: number | null
   phase_id: string | null
   points: number | null
   /** Backend ships start_date (added in migration 007). Optional for backward
@@ -150,7 +153,7 @@ function mapTask(d: TaskResponseDTO): Task {
     reporterId: d.reporter_id,
     parentTaskId: d.parent_task_id,
     projectId: d.project_id,
-    cycleId: d.cycle_id,
+    cycleId: d.sprint_id ?? d.cycle_id ?? null,
     phaseId: d.phase_id,
     points: d.points,
     // Backend ships start_date (migration 007). Fall back to null for older
@@ -206,12 +209,14 @@ export const taskService = {
     return resp.data
   },
   create: async (dto: CreateTaskDTO): Promise<Task> => {
-    // Map frontend CreateTaskDTO to backend field names.
-    // `due` → `due_date`, `start_date` passes through directly.
-    const { due, ...rest } = dto
+    // Map frontend CreateTaskDTO to backend field names:
+    //   due       → due_date   (backend TaskCreateDTO rename)
+    //   cycle_id  → sprint_id  (backend uses sprint_id, frontend uses cycle_id)
+    const { due, cycle_id, ...rest } = dto
     const payload = {
       ...rest,
       due_date: due ?? null,
+      sprint_id: cycle_id ?? null,
       ...(dto.priority ? { priority: dto.priority.toUpperCase() } : {}),
     }
     const resp = await apiClient.post<TaskResponseDTO>(`/tasks`, payload)

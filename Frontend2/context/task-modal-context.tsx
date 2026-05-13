@@ -5,6 +5,7 @@ export interface TaskModalDefaults {
   defaultProjectId?: number
   defaultType?: "task" | "subtask" | "bug"
   defaultParentId?: number
+  defaultCycleId?: number | null
 }
 
 interface TaskModalContextType {

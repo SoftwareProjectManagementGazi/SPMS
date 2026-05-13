@@ -64,12 +64,15 @@ export function BoardTab({ project }: { project: Project }) {
   const enablePhaseBadge = !!cfg.enable_phase_assignment
   const phaseNodes = cfg.workflow?.nodes ?? []
 
-  // Apply search + phase filters client-side. Sort is status-first so cards
-  // land in the correct column grouping regardless of incoming order.
+  // Apply search + sprint + phase filters client-side.
   const filteredTasks = React.useMemo<Task[]>(() => {
     const q = pd.searchQuery.trim().toLowerCase()
     return tasks.filter((t) => {
       if (q && !t.title.toLowerCase().includes(q) && !t.key.toLowerCase().includes(q)) {
+        return false
+      }
+      // Sprint filter: null means "all tasks", number means specific sprint
+      if (pd.sprintFilter !== null && t.cycleId !== pd.sprintFilter) {
         return false
       }
       if (pd.phaseFilter && t.phaseId !== pd.phaseFilter) {
@@ -77,7 +80,7 @@ export function BoardTab({ project }: { project: Project }) {
       }
       return true
     })
-  }, [tasks, pd.searchQuery, pd.phaseFilter])
+  }, [tasks, pd.searchQuery, pd.sprintFilter, pd.phaseFilter])
 
   // Prefer the /columns meta response for column list + WIP; fall back to
   // project.columns (the string[] status list) when the meta fetch is empty.

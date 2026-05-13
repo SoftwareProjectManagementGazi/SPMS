@@ -5,16 +5,11 @@
 // Per D-22 the Phase-11 toolbar scope is:
 //   - search input (wires to ProjectDetailContext.searchQuery)
 //   - Compact/Rich SegmentedControl (ProjectDetailContext.densityMode)
-//   - current-cycle Badge (Scrum only — /api/v1/sprints?current=true)
+//   - Sprint filter dropdown (Scrum only — tıklanabilir, tüm sprint'leri listeler)
 //   - Phase filter dropdown (hidden when enable_phase_assignment=false)
-//
-// The cycle query is SCRUM-gated at the hook level: non-Scrum methodologies
-// simply never fetch, so the badge row is omitted. Kanban has no cycle by
-// definition; Waterfall/Iterative/etc. are deferred to Phase 12 per D-44.
 
 import * as React from "react"
-import { Search, Filter, ChevronDown } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
+import { Search, Filter, ChevronDown, CheckCheck, Plus } from "lucide-react"
 
 import {
   Badge,
@@ -22,40 +17,21 @@ import {
   Input,
   SegmentedControl,
 } from "@/components/primitives"
-import { apiClient } from "@/lib/api-client"
 import { useApp } from "@/context/app-context"
+import { useTaskModal } from "@/context/task-modal-context"
+import { useSprints, type Sprint } from "@/hooks/use-sprints"
 import type { Project } from "@/services/project-service"
 import { useProjectDetail, type DensityMode } from "./project-detail-context"
-
-interface CurrentCycleDTO {
-  id: number
-  name: string
-  number?: number
-}
-
-function useCurrentCycle(projectId: number, methodology: string) {
-  return useQuery({
-    queryKey: ["sprints", "current", projectId],
-    queryFn: async () => {
-      try {
-        const resp = await apiClient.get<CurrentCycleDTO[]>("/sprints/", {
-          params: { project_id: projectId },
-        })
-        // Prefer the active sprint; fall back to the last one if none is active
-        return resp.data.find((s) => s.is_active) ?? resp.data[resp.data.length - 1] ?? null
-      } catch {
-        // A 404/500 on a missing sprints endpoint should NOT break the toolbar.
-        return null
-      }
-    },
-    enabled: methodology === "SCRUM",
-    staleTime: 60_000,
-  })
-}
 
 export function BoardToolbar({ project }: { project: Project }) {
   const { language } = useApp()
   const pd = useProjectDetail()
+  const { openTaskModal } = useTaskModal()
+  const T = (tr: string, en: string) => (language === "tr" ? tr : en)
+
+  const isScrum = project.methodology === "SCRUM"
+
+  const { data: sprints = [] } = useSprints(isScrum ? project.id : null)
 
   const cfg = (project.processConfig ?? {}) as {
     enable_phase_assignment?: boolean
@@ -64,31 +40,55 @@ export function BoardToolbar({ project }: { project: Project }) {
   const phaseEnabled = !!cfg.enable_phase_assignment
   const phaseNodes = cfg.workflow?.nodes ?? []
 
-  const { data: currentSprint } = useCurrentCycle(project.id, project.methodology)
+  // Sprint dropdown state
+  const [sprintMenuOpen, setSprintMenuOpen] = React.useState(false)
+  const sprintMenuRef = React.useRef<HTMLDivElement | null>(null)
 
+  // Phase dropdown state
   const [phaseMenuOpen, setPhaseMenuOpen] = React.useState(false)
-  const menuRef = React.useRef<HTMLDivElement | null>(null)
+  const phaseMenuRef = React.useRef<HTMLDivElement | null>(null)
 
-  // Click outside closes the phase filter menu.
+  // Auto-select active sprint on first load (only once per project session)
+  const didAutoSelect = React.useRef(false)
   React.useEffect(() => {
-    if (!phaseMenuOpen) return
+    if (!isScrum || didAutoSelect.current || sprints.length === 0) return
+    if (pd.sprintFilter !== null) return // user already picked one
+    const active = sprints.find((s) => s.status === "ACTIVE")
+    if (active) {
+      pd.setSprintFilter(active.id)
+      didAutoSelect.current = true
+    }
+  }, [sprints, isScrum, pd])
+
+  // Close menus on outside click
+  React.useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (sprintMenuOpen && sprintMenuRef.current && !sprintMenuRef.current.contains(e.target as Node)) {
+        setSprintMenuOpen(false)
+      }
+      if (phaseMenuOpen && phaseMenuRef.current && !phaseMenuRef.current.contains(e.target as Node)) {
         setPhaseMenuOpen(false)
       }
     }
-    document.addEventListener("mousedown", onDown)
-    return () => document.removeEventListener("mousedown", onDown)
-  }, [phaseMenuOpen])
+    if (sprintMenuOpen || phaseMenuOpen) {
+      document.addEventListener("mousedown", onDown)
+      return () => document.removeEventListener("mousedown", onDown)
+    }
+  }, [sprintMenuOpen, phaseMenuOpen])
 
   const densityOptions = [
-    { id: "compact", label: language === "tr" ? "Sıkı" : "Compact" },
-    { id: "rich", label: language === "tr" ? "Detaylı" : "Rich" },
+    { id: "compact", label: T("Sıkı", "Compact") },
+    { id: "rich", label: T("Detaylı", "Rich") },
   ]
 
+  const selectedSprint = sprints.find((s) => s.id === pd.sprintFilter) ?? null
   const selectedPhaseName = pd.phaseFilter
     ? phaseNodes.find((n) => n.id === pd.phaseFilter)?.name ?? null
     : null
+
+  const sprintLabel = selectedSprint
+    ? selectedSprint.name
+    : T("Tümü", "All")
 
   return (
     <div
@@ -102,7 +102,7 @@ export function BoardToolbar({ project }: { project: Project }) {
     >
       <Input
         icon={<Search size={13} />}
-        placeholder={language === "tr" ? "Filtrele…" : "Filter…"}
+        placeholder={T("Filtrele…", "Filter…")}
         size="sm"
         value={pd.searchQuery}
         onChange={(e) => pd.setSearchQuery(e.target.value)}
@@ -115,32 +115,84 @@ export function BoardToolbar({ project }: { project: Project }) {
         onChange={(v) => pd.setDensityMode(v as DensityMode)}
       />
 
-      {currentSprint && (
-        // UI-sweep: wrap Sprint indicator in a containment chip so the user reads
-        // it as an information-only tag, not as a control. Avoids visual collision
-        // with the SegmentedControl + Search input siblings.
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            color: "var(--fg-muted)",
-            fontSize: 12,
-            padding: "2px 6px",
-            background: "var(--surface)",
-            borderRadius: "var(--radius-sm)",
-            boxShadow: "inset 0 0 0 1px var(--border)",
-          }}
-        >
-          <span>{language === "tr" ? "Sprint:" : "Sprint:"}</span>
-          <Badge size="xs" tone="info">
-            {currentSprint.name}
-          </Badge>
+      {/* Sprint filter — only for SCRUM projects */}
+      {isScrum && sprints.length > 0 && (
+        <div ref={sprintMenuRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setSprintMenuOpen((v) => !v)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              padding: "3px 8px",
+              background: "var(--surface)",
+              borderRadius: "var(--radius-sm)",
+              boxShadow: "inset 0 0 0 1px var(--border)",
+              border: "none",
+              color: "var(--fg)",
+              cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            <span style={{ color: "var(--fg-muted)" }}>
+              {T("Sprint:", "Sprint:")}
+            </span>
+            <Badge size="xs" tone={selectedSprint?.status === "ACTIVE" ? "success" : selectedSprint?.status === "CLOSED" ? "neutral" : "primary"}>
+              {sprintLabel}
+            </Badge>
+            <ChevronDown size={11} style={{ color: "var(--fg-muted)" }} />
+          </button>
+
+          {sprintMenuOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                marginTop: 4,
+                background: "var(--surface)",
+                boxShadow: "var(--shadow-lg)",
+                borderRadius: "var(--radius-sm)",
+                padding: 4,
+                minWidth: 200,
+                zIndex: 50,
+                border: "1px solid var(--border)",
+              }}
+            >
+              {/* All tasks option */}
+              <SprintMenuItem
+                label={T("Tüm görevler", "All tasks")}
+                active={pd.sprintFilter === null}
+                status={null}
+                onClick={() => {
+                  pd.setSprintFilter(null)
+                  setSprintMenuOpen(false)
+                }}
+              />
+              {sprints.map((s) => (
+                <SprintMenuItem
+                  key={s.id}
+                  label={s.name}
+                  active={pd.sprintFilter === s.id}
+                  status={s.status}
+                  taskCount={s.task_count}
+                  completedCount={s.completed_count}
+                  onClick={() => {
+                    pd.setSprintFilter(s.id)
+                    setSprintMenuOpen(false)
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Phase filter */}
       {phaseEnabled && (
-        <div ref={menuRef} style={{ position: "relative" }}>
+        <div ref={phaseMenuRef} style={{ position: "relative" }}>
           <Button
             variant="ghost"
             size="sm"
@@ -148,7 +200,7 @@ export function BoardToolbar({ project }: { project: Project }) {
             iconRight={<ChevronDown size={12} />}
             onClick={() => setPhaseMenuOpen((v) => !v)}
           >
-            {selectedPhaseName ?? (language === "tr" ? "Faz" : "Phase")}
+            {selectedPhaseName ?? T("Faz", "Phase")}
           </Button>
           {phaseMenuOpen && (
             <div
@@ -166,56 +218,20 @@ export function BoardToolbar({ project }: { project: Project }) {
                 border: "1px solid var(--border)",
               }}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  pd.setPhaseFilter(null)
-                  setPhaseMenuOpen(false)
-                }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "6px 10px",
-                  fontSize: 12.5,
-                  background:
-                    pd.phaseFilter === null
-                      ? "var(--surface-2)"
-                      : "transparent",
-                  border: "none",
-                  color: "var(--fg)",
-                  cursor: "pointer",
-                  borderRadius: "var(--radius-sm)",
-                }}
+              <MenuButton
+                active={pd.phaseFilter === null}
+                onClick={() => { pd.setPhaseFilter(null); setPhaseMenuOpen(false) }}
               >
-                {language === "tr" ? "Tümü" : "All"}
-              </button>
+                {T("Tümü", "All")}
+              </MenuButton>
               {phaseNodes.map((n) => (
-                <button
+                <MenuButton
                   key={n.id}
-                  type="button"
-                  onClick={() => {
-                    pd.setPhaseFilter(n.id)
-                    setPhaseMenuOpen(false)
-                  }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "6px 10px",
-                    fontSize: 12.5,
-                    background:
-                      pd.phaseFilter === n.id
-                        ? "var(--surface-2)"
-                        : "transparent",
-                    border: "none",
-                    color: "var(--fg)",
-                    cursor: "pointer",
-                    borderRadius: "var(--radius-sm)",
-                  }}
+                  active={pd.phaseFilter === n.id}
+                  onClick={() => { pd.setPhaseFilter(n.id); setPhaseMenuOpen(false) }}
                 >
                   {n.name}
-                </button>
+                </MenuButton>
               ))}
             </div>
           )}
@@ -223,6 +239,111 @@ export function BoardToolbar({ project }: { project: Project }) {
       )}
 
       <div style={{ flex: 1 }} />
+
+      <Button
+        variant="primary"
+        size="sm"
+        icon={<Plus size={13} />}
+        onClick={() =>
+          openTaskModal({
+            defaultProjectId: project.id,
+            defaultCycleId: pd.sprintFilter,
+          })
+        }
+      >
+        {T("Görev Ekle", "Add Task")}
+      </Button>
     </div>
+  )
+}
+
+// ---- Internal primitives -------------------------------------------------------
+
+function SprintMenuItem({
+  label,
+  active,
+  status,
+  taskCount,
+  completedCount,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  status: string | null
+  taskCount?: number
+  completedCount?: number
+  onClick: () => void
+}) {
+  const tone =
+    status === "ACTIVE" ? "success" :
+    status === "CLOSED" ? "neutral" :
+    status === "PLANNED" ? "primary" : undefined
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        textAlign: "left",
+        padding: "6px 10px",
+        fontSize: 12.5,
+        background: active ? "var(--surface-2)" : "transparent",
+        border: "none",
+        color: "var(--fg)",
+        cursor: "pointer",
+        borderRadius: "var(--radius-sm)",
+        gap: 8,
+      }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+        {active && <CheckCheck size={12} style={{ color: "var(--fg-success)", flexShrink: 0 }} />}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {label}
+        </span>
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+        {tone && <Badge size="xs" tone={tone}>{status}</Badge>}
+        {typeof taskCount === "number" && taskCount > 0 && (
+          <span style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+            {completedCount}/{taskCount}
+          </span>
+        )}
+      </span>
+    </button>
+  )
+}
+
+function MenuButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "6px 10px",
+        fontSize: 12.5,
+        background: active ? "var(--surface-2)" : "transparent",
+        border: "none",
+        color: "var(--fg)",
+        cursor: "pointer",
+        borderRadius: "var(--radius-sm)",
+      }}
+    >
+      {children}
+    </button>
   )
 }

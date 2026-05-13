@@ -139,6 +139,9 @@ export function TaskCreateModal() {
   const [dueDate, setDueDate] = React.useState("")
   const [cycleId, setCycleId] = React.useState<number | null>(null)
   const [phaseId, setPhaseId] = React.useState<string | null>(null)
+  // Tracks whether auto-selection of active sprint has already fired for this
+  // modal session, so clearing the dropdown doesn't immediately re-select it.
+  const autoSelectedCycle = React.useRef(false)
   const [points, setPoints] = React.useState<string>("")
   const [tagInput, setTagInput] = React.useState("")
   const [selectedLabels, setSelectedLabels] = React.useState<number[]>([])
@@ -185,7 +188,8 @@ export function TaskCreateModal() {
     setAssigneeId(null)
     setStartDate("")
     setDueDate("")
-    setCycleId(null)
+    setCycleId(defaults?.defaultCycleId ?? null)
+    autoSelectedCycle.current = defaults?.defaultCycleId != null
     setPhaseId(null)
     setPoints("")
     setTagInput("")
@@ -197,6 +201,21 @@ export function TaskCreateModal() {
     const t = setTimeout(() => titleRef.current?.focus(), 50)
     return () => clearTimeout(t)
   }, [isOpen, defaults])
+
+  // Auto-select the active sprint when the modal is open for a SCRUM project
+  // and no sprint has been set yet. Fires when sprints load asynchronously
+  // after the modal opens. The ref prevents re-selection after the user
+  // intentionally clears the sprint dropdown.
+  React.useEffect(() => {
+    if (!isOpen || !cycleEnabled || autoSelectedCycle.current) return
+    if (cycleId !== null) { autoSelectedCycle.current = true; return }
+    if (sprints.length === 0) return
+    const active = sprints.find((s) => s.status === "ACTIVE")
+    if (active) {
+      setCycleId(active.id)
+      autoSelectedCycle.current = true
+    }
+  }, [isOpen, cycleEnabled, sprints, cycleId])
 
   const canSubmit =
     title.trim().length > 0 && projectId !== null && !createTask.isPending
@@ -592,7 +611,7 @@ export function TaskCreateModal() {
                   {sprints.map((sprint) => (
                     <option key={sprint.id} value={sprint.id}>
                       {sprint.name}
-                      {sprint.is_active ? (lang === "tr" ? " (Aktif)" : " (Active)") : ""}
+                      {sprint.status === "ACTIVE" ? (lang === "tr" ? " (Aktif)" : " (Active)") : ""}
                     </option>
                   ))}
                 </select>
