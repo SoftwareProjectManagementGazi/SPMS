@@ -1,8 +1,9 @@
 """Phase 15 RBAC-05 — Admin permissions list integration tests (Plan 15-06).
 
 Validates GET /api/v1/admin/permissions (with optional scope filter) against
-Migration 007 seed: 38 permissions = 12 system + 26 project (PERMISSIONS_SEED
-in alembic/versions/007_phase15_rbac.py).
+Migration 012 seed: 38 permissions = 12 system + 26 project (PERMISSIONS_SEED
+in alembic/versions/012_phase15_rbac.py — renumbered from 007 after merge
+with origin/main to re-chain after friend's 007-011 series).
 """
 import pytest
 

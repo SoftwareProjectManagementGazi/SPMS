@@ -1,8 +1,13 @@
 """Phase 15 RBAC schema: permissions + role_permissions + roles ALTER + 38-perm seed + matrix bootstrap.
 
-Revision ID: 007_phase15_rbac
-Revises: 006_phase14_admin_panel
+Revision ID: 012_phase15_rbac
+Revises: 011_sprint_improvements
 Create Date: 2026-04-29
+
+NOTE — Renumbered from 007 to 012 during merge with origin/main on 2026-05-13.
+Friend's parallel commits added 007_task_start_date through 011_sprint_improvements,
+so this Phase 15 RBAC migration was re-chained to land after 011 to keep the
+alembic linear-history invariant intact.
 
 Covers:
 - D-1.8: permissions table + 38 perm seed (26 project + 12 admin.*); project = 14 base CRUD
@@ -22,8 +27,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "007_phase15_rbac"
-down_revision = "006_phase14_admin_panel"
+revision = "012_phase15_rbac"
+down_revision = "011_sprint_improvements"
 branch_labels = None
 depends_on = None
 
