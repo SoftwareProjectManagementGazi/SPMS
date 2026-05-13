@@ -82,6 +82,7 @@ import {
   pointInPolygon,
 } from "./workflow-canvas-inner"
 import { projectService, type Project } from "@/services/project-service"
+import { apiClient } from "@/lib/api-client"
 import {
   lifecycleService,
   mapWorkflowConfig,
@@ -109,6 +110,12 @@ import {
 } from "@/lib/lifecycle/node-ids"
 
 export type EditorMode = "lifecycle" | "status"
+
+/** Extract the numeric board-column ID from a status-node id (e.g. "col_42" → 42). */
+function colIdFromNodeId(nodeId: string): number | null {
+  const m = nodeId.match(/^col_(\d+)$/)
+  return m ? parseInt(m[1], 10) : null
+}
 
 export interface EditorPageProps {
   project: Project
@@ -406,6 +413,16 @@ export function EditorPage({ project }: EditorPageProps) {
 
   const renameNode = React.useCallback(
     (nodeId: string, nextName: string) => {
+      // Status mode: rename the backing board column too (fire-and-forget).
+      if (mode === "status") {
+        const colId = colIdFromNodeId(nodeId)
+        if (colId !== null) {
+          void apiClient
+            .patch(`/projects/${project.id}/columns/${colId}`, { name: nextName })
+            .then(() => qc.invalidateQueries({ queryKey: ["columns", project.id] }))
+            .catch(() => {/* column name will re-sync on next project refresh */})
+        }
+      }
       commitWorkflow({
         ...workflow,
         nodes: workflow.nodes.map((n) =>
@@ -413,7 +430,7 @@ export function EditorPage({ project }: EditorPageProps) {
         ),
       })
     },
-    [workflow, commitWorkflow],
+    [mode, project.id, workflow, commitWorkflow, qc],
   )
 
   const relabelEdge = React.useCallback(
@@ -966,7 +983,31 @@ export function EditorPage({ project }: EditorPageProps) {
   )
 
   const addNodeAtPosition = React.useCallback(
-    (pos: Point) => {
+    async (pos: Point) => {
+      if (mode === "status") {
+        // Create a real board column, then add the node with its col_* id.
+        try {
+          const resp = await apiClient.post<{ id: number; name: string }>(
+            `/projects/${project.id}/columns`,
+            { name: T("Yeni Kolon", "New Column"), order_index: workflow.nodes.length },
+          )
+          const newCol = resp.data
+          const id = `col_${newCol.id}`
+          const newNode: WorkflowNode = {
+            id,
+            name: newCol.name,
+            x: pos.x,
+            y: pos.y,
+            color: "status-todo",
+          }
+          commitWorkflow({ ...workflow, nodes: [...workflow.nodes, newNode] })
+          setSelected({ type: "node", id })
+          qc.invalidateQueries({ queryKey: ["columns", project.id] })
+        } catch {
+          showToast({ variant: "error", message: T("Kolon eklenemedi", "Could not add column") })
+        }
+        return
+      }
       const id = newNodeId()
       const newNode: WorkflowNode = {
         id,
@@ -978,12 +1019,39 @@ export function EditorPage({ project }: EditorPageProps) {
       commitWorkflow({ ...workflow, nodes: [...workflow.nodes, newNode] })
       setSelected({ type: "node", id })
     },
-    [workflow, commitWorkflow, T],
+    [mode, project.id, workflow, commitWorkflow, T, qc, showToast],
   )
 
-  const deleteSelection = React.useCallback(() => {
+  const deleteSelection = React.useCallback(async () => {
     if (!selected) return
     if (selected.type === "node") {
+      if (mode === "status") {
+        const colId = colIdFromNodeId(selected.id)
+        if (colId !== null) {
+          const otherNodes = workflow.nodes.filter((n) => n.id !== selected.id)
+          if (otherNodes.length === 0) {
+            showToast({
+              variant: "warning",
+              message: T("Son kolon silinemez", "Cannot delete the last column"),
+            })
+            return
+          }
+          // Move tasks to the nearest other column.
+          const moveToColId = otherNodes
+            .map((n) => colIdFromNodeId(n.id))
+            .find((id): id is number => id !== null)
+          if (moveToColId == null) return
+          try {
+            await apiClient.delete(
+              `/projects/${project.id}/columns/${colId}?move_tasks_to_column_id=${moveToColId}`,
+            )
+            qc.invalidateQueries({ queryKey: ["columns", project.id] })
+          } catch {
+            showToast({ variant: "error", message: T("Kolon silinemedi", "Could not delete column") })
+            return
+          }
+        }
+      }
       commitWorkflow({
         ...workflow,
         nodes: workflow.nodes.filter((n) => n.id !== selected.id),
@@ -1010,7 +1078,7 @@ export function EditorPage({ project }: EditorPageProps) {
       })
     }
     setSelected(null)
-  }, [selected, workflow, commitWorkflow])
+  }, [selected, mode, project.id, workflow, commitWorkflow, qc, showToast, T])
 
   const duplicateSelection = React.useCallback(() => {
     if (!selected || selected.type !== "node") return
@@ -1105,12 +1173,12 @@ export function EditorPage({ project }: EditorPageProps) {
       const cm = contextMenu
       if (!cm) return
       if (cm.target.type === "canvas" && id === "add-node") {
-        addNodeAtPosition(cm.target.flowPos ?? { x: 80, y: 80 })
+        void addNodeAtPosition(cm.target.flowPos ?? { x: 80, y: 80 })
       } else if (cm.target.type === "node") {
         if (id === "delete") {
           setSelected({ type: "node", id: cm.target.nodeId })
           // Defer one tick so setSelected commits before deleteSelection reads.
-          setTimeout(() => deleteSelection(), 0)
+          setTimeout(() => void deleteSelection(), 0)
         } else if (id === "duplicate") {
           setSelected({ type: "node", id: cm.target.nodeId })
           setTimeout(() => duplicateSelection(), 0)
@@ -1125,7 +1193,7 @@ export function EditorPage({ project }: EditorPageProps) {
         const edgeId = cm.target.edgeId
         if (id === "delete") {
           setSelected({ type: "edge", id: edgeId })
-          setTimeout(() => deleteSelection(), 0)
+          setTimeout(() => void deleteSelection(), 0)
         } else if (id === "toggle-bidir") {
           commitWorkflow({
             ...workflow,
@@ -1152,7 +1220,7 @@ export function EditorPage({ project }: EditorPageProps) {
           ungroup(cm.target.groupId)
         } else if (id === "delete") {
           setSelected({ type: "group", id: cm.target.groupId })
-          setTimeout(() => deleteSelection(), 0)
+          setTimeout(() => void deleteSelection(), 0)
         } else if (id === "edit-name") {
           setSelected({ type: "group", id: cm.target.groupId })
         }
@@ -1191,6 +1259,25 @@ export function EditorPage({ project }: EditorPageProps) {
         status_workflow: unmapWorkflowConfig(statusWorkflow),
       }
       await projectService.updateProcessConfig(project.id, nextProcessConfig)
+
+      // Status mode: sync column order_index from node x-positions so the
+      // board column order matches whatever the user arranged in the diagram.
+      if (mode === "status") {
+        const sortedByX = [...statusWorkflow.nodes]
+          .filter((n) => n.id.startsWith("col_"))
+          .sort((a, b) => a.x - b.x)
+        await Promise.all(
+          sortedByX.map((n, i) => {
+            const colId = colIdFromNodeId(n.id)
+            if (colId === null) return Promise.resolve()
+            return apiClient
+              .patch(`/projects/${project.id}/columns/${colId}`, { order_index: i })
+              .catch(() => {/* order sync is best-effort */})
+          }),
+        )
+        qc.invalidateQueries({ queryKey: ["columns", project.id] })
+      }
+
       // 200 success
       showToast({ variant: "success", message: T("Kaydedildi", "Saved") })
       setDirty(false)
@@ -1234,6 +1321,7 @@ export function EditorPage({ project }: EditorPageProps) {
       setSaving(false)
     }
   }, [
+    mode,
     project.id,
     project.processConfig,
     lifecycleWorkflow,
@@ -1334,7 +1422,7 @@ export function EditorPage({ project }: EditorPageProps) {
       // N — add node at the canvas center.
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.addNode)) {
         e.preventDefault()
-        addNodeAtPosition({ x: 200 + Math.random() * 80, y: 100 + Math.random() * 60 })
+        void addNodeAtPosition({ x: 200 + Math.random() * 80, y: 100 + Math.random() * 60 })
         return
       }
       // Delete / Backspace — remove selection.
@@ -1687,7 +1775,7 @@ export function EditorPage({ project }: EditorPageProps) {
           />
           <BottomToolbar
             onAddNode={() =>
-              addNodeAtPosition({ x: 80 + Math.random() * 200, y: 80 + Math.random() * 100 })
+              void addNodeAtPosition({ x: 80 + Math.random() * 200, y: 80 + Math.random() * 100 })
             }
             onAddEdge={startAddEdge}
             onGroup={() => {

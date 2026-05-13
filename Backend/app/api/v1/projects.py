@@ -12,8 +12,10 @@ from app.api.dependencies import (
     get_sprint_repo,
     get_process_template_repo,
     get_notification_service,
+    get_board_column_repo,
     _is_admin,
 )
+from app.domain.repositories.board_column_repository import IBoardColumnRepository
 from app.api.deps.audit import get_audit_repo
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.api.deps.auth import require_project_transition_authority, require_permission, _has_permission  # Phase 15 D-1.4
@@ -57,6 +59,93 @@ class MemberAddDTO(BaseModel):
 def _is_manager_or_admin(user: User, project: Project) -> bool:
     """Return True if user is project manager or admin role."""
     return user.id == project.manager_id or _is_admin(user)
+
+
+def _status_node_color(i: int, total: int) -> str:
+    """Assign a status color token based on column position."""
+    if total == 1:
+        return "status-done"
+    if i == 0:
+        return "status-todo"
+    if i == total - 1:
+        return "status-done"
+    mid = i / (total - 1)
+    return "status-review" if mid > 0.5 else "status-progress"
+
+
+async def _inject_status_workflow(
+    dto: ProjectResponseDTO,
+    project_id: int,
+    column_repo: IBoardColumnRepository,
+) -> ProjectResponseDTO:
+    """Compute status_workflow.nodes from board columns (single source of truth).
+
+    Columns in the board_columns table define what nodes appear in the status
+    workflow diagram. Edges and x/y positions are preserved from the stored
+    process_config so user-arranged layouts survive round-trips.
+    """
+    columns = await column_repo.get_by_project(project_id)
+    if not columns:
+        return dto
+
+    sorted_cols = sorted(columns, key=lambda c: c.order_index)
+    total = len(sorted_cols)
+    pc: dict = dict(dto.process_config or {})
+    existing_sw: dict = pc.get("status_workflow") or {}
+
+    # Preserve user-positioned x/y per node id so dragged layouts survive.
+    existing_positions: dict = {
+        n["id"]: {"x": n.get("x", 0), "y": n.get("y", 120)}
+        for n in existing_sw.get("nodes", [])
+        if isinstance(n, dict) and "id" in n
+    }
+
+    nodes = []
+    for i, c in enumerate(sorted_cols):
+        node_id = f"col_{c.id}"
+        pos = existing_positions.get(node_id, {"x": i * 200 + 60, "y": 120})
+        nodes.append({
+            "id": node_id,
+            "name": c.name,
+            "x": pos["x"],
+            "y": pos["y"],
+            "color": _status_node_color(i, total),
+            "is_initial": i == 0,
+            "is_final": i == total - 1,
+            "is_archived": False,
+            "wip_limit": c.wip_limit if c.wip_limit > 0 else None,
+        })
+
+    valid_ids = {f"col_{c.id}" for c in columns}
+    existing_edges = [
+        e for e in existing_sw.get("edges", [])
+        if isinstance(e, dict)
+        and e.get("source") in valid_ids
+        and e.get("target") in valid_ids
+    ]
+
+    # Auto-generate linear flow when no valid edges remain.
+    if not existing_edges and total > 1:
+        existing_edges = [
+            {
+                "id": f"es_{i}",
+                "source": f"col_{sorted_cols[i].id}",
+                "target": f"col_{sorted_cols[i + 1].id}",
+                "type": "flow",
+                "bidirectional": False,
+                "is_all_gate": False,
+            }
+            for i in range(total - 1)
+        ]
+
+    pc["status_workflow"] = {
+        "mode": "continuous",
+        "nodes": nodes,
+        "edges": existing_edges,
+        "groups": existing_sw.get("groups", []),
+    }
+    dto.process_config = pc
+    return dto
 
 
 def _sanitize_process_config(dto: ProjectResponseDTO) -> ProjectResponseDTO:
@@ -179,16 +268,17 @@ async def list_projects(
 @router.get("/{project_id}", response_model=ProjectResponseDTO)
 async def get_project(
     project_id: int,
-    current_user: dict = Depends(get_current_user),  # Giriş yapmış olması yeterli
-    project_repo: IProjectRepository = Depends(get_project_repo)
+    current_user: dict = Depends(get_current_user),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+    column_repo: IBoardColumnRepository = Depends(get_board_column_repo),
 ):
-    # DİKKAT: Burada repository'nin 'unique()' eklenmiş get_by_id metodunu kullanıyoruz.
     project = await project_repo.get_by_id(project_id)
-
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project with id {project_id} not found")
 
-    return _sanitize_process_config(ProjectResponseDTO.model_validate(project))
+    dto = ProjectResponseDTO.model_validate(project)
+    dto = await _inject_status_workflow(dto, project_id, column_repo)
+    return _sanitize_process_config(dto)
 
 
 @router.patch("/{project_id}", response_model=ProjectResponseDTO)
@@ -200,6 +290,7 @@ async def update_project(
     project_repo: IProjectRepository = Depends(get_project_repo),
     user_repo: IUserRepository = Depends(get_user_repo),
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
+    column_repo: IBoardColumnRepository = Depends(get_board_column_repo),
     current_user: User = Depends(get_current_user),
     notif_service: PollingNotificationService = Depends(get_notification_service),
 ):
@@ -282,6 +373,7 @@ async def update_project(
         for admin in admins if admin.id != current_user.id
     ])
 
+    project = await _inject_status_workflow(project, project_id, column_repo)
     return _sanitize_process_config(project)
 
 

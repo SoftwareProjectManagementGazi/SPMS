@@ -363,6 +363,41 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         result = await self.session.execute(stmt)
         return [self._to_entity(m) for m in result.unique().scalars().all()]
 
+    async def list_backlog_tasks(
+        self, project_id: int, no_sprint: bool = False, exclude_done: bool = False
+    ) -> List[Task]:
+        """Backlog filter — returns project tasks optionally filtered by:
+        no_sprint=True  → only tasks where sprint_id IS NULL
+        exclude_done=True → only tasks where is_done IS NOT TRUE
+        """
+        stmt = self._get_base_query().where(
+            TaskModel.project_id == project_id,
+            TaskModel.is_deleted == False,  # noqa: E712
+        )
+        if no_sprint:
+            stmt = stmt.where(TaskModel.sprint_id == None)  # noqa: E711
+        if exclude_done:
+            # "Done" = task is in the last column (highest order_index) of the project.
+            # There is no is_done column — it is computed from column position.
+            max_order_subq = (
+                select(func.max(BoardColumnModel.order_index))
+                .where(BoardColumnModel.project_id == project_id)
+                .scalar_subquery()
+            )
+            done_col_subq = (
+                select(BoardColumnModel.id)
+                .where(
+                    BoardColumnModel.project_id == project_id,
+                    BoardColumnModel.order_index == max_order_subq,
+                )
+            )
+            stmt = stmt.where(
+                (TaskModel.column_id == None)  # noqa: E711
+                | TaskModel.column_id.not_in(done_col_subq)
+            )
+        result = await self.session.execute(stmt)
+        return [self._to_entity(m) for m in result.unique().scalars().all()]
+
     async def count_active_by_assignee(self, user_id: int) -> int:
         """Non-deleted tasks assigned to user (proxy for active tasks count)."""
         stmt = (

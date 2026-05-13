@@ -69,19 +69,21 @@ export function resolveBacklogFilter(project: ProjectLite): Record<string, unkno
 
   switch (def) {
     case "cycle_null":
-      // Scrum / Iterative / Incremental / Evolutionary / RAD — tasks not yet in a cycle
-      return { cycle_id: null }
+      // Scrum / Iterative / Incremental / Evolutionary / RAD — tasks not yet in a sprint,
+      // and not already done. Uses backend backlog filter params (no_sprint + exclude_done).
+      return { no_sprint: true, exclude_done: true }
     case "leftmost_column":
-      // Kanban — tasks in the first column
-      return { status: project.columns?.[0] ?? "backlog" }
+      // Kanban — tasks in the first column, excluding done tasks
+      return { status: project.columns?.[0] ?? "backlog", exclude_done: true }
     case "phase_null_or_first":
-      // Waterfall — tasks unassigned to a phase, OR in the first lifecycle phase
-      return { phase_id: null }
+      // Waterfall — tasks unassigned to a phase, excluding done tasks.
+      // phase_id=null is omitted by axios; server-side phase filter is a future enhancement.
+      return { exclude_done: true }
     case "custom":
-      // User override; no automatic filter — caller must pass additional params
-      return { in_backlog: true }
+      // User override; no automatic filter — exclude done tasks as a baseline
+      return { in_backlog: true, exclude_done: true }
     default:
-      return { cycle_id: null }
+      return { no_sprint: true, exclude_done: true }
   }
 }
 

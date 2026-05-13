@@ -41,6 +41,14 @@ class ITaskRepository(ABC):
         pass
 
     @abstractmethod
+    async def list_backlog_tasks(
+        self, project_id: int, no_sprint: bool = False, exclude_done: bool = False
+    ) -> List[Task]:
+        """Backlog filter: optionally exclude tasks that have a sprint assigned
+        (no_sprint=True) and/or tasks that are already done (exclude_done=True)."""
+        pass
+
+    @abstractmethod
     async def count_active_by_assignee(self, user_id: int) -> int:
         """Count non-deleted tasks assigned to user (proxy for active tasks)."""
         pass

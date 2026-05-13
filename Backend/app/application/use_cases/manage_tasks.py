@@ -293,6 +293,19 @@ class ListProjectTasksPaginatedUseCase:
         return PaginatedResponse(items=items, total=total, page=page, page_size=page_size)
 
 
+class ListBacklogTasksUseCase:
+    def __init__(self, task_repo: ITaskRepository):
+        self.task_repo = task_repo
+
+    async def execute(
+        self, project_id: int, no_sprint: bool = False, exclude_done: bool = False
+    ) -> List[TaskResponseDTO]:
+        tasks = await self.task_repo.list_backlog_tasks(
+            project_id, no_sprint=no_sprint, exclude_done=exclude_done
+        )
+        return [map_task_to_response_dto(t) for t in tasks]
+
+
 class SearchSimilarTasksUseCase:
     def __init__(self, task_repo: ITaskRepository):
         self.task_repo = task_repo

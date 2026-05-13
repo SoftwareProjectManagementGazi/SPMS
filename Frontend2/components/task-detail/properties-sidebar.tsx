@@ -33,6 +33,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Avatar, Badge, Card, PriorityChip } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useProjectLabels } from "@/hooks/use-labels"
+import { useSprints } from "@/hooks/use-sprints"
 import {
   isCycleFieldEnabled,
   resolveCycleLabel,
@@ -133,6 +134,7 @@ export function PropertiesSidebar({
   const cycleEnabled = isCycleFieldEnabled(project.methodology)
   const { enabled: phaseEnabled, nodes: phaseNodes } = readPhaseConfig(project)
   const { data: projectLabels = [] } = useProjectLabels(project.id)
+  const { data: sprints = [] } = useSprints(cycleEnabled ? project.id : null)
   const labelById = React.useMemo(() => {
     const m = new Map<number, string>()
     for (const l of projectLabels) m.set(l.id, l.name)
@@ -477,9 +479,10 @@ export function PropertiesSidebar({
               disabled={!cycleEnabled && project.methodology !== "WATERFALL"}
               renderDisplay={(v) => {
                 if (v != null) {
+                  const sprintName = sprints.find((s) => s.id === v)?.name
                   return (
                     <Badge size="xs" tone="info">
-                      {cycleLabel} #{v}
+                      {sprintName ?? `${cycleLabel} #${v}`}
                     </Badge>
                   )
                 }
@@ -495,16 +498,22 @@ export function PropertiesSidebar({
                 return <span style={{ color: "var(--fg-subtle)" }}>—</span>
               }}
               renderEditor={(draft, setDraft, commit) => (
-                <input
+                <select
                   autoFocus
-                  type="number"
                   value={draft ?? ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setDraft(e.target.value ? Number(e.target.value) : null)
-                  }
+                  }}
                   onBlur={commit}
                   style={editorStyle}
-                />
+                >
+                  <option value="">{lang === "tr" ? "— Atanmamış —" : "— Unassigned —"}</option>
+                  {sprints.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
               )}
             />
           </MetaRow>

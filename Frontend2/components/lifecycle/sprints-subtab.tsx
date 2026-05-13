@@ -19,6 +19,7 @@ import {
   type SprintStatus,
 } from "@/hooks/use-sprints"
 import type { Project } from "@/services/project-service"
+import { useTransitionAuthority } from "@/hooks/use-transition-authority"
 
 interface SprintsSubTabProps {
   project: Project
@@ -251,6 +252,8 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
   const { language: lang } = useApp()
   const T = (tr: string, en: string) => (lang === "tr" ? tr : en)
 
+  const canManage = useTransitionAuthority(project)
+
   const { data: sprints = [], isLoading } = useSprints(project.id)
   const createSprint = useCreateSprint(project.id)
   const startSprint = useStartSprint(project.id)
@@ -329,8 +332,8 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
 
   return (
     <Section>
-      {/* Create button / form */}
-      {!showForm ? (
+      {/* Create button / form — admin + project manager only */}
+      {canManage && (!showForm ? (
         <div style={{ marginBottom: 16 }}>
           <Button size="sm" variant="secondary" onClick={() => setShowForm(true)}>
             <Plus size={14} style={{ marginRight: 6 }} />
@@ -403,7 +406,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
             </Button>
           </div>
         </div>
-      )}
+      ))}
 
       {/* Sprint list */}
       {sprints.length === 0 ? (
@@ -462,7 +465,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
                   <SprintStats sprint={sprint} lang={lang} />
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  {sprint.status === "PLANNED" && (
+                  {sprint.status === "PLANNED" && canManage && (
                     <Button
                       size="sm"
                       variant="primary"

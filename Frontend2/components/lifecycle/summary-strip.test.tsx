@@ -3,7 +3,7 @@
 // 4 RTL cases per 12-02-PLAN.md task 2 <behavior> Tests 1-4:
 //   1. Default render — Badge + ProgressBar + active-phase index + buttons
 //   2. workflow.mode === 'continuous' hides "Sonraki Faza Geç"
-//   3. useTransitionAuthority returns false hides "Sonraki Faza Geç"
+//   3. useTransitionAuthority returns false hides both "Sonraki Faza Geç" and "Düzenle"
 //   4. "Düzenle" navigates to /workflow-editor?projectId=...
 
 import * as React from "react"
@@ -99,7 +99,7 @@ describe("SummaryStrip", () => {
     expect(screen.getByRole("button", { name: /Düzenle/ })).toBeInTheDocument()
   })
 
-  it("Test 3: useTransitionAuthority false hides 'Sonraki Faza Geç' button", () => {
+  it("Test 3: useTransitionAuthority false hides both 'Sonraki Faza Geç' and 'Düzenle' buttons", () => {
     mockedTransitionAuthority.useTransitionAuthority.mockReturnValue(false)
     render(
       <SummaryStrip
@@ -112,7 +112,7 @@ describe("SummaryStrip", () => {
       />,
     )
     expect(screen.queryByRole("button", { name: /Sonraki Faza Geç/ })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Düzenle/ })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Düzenle/ })).not.toBeInTheDocument()
   })
 
   it("Test 4: 'Düzenle' click calls router.push with /workflow-editor?projectId=...", async () => {

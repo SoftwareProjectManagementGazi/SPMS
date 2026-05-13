@@ -32,6 +32,7 @@ from app.application.use_cases.manage_tasks import (
     CreateTaskUseCase,
     ListProjectTasksUseCase,
     ListProjectTasksPaginatedUseCase,
+    ListBacklogTasksUseCase,
     ListMyTasksUseCase,
     GetTaskUseCase,
     UpdateTaskUseCase,
@@ -96,9 +97,16 @@ async def list_project_tasks(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     phase_id: str = Query(default=None, description="API-05: filter tasks by phase_id (nd_xxx)"),
+    no_sprint: bool = Query(default=False, description="Backlog: only tasks without a sprint"),
+    exclude_done: bool = Query(default=False, description="Backlog: exclude completed tasks"),
     task_repo: ITaskRepository = Depends(get_task_repo),
     current_user: User = Depends(get_project_member),
 ):
+    # Backlog filter: when either backlog param is set, use the backlog use case
+    if no_sprint or exclude_done:
+        use_case = ListBacklogTasksUseCase(task_repo)
+        items = await use_case.execute(project_id, no_sprint=no_sprint, exclude_done=exclude_done)
+        return PaginatedResponse(items=items, total=len(items), page=1, page_size=len(items))
     # API-05: if phase_id provided, use the phase-aware query
     if phase_id is not None:
         from app.application.use_cases.manage_tasks import map_task_to_response_dto

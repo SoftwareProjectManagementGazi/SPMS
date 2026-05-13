@@ -144,27 +144,31 @@ export function SummaryStrip({
           )}
         </span>
         <div style={{ flex: 1 }} />
-        <PresetMenu
-          currentPresetId={null}
-          dirty={false}
-          onApply={(id: PresetId) => {
-            if (onApplyPreset) {
-              onApplyPreset(id)
-            } else {
-              router.push(
-                `/workflow-editor?projectId=${project.id}&preset=${encodeURIComponent(id)}`,
-              )
-            }
-          }}
-        />
-        <Button
-          size="sm"
-          variant="primary"
-          icon={<ExternalLink size={12} />}
-          onClick={handleEdit}
-        >
-          {T("Workflow Editörünü Aç", "Open Workflow Editor")}
-        </Button>
+        {transitionAllowed && (
+          <>
+            <PresetMenu
+              currentPresetId={null}
+              dirty={false}
+              onApply={(id: PresetId) => {
+                if (onApplyPreset) {
+                  onApplyPreset(id)
+                } else {
+                  router.push(
+                    `/workflow-editor?projectId=${project.id}&preset=${encodeURIComponent(id)}`,
+                  )
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="primary"
+              icon={<ExternalLink size={12} />}
+              onClick={handleEdit}
+            >
+              {T("Workflow Editörünü Aç", "Open Workflow Editor")}
+            </Button>
+          </>
+        )}
       </div>
     )
   }
@@ -229,14 +233,16 @@ export function SummaryStrip({
           {T("Sonraki Faza Geç", "Move to next phase")}
         </Button>
       )}
-      <Button
-        size="sm"
-        variant="ghost"
-        icon={<Pencil size={12} />}
-        onClick={handleEdit}
-      >
-        {T("Düzenle", "Edit")}
-      </Button>
+      {transitionAllowed && (
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<Pencil size={12} />}
+          onClick={handleEdit}
+        >
+          {T("Düzenle", "Edit")}
+        </Button>
+      )}
     </div>
   )
 }
