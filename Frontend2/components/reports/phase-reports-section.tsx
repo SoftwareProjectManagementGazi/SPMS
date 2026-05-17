@@ -77,16 +77,22 @@ function derivePhaseOptions(project: PickerProject | undefined): PhaseOption[] {
   // processConfig is camelCase via project-service mapProject; the wire shape
   // uses snake_case `process_config`. We tolerate both so the picker keeps
   // working if a consumer ever passes the raw DTO unmapped.
-  const cfg = project.processConfig as
-    | { workflow?: { nodes?: Array<{ id: string; name?: string; label?: string }> } }
-    | { process_config?: { workflow?: { nodes?: Array<{ id: string; name?: string; label?: string }> } } }
-    | null
-  // First try the camelCase shape, then fall back to the snake_case raw shape.
+  //
+  // Workflow Engine V2 (C1) renamed `workflow` → `phase_workflow`. Both keys
+  // are accepted on read so freshly-migrated and stale-cache payloads work.
+  type NodeShape = { id: string; name?: string; label?: string }
+  type WorkflowShape = { nodes?: NodeShape[] }
+  type ProcessConfigCamel = { phase_workflow?: WorkflowShape; workflow?: WorkflowShape }
+  const cfg = (project.processConfig ?? null) as ProcessConfigCamel | null
+  const rawDto = project as unknown as {
+    process_config?: ProcessConfigCamel
+  }
+  // Try camelCase V2 → camelCase V1 → snake-case raw V2 → snake-case raw V1.
   const nodes =
-    (cfg as { workflow?: { nodes?: Array<{ id: string; name?: string; label?: string }> } } | null)
-      ?.workflow?.nodes ??
-    (project as unknown as { process_config?: { workflow?: { nodes?: Array<{ id: string; name?: string; label?: string }> } } })
-      .process_config?.workflow?.nodes ??
+    cfg?.phase_workflow?.nodes ??
+    cfg?.workflow?.nodes ??
+    rawDto.process_config?.phase_workflow?.nodes ??
+    rawDto.process_config?.workflow?.nodes ??
     []
   return nodes.map((n) => ({ id: n.id, name: n.name || n.label || n.id }))
 }

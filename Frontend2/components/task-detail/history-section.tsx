@@ -48,12 +48,13 @@ export function HistorySection({
     columnMap[c] = c
   })
 
-  const phaseNodes =
-    (
-      project.processConfig as {
-        workflow?: { nodes?: Array<{ id: string; name: string }> }
-      } | null
-    )?.workflow?.nodes ?? []
+  // V2 canonical: phase_workflow (Workflow Engine C1); legacy `workflow` key
+  // tolerated on read for stale-cache clients.
+  const pcShape = project.processConfig as {
+    phase_workflow?: { nodes?: Array<{ id: string; name: string }> }
+    workflow?: { nodes?: Array<{ id: string; name: string }> }
+  } | null
+  const phaseNodes = pcShape?.phase_workflow?.nodes ?? pcShape?.workflow?.nodes ?? []
   const phaseMap: Record<string, string> = {}
   phaseNodes.forEach((n) => {
     phaseMap[n.id] = n.name

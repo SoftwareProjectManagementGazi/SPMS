@@ -439,11 +439,11 @@ describe("EditorPage", () => {
 
   // Phase 12 Plan 12-10 (Bug 2 UAT fix) — drag history coalescing.
   it("Test 18: 30 per-frame node-drag position changes produce exactly ONE history entry", async () => {
-    // Project with a single node so we can drag it.
+    // Project with a single node so we can drag it. C10 — V2 canonical shape.
     const dragProject: Project = {
       ...mockProject,
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             {
@@ -534,10 +534,11 @@ describe("EditorPage", () => {
   })
 
   it("Test 19: a no-op drag (no movement) does NOT push a history entry", async () => {
+    // C10 — V2 canonical shape.
     const dragProject: Project = {
       ...mockProject,
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             {
@@ -613,15 +614,15 @@ describe("EditorPage", () => {
       expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
     })
 
-    // Inspect the PATCH body — process_config.workflow.nodes must include
-    // the Incremental preset's "Artırım 1" node.
+    // Inspect the PATCH body — process_config.phase_workflow.nodes must include
+    // the Incremental preset's "Artırım 1" node. (C10 — Workflow Engine V2.)
     const callArgs = mockUpdateProcessConfig.mock.calls[0]
     expect(callArgs[0]).toBe(42)
     const processConfig = callArgs[1] as {
-      workflow?: { nodes: Array<{ id: string; name?: string }> }
+      phase_workflow?: { nodes: Array<{ id: string; name?: string }> }
     }
-    expect(processConfig.workflow).toBeDefined()
-    const nodeNames = (processConfig.workflow!.nodes ?? []).map(
+    expect(processConfig.phase_workflow).toBeDefined()
+    const nodeNames = (processConfig.phase_workflow!.nodes ?? []).map(
       (n) => n.name,
     )
     // "Artırım 1" is unique to the Incremental preset (per
@@ -652,10 +653,10 @@ describe("EditorPage", () => {
 
     const callArgs = mockUpdateProcessConfig.mock.calls[0]
     const processConfig = callArgs[1] as {
-      workflow?: { nodes: Array<{ id: string }> }
+      phase_workflow?: { nodes: Array<{ id: string }> }
     }
-    expect(processConfig.workflow).toBeDefined()
-    const nodeIds = (processConfig.workflow!.nodes ?? []).map((n) => n.id)
+    expect(processConfig.phase_workflow).toBeDefined()
+    const nodeIds = (processConfig.phase_workflow!.nodes ?? []).map((n) => n.id)
     const NODE_ID_REGEX = /^nd_[a-z0-9]{10}$/
     expect(nodeIds.length).toBeGreaterThan(0)
     for (const id of nodeIds) {
@@ -686,9 +687,9 @@ describe("EditorPage", () => {
 
     const callArgs = mockUpdateProcessConfig.mock.calls[0]
     const processConfig = callArgs[1] as {
-      workflow?: { nodes: Array<{ id: string }> }
+      phase_workflow?: { nodes: Array<{ id: string }> }
     }
-    const nodeIds = (processConfig.workflow!.nodes ?? []).map((n) => n.id)
+    const nodeIds = (processConfig.phase_workflow!.nodes ?? []).map((n) => n.id)
     const NODE_ID_REGEX = /^nd_[a-z0-9]{10}$/
     expect(nodeIds.length).toBeGreaterThan(0)
     for (const id of nodeIds) {

@@ -195,9 +195,12 @@ export const projectService = {
   },
 
   // Phase 12 Plan 12-09: Workflow Editor save flow.
-  // PATCHes /projects/{id} with body { process_config: { ...current, workflow: newWorkflow } }.
+  // PATCHes /projects/{id} with body { process_config: { ...current, phase_workflow: newWorkflow } }.
+  // Workflow Engine V2 (C10) renamed `workflow` → `phase_workflow`. Backend still
+  // accepts the legacy `workflow` key for one-version transition (dual-key tolerance
+  // in manage_projects.py PATCH endpoint), but new clients must emit `phase_workflow`.
   // The caller is responsible for spreading the existing processConfig and replacing
-  // workflow with the new (already snake_case-serialized via unmapWorkflowConfig)
+  // phase_workflow with the new (already snake_case-serialized via unmapWorkflowConfig)
   // shape. Backend re-validates the entire process_config; 422 surfaces validation
   // errors, 409 on concurrent edit, 429 on rate-limit.
   updateProcessConfig: async (

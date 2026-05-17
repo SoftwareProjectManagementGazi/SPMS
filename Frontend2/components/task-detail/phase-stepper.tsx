@@ -4,7 +4,9 @@
 // Renders only when:
 //   - project.process_config.enable_phase_assignment = true
 //   - task has at least one sub-task
-//   - project.process_config.workflow.nodes is non-empty
+//   - project.process_config.phase_workflow.nodes is non-empty
+//     (Workflow Engine V2 — C1 renamed `workflow` → `phase_workflow`;
+//     legacy `workflow` is tolerated as a read fallback.)
 //
 // Counts sub-tasks per phase node; highlights the phase with the most.
 // Spec: UI-SPEC §10 PhaseStepper (lines 628-646).
@@ -28,10 +30,12 @@ function readPhaseConfig(
 ): { enabled: boolean; nodes: PhaseNode[] } {
   const cfg = (project.processConfig ?? {}) as {
     enable_phase_assignment?: boolean
+    phase_workflow?: { nodes?: Array<{ id?: unknown; name?: unknown }> }
     workflow?: { nodes?: Array<{ id?: unknown; name?: unknown }> }
   }
   const enabled = cfg.enable_phase_assignment === true
-  const raw = cfg.workflow?.nodes ?? []
+  // V2 canonical: phase_workflow; legacy workflow tolerated as fallback.
+  const raw = cfg.phase_workflow?.nodes ?? cfg.workflow?.nodes ?? []
   const nodes: PhaseNode[] = raw
     .filter(
       (n): n is { id: string; name: string } =>

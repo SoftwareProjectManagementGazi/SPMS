@@ -97,7 +97,8 @@ interface MockProjectShape {
   progress: number
   columns: string[]
   processConfig: {
-    workflow?: {
+    // C10: V2 canonical key.
+    phase_workflow?: {
       mode: string
       nodes: Array<{
         id: string
@@ -134,7 +135,7 @@ function makeProject(overrides: Partial<MockProjectShape> = {}): MockProjectShap
     progress: 40,
     columns: [],
     processConfig: {
-      workflow: {
+      phase_workflow: {
         mode: "flexible",
         nodes: [
           { id: "planning", name: "Planlama", x: 0, y: 0, is_initial: true },
@@ -169,7 +170,7 @@ describe("CriteriaEditorPanel", () => {
   it("Test 1 — phase picker renders with archived suffix", () => {
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             { id: "planning", name: "Planlama", x: 0, y: 0, is_initial: true },
@@ -240,7 +241,7 @@ describe("CriteriaEditorPanel", () => {
     const user = userEvent.setup()
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             { id: "planning", name: "Planlama", x: 0, y: 0, is_initial: true },
@@ -310,7 +311,7 @@ describe("CriteriaEditorPanel", () => {
     }
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             { id: "planning", name: "Planlama", x: 0, y: 0, is_initial: true },
@@ -343,7 +344,7 @@ describe("CriteriaEditorPanel", () => {
   it("Test 7 — round-trip: re-rendering with saved state reflects toggles + manual list", async () => {
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [
             { id: "planning", name: "Planlama", x: 0, y: 0, is_initial: true },
@@ -398,7 +399,7 @@ describe("CriteriaEditorPanel", () => {
   it("Test 9 — empty workflow shows Şablon Yükle + Workflow Editörünü Aç CTAs", () => {
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [], // empty triggers the empty-state branch
           edges: [],
@@ -431,7 +432,7 @@ describe("CriteriaEditorPanel", () => {
   it("Test 10 (Bug X) — applyPresetInline sends a PATCH body whose node IDs match the regex", async () => {
     const project = makeProject({
       processConfig: {
-        workflow: {
+        phase_workflow: {
           mode: "flexible",
           nodes: [], // empty triggers WorkflowEmptyState
           edges: [],
@@ -454,10 +455,10 @@ describe("CriteriaEditorPanel", () => {
 
     const [, body] = mockedApi.patch.mock.calls[0] as [
       string,
-      { process_config: { workflow: { nodes: Array<{ id: string }> } } },
+      { process_config: { phase_workflow: { nodes: Array<{ id: string }> } } },
     ]
     const NODE_ID_REGEX = /^nd_[A-Za-z0-9_-]{10}$/
-    const ids = body.process_config.workflow.nodes.map((n) => n.id)
+    const ids = body.process_config.phase_workflow.nodes.map((n) => n.id)
     expect(ids.length).toBeGreaterThan(0)
     for (const id of ids) {
       expect(NODE_ID_REGEX.test(id)).toBe(true)

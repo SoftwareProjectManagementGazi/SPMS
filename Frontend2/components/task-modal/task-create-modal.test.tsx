@@ -23,10 +23,21 @@ vi.mock("@/services/project-service", () => {
     progress: 0,
     columns: ["todo", "progress", "review", "done"],
     processConfig: {
-      schema_version: 1,
-      workflow: {
+      // C10: V2 shape — schema_version=2, `phase_workflow` (renamed from V1
+      // `workflow`), and the `task_workflow` placeholder Wave 2 will enrich.
+      schema_version: 2,
+      phase_workflow: {
         mode: "flexible",
         nodes: [{ id: "n1", name: "Analiz" }, { id: "n2", name: "Tasarım" }],
+        edges: [],
+        groups: [],
+      },
+      task_workflow: {
+        capabilities: {
+          enforce_wip_limits: false,
+          initial_node_id: null,
+          has_recurring: true,
+        },
         edges: [],
         groups: [],
       },

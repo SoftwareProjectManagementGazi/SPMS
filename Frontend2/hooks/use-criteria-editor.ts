@@ -2,7 +2,8 @@
 // Settings > Yaşam Döngüsü criteria editor (Plan 12-03 consumer).
 //
 // Maintains per-phase drafts keyed by phase_id (sourced from
-// project.process_config.workflow.nodes). Mirrors the
+// project.process_config.phase_workflow.nodes — Workflow Engine V2; legacy
+// `workflow` key is tolerated as a read fallback). Mirrors the
 // settings-columns-subtab.tsx draft + commit-on-blur pattern but indexed
 // by phase id instead of column id.
 //

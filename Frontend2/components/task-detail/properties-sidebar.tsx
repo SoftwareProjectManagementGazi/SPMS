@@ -20,7 +20,9 @@
 //                          When set, displays as a tone="info" Badge to match
 //                          the prototype's "Sprint 7" pill.
 //   Faz       (Phase)    — conditional on enable_phase_assignment, select
-//                          backed by process_config.workflow.nodes
+//                          backed by process_config.phase_workflow.nodes
+//                          (Workflow Engine V2 — C1 rename; legacy
+//                          `workflow` key is read-tolerated.)
 //   Etiketler (Labels)   — chips with the human label name (joined via
 //                          useProjectLabels). Falls back to "#${id}" only when
 //                          the master record hasn't loaded yet.
@@ -92,10 +94,12 @@ function readPhaseConfig(
 ): { enabled: boolean; nodes: PhaseNode[] } {
   const cfg = (project.processConfig ?? {}) as {
     enable_phase_assignment?: boolean
+    phase_workflow?: { nodes?: Array<{ id?: unknown; name?: unknown }> }
     workflow?: { nodes?: Array<{ id?: unknown; name?: unknown }> }
   }
   const enabled = cfg.enable_phase_assignment === true
-  const raw = cfg.workflow?.nodes ?? []
+  // V2 canonical: phase_workflow; legacy workflow tolerated as fallback.
+  const raw = cfg.phase_workflow?.nodes ?? cfg.workflow?.nodes ?? []
   const nodes: PhaseNode[] = raw
     .filter(
       (n): n is { id: string; name: string } =>

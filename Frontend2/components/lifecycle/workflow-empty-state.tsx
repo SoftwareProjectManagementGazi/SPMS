@@ -3,7 +3,9 @@
 // WorkflowEmptyState (Phase 12 Plan 12-10 — LIFE-01 UAT fix).
 //
 // Shared dead-end-killer rendered whenever a project's
-// `processConfig.workflow.nodes` array is empty. Replaces the prior
+// `processConfig.phase_workflow.nodes` (Workflow Engine V2; legacy
+// `processConfig.workflow.nodes` for pre-C1 payloads) array is empty.
+// Replaces the prior
 // "Bu projede aktif workflow tanımlanmamış" AlertBanner that left the user
 // with no path forward. Now offers two CTAs:
 //

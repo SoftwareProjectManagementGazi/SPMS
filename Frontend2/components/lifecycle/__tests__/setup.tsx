@@ -24,7 +24,11 @@ export interface MockProject {
   name: string
   managerId: number | null
   methodology: string
-  processConfig: { workflow?: WorkflowConfig } | null
+  // C10: V2 canonical key is `phase_workflow`; legacy `workflow` kept as
+  // optional read-only fallback so older fixtures compile during the migration.
+  processConfig:
+    | { phase_workflow?: WorkflowConfig; workflow?: WorkflowConfig }
+    | null
 }
 
 export const mockUser: AuthUser = {

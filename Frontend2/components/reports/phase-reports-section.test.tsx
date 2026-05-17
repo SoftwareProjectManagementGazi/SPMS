@@ -86,7 +86,10 @@ const mkProject = (overrides: Partial<{
   columns: [],
   boardColumns: [],
   processConfig: {
-    workflow: {
+    // C10: V2 canonical key (phase_workflow). Mirrors what the migrated backend
+    // now returns from GET /projects/{id}.
+    schema_version: 2,
+    phase_workflow: {
       mode: "flexible",
       nodes: (overrides.phases ?? [
         { id: "design", name: "Tasarım" },

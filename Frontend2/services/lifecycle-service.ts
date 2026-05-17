@@ -258,10 +258,19 @@ export const lifecycleService = {
       extra_metadata: (item.extra_metadata ?? item.metadata ?? {}) as PhaseTransitionEntry["extra_metadata"],
     }))
 
+    // Workflow Engine V2 (commit C1): canonical key is `phase_workflow`. The
+    // legacy `workflow` is read as fallback so a stale-cache browser hitting a
+    // freshly-migrated backend still renders (backend's dual-key tolerance only
+    // covers the WRITE path; on the READ side we just emit V2).
     const processConfig = (projectResp.data["process_config"] ??
-      projectResp.data["processConfig"]) as { workflow?: WorkflowConfigDTO } | null
-    const workflow = processConfig?.workflow
-      ? mapWorkflowConfig(processConfig.workflow)
+      projectResp.data["processConfig"]) as {
+        phase_workflow?: WorkflowConfigDTO
+        workflow?: WorkflowConfigDTO
+      } | null
+    const phaseWorkflow =
+      processConfig?.phase_workflow ?? processConfig?.workflow
+    const workflow = phaseWorkflow
+      ? mapWorkflowConfig(phaseWorkflow)
       : null
 
     return {

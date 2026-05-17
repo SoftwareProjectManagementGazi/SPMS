@@ -90,16 +90,18 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
     return () => document.removeEventListener("mousedown", handler)
   }, [openMilestoneId])
 
-  // Resolve linked phase node names from project.processConfig.workflow.nodes.
-  // The Gantt is the only consumer here so we read the nodes inline rather
-  // than threading another prop.
+  // Resolve linked phase node names from project.processConfig.phase_workflow.nodes
+  // (Workflow Engine V2 — C1 rename). Legacy `workflow` is tolerated as a read
+  // fallback for stale-cache payloads. The Gantt is the only consumer here so
+  // we read the nodes inline rather than threading another prop.
   const phaseNameById = React.useMemo(() => {
     const m = new Map<string, string>()
     interface ProcessConfigShape {
+      phase_workflow?: { nodes?: { id: string; name: string }[] }
       workflow?: { nodes?: { id: string; name: string }[] }
     }
     const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
-    const nodes = cfg?.workflow?.nodes ?? []
+    const nodes = cfg?.phase_workflow?.nodes ?? cfg?.workflow?.nodes ?? []
     for (const n of nodes) m.set(n.id, n.name)
     return m
   }, [project.processConfig])

@@ -10,7 +10,8 @@
 // noting the deferred slot.
 //
 // Wiring summary:
-//   project.processConfig.workflow → WorkflowConfig (via lifecycle-service mapper)
+//   project.processConfig.phase_workflow → WorkflowConfig (via lifecycle-service mapper)
+//   (Workflow Engine V2 — C1 renamed `workflow` → `phase_workflow`)
 //   activity feed (cycle counters)  → useCycleCounters
 //   cycle counters + workflow       → React Flow node/edge inputs
 //   computeNodeStates               → Map<id, 'active'|'past'|'future'|'unreachable'>
@@ -69,6 +70,9 @@ interface PhaseTransitionEntryShape {
 }
 
 interface ProcessConfigShape {
+  /** Workflow Engine V2 (C1 rename): canonical key. */
+  phase_workflow?: WorkflowConfigDTO
+  /** Legacy V1 key — read-only fallback; writes always emit phase_workflow. */
   workflow?: WorkflowConfigDTO
   phase_completion_criteria?: Record<
     string,
@@ -84,8 +88,11 @@ const DEFAULT_AUTO_CRITERIA = {
 
 function readWorkflow(project: Project): WorkflowConfig | null {
   const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
-  if (!cfg || !cfg.workflow) return null
-  return mapWorkflowConfig(cfg.workflow)
+  // V2 canonical: phase_workflow. Fallback to legacy `workflow` so a
+  // stale-cache client doesn't see an empty Lifecycle tab.
+  const wf = cfg?.phase_workflow ?? cfg?.workflow
+  if (!cfg || !wf) return null
+  return mapWorkflowConfig(wf)
 }
 
 function readCriteria(project: Project, phaseId: string | null): PhaseGateCriteria {
@@ -319,10 +326,15 @@ export function LifecycleTab({ project }: LifecycleTabProps) {
     async (id: PresetId) => {
       try {
         const wf = unmapWorkflowConfig(resolvePreset(id))
+        // C10: emit V2 canonical (`phase_workflow`) and drop any lingering
+        // legacy `workflow` key so the persisted document is V2-shaped.
+        const { workflow: _legacy, ...restPC } =
+          (project.processConfig ?? {}) as { workflow?: unknown; [k: string]: unknown }
+        void _legacy
         await apiClient.patch(`/projects/${project.id}`, {
           process_config: {
-            ...((project.processConfig ?? {}) as Record<string, unknown>),
-            workflow: wf,
+            ...restPC,
+            phase_workflow: wf,
           },
         })
         qc.invalidateQueries({ queryKey: ["project", project.id] })

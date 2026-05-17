@@ -122,6 +122,12 @@ export interface EditorPageProps {
 }
 
 interface ProcessConfigShape {
+  /** Workflow Engine V2 (C1 rename): canonical phase workflow key. */
+  phase_workflow?: WorkflowConfigDTO
+  /** Legacy V1 key — accepted on read only so freshly-migrated projects
+   *  whose payload still carries the old shape (e.g. due to a stale browser
+   *  cache or in-flight request) keep working. WRITES always emit
+   *  `phase_workflow`. */
   workflow?: WorkflowConfigDTO
   /** Triage #1 — separate task-status flow stored alongside the lifecycle. */
   status_workflow?: WorkflowConfigDTO
@@ -141,10 +147,13 @@ interface ContextMenuState {
 
 function readWorkflow(project: Project): WorkflowConfig {
   const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
-  if (!cfg || !cfg.workflow) {
+  // V2 canonical key is `phase_workflow`; tolerate legacy `workflow` on read so
+  // stale-cache clients don't crash. WRITES emit phase_workflow exclusively.
+  const wf = cfg?.phase_workflow ?? cfg?.workflow
+  if (!cfg || !wf) {
     return { mode: "flexible", nodes: [], edges: [], groups: [] }
   }
-  return mapWorkflowConfig(cfg.workflow)
+  return mapWorkflowConfig(wf)
 }
 
 /**
@@ -1248,14 +1257,25 @@ export function EditorPage({ project }: EditorPageProps) {
     setSaveError(null)
     try {
       const currentPC = (project.processConfig ?? {}) as Record<string, unknown>
+      // C10: emit V2 canonical shape. Drop the legacy `workflow` key on
+      // write so the persisted document is always V2; we only kept it as a
+      // read fallback for in-flight stale-cache clients.
+      const { workflow: _legacyWorkflow, ...restPC } = currentPC as {
+        workflow?: unknown
+        [k: string]: unknown
+      }
+      void _legacyWorkflow
       const nextProcessConfig = {
-        ...currentPC,
+        ...restPC,
         // Serialize camelCase -> snake_case at the wire boundary (Pitfall 21).
         // unmapWorkflowConfig handles bidirectional/is_all_gate, is_initial,
         // is_final, is_archived, parent_id, wip_limit conversions.
         // Triage #1 — persist BOTH lifecycle and status workflows so a user
         // who edited only one mode doesn't lose the other.
-        workflow: unmapWorkflowConfig(lifecycleWorkflow),
+        // C10 (Workflow Engine V2): canonical key is `phase_workflow`. Backend
+        // still accepts legacy `workflow` (dual-key tolerance in manage_projects.py)
+        // but new clients emit V2 only.
+        phase_workflow: unmapWorkflowConfig(lifecycleWorkflow),
         status_workflow: unmapWorkflowConfig(statusWorkflow),
       }
       await projectService.updateProcessConfig(project.id, nextProcessConfig)

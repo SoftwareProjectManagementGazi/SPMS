@@ -154,7 +154,7 @@ function renderPanel(opts: SetupOpts = {}) {
   const utils = render(
     wrap(
       <PhaseGateExpand
-        project={{ ...baseProject, processConfig: { workflow: { mode, nodes: [], edges: [] } } } as never}
+        project={{ ...baseProject, processConfig: { phase_workflow: { mode, nodes: [], edges: [] } } } as never}
         workflowMode={mode}
         currentPhase={currentPhase as never}
         nextPhase={nextPhase as never}

@@ -210,8 +210,21 @@ function WizardContent() {
       methodology,
       columns,
       process_config: {
-        schema_version: 1,
-        workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+        // C10: emit V2 canonical shape on project create. Backend
+        // `normalize_process_config` will still migrate any legacy V1 payload
+        // server-side, but new clients ship V2 directly so the persisted
+        // document needs no migration pass.
+        schema_version: 2,
+        phase_workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+        task_workflow: {
+          capabilities: {
+            enforce_wip_limits: false,
+            initial_node_id: null,
+            has_recurring: true,
+          },
+          edges: [],
+          groups: [],
+        },
       },
     }, {
       onSuccess: (project) => {

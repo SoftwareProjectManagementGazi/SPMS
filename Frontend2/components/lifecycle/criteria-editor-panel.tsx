@@ -60,6 +60,13 @@ interface ProjectShape {
   managerId?: number | null
   manager_id?: number | null
   processConfig?: {
+    /** Workflow Engine V2 canonical key (C1 rename). */
+    phase_workflow?: {
+      mode?: string
+      nodes?: WorkflowNodeShape[]
+      edges?: unknown[]
+    }
+    /** Legacy V1 — read-only fallback; writes always emit phase_workflow. */
     workflow?: {
       mode?: string
       nodes?: WorkflowNodeShape[]
@@ -121,7 +128,13 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
   const canEdit = useTransitionAuthority(project) && !isArchived
 
   // -- workflow ----------------------------------------------------------------
-  const rawNodes = (project.processConfig?.workflow?.nodes ?? []).map(normalizeNode)
+  // V2 canonical key is `phase_workflow`; tolerate the legacy `workflow` key on
+  // read so stale-cache clients don't see an empty editor.
+  const rawNodes = (
+    project.processConfig?.phase_workflow?.nodes ??
+    project.processConfig?.workflow?.nodes ??
+    []
+  ).map(normalizeNode)
   const initialCriteria: Record<string, PhaseCriteria> =
     project.processConfig?.phase_completion_criteria ?? {}
 
@@ -185,8 +198,8 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
   // with the WorkflowEmptyState dual-CTA: "Şablon Yükle" applies a preset
   // in-place via PATCH /projects/{id}, and "Workflow Editörünü Aç" deep-links
   // to the editor. Picking a preset here writes
-  // process_config.workflow = unmapWorkflowConfig(resolvePreset(id)) so the
-  // user can immediately start editing per-phase criteria without a route hop.
+  // process_config.phase_workflow = unmapWorkflowConfig(resolvePreset(id)) so
+  // the user can immediately start editing per-phase criteria without a route hop.
   async function applyPresetInline(id: PresetId) {
     try {
       // Phase 12 Plan 12-10 (Bug X UAT fix) — defensive ID regeneration so a
@@ -195,10 +208,17 @@ export function CriteriaEditorPanel({ project, isArchived }: CriteriaEditorPanel
       // closes the loop so the criteria-editor empty-state CTA never sends
       // 422-bait to the backend.
       const wf = unmapWorkflowConfig(regenerateInvalidNodeIds(resolvePreset(id)))
+      // C10 (Workflow Engine V2): drop the legacy `workflow` key before
+      // writing so the persisted shape is V2-only. Backend still accepts the
+      // legacy key (dual-key tolerance) but emitting it would re-introduce
+      // duplicate data.
+      const { workflow: _legacy, ...restPC } =
+        (project.processConfig ?? {}) as { workflow?: unknown; [k: string]: unknown }
+      void _legacy
       await apiClient.patch(`/projects/${project.id}`, {
         process_config: {
-          ...(project.processConfig ?? {}),
-          workflow: wf,
+          ...restPC,
+          phase_workflow: wf,
         },
       })
       qc.invalidateQueries({ queryKey: ["project", project.id] })

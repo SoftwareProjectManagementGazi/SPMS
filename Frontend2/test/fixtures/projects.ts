@@ -25,14 +25,24 @@ export const mockProjects: Project[] = [
     taskCount: 0,
     taskDoneCount: 0,
     processConfig: {
-      schema_version: 1,
-      workflow: {
+      // C10 — Workflow Engine V2 canonical fixture.
+      schema_version: 2,
+      phase_workflow: {
         mode: "flexible",
         nodes: [
           { id: "n1", name: "Analiz" },
           { id: "n2", name: "Tasarım" },
           { id: "n3", name: "Geliştirme" },
         ],
+        edges: [],
+        groups: [],
+      },
+      task_workflow: {
+        capabilities: {
+          enforce_wip_limits: false,
+          initial_node_id: null,
+          has_recurring: true,
+        },
         edges: [],
         groups: [],
       },
@@ -66,8 +76,18 @@ export const mockProjects: Project[] = [
     taskCount: 0,
     taskDoneCount: 0,
     processConfig: {
-      schema_version: 1,
-      workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+      // C10 — Workflow Engine V2 canonical fixture.
+      schema_version: 2,
+      phase_workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+      task_workflow: {
+        capabilities: {
+          enforce_wip_limits: false,
+          initial_node_id: null,
+          has_recurring: true,
+        },
+        edges: [],
+        groups: [],
+      },
       enable_phase_assignment: false,
       backlog_definition: "leftmost_column",
       cycle_label: null,

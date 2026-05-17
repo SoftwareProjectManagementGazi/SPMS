@@ -298,7 +298,7 @@ describe("TimelineTab", () => {
         name: "Alpha Launch",
         targetDate: "2026-04-15",
         status: "PLANNED",
-        linkedPhaseIds: ["n1"], // matches mockProjects[0].processConfig.workflow.nodes[0]
+        linkedPhaseIds: ["n1"], // matches mockProjects[0].processConfig.phase_workflow.nodes[0]
         createdAt: "2026-04-01T00:00:00Z",
         updatedAt: null,
       },
