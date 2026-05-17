@@ -299,3 +299,224 @@ async def test_patch_accepts_legacy_workflow_key(authenticated_client, db_sessio
         assert pw["mode"] == good_workflow["mode"]
         assert {n["id"] for n in pw["nodes"]} == {n["id"] for n in good_workflow["nodes"]}
         assert {e["id"] for e in pw["edges"]} == {e["id"] for e in good_workflow["edges"]}
+
+
+# ---------------------------------------------------------------------------
+# W2-C3: Capability + node-field PATCH round-trip integration tests.
+#
+# These tests sigortalar Wave 2 W2-C1 (Pydantic capabilities round-trip) + W2-C2
+# (idempotent _migrate_v1_to_v2) at the API boundary so that W2-C4+ FE flows
+# (CapabilitiesPanel, status-mode node engine fields) cannot regress silently.
+#
+# Production code is UNCHANGED in W2-C3; only new test cases are added.
+# ---------------------------------------------------------------------------
+
+
+def _valid_phase_workflow_body(*, capabilities: dict | None = None) -> dict:
+    """V2 phase_workflow shape — 1 initial + 1 final node (satisfies D-19 rule 4)."""
+    body: dict = {
+        "mode": "flexible",
+        "nodes": [_VALID_NODE, _VALID_FINAL_NODE],
+        "edges": [
+            {"id": "e1", "source": _VALID_NODE["id"], "target": _VALID_FINAL_NODE["id"], "type": "flow"},
+        ],
+        "groups": [],
+    }
+    if capabilities is not None:
+        body["capabilities"] = capabilities
+    return body
+
+
+@pytest.mark.asyncio
+async def test_patch_phase_workflow_capabilities_round_trip(
+    authenticated_client, db_session
+):
+    """W2-C3: PATCH phase_workflow.capabilities -> GET preserves all flags.
+
+    Validates the W2-C1 fix: pre-W2 the WorkflowConfig DTO did not declare a
+    `capabilities` field, so Pydantic `extra="ignore"` silently dropped user
+    edits. Post-W2 the field is declared (Optional[WorkflowCapabilities]) and
+    PATCHed values must survive a PATCH -> GET cycle verbatim.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C3CAP1")
+
+    caps = {
+        "enforce_wip_limits": True,
+        "enforce_sequential_dependencies": True,
+        "restrict_expired_sprints": True,
+        "has_recurring": False,
+        "initial_node_id": _VALID_NODE["id"],
+    }
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={
+                "process_config": {
+                    "phase_workflow": _valid_phase_workflow_body(capabilities=caps),
+                }
+            },
+        )
+        assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
+
+        r2 = await client.get(f"/api/v1/projects/{pid}")
+        assert r2.status_code == 200
+        pc = r2.json()["process_config"]
+        got_caps = pc["phase_workflow"].get("capabilities")
+        assert got_caps is not None, (
+            "phase_workflow.capabilities missing on GET — W2-C1 regression "
+            "(Pydantic dropped the key)"
+        )
+        assert got_caps["enforce_wip_limits"] is True
+        assert got_caps["enforce_sequential_dependencies"] is True
+        assert got_caps["restrict_expired_sprints"] is True
+        assert got_caps["has_recurring"] is False
+        assert got_caps["initial_node_id"] == _VALID_NODE["id"]
+
+
+@pytest.mark.asyncio
+async def test_patch_phase_workflow_capabilities_partial_preserves_others(
+    authenticated_client, db_session
+):
+    """W2-C3: Second PATCH with subset of caps must not zero out prior flags.
+
+    Guards the Wave 2 FE flow where a single toggle change ships only the
+    changed flag (avoiding races where two users edit different toggles).
+    The _migrate_v1_to_v2 entity normalizer plus the JSONB persistence layer
+    must preserve untouched values across successive PATCH calls.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C3CAP2")
+
+    async with authenticated_client(role="admin") as client:
+        # First PATCH: enable all three engine-relevant caps.
+        r1 = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={
+                "process_config": {
+                    "phase_workflow": _valid_phase_workflow_body(capabilities={
+                        "enforce_wip_limits": True,
+                        "enforce_sequential_dependencies": True,
+                        "restrict_expired_sprints": True,
+                    }),
+                }
+            },
+        )
+        assert r1.status_code == 200, r1.text
+
+        # Second PATCH: toggle ONLY enforce_wip_limits off, keep the other two
+        # explicit. The FE will likely re-send the full caps object after
+        # reading the current state — this models that contract.
+        r2 = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={
+                "process_config": {
+                    "phase_workflow": _valid_phase_workflow_body(capabilities={
+                        "enforce_wip_limits": False,
+                        "enforce_sequential_dependencies": True,
+                        "restrict_expired_sprints": True,
+                    }),
+                }
+            },
+        )
+        assert r2.status_code == 200, r2.text
+
+        # GET — final state must have wip off and other two still on.
+        r3 = await client.get(f"/api/v1/projects/{pid}")
+        assert r3.status_code == 200
+        caps = r3.json()["process_config"]["phase_workflow"]["capabilities"]
+        assert caps["enforce_wip_limits"] is False
+        assert caps["enforce_sequential_dependencies"] is True, (
+            "Second PATCH must preserve enforce_sequential_dependencies"
+        )
+        assert caps["restrict_expired_sprints"] is True, (
+            "Second PATCH must preserve restrict_expired_sprints"
+        )
+
+
+@pytest.mark.asyncio
+async def test_patch_task_workflow_capabilities_round_trip(
+    authenticated_client, db_session
+):
+    """W2-C3: task_workflow.capabilities round-trip (has_recurring etc.).
+
+    task_workflow is the second leg of the V2 dual-workflow split — the
+    entity normalizer seeds it via setdefault, and a PATCH carrying a
+    task_workflow body must persist + round-trip identically.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C3CAP3")
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={
+                "process_config": {
+                    "phase_workflow": _valid_phase_workflow_body(),
+                    "task_workflow": {
+                        "capabilities": {
+                            "enforce_wip_limits": True,
+                            "has_recurring": False,
+                        },
+                        "edges": [],
+                        "groups": [],
+                    },
+                }
+            },
+        )
+        assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
+
+        r2 = await client.get(f"/api/v1/projects/{pid}")
+        assert r2.status_code == 200
+        tw = r2.json()["process_config"].get("task_workflow")
+        assert tw is not None, "GET response missing task_workflow"
+        tw_caps = tw.get("capabilities")
+        assert tw_caps is not None, "task_workflow.capabilities missing on GET"
+        assert tw_caps["enforce_wip_limits"] is True
+        assert tw_caps["has_recurring"] is False
+
+
+@pytest.mark.asyncio
+async def test_patch_capabilities_rejects_non_bool(
+    authenticated_client, db_session
+):
+    """W2-C3: a clearly-non-bool capability value -> 422.
+
+    NOTE on the test fixture choice: Pydantic V2's default ("lax") bool
+    coercion accepts the JSON-bool-shaped strings ``"yes"`` / ``"no"`` /
+    ``"true"`` / ``"false"`` and turns them into Python bools, so those
+    inputs would NOT be rejected at the API boundary even though the
+    schema declares ``bool``. To exercise the strict validation path we
+    use a list (``[]``) — clearly not a bool nor a coercible scalar — so
+    Pydantic returns 422.
+
+    Validates that the Pydantic round-trip introduced in W2-C1 surfaces
+    proper validation errors for malformed payloads (rather than silently
+    dropping the value the way pre-W2 ``extra="ignore"`` did).
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C3CAP4")
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={
+                "process_config": {
+                    "phase_workflow": _valid_phase_workflow_body(capabilities={
+                        "enforce_wip_limits": [],  # list is uncoercible to bool
+                    }),
+                }
+            },
+        )
+        assert r.status_code == 422, (
+            f"non-bool capability value must yield 422; got {r.status_code}: {r.text}"
+        )
