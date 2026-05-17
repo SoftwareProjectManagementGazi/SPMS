@@ -110,9 +110,13 @@ def _migrate_v1_to_v2(config: dict) -> dict:
     # Idempotency: setdefault on outer key + nested setdefault on capabilities so
     # that a partially-migrated config (where task_workflow exists without 'capabilities')
     # is healed without clobbering existing values.
+    # C9: `has_recurring` (default True) gates the recurring-next-instance trigger
+    # in UpdateTaskUseCase; nested setdefault guarantees pre-V2-of-V2 rows (those
+    # touched by C2 but predating C9) also pick up the default on re-normalisation.
     tw = new.setdefault("task_workflow", {
         "capabilities": {
             "enforce_wip_limits": False,
+            "has_recurring": True,
             "initial_node_id": None,
         },
         "edges": [],
@@ -122,6 +126,7 @@ def _migrate_v1_to_v2(config: dict) -> dict:
         tw.setdefault("capabilities", {})
         if isinstance(tw["capabilities"], dict):
             tw["capabilities"].setdefault("enforce_wip_limits", False)
+            tw["capabilities"].setdefault("has_recurring", True)
             tw["capabilities"].setdefault("initial_node_id", None)
         tw.setdefault("edges", [])
         tw.setdefault("groups", [])

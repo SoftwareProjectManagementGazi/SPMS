@@ -240,7 +240,11 @@ class UpdateTaskUseCase:
             raise TaskNotFoundError(f"Task with id {task_id} not found")
 
         # Business Rule 1: Validate Column ID
-        new_column_name = None
+        # NOTE (C9): the legacy `new_column_name` string lookup is gone —
+        # recurring trigger now goes through engine.is_terminal(target_col)
+        # below, which is language-agnostic and uses the BoardColumn entity
+        # directly. No need to materialise the name here.
+        project = None
         if dto.column_id is not None:
             # Projeyi ve columnlarını çek
             project = await self.project_repo.get_by_id(existing_task.project_id)
@@ -252,11 +256,6 @@ class UpdateTaskUseCase:
             valid_column_ids = [c.id for c in project.columns]
             if dto.column_id not in valid_column_ids:
                 raise ValueError(f"Column {dto.column_id} does not belong to project {existing_task.project_id}")
-            # Find the column name for recurring check
-            for col in project.columns:
-                if col.id == dto.column_id:
-                    new_column_name = col.name
-                    break
 
             # Phase 17 C7 — engine-driven edge validation.
             # Senior review (2026-05-17): only enforce when the capability is
@@ -316,11 +315,32 @@ class UpdateTaskUseCase:
         # ARCH-05: task_repo.update() already returns the full entity with eager loading — no separate get_by_id needed
         updated_task = await self.task_repo.update(task_id, update_data, user_id=user_id)
 
-        # Recurring next-instance creation when task is moved to a done column
-        if new_column_name is not None and existing_task.is_recurring:
-            status_changed_to_done = new_column_name.lower().strip() in ("done", "completed", "closed")
-            if status_changed_to_done and _check_recurrence_should_continue(existing_task):
-                await _create_next_recurrence_instance(existing_task, self.task_repo)
+        # Phase 17 C9 — Recurring next-instance creation when task lands in a
+        # terminal column. Replaces the previous hard-coded English string match
+        # ("done", "completed", "closed") with engine.is_terminal(target_col) so
+        # custom / non-English column names ("Tamamlandı", "Bitti", "Yapıldı",
+        # ...) trigger correctly. The is_terminal flag (backfilled by migration
+        # 013) wins; legacy unmigrated rows fall back to max(order_index).
+        #
+        # Capability gate: task_workflow.capabilities.has_recurring (default
+        # True via _migrate_v1_to_v2) lets a project disable recurring instance
+        # creation entirely. Same engine surface as C7/C8 but a fresh instance
+        # is built here — `project` is only resolved inside the `dto.column_id`
+        # branch above, and re-using the C7/C8 engine would require widening
+        # that branch's scope. Engine is state-less, allocation is cheap.
+        if dto.column_id is not None and existing_task.is_recurring and project is not None:
+            rec_engine = WorkflowEngine(
+                workflow=(project.process_config or {}).get("task_workflow"),
+                columns=project.columns or [],
+            )
+            if rec_engine.cap("has_recurring", default=True):
+                target_col = next(
+                    (c for c in (project.columns or []) if c.id == dto.column_id),
+                    None,
+                )
+                if target_col is not None and rec_engine.is_terminal(target_col):
+                    if _check_recurrence_should_continue(existing_task):
+                        await _create_next_recurrence_instance(existing_task, self.task_repo)
 
         return map_task_to_response_dto(updated_task)
 

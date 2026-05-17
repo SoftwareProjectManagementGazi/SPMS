@@ -538,3 +538,224 @@ async def test_wip_excludes_self_when_moving_within():
     assert result.column_id == 2
     task_repo.count_tasks_in_column.assert_not_called()
     task_repo.update.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# C9 — Recurring trigger via WorkflowEngine.is_terminal()
+# ---------------------------------------------------------------------------
+# UpdateTaskUseCase no longer matches column.name.lower() against
+# ("done", "completed", "closed"). Instead it asks engine.is_terminal(target)
+# — language-agnostic, capability-gated by task_workflow.capabilities
+# .has_recurring (default True). These tests pin all four branches of that
+# gate (terminal+enabled, non-terminal, disabled, legacy fallback).
+
+
+def _mk_project_with_recurring_workflow(
+    *,
+    columns: list[BoardColumn],
+    has_recurring: bool = True,
+) -> Project:
+    """Build a Project whose task_workflow toggles ONLY ``has_recurring``.
+
+    Edge validation & WIP capabilities stay False so the C9 path is exercised
+    in isolation — any test failure here must come from the recurring trigger
+    branch, never from C7/C8 leaking in.
+    """
+    return Project(
+        id=1,
+        key="K",
+        name="P",
+        start_date=datetime(2026, 1, 1),
+        methodology=Methodology.KANBAN,
+        status=ProjectStatus.ACTIVE,
+        columns=columns,
+        process_config={
+            "schema_version": 2,
+            "phase_workflow": {
+                "mode": "flexible",
+                "capabilities": {
+                    "enforce_wip_limits": False,
+                    "enforce_sequential_dependencies": False,
+                    "restrict_expired_sprints": False,
+                    "initial_node_id": None,
+                },
+                "nodes": [],
+                "edges": [],
+                "groups": [],
+            },
+            "task_workflow": {
+                "capabilities": {
+                    "enforce_wip_limits": False,
+                    "enforce_sequential_dependencies": False,
+                    "has_recurring": has_recurring,
+                    "initial_node_id": None,
+                },
+                "edges": [],
+                "groups": [],
+            },
+            "phase_completion_criteria": {},
+            "enable_phase_assignment": False,
+        },
+    )
+
+
+def _mk_recurring_task(column_id: int, column: BoardColumn, project: Project) -> Task:
+    """Recurring-task fixture for C9 tests.
+
+    ``recurrence_count=3`` is the loop-continue value used by
+    ``_check_recurrence_should_continue`` (anything > 1 keeps the series alive).
+    ``recurrence_end_date`` is left None so the date comparison branch in that
+    helper is skipped — the trigger we want to observe here is purely the
+    is_terminal/cap interaction, not series-end logic.
+    """
+    return Task(
+        id=42,
+        title="Recurring",
+        priority=TaskPriority.MEDIUM,
+        project_id=1,
+        column_id=column_id,
+        column=column,
+        project=project,
+        is_recurring=True,
+        recurrence_interval="weekly",
+        recurrence_count=3,
+        series_id="series-uuid-test",
+        due_date=datetime(2026, 1, 8),
+        created_at=datetime(2026, 1, 1),
+    )
+
+
+@pytest.mark.asyncio
+async def test_recurring_triggers_on_is_terminal_column():
+    """is_terminal=True target column + has_recurring=True -> next instance created.
+
+    Custom non-English terminal column name ("Tamamlandı") proves the trigger
+    is language-agnostic. The old hard-coded match against
+    {"done","completed","closed"} would never have fired on this name; engine
+    .is_terminal() does because the column carries the explicit flag.
+    """
+    todo = BoardColumn(
+        id=1, project_id=1, name="Yapılacak", order_index=0, is_initial=True,
+    )
+    tamamlandi = BoardColumn(
+        id=3, project_id=1, name="Tamamlandı", order_index=2, is_terminal=True,
+    )
+    project = _mk_project_with_recurring_workflow(
+        columns=[todo, tamamlandi], has_recurring=True
+    )
+    existing = _mk_recurring_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, tamamlandi)
+    # `_create_next_recurrence_instance` calls task_repo.create — wire it.
+    task_repo.create = AsyncMock(return_value=existing)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=3)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 3
+    # The recurring-next-instance was created exactly once.
+    task_repo.create.assert_awaited_once()
+    # Sanity: the new task carries the same series_id and is_recurring=True.
+    new_task_arg = task_repo.create.await_args.args[0]
+    assert new_task_arg.series_id == "series-uuid-test"
+    assert new_task_arg.is_recurring is True
+
+
+@pytest.mark.asyncio
+async def test_recurring_does_not_trigger_on_non_terminal():
+    """Middle (non-terminal) column move -> no next instance created.
+
+    Even with has_recurring=True and a recurring task, moving to a
+    non-terminal column ("Doing") must not spawn a next instance.
+    """
+    todo = BoardColumn(
+        id=1, project_id=1, name="To Do", order_index=0, is_initial=True,
+    )
+    doing = BoardColumn(
+        id=2, project_id=1, name="Doing", order_index=1, is_terminal=False,
+    )
+    done = BoardColumn(
+        id=3, project_id=1, name="Done", order_index=2, is_terminal=True,
+    )
+    project = _mk_project_with_recurring_workflow(
+        columns=[todo, doing, done], has_recurring=True
+    )
+    existing = _mk_recurring_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, doing)
+    task_repo.create = AsyncMock()
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=2)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 2
+    # No recurring instance — Doing is not terminal.
+    task_repo.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_recurring_disabled_when_has_recurring_off():
+    """has_recurring=False -> trigger is skipped even on a terminal column.
+
+    This is the per-project opt-out: a workflow editor will eventually expose
+    has_recurring as a toggle so admins can pause series creation without
+    deleting the recurring tasks themselves.
+    """
+    todo = BoardColumn(
+        id=1, project_id=1, name="To Do", order_index=0, is_initial=True,
+    )
+    done = BoardColumn(
+        id=3, project_id=1, name="Done", order_index=2, is_terminal=True,
+    )
+    project = _mk_project_with_recurring_workflow(
+        columns=[todo, done], has_recurring=False
+    )
+    existing = _mk_recurring_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, done)
+    task_repo.create = AsyncMock()
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=3)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 3
+    # Capability gate held — no creation despite landing in a terminal column.
+    task_repo.create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_recurring_legacy_done_column_still_works():
+    """Legacy / unmigrated rows: is_terminal=None but max(order_index) wins.
+
+    Pre-migration-013 columns carry is_terminal=None. engine.is_terminal()'s
+    fallback path matches the column with max(order_index) as terminal — so
+    a recurring task moved to that column still triggers, with NO hard-coded
+    English string match anywhere in the use case.
+    """
+    todo = BoardColumn(
+        id=1, project_id=1, name="To Do", order_index=0, is_initial=True,
+        is_terminal=False,  # legacy default
+    )
+    # Highest order_index, but is_terminal explicitly False (mirrors a row
+    # that pre-dates migration 013's backfill of is_terminal=True).
+    legacy_done = BoardColumn(
+        id=3, project_id=1, name="Done", order_index=2, is_terminal=False,
+    )
+    project = _mk_project_with_recurring_workflow(
+        columns=[todo, legacy_done], has_recurring=True
+    )
+    existing = _mk_recurring_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, legacy_done)
+    task_repo.create = AsyncMock(return_value=existing)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=3)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 3
+    # Engine fell back to max(order_index) — recurring instance was created.
+    task_repo.create.assert_awaited_once()
