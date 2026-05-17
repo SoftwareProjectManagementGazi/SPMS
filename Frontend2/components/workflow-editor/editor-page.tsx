@@ -204,10 +204,67 @@ function readCapabilities(
  * Read-side fallback chain: task_workflow → statusWorkflow → status_workflow.
  * Cleanup of the legacy keys deferred to Wave 3.
  */
+// Wave 2 follow-up (2026-05-18) — derive status-mode nodes from BoardColumn
+// entities. Plan Q1 decision (workflow-engine-design.md §3) is BoardColumn
+// yerinde + JSON edges: the source of truth for status-mode nodes is the
+// board_columns table, while edges/groups/capabilities live in JSONB.
+// Without this derivation, ?mode=status renders an empty canvas because the
+// W1-C2 migration seeds task_workflow with {edges:[], groups:[], capabilities}
+// — no `nodes` field — so mapWorkflowConfig returned an empty workflow.
+function deriveStatusNodesFromColumns(
+  boardColumns: { id: number; name: string }[],
+): WorkflowNode[] {
+  return boardColumns.map((col, idx) => {
+    const isFirst = idx === 0
+    const isLast = idx === boardColumns.length - 1
+    return {
+      id: `col_${col.id}`,
+      name: col.name,
+      x: 60 + idx * 200,
+      y: 120,
+      color: isFirst
+        ? "status-todo"
+        : isLast
+          ? "status-done"
+          : "status-progress",
+      isInitial: isFirst || undefined,
+      isFinal: isLast || undefined,
+    }
+  })
+}
+
 function readStatusWorkflow(project: Project): WorkflowConfig {
   const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
   const dto = cfg?.task_workflow ?? cfg?.statusWorkflow ?? cfg?.status_workflow
-  if (dto) return mapWorkflowConfig(dto)
+
+  const hasColumns =
+    Array.isArray(project.boardColumns) && project.boardColumns.length > 0
+
+  if (dto) {
+    const mapped = mapWorkflowConfig(dto)
+    // JSONB carries edges/groups/capabilities; nodes derived from
+    // board_columns so renames/reorders made via Settings>Columns show up
+    // here without an extra round-trip.
+    if (mapped.nodes.length === 0 && hasColumns) {
+      return {
+        ...mapped,
+        nodes: deriveStatusNodesFromColumns(project.boardColumns),
+      }
+    }
+    return mapped
+  }
+
+  // No persisted task_workflow at all — derive from columns when available,
+  // otherwise fall back to the canned 4-node default so the canvas is never
+  // empty.
+  if (hasColumns) {
+    return {
+      mode: "continuous",
+      nodes: deriveStatusNodesFromColumns(project.boardColumns),
+      edges: [],
+      groups: [],
+    }
+  }
   return DEFAULT_STATUS_WORKFLOW
 }
 
@@ -1827,15 +1884,23 @@ export function EditorPage({ project }: EditorPageProps) {
           onChange={handleModeChange}
           size="sm"
         />
-        <span
-          style={{ height: 18, width: 1, background: "var(--border)" }}
-          aria-hidden
-        />
-        <PresetMenu
-          currentPresetId={detectCurrentPresetId(workflow)}
-          dirty={dirty}
-          onApply={applyPreset}
-        />
+        {mode === "lifecycle" && (
+          <>
+            <span
+              style={{ height: 18, width: 1, background: "var(--border)" }}
+              aria-hidden
+            />
+            {/* Lifecycle preset'leri (Scrum, Waterfall, V-Model, vb.) yalnızca
+                lifecycle modunda anlamlı. Status modunda task-status flow'a
+                yüklenmesi semantic olarak yanlış olur (preset'lerin hepsi
+                proje yaşam döngüsü, kanban status'u değil). */}
+            <PresetMenu
+              currentPresetId={detectCurrentPresetId(workflow)}
+              dirty={dirty}
+              onApply={applyPreset}
+            />
+          </>
+        )}
         <div style={{ flex: 1 }} />
         <Button
           variant="ghost"

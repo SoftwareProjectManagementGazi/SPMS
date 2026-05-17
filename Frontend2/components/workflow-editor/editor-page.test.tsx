@@ -742,6 +742,10 @@ describe("EditorPage", () => {
 
     render(<EditorPage project={projectWithCaps} />)
 
+    // 2026-05-18 bug fix — RightPanel is now tabbed. Activate the
+    // "Yetenek" tab before reading the toggle.
+    fireEvent.click(screen.getByTestId("tab-capabilities"))
+
     // CapabilitiesPanel renders in the RightPanel. Toggle "WIP limitlerini
     // uygula" (TR label per useApp mock language="tr").
     const wipToggle = screen.getByRole("switch", {
@@ -852,6 +856,10 @@ describe("EditorPage", () => {
     }
 
     render(<EditorPage project={projectStatus} />)
+
+    // 2026-05-18 bug fix — RightPanel is now tabbed. Activate the
+    // "Yetenek" tab before reading the toggle.
+    fireEvent.click(screen.getByTestId("tab-capabilities"))
 
     // In status mode the panel renders the "Tekrarlayan görevler" toggle for
     // task_workflow.capabilities.has_recurring.
