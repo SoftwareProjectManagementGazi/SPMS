@@ -5,6 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.infrastructure.database.seeder_extended import seed_extended_data
+# Wave 2 W2-C9 — single-source default column lists. Shared with
+# alembic 014's backfill so the seed payload never drifts.
+from app.infrastructure.database._default_columns import (
+    KANBAN_DEFAULT_COLUMNS,
+    SCRUM_DEFAULT_COLUMNS,
+    WATERFALL_DEFAULT_COLUMNS,
+)
 
 # --- Modeller ---
 from app.infrastructure.database.models.role import RoleModel
@@ -413,6 +420,10 @@ async def seed_process_templates(session: AsyncSession):
                 {"name": "Code Review", "order": 3},
                 {"name": "Done", "order": 4},
             ],
+            # Wave 2 W2-C9 — engine-aware shape consumed by W2-C10's
+            # CreateProjectUseCase. Legacy ``columns`` above remains as a
+            # read fallback until W2-C11 dual-key cleanup.
+            "default_columns": SCRUM_DEFAULT_COLUMNS,
             "recurring_tasks": [],
             "behavioral_flags": {"sprint_required": True, "wip_limits": False},
             "cycle_label_tr": "Sprint",
@@ -464,6 +475,8 @@ async def seed_process_templates(session: AsyncSession):
                 {"name": "Test", "order": 3, "wip_limit": 2},
                 {"name": "Done", "order": 4, "wip_limit": 0},
             ],
+            # Wave 2 W2-C9 — engine-aware shape (see _default_columns.py).
+            "default_columns": KANBAN_DEFAULT_COLUMNS,
             "recurring_tasks": [],
             "behavioral_flags": {"sprint_required": False, "wip_limits": True},
             "cycle_label_tr": "Döngü",
@@ -494,6 +507,8 @@ async def seed_process_templates(session: AsyncSession):
                 {"name": "Test", "order": 4},
                 {"name": "Bakım", "order": 5},
             ],
+            # Wave 2 W2-C9 — engine-aware shape (see _default_columns.py).
+            "default_columns": WATERFALL_DEFAULT_COLUMNS,
             "recurring_tasks": [],
             "behavioral_flags": {"sprint_required": False, "strict_dependencies": True},
             "cycle_label_tr": "Faz",

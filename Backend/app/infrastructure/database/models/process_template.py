@@ -23,3 +23,9 @@ class ProcessTemplateModel(Base):
     # Phase 9 D-43: cycle label i18n moves to template (out of Project)
     cycle_label_tr = Column(String(50), nullable=True)
     cycle_label_en = Column(String(50), nullable=True)
+    # Wave 2 W2-C9 — engine-aware column defaults read by CreateProjectUseCase
+    # in W2-C10. Carries the full BoardColumn engine fields (category /
+    # is_initial / is_terminal / max_duration_days / entry_policy / exit_policy)
+    # plus name / order_index / wip_limit. Legacy ``columns`` field (above) is
+    # preserved as a read fallback for clients that have not migrated.
+    default_columns = Column(JSONB, nullable=True)

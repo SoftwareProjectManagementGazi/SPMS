@@ -263,3 +263,203 @@ def test_default_workflow_round_trips_through_workflow_config():
         config = WorkflowConfig(**wf)
         assert config.mode == wf["mode"]
         assert len(config.nodes) == len(wf["nodes"])
+
+
+# ============================================================================
+# Wave 2 W2-C9 — ProcessTemplate.default_columns engine-aware seeding
+# ============================================================================
+#
+# Asserts the new ``default_columns`` JSONB field on the three built-in
+# templates carries the engine field shape (``category`` / ``is_initial`` /
+# ``is_terminal`` / ``max_duration_days`` / ``entry_policy`` / ``exit_policy``)
+# expected by W2-C10's CreateProjectUseCase. The shared
+# ``_default_columns.py`` module is the single source of truth for both the
+# alembic 014 backfill and the runtime seeder, so a regression here usually
+# means one of them drifted.
+
+
+_REQUIRED_ENGINE_FIELDS = {
+    "name",
+    "order_index",
+    "wip_limit",
+    "category",
+    "is_initial",
+    "is_terminal",
+    "max_duration_days",
+    "entry_policy",
+    "exit_policy",
+}
+
+_VALID_CATEGORIES = {"todo", "in_progress", "done"}
+_VALID_ENTRY_POLICIES = {"any", "edges_only", "initial_only"}
+_VALID_EXIT_POLICIES = {"any", "edges_only", "terminal_lock"}
+
+
+def test_default_columns_module_exposes_three_methodologies():
+    """W2-C9: ``_default_columns`` exports Scrum/Kanban/Waterfall lists.
+
+    A structural sanity check — the shared module is imported by both
+    alembic 014 and the seeder, so a missing symbol breaks migration AND
+    runtime seeding simultaneously.
+    """
+    from app.infrastructure.database._default_columns import (
+        DEFAULT_COLUMNS_BY_TEMPLATE_NAME,
+        KANBAN_DEFAULT_COLUMNS,
+        SCRUM_DEFAULT_COLUMNS,
+        WATERFALL_DEFAULT_COLUMNS,
+    )
+
+    assert len(SCRUM_DEFAULT_COLUMNS) == 5
+    assert len(KANBAN_DEFAULT_COLUMNS) == 5
+    assert len(WATERFALL_DEFAULT_COLUMNS) == 6
+    # Dispatch table keys mirror the seeder's lowercase-name lookup.
+    assert {"scrum", "kanban", "waterfall", "iterative"} <= set(
+        DEFAULT_COLUMNS_BY_TEMPLATE_NAME.keys()
+    )
+
+
+def test_default_columns_carry_required_engine_fields():
+    """Every default column on every methodology must declare the full
+    BoardColumn engine field set added in migration 013.
+
+    Missing a key would force W2-C10's CreateProjectUseCase to fall back
+    to entity defaults — masking what the template explicitly wanted.
+    """
+    from app.infrastructure.database._default_columns import (
+        KANBAN_DEFAULT_COLUMNS,
+        SCRUM_DEFAULT_COLUMNS,
+        WATERFALL_DEFAULT_COLUMNS,
+        ITERATIVE_DEFAULT_COLUMNS,
+    )
+
+    for label, cols in (
+        ("Scrum", SCRUM_DEFAULT_COLUMNS),
+        ("Kanban", KANBAN_DEFAULT_COLUMNS),
+        ("Waterfall", WATERFALL_DEFAULT_COLUMNS),
+        ("Iterative", ITERATIVE_DEFAULT_COLUMNS),
+    ):
+        for col in cols:
+            missing = _REQUIRED_ENGINE_FIELDS - set(col.keys())
+            assert not missing, (
+                f"{label} column {col.get('name')!r} missing fields: {missing}"
+            )
+            assert col["category"] in _VALID_CATEGORIES, (
+                f"{label} column {col['name']!r} bad category {col['category']!r}"
+            )
+            assert col["entry_policy"] in _VALID_ENTRY_POLICIES, (
+                f"{label} column {col['name']!r} bad entry_policy "
+                f"{col['entry_policy']!r}"
+            )
+            assert col["exit_policy"] in _VALID_EXIT_POLICIES, (
+                f"{label} column {col['name']!r} bad exit_policy "
+                f"{col['exit_policy']!r}"
+            )
+
+
+def test_default_columns_have_exactly_one_initial_and_one_terminal():
+    """Each methodology's default_columns must declare exactly one
+    ``is_initial=True`` and at least one ``is_terminal=True`` column.
+
+    Multiple initials or zero terminals would corrupt W2-C10's project
+    seed — new tasks would not know where to land, and the engine would
+    refuse to transition to a 'done' state.
+    """
+    from app.infrastructure.database._default_columns import (
+        KANBAN_DEFAULT_COLUMNS,
+        SCRUM_DEFAULT_COLUMNS,
+        WATERFALL_DEFAULT_COLUMNS,
+        ITERATIVE_DEFAULT_COLUMNS,
+    )
+
+    for label, cols in (
+        ("Scrum", SCRUM_DEFAULT_COLUMNS),
+        ("Kanban", KANBAN_DEFAULT_COLUMNS),
+        ("Waterfall", WATERFALL_DEFAULT_COLUMNS),
+        ("Iterative", ITERATIVE_DEFAULT_COLUMNS),
+    ):
+        initials = [c for c in cols if c["is_initial"]]
+        terminals = [c for c in cols if c["is_terminal"]]
+        assert len(initials) == 1, (
+            f"{label} must declare exactly one is_initial; got {len(initials)}"
+        )
+        assert len(terminals) >= 1, (
+            f"{label} must declare >=1 is_terminal; got {len(terminals)}"
+        )
+
+
+def test_seeder_template_dicts_carry_default_columns():
+    """Source-level check: seeder source MUST include `"default_columns":`
+    in every built-in template dict.
+
+    This catches a regression where someone removes the field from the
+    Scrum/Kanban/Waterfall template fixtures — the alembic migration would
+    still backfill the column, but freshly-seeded databases (test &
+    development) would drop back to NULL until the next migration run.
+    """
+    import inspect
+    from app.infrastructure.database import seeder
+
+    src = inspect.getsource(seeder.seed_process_templates)
+    # The Scrum template carries SCRUM_DEFAULT_COLUMNS, Kanban -> KANBAN,
+    # Waterfall -> WATERFALL — exactly 3 references in the dispatch list.
+    assert '"default_columns": SCRUM_DEFAULT_COLUMNS' in src, (
+        "Seeder Scrum template lost its default_columns binding."
+    )
+    assert '"default_columns": KANBAN_DEFAULT_COLUMNS' in src, (
+        "Seeder Kanban template lost its default_columns binding."
+    )
+    assert '"default_columns": WATERFALL_DEFAULT_COLUMNS' in src, (
+        "Seeder Waterfall template lost its default_columns binding."
+    )
+
+
+@pytest.mark.requires_db
+@pytest.mark.asyncio
+async def test_seeded_templates_carry_default_columns_with_engine_fields(db_session):
+    """W2-C9 integration: after seeding (or alembic 014 backfill), every
+    built-in template row should have ``default_columns`` populated with
+    the engine field shape.
+
+    Live-DB assertion — runs the seeder against the transactional test
+    session, then re-reads the row and validates the JSONB payload.
+    """
+    from sqlalchemy import select
+
+    from app.infrastructure.database.models.process_template import (
+        ProcessTemplateModel,
+    )
+    from app.infrastructure.database.seeder import seed_process_templates
+
+    await seed_process_templates(db_session)
+
+    for template_name, expected_len in (
+        ("Scrum", 5),
+        ("Kanban", 5),
+        ("Waterfall", 6),
+    ):
+        result = await db_session.execute(
+            select(ProcessTemplateModel).where(
+                ProcessTemplateModel.name == template_name
+            )
+        )
+        template = result.scalar_one()
+        assert template.default_columns is not None, (
+            f"{template_name}: default_columns must not be NULL after seeding"
+        )
+        assert isinstance(template.default_columns, list)
+        assert len(template.default_columns) == expected_len, (
+            f"{template_name}: expected {expected_len} columns, "
+            f"got {len(template.default_columns)}"
+        )
+        # Spot-check engine fields on first and last entries.
+        first = template.default_columns[0]
+        last = template.default_columns[-1]
+        assert first["is_initial"] is True, (
+            f"{template_name}: first column must be is_initial=True"
+        )
+        assert last["is_terminal"] is True, (
+            f"{template_name}: last column must be is_terminal=True"
+        )
+        # category bucket sanity
+        assert first["category"] == "todo"
+        assert last["category"] == "done"
