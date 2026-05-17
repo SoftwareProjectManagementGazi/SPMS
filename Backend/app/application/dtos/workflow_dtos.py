@@ -96,11 +96,52 @@ class WorkflowGroup(BaseModel):
     height: Optional[float] = None
 
 
+class WorkflowCapabilities(BaseModel):
+    """Wave 2 W2-C1 — capability flags that gate engine behaviors.
+
+    Mirrors phase_workflow.capabilities / task_workflow.capabilities shape from
+    .planning/workflow-engine-design.md §4. All fields have safe defaults so
+    legacy JSONB rows (no capabilities sub-object) parse without error and the
+    entity normalizer's idempotent setdefault path remains correct.
+
+    Used by WorkflowConfig.capabilities (and TaskWorkflowConfig.capabilities in
+    future waves). Engine reads via dict.get() on the JSONB blob, so this
+    Pydantic class is primarily for API boundary validation — it stops the
+    pre-fix silent drop where `extra="ignore"` discarded user-edited capability
+    values at PATCH time.
+    """
+
+    enforce_wip_limits: bool = False
+    enforce_sequential_dependencies: bool = False
+    restrict_expired_sprints: bool = False
+    has_recurring: bool = True  # task_workflow only; phase_workflow ignores
+    initial_node_id: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")  # forward compat: unknown caps tolerated
+
+    @field_validator("initial_node_id")
+    @classmethod
+    def validate_initial_node_id_format(cls, v):
+        # NOTE: we do NOT enforce NODE_ID_REGEX here — task_workflow.capabilities
+        # may reference a column-style id (numeric string), so format checks
+        # belong at the use-case layer where context is known.
+        if v is not None and not isinstance(v, str):
+            raise ValueError(f"initial_node_id must be a string, got {type(v).__name__}")
+        if v is not None and not v:
+            raise ValueError("initial_node_id must be non-empty when provided")
+        return v
+
+
 class WorkflowConfig(BaseModel):
     mode: Literal["flexible", "sequential-locked", "continuous", "sequential-flexible"]
     nodes: List[WorkflowNode]
     edges: List[WorkflowEdge]
     groups: List[WorkflowGroup] = []
+    # Wave 2 W2-C1 — engine capabilities round-trip. Optional with None default
+    # so legacy rows (where capabilities was never persisted at the Pydantic
+    # boundary, because pre-fix `extra="ignore"` silently dropped the key)
+    # still parse cleanly; the entity normalizer fills defaults downstream.
+    capabilities: Optional[WorkflowCapabilities] = None
 
     model_config = ConfigDict(extra="ignore")
 

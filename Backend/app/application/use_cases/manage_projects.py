@@ -152,6 +152,15 @@ class UpdateProjectUseCase:
         # entity normalizer (Project.normalize_process_config) renames the key
         # to `phase_workflow` on construction regardless of which one came in,
         # so persistence is always V2-shaped.
+        #
+        # W2-C1 — capabilities round-trip: WorkflowConfigDTO now declares
+        # `capabilities: Optional[WorkflowCapabilities]`, so user-edited
+        # capability flags (enforce_wip_limits, enforce_sequential_dependencies,
+        # restrict_expired_sprints, has_recurring, initial_node_id) survive the
+        # PATCH validation pass instead of being silently dropped by the
+        # pre-fix `extra="ignore"` shape. No body change required here; the
+        # validate-and-discard call below now additionally guards capability
+        # types (e.g. bool flags must be booleans).
         if dto.process_config is not None:
             wf = None
             if isinstance(dto.process_config, dict):
