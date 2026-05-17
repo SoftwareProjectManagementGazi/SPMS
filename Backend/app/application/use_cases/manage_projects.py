@@ -10,6 +10,10 @@ from app.domain.entities.board_column import BoardColumn
 from app.domain.entities.user import User
 from app.domain.exceptions import ProjectAccessDeniedError, ProjectNotFoundError
 from app.application.services.artifact_seeder import ArtifactSeeder
+from app.application.use_cases.manage_board_columns import (
+    SeedDefaultColumnsUseCase,
+    _normalize_template_column_shape,
+)
 
 
 class CreateProjectUseCase:
@@ -31,20 +35,87 @@ class CreateProjectUseCase:
         if self.template_repo is not None:
             template = await self.template_repo.get_by_name(dto.methodology.value)
 
-        # Build columns: from template if no custom columns provided, otherwise from DTO
-        if template and not dto.columns:
-            columns = [
-                BoardColumn(
-                    name=col["name"],
-                    order_index=col.get("order", i),
-                    wip_limit=col.get("wip_limit", 0),
-                )
-                for i, col in enumerate(template.columns)
-            ]
-        else:
+        # Wave 2 W2-C10 — Build columns via the engine-aware fallback chain:
+        #
+        #   1. ``dto.columns`` (user-customized; preserves V1 behavior).
+        #      Engine fields default — the seeder/UpdateColumn flow can fill
+        #      them in later via the Settings > Columns subtab.
+        #   2. ``template.default_columns`` (W2-C9 engine-aware shape) —
+        #      built-in templates (Scrum/Kanban/Waterfall) populated by
+        #      alembic 014 + seeder. Engine fields flow through verbatim.
+        #   3. ``template.columns`` (Wave 1 legacy shape) — extended templates
+        #      (V-Model, Spiral, RAD, …) without engine-aware seeds. Run
+        #      through ``_normalize_template_column_shape`` so engine fields
+        #      land on safe defaults; ``is_initial``/``is_terminal`` inferred
+        #      positionally below to match the SeedDefaultColumnsUseCase
+        #      legacy-shape behavior.
+        #   4. ``SeedDefaultColumnsUseCase.DEFAULT_COLUMNS`` (5-column hard-
+        #      coded) — last-resort fallback when no template was found.
+        columns: List[BoardColumn] = []
+
+        if dto.columns:
+            # Path 1: explicit user-supplied column names — V1 behavior preserved.
             columns = [
                 BoardColumn(name=col_name, order_index=i, wip_limit=0)
                 for i, col_name in enumerate(dto.columns)
+            ]
+        elif template is not None and getattr(template, "default_columns", None):
+            # Path 2: W2-C9 engine-aware default_columns — canonical going forward.
+            columns = [
+                BoardColumn(
+                    name=c["name"],
+                    order_index=c.get("order_index", i),
+                    wip_limit=c.get("wip_limit", 0),
+                    category=c.get("category", "todo"),
+                    is_initial=bool(c.get("is_initial", False)),
+                    is_terminal=bool(c.get("is_terminal", False)),
+                    max_duration_days=c.get("max_duration_days"),
+                    entry_policy=c.get("entry_policy", "any"),
+                    exit_policy=c.get("exit_policy", "any"),
+                )
+                for i, c in enumerate(template.default_columns)
+            ]
+        elif template is not None and template.columns:
+            # Path 3: legacy ``columns`` JSONB shape — engine fields defaulted,
+            # then is_initial/is_terminal inferred positionally so the engine
+            # still has a start + end state without an alembic backfill.
+            specs = [_normalize_template_column_shape(c) for c in template.columns]
+            has_any_initial = any(s["is_initial"] for s in specs)
+            has_any_terminal = any(s["is_terminal"] for s in specs)
+            if specs and not has_any_initial:
+                first_idx = min(range(len(specs)), key=lambda i: specs[i]["order_index"])
+                specs[first_idx]["is_initial"] = True
+            if specs and not has_any_terminal:
+                last_idx = max(range(len(specs)), key=lambda i: specs[i]["order_index"])
+                specs[last_idx]["is_terminal"] = True
+            columns = [
+                BoardColumn(
+                    name=s["name"],
+                    order_index=s["order_index"],
+                    wip_limit=s.get("wip_limit", 0),
+                    category=s["category"],
+                    is_initial=s["is_initial"],
+                    is_terminal=s["is_terminal"],
+                    max_duration_days=s.get("max_duration_days"),
+                    entry_policy=s.get("entry_policy", "any"),
+                    exit_policy=s.get("exit_policy", "any"),
+                )
+                for s in specs
+            ]
+        else:
+            # Path 4: no template, no DTO columns — fall back to the hard-coded
+            # 5-list embedded in ``SeedDefaultColumnsUseCase.DEFAULT_COLUMNS``.
+            # This keeps orphan/custom-workflow projects working out of the box.
+            columns = [
+                BoardColumn(
+                    name=spec["name"],
+                    order_index=i,
+                    wip_limit=0,
+                    category=spec["category"],
+                    is_initial=spec["is_initial"],
+                    is_terminal=spec["is_terminal"],
+                )
+                for i, spec in enumerate(SeedDefaultColumnsUseCase.DEFAULT_COLUMNS)
             ]
 
         # Build process_config: merge template behavioral_flags with user-provided config

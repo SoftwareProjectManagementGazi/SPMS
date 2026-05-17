@@ -1,5 +1,5 @@
 """Board column management use cases — Clean Architecture (no SQLAlchemy imports)."""
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from app.domain.entities.board_column import BoardColumn
 from app.domain.repositories.board_column_repository import IBoardColumnRepository
@@ -8,6 +8,55 @@ from app.application.dtos.board_column_dtos import (
     CreateColumnDTO,
     UpdateColumnDTO,
 )
+
+
+# --------------------------------------------------------------------------- #
+# Wave 2 W2-C10 — template column normalization helper.
+#
+# Two shapes flow through the seed path:
+#
+#   * **Engine-aware (canonical, W2-C9):** keys ``order_index`` + all engine
+#     fields (``category``, ``is_initial``, ``is_terminal``,
+#     ``max_duration_days``, ``entry_policy``, ``exit_policy``). Source:
+#     ``ProcessTemplate.default_columns`` for the three built-in templates
+#     (Scrum / Kanban / Waterfall).
+#
+#   * **Legacy (Wave 1):** keys ``name`` + ``order`` (+ optional ``wip_limit``).
+#     Source: ``ProcessTemplate.columns`` JSONB for extended templates
+#     (V-Model, Spiral, RAD, etc.) that have not been migrated to the
+#     engine-aware shape yet.
+#
+# This helper folds both into the canonical engine shape so downstream code
+# only ever deals with one dict layout. Missing engine fields fall back to
+# safe defaults (todo / "any" / False); ``is_initial`` / ``is_terminal``
+# are NOT auto-computed here — that's the caller's responsibility (the
+# seed loop sets the first/last column flags when the legacy shape is
+# detected via the absence of ANY ``is_initial``/``is_terminal`` flag in
+# the whole list).
+# --------------------------------------------------------------------------- #
+
+
+def _normalize_template_column_shape(col: Dict[str, Any]) -> Dict[str, Any]:
+    """Map both engine (W2-C9 canonical) and legacy (Wave 1) column shapes
+    into the canonical dict layout that the seed loop expects.
+
+    Legacy shape: ``{"name", "order", "wip_limit"?}`` — engine fields default.
+    Engine shape: ``{"name", "order_index", "category", "is_initial",
+                    "is_terminal", "max_duration_days", "entry_policy",
+                    "exit_policy", "wip_limit"?}`` — fully populated.
+    """
+    return {
+        "name": col["name"],
+        # Engine canonical key wins; legacy "order" only used if order_index missing.
+        "order_index": col.get("order_index", col.get("order", 0)),
+        "wip_limit": col.get("wip_limit", 0),
+        "category": col.get("category", "todo"),
+        "is_initial": bool(col.get("is_initial", False)),
+        "is_terminal": bool(col.get("is_terminal", False)),
+        "max_duration_days": col.get("max_duration_days"),
+        "entry_policy": col.get("entry_policy", "any"),
+        "exit_policy": col.get("exit_policy", "any"),
+    }
 
 
 def _to_dto(column: BoardColumn, task_count: int = 0) -> BoardColumnDTO:
@@ -161,6 +210,14 @@ class SeedDefaultColumnsUseCase:
     # uses is_initial / is_terminal directly, so seeded projects are wired right
     # out of the box without relying on the order_index-positional heuristic that
     # 013's backfill query uses for legacy data.
+    #
+    # Wave 2 W2-C10 — these remain the hard-coded fallback used only when:
+    #   (a) ``CreateProjectUseCase`` finds no template for the methodology, OR
+    #   (b) a downstream caller seeds an orphan project with no template_columns.
+    # Production paths route templates through ``execute(template_columns=...)``
+    # instead, which threads ``ProcessTemplate.default_columns`` (Scrum/Kanban/
+    # Waterfall) or the legacy ``columns`` field (extended templates) through
+    # ``_normalize_template_column_shape``.
     DEFAULT_COLUMNS = [
         {"name": "Backlog",     "category": "todo",        "is_initial": True,  "is_terminal": False},
         {"name": "Todo",        "category": "todo",        "is_initial": False, "is_terminal": False},
@@ -172,20 +229,73 @@ class SeedDefaultColumnsUseCase:
     def __init__(self, column_repo: IBoardColumnRepository):
         self.column_repo = column_repo
 
-    async def execute(self, project_id: int) -> List[BoardColumnDTO]:
-        """Insert 5 default columns for a project. Used when a project has no columns."""
+    async def execute(
+        self,
+        project_id: int,
+        template_columns: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[BoardColumnDTO]:
+        """Seed default columns for a project.
+
+        Wave 2 W2-C10 — ``template_columns`` is an optional list of column dicts
+        in either the engine-aware (W2-C9) shape or the legacy (Wave 1) shape.
+        Both are folded through ``_normalize_template_column_shape``.
+
+        When ``template_columns`` is ``None`` the hard-coded 5-column fallback
+        (``DEFAULT_COLUMNS``) is used — preserving the pre-W2-C10 behavior for
+        callers that have no template (orphan projects, legacy code paths).
+
+        Behavior for legacy shape: if NONE of the supplied template_columns
+        carry an explicit ``is_initial``/``is_terminal`` flag we infer them
+        positionally (first column = initial, last = terminal). This keeps
+        the extended templates (V-Model, Spiral, RAD, …) workflow-engine-ready
+        out of the box without requiring an alembic backfill of their
+        ``columns`` JSONB.
+        """
+        if template_columns is not None:
+            specs = [_normalize_template_column_shape(c) for c in template_columns]
+
+            # If the legacy shape supplied nothing about initial/terminal,
+            # infer positionally so the engine still has a start + end state.
+            # (Engine-aware shape already populates these flags explicitly.)
+            has_any_initial = any(s["is_initial"] for s in specs)
+            has_any_terminal = any(s["is_terminal"] for s in specs)
+            if specs and not has_any_initial:
+                # Order by the normalized order_index so we mark the visually-first column.
+                first_idx = min(range(len(specs)), key=lambda i: specs[i]["order_index"])
+                specs[first_idx]["is_initial"] = True
+            if specs and not has_any_terminal:
+                last_idx = max(range(len(specs)), key=lambda i: specs[i]["order_index"])
+                specs[last_idx]["is_terminal"] = True
+        else:
+            # Hard-coded fallback — preserves pre-W2-C10 behavior.
+            specs = [
+                {
+                    "name": s["name"],
+                    "order_index": i,
+                    "wip_limit": 0,
+                    "category": s["category"],
+                    "is_initial": s["is_initial"],
+                    "is_terminal": s["is_terminal"],
+                    "max_duration_days": None,
+                    "entry_policy": "any",
+                    "exit_policy": "any",
+                }
+                for i, s in enumerate(self.DEFAULT_COLUMNS)
+            ]
+
         columns = []
-        for i, spec in enumerate(self.DEFAULT_COLUMNS):
+        for spec in specs:
             column = BoardColumn(
                 project_id=project_id,
                 name=spec["name"],
-                order_index=i,
-                wip_limit=0,
+                order_index=spec["order_index"],
+                wip_limit=spec.get("wip_limit", 0),
                 category=spec["category"],
                 is_initial=spec["is_initial"],
                 is_terminal=spec["is_terminal"],
-                # entry_policy / exit_policy / max_duration_days stay at entity
-                # defaults — explicit policies are a C7+ concern.
+                max_duration_days=spec.get("max_duration_days"),
+                entry_policy=spec.get("entry_policy", "any"),
+                exit_policy=spec.get("exit_policy", "any"),
             )
             created = await self.column_repo.create(column)
             columns.append(_to_dto(created, 0))
