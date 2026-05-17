@@ -169,11 +169,18 @@ async def export_pdf(
     if report is None:
         raise HTTPException(404, "PhaseReport not found")
 
-    # Resolve phase name from project workflow nodes
+    # Resolve phase name from project workflow nodes.
+    # C1: V2 renamed `workflow` -> `phase_workflow`; entity normalizer migrates
+    # legacy rows on load. Fallback to V1 alias supports in-memory fakes.
     project = await project_repo.get_by_id(report.project_id)
     phase_name = "N/A"
     project_name = project.name if project else "N/A"
-    nodes = (project.process_config or {}).get("workflow", {}).get("nodes", []) if project else []
+    if project:
+        pc = project.process_config or {}
+        pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+        nodes = pw.get("nodes", [])
+    else:
+        nodes = []
     node = next((n for n in nodes if n["id"] == report.phase_id), None)
     if node:
         phase_name = node.get("name", report.phase_id)

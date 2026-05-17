@@ -2,7 +2,9 @@
 
 JSON linked_phase_ids is an array of workflow node IDs (D-24). Empty list valid.
 Phase ID format regex matches Task.phase_id (D-22). Cross-entity reference to
-project.process_config.workflow.nodes; validated in use case, not entity.
+project.process_config.phase_workflow.nodes; validated in use case, not entity.
+
+C1 (workflow engine refactor): schema V2 renamed `workflow` -> `phase_workflow`.
 """
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional

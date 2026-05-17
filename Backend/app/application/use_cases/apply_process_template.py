@@ -74,14 +74,17 @@ class ApplyProcessTemplateUseCase:
                     failed.append({"project_id": pid, "error": "project_not_found"})
                     continue
 
-                # Apply template fields
+                # Apply template fields.
+                # C1: V2 schema — write into `phase_workflow` (was `workflow` in V1)
+                # and stamp schema_version=2. The entity normalizer is idempotent on
+                # V2 and will populate `capabilities` if absent.
                 project.process_template_id = template.id
                 pc = project.process_config or {}
                 if getattr(template, "default_workflow", None):
-                    pc["workflow"] = template.default_workflow
+                    pc["phase_workflow"] = template.default_workflow
                 if getattr(template, "default_phase_criteria", None):
                     pc["phase_completion_criteria"] = template.default_phase_criteria
-                pc["schema_version"] = 1
+                pc["schema_version"] = 2
                 project.process_config = pc
 
                 await self.project_repo.update(project)

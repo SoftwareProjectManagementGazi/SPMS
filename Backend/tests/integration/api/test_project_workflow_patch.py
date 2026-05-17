@@ -170,10 +170,16 @@ async def test_patch_round_trips_description_isInitial_isFinal_parentId_wipLimit
         assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
 
         # GET back and verify fields didn't get silently dropped.
+        # C1: V2 schema renamed `workflow` -> `phase_workflow`. The PATCH route
+        # still accepts both keys (dual-key tolerance), but the GET response
+        # always carries `phase_workflow` after the Project entity normalizes.
         r2 = await client.get(f"/api/v1/projects/{pid}")
         assert r2.status_code == 200
         body = r2.json()
-        nodes = body["process_config"]["workflow"]["nodes"]
+        pc = body["process_config"]
+        pw = pc.get("phase_workflow") or pc.get("workflow")
+        assert pw is not None, "Response missing both phase_workflow and workflow keys"
+        nodes = pw["nodes"]
         first = next((n for n in nodes if n["id"] == "nd_initialnod"), None)
         assert first is not None, "Initial node lost on round trip"
         assert first.get("description") == "Sprint planning phase"

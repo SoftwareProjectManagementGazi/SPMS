@@ -100,7 +100,8 @@ PARENT_TASK_TEMPLATES = [
 SUBTASK_PREFIXES = ["Analiz", "Tasarım", "Geliştirme", "Unit Test", "Entegrasyon", "Code Review", "Bug Fix"]
 
 # Phase 12 Plan 12-10 (LIFE-01 fix) — default workflow shapes per methodology
-# so a freshly-seeded project never lands with an empty `process_config.workflow`.
+# so a freshly-seeded project never lands with an empty `process_config.phase_workflow`.
+# (C1: V2 schema renamed `workflow` -> `phase_workflow`.)
 # Each shape ports the canonical preset from
 # Frontend2/lib/lifecycle/presets.ts (which itself ports from
 # New_Frontend/src/data.jsx DEFAULT_LIFECYCLES + EXTRA_LIFECYCLES) so the
@@ -222,6 +223,34 @@ _DEFAULT_WORKFLOW_ITERATIVE = {
 }
 
 
+# C1: capabilities defaults per methodology. Mirrors the seed values written
+# by migration_005.py for the process_templates table (Scrum -> restrict_expired_sprints,
+# Kanban -> enforce_wip_limits, Waterfall -> enforce_sequential_dependencies).
+# Kept here as the single seed-time source of truth for fresh project rows.
+_CAPABILITY_DEFAULTS_BY_METHODOLOGY = {
+    Methodology.SCRUM: {
+        "enforce_wip_limits": False,
+        "enforce_sequential_dependencies": False,
+        "restrict_expired_sprints": True,
+    },
+    Methodology.KANBAN: {
+        "enforce_wip_limits": True,
+        "enforce_sequential_dependencies": False,
+        "restrict_expired_sprints": False,
+    },
+    Methodology.WATERFALL: {
+        "enforce_wip_limits": False,
+        "enforce_sequential_dependencies": True,
+        "restrict_expired_sprints": False,
+    },
+    Methodology.ITERATIVE: {
+        "enforce_wip_limits": False,
+        "enforce_sequential_dependencies": False,
+        "restrict_expired_sprints": False,
+    },
+}
+
+
 def _default_workflow_for_methodology(methodology: Methodology) -> dict:
     """Return a ready-to-use workflow shape (LIFE-01 fix).
 
@@ -229,17 +258,39 @@ def _default_workflow_for_methodology(methodology: Methodology) -> dict:
     the Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip
     have a real workflow to render on day-zero. The returned dict is a deep
     copy so callers can mutate it without affecting the module-level fixture.
+
+    C1 (workflow engine refactor): the returned dict is a V2 `phase_workflow`
+    block that includes the `capabilities` sub-object seeded with methodology-
+    appropriate defaults (mirrors migration_005.py:115-139). The caller is
+    expected to attach this under `process_config["phase_workflow"]` with
+    `schema_version=2`.
     """
     import copy
     if methodology == Methodology.WATERFALL:
-        return copy.deepcopy(_DEFAULT_WORKFLOW_WATERFALL)
-    if methodology == Methodology.KANBAN:
-        return copy.deepcopy(_DEFAULT_WORKFLOW_KANBAN)
-    if methodology == Methodology.ITERATIVE:
-        return copy.deepcopy(_DEFAULT_WORKFLOW_ITERATIVE)
-    # SCRUM is the default fallback (matches CLAUDE.md polymorphism rule —
-    # any unhandled methodology degrades to the safest, most-common shape).
-    return copy.deepcopy(_DEFAULT_WORKFLOW_SCRUM)
+        wf = copy.deepcopy(_DEFAULT_WORKFLOW_WATERFALL)
+    elif methodology == Methodology.KANBAN:
+        wf = copy.deepcopy(_DEFAULT_WORKFLOW_KANBAN)
+    elif methodology == Methodology.ITERATIVE:
+        wf = copy.deepcopy(_DEFAULT_WORKFLOW_ITERATIVE)
+    else:
+        # SCRUM is the default fallback (matches CLAUDE.md polymorphism rule —
+        # any unhandled methodology degrades to the safest, most-common shape).
+        wf = copy.deepcopy(_DEFAULT_WORKFLOW_SCRUM)
+
+    # C1: derive initial_node_id from the seeded nodes (matches the entity
+    # normalizer's algorithm) and attach the capabilities sub-object.
+    initial_node_id = None
+    for n in wf.get("nodes", []) or []:
+        if isinstance(n, dict) and n.get("is_initial"):
+            initial_node_id = n.get("id")
+            break
+    cap_defaults = _CAPABILITY_DEFAULTS_BY_METHODOLOGY.get(methodology, {
+        "enforce_wip_limits": False,
+        "enforce_sequential_dependencies": False,
+        "restrict_expired_sprints": False,
+    })
+    wf["capabilities"] = {**cap_defaults, "initial_node_id": initial_node_id}
+    return wf
 
 COMMENT_TEXTS = [
     "Bu konuda biraz daha detaya ihtiyacım var.",
@@ -512,14 +563,17 @@ async def seed_projects(session: AsyncSession, users_map):
             )
             # D-36: varied project statuses for SegmentedControl filter testing
             project.status = ProjectStatus(p_data.get("status", "ACTIVE"))
-            # D-36: process_config base structure (schema_version 1).
+            # D-36: process_config base structure (schema_version 2 since C1).
             # Phase 12 Plan 12-10 (LIFE-01 fix) — seed a non-empty default
             # workflow per methodology so freshly-created projects never
             # land on an empty `nodes: []` and the lifecycle panel always
             # has a real graph to render on first open.
+            # C1 (workflow engine refactor): V2 schema — key is `phase_workflow`
+            # (was `workflow`), and the helper attaches `capabilities` with
+            # methodology-appropriate defaults.
             project.process_config = {
-                "schema_version": 1,
-                "workflow": _default_workflow_for_methodology(p_data["methodology"]),
+                "schema_version": 2,
+                "phase_workflow": _default_workflow_for_methodology(p_data["methodology"]),
             }
             # Rastgele 4-6 üye ata
             members = random.sample(all_users, k=min(len(all_users), random.randint(4, 6)))

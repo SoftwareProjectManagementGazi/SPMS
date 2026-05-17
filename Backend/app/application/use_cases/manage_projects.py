@@ -136,17 +136,29 @@ class UpdateProjectUseCase:
             raise ProjectAccessDeniedError(project_id)
 
         # Phase 12 Plan 12-10 (Bug X + Bug Y UAT fix) — when the client sends
-        # `process_config.workflow`, route it through the WorkflowConfig
-        # Pydantic DTO so D-22 node-id regex + D-55 rules 1-3 + D-19 rule 4
-        # all execute server-side. Pre-fix the dto's `process_config` was
-        # `Dict[str, Any]` which accepted ANY shape, so bad node IDs and
-        # missing isInitial/isFinal landed in the DB and only failed later
-        # at task-creation time. We surface the validation error as a
-        # standard Pydantic ValidationError; FastAPI's exception handler
-        # converts that to a 422 with the standard `detail[]` payload so
-        # the FE save-flow's 422 branch shows the correct toast.
+        # `process_config.workflow` (V1 legacy) or `process_config.phase_workflow`
+        # (V2, C1 onwards), route it through the WorkflowConfig Pydantic DTO so
+        # D-22 node-id regex + D-55 rules 1-3 + D-19 rule 4 all execute server-side.
+        # Pre-fix the dto's `process_config` was `Dict[str, Any]` which accepted
+        # ANY shape, so bad node IDs and missing isInitial/isFinal landed in the
+        # DB and only failed later at task-creation time. We surface the validation
+        # error as a standard Pydantic ValidationError; FastAPI's exception handler
+        # converts that to a 422 with the standard `detail[]` payload so the FE
+        # save-flow's 422 branch shows the correct toast.
+        #
+        # C1 — dual-key tolerance at the API boundary: accept BOTH the legacy
+        # `workflow` key and the new `phase_workflow` key so the FE (Frontend2)
+        # migration in C10 can land independently of this backend rename. The
+        # entity normalizer (Project.normalize_process_config) renames the key
+        # to `phase_workflow` on construction regardless of which one came in,
+        # so persistence is always V2-shaped.
         if dto.process_config is not None:
-            wf = dto.process_config.get("workflow") if isinstance(dto.process_config, dict) else None
+            wf = None
+            if isinstance(dto.process_config, dict):
+                wf = (
+                    dto.process_config.get("phase_workflow")
+                    or dto.process_config.get("workflow")
+                )
             if isinstance(wf, dict):
                 # Pydantic raises ValidationError on regex / business-rule
                 # failures; let it propagate up to the API layer.

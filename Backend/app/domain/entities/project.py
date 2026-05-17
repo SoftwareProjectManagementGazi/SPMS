@@ -22,7 +22,11 @@ class ProjectStatus(str, Enum):
 
 
 # BACK-03 / D-33 — process_config schema version
-CURRENT_SCHEMA_VERSION = 1
+# C1 (workflow engine refactor): bumped to 2.
+#   V2 changes: rename `workflow` -> `phase_workflow`; nest engine flags
+#   (enforce_wip_limits / enforce_sequential_dependencies / restrict_expired_sprints)
+#   under `phase_workflow.capabilities`. See .planning/workflow-engine-design.md.
+CURRENT_SCHEMA_VERSION = 2
 _MAX_MIGRATION_ITERATIONS = 20  # Pitfall 4 guard against infinite loop
 
 
@@ -42,6 +46,8 @@ def _migrate_v0_to_v1(config: dict) -> dict:
     #   Waterfall-> enforce_sequential_dependencies=True
     # No use case reads these yet; they are the contract for the upcoming
     # workflow engine (Strangler target — see workflow motor design).
+    # NOTE (C1): V2 migration moves these into phase_workflow.capabilities;
+    # at V1 they still live at the top level so this seed is intentional.
     new.setdefault("enforce_sequential_dependencies", False)
     new.setdefault("enforce_wip_limits", False)
     new.setdefault("restrict_expired_sprints", False)
@@ -52,8 +58,61 @@ def _migrate_v0_to_v1(config: dict) -> dict:
     return new
 
 
+def _migrate_v1_to_v2(config: dict) -> dict:
+    """V1 -> V2: rename `workflow` -> `phase_workflow`; nest engine flags under `capabilities`.
+
+    Idempotent and defensive — safe to run on partially-migrated configs in the wild
+    (e.g. a V1 row that already has `phase_workflow` because it was touched by a
+    forward-compatible client). Behavioural impact is zero; only the JSONB shape
+    changes. See .planning/workflow-engine-design.md and the C1 plan section in
+    .planning/workflow-engine-implementation.md.
+    """
+    new = dict(config)
+    # 1. Rename workflow -> phase_workflow (only if old key exists AND new key does not).
+    if "workflow" in new and "phase_workflow" not in new:
+        new["phase_workflow"] = new.pop("workflow")
+    elif "workflow" in new:
+        # Both present — keep phase_workflow as canonical, drop the legacy alias.
+        new.pop("workflow", None)
+
+    # 2. Build capabilities sub-object by pulling from top-level flags.
+    caps = {
+        "enforce_wip_limits": new.pop("enforce_wip_limits", False),
+        "enforce_sequential_dependencies": new.pop(
+            "enforce_sequential_dependencies", False
+        ),
+        "restrict_expired_sprints": new.pop("restrict_expired_sprints", False),
+        # initial_node_id is derived from nodes when any node has is_initial=True.
+        "initial_node_id": None,
+    }
+    pw = new.get("phase_workflow") or {}
+    if isinstance(pw, dict):
+        for n in pw.get("nodes", []) or []:
+            if isinstance(n, dict) and n.get("is_initial"):
+                caps["initial_node_id"] = n.get("id")
+                break
+        # Idempotency for partial pre-V2 configs in the wild: only set capabilities
+        # if it isn't already present. Do NOT overwrite a pre-existing block.
+        pw.setdefault("capabilities", caps)
+        new["phase_workflow"] = pw
+    else:
+        # Highly defensive: phase_workflow was non-dict (e.g. None). Seed a minimal
+        # canonical block so downstream readers don't NPE.
+        new["phase_workflow"] = {
+            "mode": "flexible",
+            "nodes": [],
+            "edges": [],
+            "groups": [],
+            "capabilities": caps,
+        }
+
+    new["schema_version"] = 2
+    return new
+
+
 _MIGRATIONS = {
     0: _migrate_v0_to_v1,
+    1: _migrate_v1_to_v2,
     # When bumping CURRENT_SCHEMA_VERSION, add migration handler here.
 }
 

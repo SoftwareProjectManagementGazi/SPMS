@@ -118,9 +118,10 @@ def test_workflow_edges_have_v2_fields_in_source():
 # >=1 isFinal, mode set, edges/groups arrays present).
 #
 # The bug we are guarding against: prior to this plan, freshly-seeded
-# projects landed with `process_config.workflow.nodes = []`, which caused
+# projects landed with `process_config.phase_workflow.nodes = []`, which caused
 # the Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip
 # to render a dead-end "no workflow defined" message with no CTA.
+# (C1: V2 schema renamed `workflow` -> `phase_workflow`.)
 
 def test_default_workflow_scrum_has_at_least_3_nodes():
     """Scrum default workflow must include >= 3 nodes with valid initial/final markers."""
@@ -216,7 +217,8 @@ def test_default_workflow_edges_have_v2_fields():
 
 def test_default_workflow_node_ids_match_d22_regex():
     """Every node in every _DEFAULT_WORKFLOW_* must satisfy the D-22 regex
-    so the seeded process_config.workflow doesn't 422 on the next user save.
+    so the seeded process_config.phase_workflow doesn't 422 on the next user save.
+    (C1: V2 schema renamed `workflow` -> `phase_workflow`.)
     """
     from app.infrastructure.database.seeder import _default_workflow_for_methodology
     from app.infrastructure.database.models.project import Methodology

@@ -50,15 +50,21 @@ async def _validate_phase_ids_against_workflow(
     project_id: int,
     project_repo: IProjectRepository,
 ) -> None:
-    """D-19/D-21: each id must exist in project.process_config.workflow.nodes and
+    """D-19/D-21: each id must exist in project.process_config.phase_workflow.nodes and
     not be is_archived. Raises ArchivedNodeReferenceError on first violation.
-    Empty list is valid (D-24)."""
+    Empty list is valid (D-24).
+
+    C1: V2 schema renamed `workflow` -> `phase_workflow`. Entity normalizer migrates
+    legacy rows on load. The fallback to the V1 alias keeps in-memory fakes
+    (tests that bypass the entity layer) working — see C3 for fixture cleanup."""
     if not phase_ids:
         return
     project = await project_repo.get_by_id(project_id)
     if project is None:
         raise ProjectNotFoundError(project_id)
-    nodes = (project.process_config or {}).get("workflow", {}).get("nodes", [])
+    pc = project.process_config or {}
+    pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+    nodes = pw.get("nodes", [])
     node_map = {n["id"]: n for n in nodes}
     for pid in phase_ids:
         node = node_map.get(pid)

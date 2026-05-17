@@ -526,8 +526,11 @@ async def patch_phase_criteria(
     """API-06 / D-06: upsert phase_completion_criteria[phase_id].
 
     WARNING-3 fix (D-19 strict validation):
-    Validates dto.phase_id against project.process_config.workflow.nodes.
+    Validates dto.phase_id against project.process_config.phase_workflow.nodes.
     Rejects unknown or archived phase_ids with 400 + error_code=INVALID_PHASE_ID.
+
+    C1: V2 renamed `workflow` -> `phase_workflow`; entity normalizer migrates
+    legacy rows on load.
     """
     project = await project_repo.get_by_id(project_id)
     if project is None:
@@ -535,8 +538,10 @@ async def patch_phase_criteria(
 
     pc = project.process_config or {}
 
-    # WARNING-3 / D-19: strict phase_id validation against non-archived workflow nodes
-    workflow = pc.get("workflow", {}) or {}
+    # WARNING-3 / D-19: strict phase_id validation against non-archived workflow nodes.
+    # C1: read `phase_workflow` first, fall back to legacy `workflow` for in-memory
+    # fakes that bypass the entity normalizer.
+    workflow = pc.get("phase_workflow") or pc.get("workflow") or {}
     nodes = workflow.get("nodes", []) or []
     valid_node_ids = {
         n["id"] for n in nodes
@@ -550,7 +555,7 @@ async def patch_phase_criteria(
             detail={
                 "error_code": "INVALID_PHASE_ID",
                 "bad_phase_ids": bad_phase_ids,
-                "reason": "phase_id not present in project.process_config.workflow.nodes (or node is archived)",
+                "reason": "phase_id not present in project.process_config.phase_workflow.nodes (or node is archived)",
             },
         )
 

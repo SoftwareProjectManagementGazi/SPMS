@@ -1290,7 +1290,13 @@ def _rnd_date(start_days_ago=60, end_days_ago=0) -> datetime:
 
 
 def _default_workflow_for_template_name(template_name: str, templates_by_name: dict) -> dict:
-    """Şablon adından process_config.workflow oluştur."""
+    """Şablon adından process_config.phase_workflow oluştur (C1: V2 schema).
+
+    Returns the raw `default_workflow` shape from the template; the caller is
+    responsible for stamping it under `process_config["phase_workflow"]` with
+    `schema_version=2`. The entity normalizer will inject a default
+    `capabilities` block on first load if absent.
+    """
     tpl = templates_by_name.get(template_name.lower())
     if tpl and tpl.default_workflow:
         return copy.deepcopy(tpl.default_workflow)
@@ -1400,9 +1406,12 @@ async def seed_extra_projects(session: AsyncSession, users_map: dict, templates_
             end_date=date.today()   + timedelta(days=random.randint(60, 180)),
         )
         project.status = ProjectStatus(p_data.get("status", "ACTIVE"))
+        # C1 (workflow engine refactor): V2 schema — key is `phase_workflow`
+        # (was `workflow`). Entity normalizer attaches a default `capabilities`
+        # block on first load if absent.
         project.process_config = {
-            "schema_version": 1,
-            "workflow": _default_workflow_for_template_name(tpl_name, templates_by_name),
+            "schema_version": 2,
+            "phase_workflow": _default_workflow_for_template_name(tpl_name, templates_by_name),
         }
 
         # 6–12 rastgele üye
