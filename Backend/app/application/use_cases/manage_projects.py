@@ -217,28 +217,33 @@ class UpdateProjectUseCase:
         # converts that to a 422 with the standard `detail[]` payload so the FE
         # save-flow's 422 branch shows the correct toast.
         #
-        # C1 — dual-key tolerance at the API boundary: accept BOTH the legacy
-        # `workflow` key and the new `phase_workflow` key so the FE (Frontend2)
-        # migration in C10 can land independently of this backend rename. The
-        # entity normalizer (Project.normalize_process_config) renames the key
-        # to `phase_workflow` on construction regardless of which one came in,
-        # so persistence is always V2-shaped.
+        # W2-C11 — Dual-key tolerance removed. The Wave 1 C1 read-side accepted
+        # BOTH the legacy `workflow` key (Frontend1) AND the new `phase_workflow`
+        # key (V2-aware clients) as a migration bridge while Frontend2 was being
+        # rewritten. Since W2-C5 (Wave 2 frontend save-handler rewrite) Frontend2
+        # emits `phase_workflow` exclusively, so the legacy alias is no longer
+        # needed at the API boundary.
         #
-        # W2-C1 — capabilities round-trip: WorkflowConfigDTO now declares
+        # Read-side normalizer (Project.normalize_process_config /
+        # _migrate_v1_to_v2) still renames legacy V1 `workflow` -> `phase_workflow`
+        # on entity load, so persisted pre-W2 documents remain readable.
+        #
+        # Behavioural note: pre-W2-C5 clients still PATCHing the legacy `workflow`
+        # key receive a 200 (the JSONB column is still updated) but their workflow
+        # block bypasses WorkflowConfigDTO validation. The normalizer renames the
+        # key on the next entity load. This is acceptable degradation — every
+        # supported FE binary post-W2-C5 emits the canonical V2 key.
+        #
+        # W2-C1 — capabilities round-trip: WorkflowConfigDTO declares
         # `capabilities: Optional[WorkflowCapabilities]`, so user-edited
         # capability flags (enforce_wip_limits, enforce_sequential_dependencies,
         # restrict_expired_sprints, has_recurring, initial_node_id) survive the
         # PATCH validation pass instead of being silently dropped by the
-        # pre-fix `extra="ignore"` shape. No body change required here; the
-        # validate-and-discard call below now additionally guards capability
-        # types (e.g. bool flags must be booleans).
+        # pre-fix `extra="ignore"` shape.
         if dto.process_config is not None:
             wf = None
             if isinstance(dto.process_config, dict):
-                wf = (
-                    dto.process_config.get("phase_workflow")
-                    or dto.process_config.get("workflow")
-                )
+                wf = dto.process_config.get("phase_workflow")
             if isinstance(wf, dict):
                 # Pydantic raises ValidationError on regex / business-rule
                 # failures; let it propagate up to the API layer.

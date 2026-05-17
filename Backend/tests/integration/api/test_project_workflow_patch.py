@@ -14,6 +14,15 @@ This integration suite asserts the post-fix behavior:
     round-trips through GET /projects/{id} with the fields intact (Bug Y)
   * Workflow with zero is_initial nodes → 422 (Bug Y rule 4)
   * Workflow with zero is_final nodes → 422 (Bug Y rule 4)
+
+W2-C11 NOTE: The PATCH body shape was originally `{"workflow": ...}` (the V1
+key) because these tests pre-date the W1 schema migration. W2-C11 removed the
+backend's dual-key tolerance — the canonical V2 key is `phase_workflow`. All
+validation-shape tests below have been migrated to emit `phase_workflow` so
+they continue to exercise the WorkflowConfigDTO validation contract. A new
+test (test_patch_with_legacy_workflow_key_no_longer_validates) explicitly
+documents that legacy `workflow` PATCH bodies now bypass validation but still
+get normalized on entity load.
 """
 import json
 import pytest
@@ -91,7 +100,7 @@ async def test_patch_with_legacy_n1_id_returns_422(authenticated_client, db_sess
     async with authenticated_client(role="admin") as client:
         r = await client.patch(
             f"/api/v1/projects/{pid}",
-            json={"process_config": {"workflow": bad_workflow}},
+            json={"process_config": {"phase_workflow": bad_workflow}},
         )
         assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
 
@@ -114,7 +123,7 @@ async def test_patch_with_compliant_nd_ids_returns_200(authenticated_client, db_
     async with authenticated_client(role="admin") as client:
         r = await client.patch(
             f"/api/v1/projects/{pid}",
-            json={"process_config": {"workflow": good_workflow}},
+            json={"process_config": {"phase_workflow": good_workflow}},
         )
         assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
 
@@ -165,20 +174,20 @@ async def test_patch_round_trips_description_isInitial_isFinal_parentId_wipLimit
     async with authenticated_client(role="admin") as client:
         r = await client.patch(
             f"/api/v1/projects/{pid}",
-            json={"process_config": {"workflow": workflow}},
+            json={"process_config": {"phase_workflow": workflow}},
         )
         assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
 
         # GET back and verify fields didn't get silently dropped.
-        # C1: V2 schema renamed `workflow` -> `phase_workflow`. The PATCH route
-        # still accepts both keys (dual-key tolerance), but the GET response
-        # always carries `phase_workflow` after the Project entity normalizes.
+        # W2-C11: V2 schema is canonical. The GET response always carries
+        # `phase_workflow` after the Project entity normalizes (legacy V1
+        # rows continue to be migrated on entity load).
         r2 = await client.get(f"/api/v1/projects/{pid}")
         assert r2.status_code == 200
         body = r2.json()
         pc = body["process_config"]
-        pw = pc.get("phase_workflow") or pc.get("workflow")
-        assert pw is not None, "Response missing both phase_workflow and workflow keys"
+        pw = pc.get("phase_workflow")
+        assert pw is not None, "Response missing phase_workflow key"
         nodes = pw["nodes"]
         first = next((n for n in nodes if n["id"] == "nd_initialnod"), None)
         assert first is not None, "Initial node lost on round trip"
@@ -215,7 +224,7 @@ async def test_patch_with_zero_initial_returns_422(authenticated_client, db_sess
     async with authenticated_client(role="admin") as client:
         r = await client.patch(
             f"/api/v1/projects/{pid}",
-            json={"process_config": {"workflow": workflow}},
+            json={"process_config": {"phase_workflow": workflow}},
         )
         assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
 
@@ -245,21 +254,40 @@ async def test_patch_with_zero_final_returns_422(authenticated_client, db_sessio
     async with authenticated_client(role="admin") as client:
         r = await client.patch(
             f"/api/v1/projects/{pid}",
-            json={"process_config": {"workflow": workflow}},
+            json={"process_config": {"phase_workflow": workflow}},
         )
         assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
 
 
 @pytest.mark.asyncio
-async def test_patch_accepts_legacy_workflow_key(authenticated_client, db_session):
-    """C1 D-X / C3: PATCH endpoint dual-key tolerance — the API accepts BOTH
-    the legacy `workflow` key (Frontend1 / pre-FE2 clients) AND the new
-    `phase_workflow` key (V2-aware clients) and the entity normalizer renames
-    it on persistence. GET-after-PATCH always returns the V2 `phase_workflow`
-    shape regardless of which key the client originally sent.
+async def test_patch_with_legacy_workflow_key_no_longer_validates(authenticated_client, db_session):
+    """W2-C11: legacy `workflow` key is silently dropped by WorkflowConfigDTO
+    validation at the API boundary, but the PATCH itself still succeeds and
+    the entity normalizer migrates the persisted JSONB on the next entity
+    load.
 
-    This contract MUST be preserved until C10 — only after FE2 ships with V2
-    payloads can the legacy `workflow` request-boundary tolerance be removed.
+    Pre-W2-C11 the API boundary accepted BOTH `workflow` (Frontend1) and
+    `phase_workflow` (V2-aware clients) — dual-key tolerance kept the
+    Wave 1 backend rename decoupled from the Frontend2 migration. After
+    Frontend2 shipped its V2 save handler in W2-C5, the legacy alias was
+    no longer reachable from any supported client, so W2-C11 removed it
+    from the API boundary.
+
+    Behavioural contract preserved by this test:
+      * PATCH `{"process_config": {"workflow": ...}}` still returns 200 —
+        backend doesn't reject the unknown key (the JSONB column accepts
+        arbitrary dicts).
+      * The `workflow` block does NOT pass through `WorkflowConfigDTO`
+        validation (the use case only validates `phase_workflow`).
+      * The entity normalizer renames `workflow` -> `phase_workflow`
+        when the next read constructs the Project entity, so GET-after-
+        PATCH surfaces the V2 key shape.
+
+    This documents the graceful-degradation path for any pre-W2-C5 client
+    still emitting V1 payloads. Note: an invalid `workflow` block that
+    would have produced 422 pre-W2-C11 now silently passes — this is the
+    intentional cost of the cleanup, because no supported FE binary still
+    emits the legacy key.
     """
     if not await _db_has_roles(db_session):
         pytest.skip("DB has no roles — skipping integration test")
@@ -274,28 +302,34 @@ async def test_patch_accepts_legacy_workflow_key(authenticated_client, db_sessio
     }
 
     async with authenticated_client(role="admin") as client:
-        # Send with the LEGACY `workflow` key — backend must accept.
+        # Send with the LEGACY `workflow` key — backend no longer validates
+        # the block, but the PATCH succeeds (200) because the unknown key is
+        # accepted into the process_config JSONB.
         r = await client.patch(
             f"/api/v1/projects/{pid}",
             json={"process_config": {"workflow": good_workflow}},
         )
         assert r.status_code == 200, (
-            f"PATCH must accept legacy `workflow` key (dual-key tolerance); "
-            f"got {r.status_code}: {r.text}"
+            f"PATCH with legacy `workflow` key must still return 200 "
+            f"(graceful degradation); got {r.status_code}: {r.text}"
         )
 
         # GET-after-PATCH must return the V2 `phase_workflow` key (normalizer
-        # renamed it). The body content must equal what was sent under the
-        # legacy key.
+        # renamed it on entity load). The body content must equal what was
+        # sent under the legacy key.
         r2 = await client.get(f"/api/v1/projects/{pid}")
         assert r2.status_code == 200
         pc = r2.json()["process_config"]
         assert "phase_workflow" in pc, (
             "GET response must surface the V2 `phase_workflow` key after "
-            "normalizer applies the legacy `workflow` rename."
+            "normalizer applies the legacy `workflow` rename on entity load."
+        )
+        assert "workflow" not in pc, (
+            "Legacy `workflow` key must be removed by the normalizer "
+            "(it should never coexist with `phase_workflow` in the V2 shape)."
         )
         pw = pc["phase_workflow"]
-        # Content equivalence — nodes/edges/mode preserved verbatim.
+        # Content equivalence — nodes/edges/mode preserved verbatim by the rename.
         assert pw["mode"] == good_workflow["mode"]
         assert {n["id"] for n in pw["nodes"]} == {n["id"] for n in good_workflow["nodes"]}
         assert {e["id"] for e in pw["edges"]} == {e["id"] for e in good_workflow["edges"]}
