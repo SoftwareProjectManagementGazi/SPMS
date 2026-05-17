@@ -50,7 +50,7 @@ from app.domain.repositories.task_repository import ITaskRepository
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.entities.user import User
-from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError, DependencyAlreadyExistsError
+from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError, DependencyAlreadyExistsError, InvalidColumnMoveError
 from app.infrastructure.database.repositories.task_dependency_repo import SqlAlchemyTaskDependencyRepository
 from app.infrastructure.database.models.task_watcher import TaskWatcherModel
 
@@ -192,6 +192,15 @@ async def update_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidColumnMoveError as e:
+        # Phase 17 C7 — structured 400 so the FE board can surface the exact
+        # source/target/reason triple rather than a free-text "Invalid move".
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={
+            "error_code": "INVALID_COLUMN_MOVE",
+            "from_column_id": e.from_id,
+            "to_column_id": e.to_id,
+            "reason": e.reason,
+        })
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -320,6 +329,14 @@ async def patch_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ProjectNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidColumnMoveError as e:
+        # Phase 17 C7 — structured 400 (mirror of PUT handler above).
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={
+            "error_code": "INVALID_COLUMN_MOVE",
+            "from_column_id": e.from_id,
+            "to_column_id": e.to_id,
+            "reason": e.reason,
+        })
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

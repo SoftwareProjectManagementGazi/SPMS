@@ -173,6 +173,23 @@ class ProcessConfigSchemaError(DomainError):
         )
 
 
+class InvalidColumnMoveError(DomainError):
+    """Phase 17 C7 — Raised when WorkflowEngine.can_move() returns False for a
+    Kanban board column move (UpdateTaskUseCase edge validation).
+
+    Only fires when project task_workflow.capabilities.enforce_sequential_dependencies=True
+    (capability defaults to False on all migrated projects -> zero regression).
+
+    Router maps to HTTP 400 Bad Request with structured detail
+    {error_code: 'INVALID_COLUMN_MOVE', from_column_id, to_column_id, reason}.
+    """
+    def __init__(self, from_id, to_id, reason: str):
+        self.from_id = from_id
+        self.to_id = to_id
+        self.reason = reason
+        super().__init__(f"Invalid column move {from_id} -> {to_id}: {reason}")
+
+
 class InvalidTransitionError(DomainError):
     """Phase 12 D-16/D-17 — Raised when ExecutePhaseTransitionUseCase finds no edge
     (direct, bidirectional pair-wise reverse, or is_all_gate) connects source to target.

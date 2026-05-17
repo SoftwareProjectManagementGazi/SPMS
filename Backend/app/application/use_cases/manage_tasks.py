@@ -12,7 +12,7 @@ from app.application.dtos.task_dtos import (
     PaginatedResponse,
 )
 from app.domain.entities.task import Task
-from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError
+from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError, InvalidColumnMoveError
 from app.domain.services.workflow_engine import WorkflowEngine
 
 STOP_WORDS = {"the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or", "this", "that", "with"}
@@ -252,6 +252,26 @@ class UpdateTaskUseCase:
                 if col.id == dto.column_id:
                     new_column_name = col.name
                     break
+
+            # Phase 17 C7 — engine-driven edge validation.
+            # Senior review (2026-05-17): only enforce when the capability is
+            # explicitly enabled. Column-level exit_policy fallback was REJECTED
+            # — it produced non-deterministic behavior (one column flipping
+            # exit_policy would silently activate enforcement project-wide).
+            # Capability flag is the single source of truth.
+            if existing_task.column_id != dto.column_id:
+                engine = WorkflowEngine(
+                    workflow=(project.process_config or {}).get("task_workflow"),
+                    columns=project.columns or [],
+                )
+                if engine.cap("enforce_sequential_dependencies"):
+                    ok, reason = engine.can_move(existing_task.column_id, dto.column_id)
+                    if not ok:
+                        raise InvalidColumnMoveError(
+                            from_id=existing_task.column_id,
+                            to_id=dto.column_id,
+                            reason=reason or "edge missing",
+                        )
 
         update_data = dto.model_dump(exclude_unset=True)
 
