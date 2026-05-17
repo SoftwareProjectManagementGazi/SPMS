@@ -17,6 +17,10 @@ import { FlowRules } from "./flow-rules"
 import { SelectionPanel, type EditorSelection } from "./selection-panel"
 import { ValidationPanel } from "./validation-panel"
 import { ShortcutsPanel } from "./shortcuts-panel"
+import {
+  CapabilitiesPanel,
+  type WorkflowCapabilities,
+} from "./capabilities-panel"
 
 export interface RightPanelProps {
   workflow: WorkflowConfig
@@ -24,6 +28,17 @@ export interface RightPanelProps {
   onWorkflowChange: (next: WorkflowConfig) => void
   /** Editor mode — surfaces lifecycle vs status field affordances. */
   editorMode?: "lifecycle" | "status"
+  /** Wave 2 W2-C4 — capabilities for the *active* mode. Defaults to {}
+   *  when the parent has not yet hydrated state; CapabilitiesPanel falls
+   *  back to false for each unset flag. */
+  capabilities?: WorkflowCapabilities
+  /** Wave 2 W2-C4 — single-field patch callback dispatched whenever a
+   *  toggle flips. The editor save handler (W2-C5) will serialize the
+   *  current capabilities snapshot into the PATCH body. */
+  onCapabilitiesChange?: (patch: WorkflowCapabilities) => void
+  /** Wave 2 W2-C4 — transition-authority gate. When false, every toggle
+   *  and editable surface in the right panel renders disabled. */
+  canEdit?: boolean
 }
 
 const SECTION_STYLE: React.CSSProperties = {
@@ -36,12 +51,26 @@ export function RightPanel({
   selected,
   onWorkflowChange,
   editorMode = "lifecycle",
+  capabilities,
+  onCapabilitiesChange,
+  canEdit = true,
 }: RightPanelProps) {
   const handleModeChange = React.useCallback(
     (nextMode: WorkflowConfig["mode"]) => {
       onWorkflowChange({ ...workflow, mode: nextMode })
     },
     [workflow, onWorkflowChange],
+  )
+
+  // Wave 2 W2-C4 — fallback to no-op so the panel still renders for callers
+  // (tests, older mount sites) that have not been migrated yet. W2-C5 will
+  // make the editor-page route mandatory.
+  const safeCapabilities: WorkflowCapabilities = capabilities ?? {}
+  const safeOnCapabilitiesChange = React.useCallback(
+    (patch: WorkflowCapabilities) => {
+      if (onCapabilitiesChange) onCapabilitiesChange(patch)
+    },
+    [onCapabilitiesChange],
   )
 
   return (
@@ -65,6 +94,17 @@ export function RightPanel({
           selected={selected}
           onWorkflowChange={onWorkflowChange}
           editorMode={editorMode}
+        />
+      </section>
+      {/* Wave 2 W2-C4 — capabilities section. Sits between SelectionPanel and
+          ValidationPanel so the user sees engine-level toggles right after
+          they finish editing a node/edge. */}
+      <section style={SECTION_STYLE}>
+        <CapabilitiesPanel
+          capabilities={safeCapabilities}
+          onCapabilitiesChange={safeOnCapabilitiesChange}
+          editorMode={editorMode}
+          canEdit={canEdit}
         />
       </section>
       <section style={SECTION_STYLE}>

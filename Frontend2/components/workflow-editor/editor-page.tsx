@@ -96,6 +96,7 @@ import {
 
 import { WorkflowCanvas, type CanvasControlsHandle } from "./workflow-canvas"
 import { RightPanel } from "./right-panel"
+import type { WorkflowCapabilities } from "./capabilities-panel"
 import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
@@ -154,6 +155,32 @@ function readWorkflow(project: Project): WorkflowConfig {
     return { mode: "flexible", nodes: [], edges: [], groups: [] }
   }
   return mapWorkflowConfig(wf)
+}
+
+/**
+ * Wave 2 W2-C4 — read capabilities for a given mode from the persisted
+ * process_config payload. Returns an empty object when the legacy row has
+ * no capabilities sub-object so toggles default to `false` (a no-op for
+ * the engine, matching the backend normalizer's defaults).
+ *
+ * NOTE: capabilities is hosted on `WorkflowConfigDTO` since W2-C1 but the
+ * old `mapWorkflowConfig` strips unknown fields. We read the raw DTO
+ * instead so the round-trip stays lossless until W2-C5 lifts capabilities
+ * into the mapper.
+ */
+function readCapabilities(
+  project: Project,
+  mode: "lifecycle" | "status",
+): Record<string, unknown> {
+  const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
+  if (!cfg) return {}
+  const dto =
+    mode === "status"
+      ? cfg.statusWorkflow ?? cfg.status_workflow
+      : cfg.phase_workflow ?? cfg.workflow
+  const caps = (dto as { capabilities?: unknown } | undefined)?.capabilities
+  if (!caps || typeof caps !== "object") return {}
+  return caps as Record<string, unknown>
 }
 
 /**
@@ -249,6 +276,28 @@ export function EditorPage({ project }: EditorPageProps) {
     React.useState<WorkflowConfig>(initialLifecycle)
   const [statusWorkflow, setStatusWorkflow] =
     React.useState<WorkflowConfig>(initialStatus)
+
+  // Wave 2 W2-C4 — working-copy capabilities, kept in a separate state
+  // slice per mode so toggles can flip without dirtying the workflow
+  // structure (and vice versa). W2-C5 will lift these into the save
+  // payload alongside the workflow snapshot.
+  const initialLifecycleCaps = React.useMemo(
+    () => readCapabilities(project, "lifecycle"),
+    [project],
+  )
+  const initialStatusCaps = React.useMemo(
+    () => readCapabilities(project, "status"),
+    [project],
+  )
+  const [lifecycleCapabilities, setLifecycleCapabilities] =
+    React.useState<WorkflowCapabilities>(
+      initialLifecycleCaps as WorkflowCapabilities,
+    )
+  const [statusCapabilities, setStatusCapabilities] =
+    React.useState<WorkflowCapabilities>(
+      initialStatusCaps as WorkflowCapabilities,
+    )
+
   const [dirty, setDirty] = React.useState(false)
   const [selected, setSelected] = React.useState<{
     type: "node" | "edge" | "group"
@@ -398,6 +447,29 @@ export function EditorPage({ project }: EditorPageProps) {
   const handleWorkflowChange = React.useCallback(
     (next: WorkflowConfig) => commitWorkflow(next),
     [commitWorkflow],
+  )
+
+  // Wave 2 W2-C4 — active capabilities slice for the current mode + a
+  // single-field patch handler that the CapabilitiesPanel calls per toggle.
+  // We shallow-merge so two concurrent toggle flips don't clobber each
+  // other; W2-C5 will serialize this snapshot into the PATCH body.
+  //
+  // Senior review answer #2 (2026-05-17): capability changes share the
+  // workflow history stack; pushing `workflow` here keeps undo behavior
+  // consistent without a dedicated history slice.
+  const capabilities: WorkflowCapabilities =
+    mode === "status" ? statusCapabilities : lifecycleCapabilities
+  const handleCapabilitiesChange = React.useCallback(
+    (patch: WorkflowCapabilities) => {
+      history.push(workflow)
+      if (mode === "status") {
+        setStatusCapabilities((prev) => ({ ...prev, ...patch }))
+      } else {
+        setLifecycleCapabilities((prev) => ({ ...prev, ...patch }))
+      }
+      setDirty(true)
+    },
+    [history, mode, workflow],
   )
 
   // Plan 12-10 Task 2 — preset apply handler. Pushes the current workflow
@@ -1820,6 +1892,9 @@ export function EditorPage({ project }: EditorPageProps) {
           selected={selected}
           onWorkflowChange={handleWorkflowChange}
           editorMode={mode}
+          capabilities={capabilities}
+          onCapabilitiesChange={handleCapabilitiesChange}
+          canEdit={canEdit}
         />
       </div>
 

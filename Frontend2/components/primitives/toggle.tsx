@@ -16,6 +16,16 @@ export interface ToggleProps {
   size?: ToggleSize
   className?: string
   style?: React.CSSProperties
+  /** When true, the toggle becomes non-interactive (no onChange dispatch)
+   *  and renders at reduced opacity. Added in Wave 2 W2-C4 for
+   *  CapabilitiesPanel's read-only path (canEdit=false). */
+  disabled?: boolean
+  /** Forwarded onto the underlying <button> so callers can drive
+   *  CapabilitiesPanel toggles by accessible name via htmlFor labels. */
+  id?: string
+  /** When provided, exposed as aria-label so testing-library queries
+   *  by role with name selectors can target a specific toggle. */
+  "aria-label"?: string
 }
 
 interface ToggleDims {
@@ -35,6 +45,9 @@ export function Toggle({
   size = "md",
   className,
   style,
+  disabled = false,
+  id,
+  "aria-label": ariaLabel,
 }: ToggleProps) {
   const { w, h, d } = DIMS[size]
   const offset = (h - d) / 2
@@ -42,20 +55,28 @@ export function Toggle({
     <button
       type="button"
       role="switch"
+      id={id}
+      aria-label={ariaLabel}
       aria-checked={on}
+      aria-disabled={disabled || undefined}
+      disabled={disabled}
       className={className}
-      onClick={() => onChange && onChange(!on)}
+      onClick={() => {
+        if (disabled) return
+        onChange && onChange(!on)
+      }}
       style={{
         width: w,
         height: h,
         borderRadius: h,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
         position: "relative",
         background: on ? "var(--primary)" : "var(--surface-2)",
         boxShadow: on
           ? "var(--inset-primary-top), var(--inset-primary-bottom)"
           : "inset 0 0 0 1px var(--border-strong)",
         transition: "background 0.12s",
+        opacity: disabled ? 0.5 : 1,
         ...style,
       }}
     >
