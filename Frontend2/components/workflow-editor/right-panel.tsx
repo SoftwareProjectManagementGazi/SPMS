@@ -118,6 +118,13 @@ export function RightPanel({
         borderLeft: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
+        // height:100% + minHeight:0 ensure the panel is bounded by the
+        // parent grid row (which is pinned to the flex container height
+        // via gridTemplateRows: minmax(0, 1fr)). Without minHeight:0 a
+        // tall NodeEditor would expand the grid row and push the canvas
+        // off-screen (2026-05-18 UX fix).
+        height: "100%",
+        minHeight: 0,
         overflow: "hidden",
       }}
     >

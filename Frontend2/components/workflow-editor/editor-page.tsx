@@ -1977,11 +1977,15 @@ export function EditorPage({ project }: EditorPageProps) {
       </div>
 
       {/* Body row: canvas + right panel (prototype: grid 1fr 320px under
-          a single inset-border + radius envelope, no extra background). */}
+          a single inset-border + radius envelope, no extra background).
+          gridTemplateRows: "minmax(0, 1fr)" pins the single row to the
+          parent flex height so RightPanel cannot grow with its content
+          and push the canvas off-screen (2026-05-18 UX fix). */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 320px",
+          gridTemplateRows: "minmax(0, 1fr)",
           gap: 0,
           flex: 1,
           minHeight: 0,
