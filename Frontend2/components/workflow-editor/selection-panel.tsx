@@ -11,6 +11,7 @@
 import * as React from "react"
 import { ArrowRight, Trash2 } from "lucide-react"
 import {
+  AlertBanner,
   Button,
   Input,
   SegmentedControl,
@@ -18,6 +19,9 @@ import {
 } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type {
+  ColumnCategory,
+  EntryPolicy,
+  ExitPolicy,
   WorkflowConfig,
   WorkflowEdge,
   WorkflowEdgeType,
@@ -33,6 +37,27 @@ export interface EditorSelection {
   id: string
 }
 
+/**
+ * Wave 2 W2-C6 — per-field patch shape forwarded by `NodeEditor` when the
+ * editor is in `status` mode and the selected node maps to a BoardColumn
+ * (id `col_<N>`). The editor-page handler fires
+ * `PATCH /projects/{pid}/columns/{cid}` with this body so the BoardColumn
+ * row stays in sync independently of the workflow JSON save flow.
+ *
+ * `is_initial` is INCLUDED here even though the toggle also lives on the
+ * workflow node — it is the single field the backend uses to derive
+ * `WorkflowConfig.capabilities.initial_node_id`, so the PATCH must reach
+ * the BoardColumn before the next refetch resolves the displayed id.
+ */
+export interface ColumnEngineFieldsPatch {
+  category?: ColumnCategory
+  is_initial?: boolean
+  is_terminal?: boolean
+  max_duration_days?: number | null
+  entry_policy?: EntryPolicy
+  exit_policy?: ExitPolicy
+}
+
 export interface SelectionPanelProps {
   workflow: WorkflowConfig
   selected: EditorSelection | null
@@ -40,6 +65,14 @@ export interface SelectionPanelProps {
   /** Editor mode — drives status-only field affordances (e.g. horizontal
    * Initial/Final checkboxes per prototype). */
   editorMode?: "lifecycle" | "status"
+  /** Wave 2 W2-C6 — status-mode side-effect for BoardColumn engine fields.
+   *  Called with the numeric column id parsed from `col_<N>` and the per-field
+   *  patch produced by an engine-field edit. Lifecycle-mode nodes (no `col_`
+   *  prefix) never trigger this callback. */
+  onColumnEngineFieldsChange?: (
+    columnId: number,
+    patch: ColumnEngineFieldsPatch,
+  ) => void
 }
 
 const TITLE_STYLE: React.CSSProperties = {
@@ -75,11 +108,43 @@ const TOGGLE_ROW: React.CSSProperties = {
   marginBottom: 8,
 }
 
+// Wave 2 W2-C6 — engine-field <select> shape. Native <select> chosen over
+// SegmentedControl because the policy enums grow (initial_only adds a 3rd
+// option) and the prototype right-panel reserves segmented controls for
+// 2-3 option edge-type toggles only.
+const SELECT_STYLE: React.CSSProperties = {
+  width: "100%",
+  height: 28,
+  padding: "0 8px",
+  fontSize: 12,
+  background: "var(--surface)",
+  borderRadius: "var(--radius-sm)",
+  boxShadow: "inset 0 0 0 1px var(--border)",
+  color: "var(--fg)",
+  border: 0,
+  fontFamily: "inherit",
+}
+
+const ENGINE_SECTION_STYLE: React.CSSProperties = {
+  borderTop: "1px solid var(--border)",
+  paddingTop: 10,
+  marginTop: 10,
+}
+
+const ENGINE_HINT_STYLE: React.CSSProperties = {
+  fontSize: 11,
+  color: "var(--fg-subtle)",
+  marginTop: -4,
+  marginBottom: 8,
+  lineHeight: 1.4,
+}
+
 export function SelectionPanel({
   workflow,
   selected,
   onWorkflowChange,
   editorMode = "lifecycle",
+  onColumnEngineFieldsChange,
 }: SelectionPanelProps) {
   const { language } = useApp()
   const T = React.useCallback(
@@ -125,6 +190,7 @@ export function SelectionPanel({
         workflow={workflow}
         onWorkflowChange={onWorkflowChange}
         editorMode={editorMode}
+        onColumnEngineFieldsChange={onColumnEngineFieldsChange}
         T={T}
       />
     )
@@ -178,19 +244,71 @@ export function SelectionPanel({
 // Node editor (UI-SPEC §597-613)
 // ===========================================================================
 
+/**
+ * Wave 2 W2-C6 — derive the BoardColumn primary key from a status-mode node
+ * id. Mirrors the same regex used in `editor-page.colIdFromNodeId` so the
+ * panel can decide whether to fire `onColumnEngineFieldsChange` without an
+ * extra editor-page round trip. Returns `null` for lifecycle-mode node ids
+ * (e.g. `nd_<uuid>`) which guarantees the side-effect skips silently when
+ * the node does not back a BoardColumn row.
+ */
+function colIdFromNodeId(nodeId: string): number | null {
+  const m = nodeId.match(/^col_(\d+)$/)
+  return m ? parseInt(m[1], 10) : null
+}
+
 function NodeEditor({
   node,
   workflow,
   onWorkflowChange,
   editorMode,
+  onColumnEngineFieldsChange,
   T,
 }: {
   node: WorkflowNode
   workflow: WorkflowConfig
   onWorkflowChange: (next: WorkflowConfig) => void
   editorMode: "lifecycle" | "status"
+  onColumnEngineFieldsChange?: (
+    columnId: number,
+    patch: ColumnEngineFieldsPatch,
+  ) => void
   T: (tr: string, en: string) => string
 }) {
+  // Wave 2 W2-C6 — status-mode column id resolved once per render. `null`
+  // for lifecycle nodes (W2-C7 will write to workflow JSON only) so the
+  // updateNode side-effect skips the PATCH dispatch without a branch.
+  const columnId = editorMode === "status" ? colIdFromNodeId(node.id) : null
+
+  // Wave 2 W2-C6 — extract engine-field deltas out of an arbitrary node
+  // patch and forward them to `onColumnEngineFieldsChange` as snake_case so
+  // the editor-page handler can dispatch a single PATCH per change. We
+  // translate only the keys the BoardColumn endpoint accepts; descriptive
+  // fields like `name`/`color`/`description` keep their existing save path
+  // (workflow JSON serialization at save time).
+  //
+  // `is_initial` is forwarded even though the workflow node still owns the
+  // canonical `isInitial` toggle — the BoardColumn row drives the backend's
+  // capabilities.initial_node_id derivation, so the PATCH must reach it
+  // before the next refetch resolves the displayed id.
+  const dispatchColumnPatch = React.useCallback(
+    (patch: Partial<WorkflowNode>) => {
+      if (columnId === null || !onColumnEngineFieldsChange) return
+      const dbPatch: ColumnEngineFieldsPatch = {}
+      if (patch.category !== undefined) dbPatch.category = patch.category
+      if (patch.isInitial !== undefined) dbPatch.is_initial = patch.isInitial
+      if (patch.isTerminal !== undefined) dbPatch.is_terminal = patch.isTerminal
+      if (patch.maxDurationDays !== undefined)
+        dbPatch.max_duration_days = patch.maxDurationDays
+      if (patch.entryPolicy !== undefined) dbPatch.entry_policy = patch.entryPolicy
+      if (patch.exitPolicy !== undefined) dbPatch.exit_policy = patch.exitPolicy
+      if (Object.keys(dbPatch).length > 0) {
+        onColumnEngineFieldsChange(columnId, dbPatch)
+      }
+    },
+    [columnId, onColumnEngineFieldsChange],
+  )
+
   const updateNode = React.useCallback(
     (patch: Partial<WorkflowNode>) => {
       onWorkflowChange({
@@ -199,9 +317,22 @@ function NodeEditor({
           n.id === node.id ? { ...n, ...patch } : n,
         ),
       })
+      // Status-mode side-effect — keep BoardColumn engine fields in sync.
+      // Lifecycle-mode (columnId === null) is fire-skip; W2-C7 will route
+      // those edits straight into the workflow JSON serializer.
+      dispatchColumnPatch(patch)
     },
-    [node.id, workflow, onWorkflowChange],
+    [node.id, workflow, onWorkflowChange, dispatchColumnPatch],
   )
+
+  // Wave 2 W2-C6 — multi-initial detection. Senior review #4 resolution:
+  // we WARN about a duplicate initial flag instead of auto-unchecking the
+  // other columns. Backend validation lands in Wave 3 (currently only the
+  // migration backfill enforces a single initial column at seed time).
+  const otherInitialNodes = React.useMemo(() => {
+    if (editorMode !== "status" || !node.isInitial) return []
+    return workflow.nodes.filter((n) => n.id !== node.id && n.isInitial)
+  }, [editorMode, node.id, node.isInitial, workflow.nodes])
 
   const removeNode = React.useCallback(() => {
     onWorkflowChange({
@@ -336,6 +467,19 @@ function NodeEditor({
           </div>
         </>
       )}
+      {/* Wave 2 W2-C6 — multi-initial warning. Senior review #4: surface a
+          banner instead of auto-unchecking. Backend Wave 3 will enforce the
+          single-initial invariant; this is a UX nudge only. */}
+      {editorMode === "status" && otherInitialNodes.length > 0 ? (
+        <div style={{ marginBottom: 8 }} data-testid="multi-initial-warning">
+          <AlertBanner tone="warning">
+            {T(
+              `Diğer başlangıç olarak işaretli kolon${otherInitialNodes.length > 1 ? "lar" : ""}: ${otherInitialNodes.map((n) => n.name).join(", ")}. Tek başlangıç önerilir.`,
+              `Also marked as initial: ${otherInitialNodes.map((n) => n.name).join(", ")}. A single initial column is recommended.`,
+            )}
+          </AlertBanner>
+        </div>
+      ) : null}
       <div style={TOGGLE_ROW}>
         <span>
           {T("Arşivli (yeni geçiş alamaz)", "Archived (no new transitions)")}
@@ -345,6 +489,125 @@ function NodeEditor({
           onChange={(v) => updateNode({ isArchived: v })}
           size="sm"
         />
+      </div>
+      {/* Wave 2 W2-C6 — engine field editor. Rendered in both modes per plan
+          (lifecycle-mode persistence wires in W2-C7). Status-mode fires
+          `onColumnEngineFieldsChange` per field via dispatchColumnPatch. */}
+      <div style={ENGINE_SECTION_STYLE}>
+        <div style={{ ...TITLE_STYLE, marginBottom: 6 }}>
+          {T("Motor Alanları", "Engine Fields")}
+        </div>
+
+        <div style={FIELD_ROW}>
+          <span style={FIELD_LABEL}>{T("Kategori", "Category")}</span>
+          <select
+            aria-label={T("Kategori", "Category")}
+            value={node.category ?? "todo"}
+            onChange={(e) =>
+              updateNode({ category: e.target.value as ColumnCategory })
+            }
+            style={SELECT_STYLE}
+          >
+            <option value="todo">{T("Yapılacak", "To Do")}</option>
+            <option value="in_progress">{T("Yapılıyor", "In Progress")}</option>
+            <option value="done">{T("Tamamlandı", "Done")}</option>
+          </select>
+        </div>
+
+        <div style={TOGGLE_ROW}>
+          <span>{T("Terminal düğüm", "Terminal node")}</span>
+          <Toggle
+            on={Boolean(node.isTerminal)}
+            onChange={(v) => updateNode({ isTerminal: v })}
+            size="sm"
+            aria-label={T("Terminal düğüm", "Terminal node")}
+          />
+        </div>
+
+        <div style={FIELD_ROW}>
+          <span style={FIELD_LABEL}>
+            {T("Maks. süre (gün)", "Max duration (days)")}
+          </span>
+          {/* The Input primitive does not expose `min` (Phase 12 surface area).
+              `< 1` and NaN entries are coerced to null below; the backend
+              validates the upper bound. Extending the primitive is out of
+              scope for W2-C6 — revisit if a designer asks for the spinner
+              floor in Wave 3. */}
+          <Input
+            type="number"
+            value={
+              node.maxDurationDays != null ? String(node.maxDurationDays) : ""
+            }
+            placeholder={T("sınırsız", "unbounded")}
+            onChange={(e) => {
+              const raw = e.target.value
+              // Empty input → null (unbounded) per UX spec. We do NOT
+              // collapse Number.isNaN/sub-1 values into a noop because the
+              // <input type="number"> already rejects most of those; an
+              // invalid manual entry round-trips as null which keeps the
+              // PATCH idempotent and avoids partial commits.
+              const parsed = raw === "" ? null : Number(raw)
+              updateNode({
+                maxDurationDays:
+                  parsed == null || Number.isNaN(parsed) || parsed < 1
+                    ? null
+                    : parsed,
+              })
+            }}
+            size="sm"
+            style={{ width: 110 }}
+          />
+          <p style={ENGINE_HINT_STYLE}>
+            {T(
+              "Boş = sınırsız",
+              "Empty = unbounded",
+            )}
+          </p>
+        </div>
+
+        <div style={FIELD_ROW}>
+          <span style={FIELD_LABEL}>
+            {T("Giriş politikası", "Entry policy")}
+          </span>
+          <select
+            aria-label={T("Giriş politikası", "Entry policy")}
+            value={node.entryPolicy ?? "any"}
+            onChange={(e) =>
+              updateNode({ entryPolicy: e.target.value as EntryPolicy })
+            }
+            style={SELECT_STYLE}
+          >
+            <option value="any">{T("Serbest", "Any")}</option>
+            <option value="edges_only">
+              {T("Sadece edge'lerden", "Edges only")}
+            </option>
+            <option value="initial_only">
+              {T("Sadece başlangıçtan", "Initial only")}
+            </option>
+          </select>
+        </div>
+
+        <div style={FIELD_ROW}>
+          <span style={FIELD_LABEL}>
+            {T("Çıkış politikası", "Exit policy")}
+          </span>
+          <select
+            aria-label={T("Çıkış politikası", "Exit policy")}
+            value={node.exitPolicy ?? "any"}
+            onChange={(e) =>
+              updateNode({ exitPolicy: e.target.value as ExitPolicy })
+            }
+            style={SELECT_STYLE}
+          >
+            <option value="any">{T("Serbest", "Any")}</option>
+            <option value="edges_only">
+              {T("Sadece edge'lerden", "Edges only")}
+            </option>
+            <option value="terminal_lock">
+              {T("Terminal kilit", "Terminal lock")}
+            </option>
+          </select>
+        </div>
       </div>
       <div style={{ marginTop: 12 }}>
         <Button

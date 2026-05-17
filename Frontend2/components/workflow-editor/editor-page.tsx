@@ -97,6 +97,7 @@ import {
 import { WorkflowCanvas, type CanvasControlsHandle } from "./workflow-canvas"
 import { RightPanel } from "./right-panel"
 import type { WorkflowCapabilities } from "./capabilities-panel"
+import type { ColumnEngineFieldsPatch } from "./selection-panel"
 import { BottomToolbar } from "./bottom-toolbar"
 import { ModeBanner } from "./mode-banner"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
@@ -537,6 +538,32 @@ export function EditorPage({ project }: EditorPageProps) {
       })
     },
     [workflow, commitWorkflow],
+  )
+
+  // Wave 2 W2-C6 — status-mode BoardColumn engine field PATCH side-effect.
+  // SelectionPanel.NodeEditor calls this per-field whenever the user edits
+  // category / is_initial / is_terminal / max_duration_days / entry_policy /
+  // exit_policy. Fire-and-forget (debounce deferred to Wave 3 per plan
+  // §"Risk Notları"). On failure we surface a toast but do NOT roll back the
+  // local workflow state — the canvas already updated optimistically via
+  // updateNode, and the next ["columns", project.id] invalidation will
+  // reconcile from the server if the user navigates away.
+  const handleColumnEngineFieldsChange = React.useCallback(
+    (columnId: number, patch: ColumnEngineFieldsPatch) => {
+      void apiClient
+        .patch(`/projects/${project.id}/columns/${columnId}`, patch)
+        .then(() => qc.invalidateQueries({ queryKey: ["columns", project.id] }))
+        .catch(() => {
+          showToast({
+            variant: "error",
+            message: T(
+              "Kolon motor alanı kaydedilemedi",
+              "Failed to save column engine field",
+            ),
+          })
+        })
+    },
+    [project.id, qc, showToast, T],
   )
 
   // ---------------------- Canvas selection mapping ----------------------
@@ -1951,6 +1978,7 @@ export function EditorPage({ project }: EditorPageProps) {
           capabilities={capabilities}
           onCapabilitiesChange={handleCapabilitiesChange}
           canEdit={canEdit}
+          onColumnEngineFieldsChange={handleColumnEngineFieldsChange}
         />
       </div>
 

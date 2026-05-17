@@ -20,6 +20,17 @@ export type WorkflowMode =
 
 export type WorkflowEdgeType = "flow" | "verification" | "feedback"
 
+/**
+ * Wave 2 W2-C6 — BoardColumn engine field enums. These mirror the backend
+ * `ColumnCategory`, `EntryPolicy`, `ExitPolicy` enums introduced in alembic
+ * migration 013 and round-trip through `PATCH /projects/{pid}/columns/{cid}`
+ * in status mode. In lifecycle mode the same shape is serialized into the
+ * `phase_workflow.nodes[i]` JSON object (W2-C7 wires the lifecycle write).
+ */
+export type ColumnCategory = "todo" | "in_progress" | "done"
+export type EntryPolicy = "any" | "edges_only" | "initial_only"
+export type ExitPolicy = "any" | "edges_only" | "terminal_lock"
+
 export interface WorkflowNode {
   id: string
   name: string
@@ -32,6 +43,13 @@ export interface WorkflowNode {
   isArchived?: boolean
   parentId?: string
   wipLimit?: number | null
+  // Wave 2 W2-C6 — engine fields. Mirrored on BoardColumn for status-mode
+  // nodes; embedded in `phase_workflow.nodes[i]` JSON for lifecycle-mode.
+  category?: ColumnCategory
+  isTerminal?: boolean
+  maxDurationDays?: number | null
+  entryPolicy?: EntryPolicy
+  exitPolicy?: ExitPolicy
 }
 
 export interface WorkflowEdge {
@@ -120,6 +138,17 @@ export interface WorkflowNodeDTO {
   parent_id?: string
   wipLimit?: number | null
   wip_limit?: number | null
+  // Wave 2 W2-C6 — engine field wire shape (snake_case canonical, camelCase
+  // tolerated on the READ side so a stale browser cache still hydrates).
+  category?: ColumnCategory
+  is_terminal?: boolean
+  isTerminal?: boolean
+  max_duration_days?: number | null
+  maxDurationDays?: number | null
+  entry_policy?: EntryPolicy
+  entryPolicy?: EntryPolicy
+  exit_policy?: ExitPolicy
+  exitPolicy?: ExitPolicy
 }
 
 export interface WorkflowEdgeDTO {
@@ -173,6 +202,14 @@ export function mapWorkflowNode(d: WorkflowNodeDTO): WorkflowNode {
     isArchived: d.is_archived,
     parentId: d.parentId ?? d.parent_id,
     wipLimit: d.wipLimit ?? d.wip_limit ?? null,
+    // Wave 2 W2-C6 — engine fields. `??` on the optional camelCase fallback
+    // keeps undefined when neither key is present so the editor can treat
+    // "missing" distinctly from "explicitly null" (max_duration_days only).
+    category: d.category,
+    isTerminal: d.isTerminal ?? d.is_terminal,
+    maxDurationDays: d.maxDurationDays ?? d.max_duration_days ?? null,
+    entryPolicy: d.entryPolicy ?? d.entry_policy,
+    exitPolicy: d.exitPolicy ?? d.exit_policy,
   }
 }
 
@@ -270,6 +307,15 @@ export function unmapWorkflowConfig(c: WorkflowConfig): WorkflowConfigDTO {
       is_archived: n.isArchived ?? false,
       parent_id: n.parentId,
       wip_limit: n.wipLimit ?? null,
+      // Wave 2 W2-C6 — engine fields snake_case serialization. `category`
+      // stays undefined when unset so the backend Pydantic model can apply
+      // its own default; `max_duration_days` explicitly emits null so a
+      // user-cleared input is persisted as "unbounded" rather than dropped.
+      category: n.category,
+      is_terminal: n.isTerminal ?? false,
+      max_duration_days: n.maxDurationDays ?? null,
+      entry_policy: n.entryPolicy,
+      exit_policy: n.exitPolicy,
     })),
     edges: c.edges.map(unmapWorkflowEdge),
     groups: c.groups,

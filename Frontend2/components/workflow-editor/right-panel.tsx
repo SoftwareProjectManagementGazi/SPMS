@@ -14,7 +14,11 @@
 import * as React from "react"
 import type { WorkflowConfig } from "@/services/lifecycle-service"
 import { FlowRules } from "./flow-rules"
-import { SelectionPanel, type EditorSelection } from "./selection-panel"
+import {
+  SelectionPanel,
+  type ColumnEngineFieldsPatch,
+  type EditorSelection,
+} from "./selection-panel"
 import { ValidationPanel } from "./validation-panel"
 import { ShortcutsPanel } from "./shortcuts-panel"
 import {
@@ -39,6 +43,14 @@ export interface RightPanelProps {
   /** Wave 2 W2-C4 — transition-authority gate. When false, every toggle
    *  and editable surface in the right panel renders disabled. */
   canEdit?: boolean
+  /** Wave 2 W2-C6 — status-mode BoardColumn engine field PATCH side-effect.
+   *  Drilled straight through to `SelectionPanel.NodeEditor`. Undefined for
+   *  test mounts and lifecycle-only callers; `NodeEditor` no-ops gracefully
+   *  when the callback is absent. */
+  onColumnEngineFieldsChange?: (
+    columnId: number,
+    patch: ColumnEngineFieldsPatch,
+  ) => void
 }
 
 const SECTION_STYLE: React.CSSProperties = {
@@ -54,6 +66,7 @@ export function RightPanel({
   capabilities,
   onCapabilitiesChange,
   canEdit = true,
+  onColumnEngineFieldsChange,
 }: RightPanelProps) {
   const handleModeChange = React.useCallback(
     (nextMode: WorkflowConfig["mode"]) => {
@@ -94,6 +107,7 @@ export function RightPanel({
           selected={selected}
           onWorkflowChange={onWorkflowChange}
           editorMode={editorMode}
+          onColumnEngineFieldsChange={onColumnEngineFieldsChange}
         />
       </section>
       {/* Wave 2 W2-C4 — capabilities section. Sits between SelectionPanel and
