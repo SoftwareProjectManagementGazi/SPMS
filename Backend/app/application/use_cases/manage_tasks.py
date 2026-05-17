@@ -36,9 +36,6 @@ def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
                 default=0,
             )
             is_done = task.column.order_index == max_order
-        else:
-            # Fallback: name-based for English defaults
-            is_done = status_slug in ("done", "completed", "closed")
 
     # 2. Project Key (Key oluşturmak için gerekli)
     project_key = "TASK"

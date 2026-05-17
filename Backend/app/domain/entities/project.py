@@ -36,6 +36,12 @@ def _migrate_v0_to_v1(config: dict) -> dict:
     new.setdefault("workflow", {"mode": "flexible", "nodes": [], "edges": [], "groups": []})
     new.setdefault("phase_completion_criteria", {})
     new.setdefault("enable_phase_assignment", False)
+    # Workflow engine flags — seeded per process template by migration_005.py:
+    #   Scrum    -> restrict_expired_sprints=True
+    #   Kanban   -> enforce_wip_limits=True
+    #   Waterfall-> enforce_sequential_dependencies=True
+    # No use case reads these yet; they are the contract for the upcoming
+    # workflow engine (Strangler target — see workflow motor design).
     new.setdefault("enforce_sequential_dependencies", False)
     new.setdefault("enforce_wip_limits", False)
     new.setdefault("restrict_expired_sprints", False)
