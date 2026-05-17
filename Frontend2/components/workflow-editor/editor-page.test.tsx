@@ -696,4 +696,185 @@ describe("EditorPage", () => {
       expect(NODE_ID_REGEX.test(id)).toBe(true)
     }
   })
+
+  // ---------------------- Wave 2 W2-C5 — save handler wiring ----------------------
+
+  // W2-C5 Test 1: capabilities slice flows into the PATCH body.
+  // Pre-W2-C5 the editor-page maintained lifecycleCapabilities /
+  // statusCapabilities slices (W2-C4) but the save handler IGNORED them — so
+  // the CapabilitiesPanel was a vitrine. This test guards the wire-up by
+  // toggling enforce_wip_limits in lifecycle mode and asserting the PATCH
+  // body's phase_workflow.capabilities reflects the change.
+  it("Test 22 (W2-C5): toggling a capability flows into PATCH body.phase_workflow.capabilities", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+
+    // Seed the project with a workflow so the CapabilitiesPanel mounts inside
+    // a populated editor (mockProject.processConfig=null is fine — initial
+    // capability slice defaults to {} and the toggle still dispatches).
+    const projectWithCaps: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            {
+              id: "nd_phase01a01",
+              name: "İlk Faz",
+              x: 100,
+              y: 100,
+              is_initial: true,
+              is_final: true,
+            },
+          ],
+          edges: [],
+          groups: [],
+          capabilities: { enforce_wip_limits: false },
+        },
+        task_workflow: {
+          mode: "continuous",
+          nodes: [],
+          edges: [],
+          groups: [],
+          capabilities: {},
+        },
+      } as never,
+    }
+
+    render(<EditorPage project={projectWithCaps} />)
+
+    // CapabilitiesPanel renders in the RightPanel. Toggle "WIP limitlerini
+    // uygula" (TR label per useApp mock language="tr").
+    const wipToggle = screen.getByRole("switch", {
+      name: "WIP limitlerini uygula",
+    })
+    fireEvent.click(wipToggle)
+
+    // Save.
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    const callArgs = mockUpdateProcessConfig.mock.calls[0]
+    const processConfig = callArgs[1] as {
+      phase_workflow?: { capabilities?: Record<string, unknown> }
+      task_workflow?: { capabilities?: Record<string, unknown> }
+    }
+    expect(processConfig.phase_workflow?.capabilities).toBeDefined()
+    expect(processConfig.phase_workflow?.capabilities?.enforce_wip_limits).toBe(
+      true,
+    )
+  })
+
+  // W2-C5 Test 2: save emits the V2-canonical `task_workflow` key (not the
+  // legacy `status_workflow`). Wave 1 C10 began this rename but the editor-
+  // page save handler kept emitting the old key — W2-C5 completes it on the
+  // write side. Read-side fallback remains for legacy persisted projects.
+  it("Test 23 (W2-C5): save emits task_workflow (V2 canonical) and NOT status_workflow", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+
+    // Seed with a legacy `status_workflow` key in the persisted shape so we
+    // can assert it is dropped on save (and replaced with `task_workflow`).
+    const legacyProject: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            {
+              id: "nd_phase01a01",
+              name: "İlk Faz",
+              x: 100,
+              y: 100,
+              is_initial: true,
+              is_final: true,
+            },
+          ],
+          edges: [],
+          groups: [],
+        },
+        status_workflow: {
+          mode: "continuous",
+          nodes: [
+            { id: "col_1", name: "Yapılacak", x: 0, y: 0 },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+
+    render(<EditorPage project={legacyProject} />)
+
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    const callArgs = mockUpdateProcessConfig.mock.calls[0]
+    const body = callArgs[1] as Record<string, unknown>
+    // Wave 2 W2-C5 — write side emits task_workflow only.
+    expect("task_workflow" in body).toBe(true)
+    expect("status_workflow" in body).toBe(false)
+  })
+
+  // W2-C5 Test 3: status-mode capability toggles route into
+  // task_workflow.capabilities (NOT phase_workflow.capabilities). The
+  // editor maintains two parallel capability slices so a toggle in one mode
+  // doesn't leak into the other.
+  it("Test 24 (W2-C5): status-mode capability toggle reaches task_workflow.capabilities", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    setSearchParams("projectId=42&mode=status")
+
+    const projectStatus: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [],
+          edges: [],
+          groups: [],
+        },
+        task_workflow: {
+          mode: "continuous",
+          nodes: [{ id: "col_1", name: "Yapılacak", x: 0, y: 0 }],
+          edges: [],
+          groups: [],
+          capabilities: { has_recurring: false },
+        },
+      } as never,
+    }
+
+    render(<EditorPage project={projectStatus} />)
+
+    // In status mode the panel renders the "Tekrarlayan görevler" toggle for
+    // task_workflow.capabilities.has_recurring.
+    const recurringToggle = screen.getByRole("switch", {
+      name: "Tekrarlayan görevler",
+    })
+    fireEvent.click(recurringToggle)
+
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow?: { capabilities?: Record<string, unknown> }
+      task_workflow?: { capabilities?: Record<string, unknown> }
+    }
+    expect(body.task_workflow?.capabilities?.has_recurring).toBe(true)
+    // The lifecycle slice must remain untouched — toggling in status mode
+    // never leaks into phase_workflow.capabilities.
+    expect(body.phase_workflow?.capabilities?.has_recurring).toBeUndefined()
+  })
 })

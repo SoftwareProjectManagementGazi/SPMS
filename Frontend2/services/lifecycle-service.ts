@@ -57,11 +57,35 @@ export interface WorkflowGroup {
   children: string[]
 }
 
+/**
+ * Wave 2 W2-C5 — engine capability toggles that ride alongside the
+ * workflow graph. Backend `WorkflowConfig` Pydantic accepts these as
+ * `capabilities` (W2-C1) so the mapper round-trips them as a passthrough
+ * object — the UI surface (CapabilitiesPanel, W2-C4) is the source of
+ * truth for which keys exist.
+ *
+ * `initial_node_id` is read-only display info — derived server-side from
+ * whichever node carries `is_initial=true`. We carry it through so a
+ * refetched payload can show the resolved value, but the editor never
+ * writes a custom value here (the toggle UI does not expose it).
+ */
+export interface WorkflowCapabilities {
+  enforce_wip_limits?: boolean
+  enforce_sequential_dependencies?: boolean
+  restrict_expired_sprints?: boolean
+  has_recurring?: boolean
+  initial_node_id?: string | null
+}
+
 export interface WorkflowConfig {
   mode: WorkflowMode
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   groups?: WorkflowGroup[]
+  /** Wave 2 W2-C5 — round-tripped through map/unmap so the editor's
+   *  CapabilitiesPanel can hydrate from the persisted shape and the save
+   *  handler can serialize back without a separate state slice. */
+  capabilities?: WorkflowCapabilities
 }
 
 export interface PhaseTransitionEntry {
@@ -125,6 +149,11 @@ export interface WorkflowConfigDTO {
   nodes: WorkflowNodeDTO[]
   edges: WorkflowEdgeDTO[]
   groups?: WorkflowGroupDTO[]
+  /** Wave 2 W2-C5 — backend `WorkflowConfig.capabilities` (W2-C1). The DTO
+   *  uses the snake_case keys exactly as the backend Pydantic model expects,
+   *  so map/unmap pass the object through unchanged (no key translation
+   *  required — see Pitfall 21 vs. node/edge keys that DO get re-cased). */
+  capabilities?: WorkflowCapabilities
 }
 
 // ============================================================================
@@ -170,12 +199,43 @@ export function mapWorkflowGroup(d: WorkflowGroupDTO): WorkflowGroup {
   }
 }
 
+/**
+ * Wave 2 W2-C5 — pass-through copy of the backend `capabilities` sub-object.
+ * Backend keys are already snake_case (`enforce_wip_limits`,
+ * `enforce_sequential_dependencies`, `restrict_expired_sprints`,
+ * `has_recurring`, `initial_node_id`) and we keep them as-is so the
+ * CapabilitiesPanel can dispatch single-key patches without a translation
+ * layer. Unknown keys are dropped to keep the editor immune to backend
+ * additions until the UI explicitly adopts them.
+ */
+export function mapCapabilities(raw: unknown): WorkflowCapabilities {
+  if (!raw || typeof raw !== "object") return {}
+  const r = raw as Record<string, unknown>
+  const out: WorkflowCapabilities = {}
+  if (typeof r.enforce_wip_limits === "boolean")
+    out.enforce_wip_limits = r.enforce_wip_limits
+  if (typeof r.enforce_sequential_dependencies === "boolean")
+    out.enforce_sequential_dependencies = r.enforce_sequential_dependencies
+  if (typeof r.restrict_expired_sprints === "boolean")
+    out.restrict_expired_sprints = r.restrict_expired_sprints
+  if (typeof r.has_recurring === "boolean")
+    out.has_recurring = r.has_recurring
+  if (typeof r.initial_node_id === "string" || r.initial_node_id === null)
+    out.initial_node_id = r.initial_node_id as string | null
+  return out
+}
+
 export function mapWorkflowConfig(d: WorkflowConfigDTO): WorkflowConfig {
   return {
     mode: d.mode,
     nodes: (d.nodes ?? []).map(mapWorkflowNode),
     edges: (d.edges ?? []).map(mapWorkflowEdge),
     groups: (d.groups ?? []).map(mapWorkflowGroup),
+    // Wave 2 W2-C5 — round-trip capabilities so the editor's CapabilitiesPanel
+    // can hydrate from `process_config.{phase,task}_workflow.capabilities`.
+    capabilities: d.capabilities !== undefined
+      ? mapCapabilities(d.capabilities)
+      : undefined,
   }
 }
 
@@ -213,6 +273,11 @@ export function unmapWorkflowConfig(c: WorkflowConfig): WorkflowConfigDTO {
     })),
     edges: c.edges.map(unmapWorkflowEdge),
     groups: c.groups,
+    // Wave 2 W2-C5 — emit capabilities so toggle changes from
+    // CapabilitiesPanel reach the backend. Keys are already snake_case
+    // (no translation needed). Omit the field when the editor never
+    // hydrated one so legacy projects stay untouched on a no-op save.
+    capabilities: c.capabilities,
   }
 }
 
@@ -262,10 +327,19 @@ export const lifecycleService = {
     // legacy `workflow` is read as fallback so a stale-cache browser hitting a
     // freshly-migrated backend still renders (backend's dual-key tolerance only
     // covers the WRITE path; on the READ side we just emit V2).
+    //
+    // Wave 2 W2-C5 — task workflow canonical key is `task_workflow`. Wave 1 C10
+    // half-renamed the field so the legacy `status_workflow` is kept here as a
+    // READ-side fallback for projects persisted before the rename completed.
+    // The WRITE path (editor-page save handler) emits `task_workflow` only.
+    // Cleanup of the legacy key is deferred to Wave 3 once all persisted rows
+    // are confirmed migrated.
     const processConfig = (projectResp.data["process_config"] ??
       projectResp.data["processConfig"]) as {
         phase_workflow?: WorkflowConfigDTO
         workflow?: WorkflowConfigDTO
+        task_workflow?: WorkflowConfigDTO
+        status_workflow?: WorkflowConfigDTO
       } | null
     const phaseWorkflow =
       processConfig?.phase_workflow ?? processConfig?.workflow

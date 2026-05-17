@@ -130,7 +130,11 @@ interface ProcessConfigShape {
    *  cache or in-flight request) keep working. WRITES always emit
    *  `phase_workflow`. */
   workflow?: WorkflowConfigDTO
-  /** Triage #1 — separate task-status flow stored alongside the lifecycle. */
+  /** Wave 2 W2-C5 — canonical task-status workflow key. WRITES always emit
+   *  `task_workflow` (Wave 1 C10 began the rename; W2-C5 completes it). */
+  task_workflow?: WorkflowConfigDTO
+  /** Legacy Wave 1 transitional key — accepted on READ only so projects
+   *  persisted before W2-C5 still load. Cleanup deferred to Wave 3. */
   status_workflow?: WorkflowConfigDTO
   statusWorkflow?: WorkflowConfigDTO
 }
@@ -158,15 +162,20 @@ function readWorkflow(project: Project): WorkflowConfig {
 }
 
 /**
- * Wave 2 W2-C4 — read capabilities for a given mode from the persisted
+ * Wave 2 W2-C4/W2-C5 — read capabilities for a given mode from the persisted
  * process_config payload. Returns an empty object when the legacy row has
  * no capabilities sub-object so toggles default to `false` (a no-op for
  * the engine, matching the backend normalizer's defaults).
  *
- * NOTE: capabilities is hosted on `WorkflowConfigDTO` since W2-C1 but the
- * old `mapWorkflowConfig` strips unknown fields. We read the raw DTO
- * instead so the round-trip stays lossless until W2-C5 lifts capabilities
- * into the mapper.
+ * NOTE: capabilities is hosted on `WorkflowConfigDTO` since W2-C1 and the
+ * mapper now round-trips it (W2-C5). We still read the raw DTO here
+ * because the editor maintains capabilities in a separate state slice
+ * (`lifecycleCapabilities` / `statusCapabilities`) — see W2-C4's rationale
+ * around concurrent toggle merges without touching the workflow graph.
+ *
+ * Read-side dual-key fallback for status mode: `task_workflow` (Wave 2
+ * canonical) → `status_workflow` (Wave 1 legacy) → `statusWorkflow` (older
+ * camelCase test fixtures). Cleanup of the legacy keys lands in Wave 3.
  */
 function readCapabilities(
   project: Project,
@@ -176,7 +185,7 @@ function readCapabilities(
   if (!cfg) return {}
   const dto =
     mode === "status"
-      ? cfg.statusWorkflow ?? cfg.status_workflow
+      ? cfg.task_workflow ?? cfg.statusWorkflow ?? cfg.status_workflow
       : cfg.phase_workflow ?? cfg.workflow
   const caps = (dto as { capabilities?: unknown } | undefined)?.capabilities
   if (!caps || typeof caps !== "object") return {}
@@ -188,11 +197,15 @@ function readCapabilities(
  * synthesize a 4-node default (Yapılacak → Yapılıyor → İncelemede → Bitti) so
  * the canvas has something to render the first time the user enters status
  * mode. The save flow persists whatever shape the user produces back into
- * `processConfig.status_workflow`.
+ * `processConfig.task_workflow` (Wave 2 W2-C5 canonical; Wave 1 C10 started
+ * the rename from the legacy `status_workflow`).
+ *
+ * Read-side fallback chain: task_workflow → statusWorkflow → status_workflow.
+ * Cleanup of the legacy keys deferred to Wave 3.
  */
 function readStatusWorkflow(project: Project): WorkflowConfig {
   const cfg = (project.processConfig ?? null) as ProcessConfigShape | null
-  const dto = cfg?.statusWorkflow ?? cfg?.status_workflow
+  const dto = cfg?.task_workflow ?? cfg?.statusWorkflow ?? cfg?.status_workflow
   if (dto) return mapWorkflowConfig(dto)
   return DEFAULT_STATUS_WORKFLOW
 }
@@ -1329,26 +1342,64 @@ export function EditorPage({ project }: EditorPageProps) {
     setSaveError(null)
     try {
       const currentPC = (project.processConfig ?? {}) as Record<string, unknown>
-      // C10: emit V2 canonical shape. Drop the legacy `workflow` key on
-      // write so the persisted document is always V2; we only kept it as a
-      // read fallback for in-flight stale-cache clients.
-      const { workflow: _legacyWorkflow, ...restPC } = currentPC as {
+      // C10 + Wave 2 W2-C5: emit V2 canonical shape. Drop both legacy keys on
+      // write so the persisted document is always V2:
+      //   - `workflow` → superseded by `phase_workflow` (Wave 1 C10)
+      //   - `status_workflow` → superseded by `task_workflow` (Wave 1 C10
+      //     started the rename, W2-C5 completes it on the write side)
+      // Read-side fallback for `status_workflow` lives in readStatusWorkflow /
+      // readCapabilities + lifecycle-service so projects persisted with the
+      // legacy key continue to load. Cleanup of the read fallback is deferred
+      // to Wave 3 once all rows are migrated.
+      const {
+        workflow: _legacyWorkflow,
+        status_workflow: _legacyStatusWorkflow,
+        ...restPC
+      } = currentPC as {
         workflow?: unknown
+        status_workflow?: unknown
         [k: string]: unknown
       }
       void _legacyWorkflow
+      void _legacyStatusWorkflow
+
+      // Wave 2 W2-C5 — merge the working-copy capability slices INTO the
+      // serialized workflow DTOs so toggle changes (W2-C4 CapabilitiesPanel)
+      // actually reach the backend. unmapWorkflowConfig already round-trips
+      // capabilities that live on the WorkflowConfig (W2-C5 mapper change),
+      // but the editor maintains capabilities in a separate state slice (so
+      // a toggle flip doesn't force a workflow-graph history entry), so we
+      // overlay the live slice here at save time. Spread order matters:
+      // putting the capability slice LAST means an in-DTO capabilities sub-
+      // object (e.g. unchanged from the persisted shape) is overridden by
+      // the live state.
+      const lifecycleDto = unmapWorkflowConfig(lifecycleWorkflow)
+      const taskDto = unmapWorkflowConfig(statusWorkflow)
+
       const nextProcessConfig = {
         ...restPC,
         // Serialize camelCase -> snake_case at the wire boundary (Pitfall 21).
         // unmapWorkflowConfig handles bidirectional/is_all_gate, is_initial,
         // is_final, is_archived, parent_id, wip_limit conversions.
-        // Triage #1 — persist BOTH lifecycle and status workflows so a user
+        // Triage #1 — persist BOTH lifecycle and task workflows so a user
         // who edited only one mode doesn't lose the other.
         // C10 (Workflow Engine V2): canonical key is `phase_workflow`. Backend
         // still accepts legacy `workflow` (dual-key tolerance in manage_projects.py)
         // but new clients emit V2 only.
-        phase_workflow: unmapWorkflowConfig(lifecycleWorkflow),
-        status_workflow: unmapWorkflowConfig(statusWorkflow),
+        phase_workflow: {
+          ...lifecycleDto,
+          capabilities: lifecycleCapabilities,
+        },
+        // Wave 2 W2-C5: canonical task workflow key is `task_workflow`. The
+        // backend's normalizer accepts both keys (Wave 1 C10's dual-key
+        // tolerance lives in manage_projects.py), but new clients emit the
+        // V2 canonical name only. The legacy `status_workflow` key is
+        // explicitly dropped from the restPC spread above so the persisted
+        // document is always V2-canonical post-save.
+        task_workflow: {
+          ...taskDto,
+          capabilities: statusCapabilities,
+        },
       }
       await projectService.updateProcessConfig(project.id, nextProcessConfig)
 
@@ -1418,6 +1469,11 @@ export function EditorPage({ project }: EditorPageProps) {
     project.processConfig,
     lifecycleWorkflow,
     statusWorkflow,
+    // Wave 2 W2-C5 — capability slices participate in the PATCH body, so
+    // they belong in the dep array. Without these, a save fired from a
+    // stale callback closure could send pre-toggle capabilities.
+    lifecycleCapabilities,
+    statusCapabilities,
     history,
     qc,
     showToast,
