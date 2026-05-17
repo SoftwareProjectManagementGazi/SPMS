@@ -60,6 +60,12 @@ class WorkflowEdge(BaseModel):
     # Phase 12 D-17 — Jira-style source-agnostic gate. When True, ANY non-archived
     # source node may transition to this edge's target.
     is_all_gate: bool = False
+    # Phase 17 C5 — BPMN-style inclusive (source-fanout) gate. When True, the
+    # edge's source node may transition to ANY non-archived target, regardless
+    # of whether a matching edge exists. Symmetric counterpart to is_all_gate
+    # (which is target-fanin). Additive — pre-existing JSONB edges parse with
+    # default False, so no schema-version bump required (Pitfall 9).
+    is_any_gate: bool = False
 
 
 class WorkflowGroup(BaseModel):
