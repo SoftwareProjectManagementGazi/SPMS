@@ -85,11 +85,10 @@ class ExecutePhaseTransitionUseCase:
 
         pc = project.process_config or {}
         # C1: V2 schema renamed `workflow` -> `phase_workflow`. The Project entity's
-        # lazy normalizer migrates legacy V1 dicts on load, so production reads
-        # always see the V2 key. The fallback to the V1 alias keeps in-memory
-        # fakes (unit/integration tests that bypass the entity layer) working
-        # during the rename rollout — see C3 for fixture cleanup.
-        workflow = pc.get("phase_workflow") or pc.get("workflow") or {}
+        # lazy normalizer migrates legacy V1 dicts on load, so all reads here see
+        # the V2 key. (C3: removed the V1-alias fallback once all test fixtures
+        # were migrated to V2 shape.)
+        workflow = pc.get("phase_workflow", {})
         mode = workflow.get("mode", "flexible")
 
         # 3. Mode guard (D-07)

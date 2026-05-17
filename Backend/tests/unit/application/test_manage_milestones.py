@@ -13,17 +13,33 @@ from datetime import datetime
 
 
 def _mk_project(nodes):
+    # C3: V2 schema. `initial_node_id` derived from the first non-empty node;
+    # empty-nodes test (test_create_rejects_missing_phase_id) keeps it None.
+    initial_node_id = nodes[0]["id"] if nodes else None
     return Project(
         id=1, key="K", name="P", start_date=datetime(2026, 1, 1),
         methodology=Methodology.SCRUM, status=ProjectStatus.ACTIVE,
         process_config={
-            "schema_version": 1,
-            "workflow": {"mode": "flexible", "nodes": nodes, "edges": [], "groups": []},
+            "schema_version": 2,
+            "phase_workflow": {
+                "mode": "flexible",
+                "capabilities": {
+                    "enforce_wip_limits": False,
+                    "enforce_sequential_dependencies": False,
+                    "restrict_expired_sprints": False,
+                    "initial_node_id": initial_node_id,
+                },
+                "nodes": nodes,
+                "edges": [],
+                "groups": [],
+            },
+            "task_workflow": {
+                "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+                "edges": [],
+                "groups": [],
+            },
             "phase_completion_criteria": {},
             "enable_phase_assignment": False,
-            "enforce_sequential_dependencies": False,
-            "enforce_wip_limits": False,
-            "restrict_expired_sprints": False,
         },
     )
 

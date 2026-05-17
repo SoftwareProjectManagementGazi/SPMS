@@ -22,11 +22,10 @@ async def _validate_phase_in_workflow(
     project = await project_repo.get_by_id(project_id)
     if project is None:
         raise ProjectNotFoundError(project_id)
-    # C1: V2 renamed `workflow` -> `phase_workflow`; entity normalizer migrates
-    # legacy rows on load. Fallback to the V1 alias keeps in-memory fakes
-    # (tests bypassing the entity layer) working — see C3 for fixture cleanup.
+    # C1/C3: V2 renamed `workflow` -> `phase_workflow`; entity normalizer
+    # migrates legacy rows on load, so reads always see the V2 key.
     pc = project.process_config or {}
-    pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+    pw = pc.get("phase_workflow", {})
     nodes = pw.get("nodes", [])
     node = next((n for n in nodes if n["id"] == phase_id), None)
     if node is None:
@@ -43,14 +42,14 @@ async def _resolve_phase_name(
     Falls back to None if the project or node disappeared (D-D6 graceful).
     Mirrors the BoardColumn.name resolver pattern from task_repo.py.
 
-    C1: V2 renamed `workflow` -> `phase_workflow`; entity normalizer migrates
-    legacy rows on load. Fallback to V1 alias supports in-memory fakes.
+    C1/C3: V2 renamed `workflow` -> `phase_workflow`; entity normalizer
+    migrates legacy rows on load, so reads always see the V2 key.
     """
     project = await project_repo.get_by_id(project_id)
     if project is None:
         return None
     pc = project.process_config or {}
-    pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+    pw = pc.get("phase_workflow", {})
     nodes = pw.get("nodes", [])
     node = next((n for n in nodes if n.get("id") == phase_id), None)
     if node is None:

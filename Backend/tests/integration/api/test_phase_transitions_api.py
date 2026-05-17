@@ -39,7 +39,11 @@ async def _migration_005_applied(session: AsyncSession) -> bool:
 # ---------------------------------------------------------------------------
 
 def _make_process_config(mode: str = "flexible", extra_nodes: list = None) -> dict:
-    """Build a valid process_config dict for testing."""
+    """Build a valid process_config dict for testing.
+
+    C3: V2 schema — `phase_workflow` (was `workflow`), engine flags now live
+    under `phase_workflow.capabilities`, `task_workflow` placeholder seeded.
+    """
     nodes = [
         {"id": "nd_Src123DXYZ", "name": "Source", "x": 0, "y": 0, "color": "#888", "is_archived": False},
         {"id": "nd_Tgt456DXYZ", "name": "Target", "x": 100, "y": 0, "color": "#888", "is_archived": False},
@@ -47,13 +51,26 @@ def _make_process_config(mode: str = "flexible", extra_nodes: list = None) -> di
     if extra_nodes:
         nodes.extend(extra_nodes)
     return {
-        "schema_version": 1,
-        "workflow": {"mode": mode, "nodes": nodes, "edges": [], "groups": []},
+        "schema_version": 2,
+        "phase_workflow": {
+            "mode": mode,
+            "capabilities": {
+                "enforce_wip_limits": False,
+                "enforce_sequential_dependencies": False,
+                "restrict_expired_sprints": False,
+                "initial_node_id": "nd_Src123DXYZ",
+            },
+            "nodes": nodes,
+            "edges": [],
+            "groups": [],
+        },
+        "task_workflow": {
+            "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+            "edges": [],
+            "groups": [],
+        },
         "phase_completion_criteria": {},
         "enable_phase_assignment": True,
-        "enforce_sequential_dependencies": False,
-        "enforce_wip_limits": False,
-        "restrict_expired_sprints": False,
     }
 
 

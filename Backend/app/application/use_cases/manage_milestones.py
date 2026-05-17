@@ -62,8 +62,9 @@ async def _validate_phase_ids_against_workflow(
     project = await project_repo.get_by_id(project_id)
     if project is None:
         raise ProjectNotFoundError(project_id)
+    # C1/C3: entity normalizer guarantees `phase_workflow` on read.
     pc = project.process_config or {}
-    pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+    pw = pc.get("phase_workflow", {})
     nodes = pw.get("nodes", [])
     node_map = {n["id"]: n for n in nodes}
     for pid in phase_ids:

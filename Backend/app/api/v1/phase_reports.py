@@ -177,7 +177,8 @@ async def export_pdf(
     project_name = project.name if project else "N/A"
     if project:
         pc = project.process_config or {}
-        pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+        # C1/C3: entity normalizer guarantees `phase_workflow` on read.
+        pw = pc.get("phase_workflow", {})
         nodes = pw.get("nodes", [])
     else:
         nodes = []

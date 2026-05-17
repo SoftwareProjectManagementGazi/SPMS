@@ -25,17 +25,32 @@ def _mk_project(mode="flexible", extra_nodes=None, criteria=None, extra_edges=No
     edges = [{"id": "e1", "source": "nd_Src123DXYZ", "target": "nd_Tgt456DXYZ", "type": "flow"}]
     if extra_edges:
         edges.extend(extra_edges)
+    # C3: V2 schema — `phase_workflow` (was `workflow`), engine flags under
+    # `phase_workflow.capabilities`, `task_workflow` placeholder seeded.
     return Project(
         id=1, key="K", name="P", start_date=datetime(2026, 1, 1),
         methodology=Methodology.SCRUM, status=ProjectStatus.ACTIVE,
         process_config={
-            "schema_version": 1,
-            "workflow": {"mode": mode, "nodes": nodes, "edges": edges, "groups": []},
+            "schema_version": 2,
+            "phase_workflow": {
+                "mode": mode,
+                "capabilities": {
+                    "enforce_wip_limits": False,
+                    "enforce_sequential_dependencies": False,
+                    "restrict_expired_sprints": False,
+                    "initial_node_id": "nd_Src123DXYZ",
+                },
+                "nodes": nodes,
+                "edges": edges,
+                "groups": [],
+            },
+            "task_workflow": {
+                "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+                "edges": [],
+                "groups": [],
+            },
             "phase_completion_criteria": criteria or {},
             "enable_phase_assignment": True,
-            "enforce_sequential_dependencies": False,
-            "enforce_wip_limits": False,
-            "restrict_expired_sprints": False,
         },
     )
 

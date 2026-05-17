@@ -539,9 +539,9 @@ async def patch_phase_criteria(
     pc = project.process_config or {}
 
     # WARNING-3 / D-19: strict phase_id validation against non-archived workflow nodes.
-    # C1: read `phase_workflow` first, fall back to legacy `workflow` for in-memory
-    # fakes that bypass the entity normalizer.
-    workflow = pc.get("phase_workflow") or pc.get("workflow") or {}
+    # C1/C3: Project entity normalizer guarantees `phase_workflow` on read; the
+    # V1-alias fallback was removed in C3 after fixtures migrated to V2.
+    workflow = pc.get("phase_workflow", {})
     nodes = workflow.get("nodes", []) or []
     valid_node_ids = {
         n["id"] for n in nodes

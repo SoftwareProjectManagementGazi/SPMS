@@ -248,3 +248,54 @@ async def test_patch_with_zero_final_returns_422(authenticated_client, db_sessio
             json={"process_config": {"workflow": workflow}},
         )
         assert r.status_code == 422, f"expected 422, got {r.status_code}: {r.text}"
+
+
+@pytest.mark.asyncio
+async def test_patch_accepts_legacy_workflow_key(authenticated_client, db_session):
+    """C1 D-X / C3: PATCH endpoint dual-key tolerance — the API accepts BOTH
+    the legacy `workflow` key (Frontend1 / pre-FE2 clients) AND the new
+    `phase_workflow` key (V2-aware clients) and the entity normalizer renames
+    it on persistence. GET-after-PATCH always returns the V2 `phase_workflow`
+    shape regardless of which key the client originally sent.
+
+    This contract MUST be preserved until C10 — only after FE2 ships with V2
+    payloads can the legacy `workflow` request-boundary tolerance be removed.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="DUALK1")
+
+    good_workflow = {
+        "mode": "flexible",
+        "nodes": [_VALID_NODE, _VALID_FINAL_NODE],
+        "edges": [{"id": "e1", "source": _VALID_NODE["id"], "target": _VALID_FINAL_NODE["id"], "type": "flow"}],
+        "groups": [],
+    }
+
+    async with authenticated_client(role="admin") as client:
+        # Send with the LEGACY `workflow` key — backend must accept.
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={"process_config": {"workflow": good_workflow}},
+        )
+        assert r.status_code == 200, (
+            f"PATCH must accept legacy `workflow` key (dual-key tolerance); "
+            f"got {r.status_code}: {r.text}"
+        )
+
+        # GET-after-PATCH must return the V2 `phase_workflow` key (normalizer
+        # renamed it). The body content must equal what was sent under the
+        # legacy key.
+        r2 = await client.get(f"/api/v1/projects/{pid}")
+        assert r2.status_code == 200
+        pc = r2.json()["process_config"]
+        assert "phase_workflow" in pc, (
+            "GET response must surface the V2 `phase_workflow` key after "
+            "normalizer applies the legacy `workflow` rename."
+        )
+        pw = pc["phase_workflow"]
+        # Content equivalence — nodes/edges/mode preserved verbatim.
+        assert pw["mode"] == good_workflow["mode"]
+        assert {n["id"] for n in pw["nodes"]} == {n["id"] for n in good_workflow["nodes"]}
+        assert {e["id"] for e in pw["edges"]} == {e["id"] for e in good_workflow["edges"]}

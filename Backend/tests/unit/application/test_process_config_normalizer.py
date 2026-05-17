@@ -10,63 +10,88 @@ from app.domain.exceptions import ProcessConfigSchemaError
 
 
 # ---------------------------------------------------------------------------
-# C1: Legacy V1-shape tests
+# C3: V2 canonical-shape tests
 # ---------------------------------------------------------------------------
 # CURRENT_SCHEMA_VERSION was bumped from 1 -> 2 in C1 of the workflow engine
 # refactor (rename `workflow` -> `phase_workflow`; nest engine flags under
-# `phase_workflow.capabilities`). The tests below assert the *V1* shape and
-# therefore fail under V2 normalization — this is the deliberate, documented
-# breaking change. They are marked xfail here and will be rewritten as
-# V2-shape assertions in C3 (test fixture migration). See
-# .planning/workflow-engine-implementation.md C1 § "Test Stratejisi".
+# `phase_workflow.capabilities`; seed `task_workflow` placeholder).
+# The xfail tests that asserted the V1 shape have been rewritten below to
+# assert V2. The V1->V2 migration step itself is still covered by
+# test_v1_config_migrates_to_v2 further down in this file.
 
 
-@pytest.mark.xfail(
-    reason="V1→V2 migration introduced in C1; test rewritten in C3", strict=True
-)
-def test_legacy_config_migrates_to_v1():
-    """V0 legacy config with only `methodology` -> V1 canonical shape."""
+def test_legacy_v0_config_migrates_to_v2():
+    """V0 legacy config (only `methodology`) walks V0 -> V1 -> V2 in one call."""
     legacy = {"methodology": "SCRUM"}
     result = _normalize_process_config(legacy)
-    assert result["schema_version"] == 1
+    assert result["schema_version"] == 2
     assert result["methodology_legacy"] == "SCRUM"
     assert "methodology" not in result
-    assert result["workflow"] == {"mode": "flexible", "nodes": [], "edges": [], "groups": []}
+    # V1 stage seeded `workflow`; V2 stage renamed to `phase_workflow`.
+    assert "workflow" not in result
+    assert result["phase_workflow"]["mode"] == "flexible"
+    assert result["phase_workflow"]["nodes"] == []
+    assert result["phase_workflow"]["edges"] == []
+    assert result["phase_workflow"]["groups"] == []
+    # Capabilities sub-object holds the engine flags now.
+    caps = result["phase_workflow"]["capabilities"]
+    assert caps["enforce_sequential_dependencies"] is False
+    assert caps["enforce_wip_limits"] is False
+    assert caps["restrict_expired_sprints"] is False
+    assert caps["initial_node_id"] is None
+    # Top-level engine flags removed.
+    assert "enforce_sequential_dependencies" not in result
+    assert "enforce_wip_limits" not in result
+    assert "restrict_expired_sprints" not in result
+    # task_workflow placeholder seeded (C2).
+    assert result["task_workflow"]["edges"] == []
+    assert result["task_workflow"]["groups"] == []
+    assert result["task_workflow"]["capabilities"]["enforce_wip_limits"] is False
+    assert result["task_workflow"]["capabilities"]["initial_node_id"] is None
+    # Other defaults.
     assert result["phase_completion_criteria"] == {}
     assert result["enable_phase_assignment"] is False
-    assert result["enforce_sequential_dependencies"] is False
-    assert result["enforce_wip_limits"] is False
-    assert result["restrict_expired_sprints"] is False
 
 
-@pytest.mark.xfail(
-    reason="V1→V2 migration introduced in C1; test rewritten in C3", strict=True
-)
-def test_v1_config_is_idempotent():
-    """Running normalizer on already-normalized config returns same shape."""
-    v1 = {
-        "schema_version": 1,
-        "workflow": {"mode": "flexible", "nodes": [], "edges": [], "groups": []},
+def test_v2_canonical_config_is_idempotent():
+    """Running normalizer on an already-V2 config returns the exact same shape."""
+    v2 = {
+        "schema_version": 2,
+        "phase_workflow": {
+            "mode": "flexible",
+            "capabilities": {
+                "enforce_wip_limits": False,
+                "enforce_sequential_dependencies": False,
+                "restrict_expired_sprints": False,
+                "initial_node_id": None,
+            },
+            "nodes": [],
+            "edges": [],
+            "groups": [],
+        },
+        "task_workflow": {
+            "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+            "edges": [],
+            "groups": [],
+        },
         "phase_completion_criteria": {},
         "enable_phase_assignment": True,
-        "enforce_sequential_dependencies": False,
-        "enforce_wip_limits": False,
-        "restrict_expired_sprints": False,
     }
-    result = _normalize_process_config(v1)
-    assert result == v1
+    result = _normalize_process_config(v2)
+    assert result == v2
     # Idempotency: run twice
     result2 = _normalize_process_config(result)
     assert result2 == result
 
 
-@pytest.mark.xfail(
-    reason="V1→V2 migration introduced in C1; test rewritten in C3", strict=True
-)
 def test_empty_config_fills_defaults():
+    """Empty config fills V2 canonical defaults end-to-end."""
     result = _normalize_process_config({})
-    assert result["schema_version"] == 1
-    assert result["workflow"]["mode"] == "flexible"
+    assert result["schema_version"] == 2
+    assert result["phase_workflow"]["mode"] == "flexible"
+    assert "task_workflow" in result
+    assert result["task_workflow"]["edges"] == []
+    assert result["task_workflow"]["groups"] == []
 
 
 def test_none_config_returns_none():

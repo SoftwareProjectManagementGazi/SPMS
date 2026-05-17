@@ -33,10 +33,18 @@ pytestmark = pytest.mark.requires_db
 # Seed helpers
 # ---------------------------------------------------------------------------
 
+# C3: V2 schema — `phase_workflow` (was `workflow`), engine flags now live
+# under `phase_workflow.capabilities`, `task_workflow` placeholder seeded.
 _PROCESS_CONFIG = {
-    "schema_version": 1,
-    "workflow": {
+    "schema_version": 2,
+    "phase_workflow": {
         "mode": "flexible",
+        "capabilities": {
+            "enforce_wip_limits": False,
+            "enforce_sequential_dependencies": False,
+            "restrict_expired_sprints": False,
+            "initial_node_id": "nd_a1b2c3d4e5",
+        },
         "nodes": [
             {
                 "id": "nd_a1b2c3d4e5",
@@ -52,11 +60,13 @@ _PROCESS_CONFIG = {
         "edges": [],
         "groups": [],
     },
+    "task_workflow": {
+        "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+        "edges": [],
+        "groups": [],
+    },
     "phase_completion_criteria": {},
     "enable_phase_assignment": False,
-    "enforce_sequential_dependencies": False,
-    "enforce_wip_limits": False,
-    "restrict_expired_sprints": False,
 }
 
 

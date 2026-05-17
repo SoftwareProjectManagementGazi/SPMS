@@ -18,23 +18,36 @@ def make_project(
 ) -> Project:
     _counter["value"] += 1
     n = _counter["value"]
-    # Default workflow stub suitable for Phase Gate tests
+    # Default workflow stub suitable for Phase Gate tests.
+    # C3: V2 schema — `workflow` renamed to `phase_workflow`, engine flags moved
+    # into `phase_workflow.capabilities`, and a `task_workflow` placeholder is
+    # seeded. See .planning/workflow-engine-implementation.md C3 + C1.
     default_pc = {
-        "schema_version": 1,
-        "workflow": {
+        "schema_version": 2,
+        "phase_workflow": {
             "mode": "flexible",
+            "capabilities": {
+                "enforce_wip_limits": False,
+                "enforce_sequential_dependencies": False,
+                "restrict_expired_sprints": False,
+                "initial_node_id": "nd_SrcPhase001",
+            },
             "nodes": [
-                {"id": "nd_SrcPhase001", "name": "Source", "x": 0, "y": 0, "color": "#888", "is_archived": False},
-                {"id": "nd_TgtPhase001", "name": "Target", "x": 100, "y": 0, "color": "#888", "is_archived": False},
+                {"id": "nd_SrcPhase001", "name": "Source", "x": 0, "y": 0, "color": "#888", "is_archived": False, "is_initial": True, "is_final": False},
+                {"id": "nd_TgtPhase001", "name": "Target", "x": 100, "y": 0, "color": "#888", "is_archived": False, "is_initial": False, "is_final": True},
             ],
             "edges": [{"id": "ed_1", "source": "nd_SrcPhase001", "target": "nd_TgtPhase001", "type": "flow"}],
             "groups": [],
         },
+        "task_workflow": {
+            "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+            "edges": [],
+            "groups": [],
+        },
         "phase_completion_criteria": {},
         "enable_phase_assignment": False,
-        "enforce_sequential_dependencies": False,
-        "enforce_wip_limits": False,
-        "restrict_expired_sprints": False,
+        "backlog_definition": "cycle_null",
+        "cycle_label": None,
     }
     return Project(
         id=id,

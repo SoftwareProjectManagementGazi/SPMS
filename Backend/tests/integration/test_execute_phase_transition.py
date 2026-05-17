@@ -162,11 +162,37 @@ def reset_idempotency():
 
 
 def _build_use_case(workflow: dict) -> tuple[ExecutePhaseTransitionUseCase, FakeAuditRepo]:
+    # C3: V2 schema — `phase_workflow` (was `workflow`), capabilities seeded
+    # under `phase_workflow.capabilities`, `task_workflow` placeholder added.
+    # `initial_node_id` derived from the first is_initial=True node in the
+    # supplied workflow, falling back to the first node id, then None.
+    nodes = workflow.get("nodes", []) if isinstance(workflow, dict) else []
+    initial_node_id = next(
+        (n.get("id") for n in nodes if n.get("is_initial")),
+        nodes[0].get("id") if nodes else None,
+    )
+    phase_workflow = {
+        "mode": workflow.get("mode", "flexible") if isinstance(workflow, dict) else "flexible",
+        "capabilities": {
+            "enforce_wip_limits": False,
+            "enforce_sequential_dependencies": False,
+            "restrict_expired_sprints": False,
+            "initial_node_id": initial_node_id,
+        },
+        "nodes": nodes,
+        "edges": workflow.get("edges", []) if isinstance(workflow, dict) else [],
+        "groups": workflow.get("groups", []) if isinstance(workflow, dict) else [],
+    }
     project = FakeProject(
         id=1,
         process_config={
-            "schema_version": 1,
-            "workflow": workflow,
+            "schema_version": 2,
+            "phase_workflow": phase_workflow,
+            "task_workflow": {
+                "capabilities": {"enforce_wip_limits": False, "initial_node_id": None},
+                "edges": [],
+                "groups": [],
+            },
             "phase_completion_criteria": {},
             "enable_phase_assignment": True,
         },

@@ -50,10 +50,10 @@ async def _validate_phase_id_in_workflow(
     project = await project_repo.get_by_id(project_id)
     if project is None:
         raise ProjectNotFoundError(project_id)
-    # C1: V2 renamed `workflow` -> `phase_workflow`; entity normalizer migrates
-    # legacy rows on load. Fallback to V1 alias supports in-memory fakes.
+    # C1/C3: V2 renamed `workflow` -> `phase_workflow`; entity normalizer
+    # migrates legacy rows on load, so reads always see the V2 key.
     pc = project.process_config or {}
-    pw = pc.get("phase_workflow") or pc.get("workflow") or {}
+    pw = pc.get("phase_workflow", {})
     nodes = pw.get("nodes", [])
     node_map = {n["id"]: n for n in nodes}
     node = node_map.get(phase_id)
