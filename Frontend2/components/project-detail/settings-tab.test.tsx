@@ -7,9 +7,8 @@ import { mockProjects } from "@/test/fixtures/projects"
 import { SettingsTab } from "./settings-tab"
 
 // Stub the underlying HTTP client: the Genel sub-tab PATCHes via
-// projectService which wraps apiClient.patch, and the Kolonlar sub-tab
-// fetches /projects/{id}/columns via apiClient.get directly. Mocking the
-// client at one level keeps the test stable.
+// projectService which wraps apiClient.patch. Mocking the client at one
+// level keeps the test stable.
 vi.mock("@/lib/api-client", () => ({
   apiClient: {
     get: vi.fn().mockResolvedValue({ data: [] }),
@@ -20,14 +19,16 @@ vi.mock("@/lib/api-client", () => ({
 }))
 
 describe("SettingsTab", () => {
-  it("renders 4 sub-tab buttons", () => {
-    const { getByText } = renderWithProviders(
+  it("renders 3 sub-tab buttons (Kolonlar removed 2026-05-18 — column management lives in workflow editor status mode)", () => {
+    const { getByText, queryByText } = renderWithProviders(
       <SettingsTab project={mockProjects[0]} isArchived={false} />
     )
     expect(getByText("Genel")).toBeInTheDocument()
-    expect(getByText("Kolonlar")).toBeInTheDocument()
     expect(getByText("İş Akışı")).toBeInTheDocument()
     expect(getByText("Yaşam Döngüsü")).toBeInTheDocument()
+    // Kolonlar sub-tab intentionally absent — duplicated workflow editor's
+    // status mode and split column CRUD across two surfaces.
+    expect(queryByText("Kolonlar")).toBeNull()
   })
 
   it("defaults to the Genel sub-tab and shows Proje Adı / Backlog Tanımı fields", () => {
@@ -39,43 +40,13 @@ describe("SettingsTab", () => {
     expect(getByText("Döngü Etiketi")).toBeInTheDocument()
   })
 
-  it("switches to Kolonlar and renders the column header row", async () => {
-    const { getByText } = renderWithProviders(
-      <SettingsTab project={mockProjects[0]} isArchived={false} />
-    )
-    fireEvent.click(getByText("Kolonlar"))
-    // Kolonlar header appears once the loading state resolves.
-    await waitFor(() => {
-      expect(getByText("KOLON ADI")).toBeInTheDocument()
-    })
-    // mockProjects[0] is SCRUM — WIP column visible.
-    expect(getByText("WIP LİMİTİ")).toBeInTheDocument()
-  })
-
-  it("hides the WIP limit column for Waterfall projects", async () => {
-    const waterfallProject = {
-      ...mockProjects[0],
-      methodology: "WATERFALL",
-    }
-    const { getByText, queryByText } = renderWithProviders(
-      <SettingsTab project={waterfallProject} isArchived={false} />
-    )
-    fireEvent.click(getByText("Kolonlar"))
-    await waitFor(() => {
-      expect(getByText("KOLON ADI")).toBeInTheDocument()
-    })
-    expect(queryByText("WIP LİMİTİ")).toBeNull()
-    expect(
-      getByText(/Waterfall metodolojisinde WIP limitleri gizlidir/)
-    ).toBeInTheDocument()
-  })
-
-  it("switches to İş Akışı and shows the editor link button", () => {
+  it("switches to İş Akışı and shows both editor link buttons (lifecycle + status)", () => {
     const { getByText } = renderWithProviders(
       <SettingsTab project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("İş Akışı"))
-    expect(getByText("Workflow Editörünü Aç")).toBeInTheDocument()
+    expect(getByText("Yaşam Döngüsü Editörü")).toBeInTheDocument()
+    expect(getByText("Görev Durumları (Kolonlar)")).toBeInTheDocument()
   })
 
   it("renders the CriteriaEditorPanel on the Yaşam Döngüsü sub-tab (replaces the Faz 12 stub)", async () => {

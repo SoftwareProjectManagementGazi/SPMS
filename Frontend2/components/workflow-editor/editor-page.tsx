@@ -532,7 +532,14 @@ export function EditorPage({ project }: EditorPageProps) {
     mode === "status" ? statusCapabilities : lifecycleCapabilities
   const handleCapabilitiesChange = React.useCallback(
     (patch: WorkflowCapabilities) => {
-      history.push(workflow)
+      // Bug fix 2026-05-18 — capability toggles do NOT push to the undo
+      // stack. The old behavior captured a workflow snapshot before
+      // mutating the (separate) capability state; pressing Geri Al
+      // therefore restored an unchanged workflow while leaving the
+      // capability flipped — a visible-but-meaningless undo entry that
+      // confused users. The toggle action is trivially reversible (just
+      // re-click), so the undo stack only tracks structural workflow
+      // edits (nodes/edges/groups) where Geri Al carries real value.
       if (mode === "status") {
         setStatusCapabilities((prev) => ({ ...prev, ...patch }))
       } else {
@@ -540,7 +547,7 @@ export function EditorPage({ project }: EditorPageProps) {
       }
       setDirty(true)
     },
-    [history, mode, workflow],
+    [mode],
   )
 
   // Plan 12-10 Task 2 — preset apply handler. Pushes the current workflow
