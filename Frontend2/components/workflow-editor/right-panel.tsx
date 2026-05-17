@@ -124,12 +124,17 @@ export function RightPanel({
         borderLeft: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
-        // height:100% + minHeight:0 ensure the panel is bounded by the
-        // parent grid row (which is pinned to the flex container height
-        // via gridTemplateRows: minmax(0, 1fr)). Without minHeight:0 a
-        // tall NodeEditor would expand the grid row and push the canvas
-        // off-screen (2026-05-18 UX fix).
-        height: "100%",
+        // Plan B (2026-05-18) — AppShell <main> is overflow-auto, so any
+        // intra-grid height cap was being defeated by main scrolling the
+        // entire EditorPage. Sticky + alignSelf:start pins the aside to
+        // the viewport top inside main's scroll container; maxHeight
+        // viewport-relative caps the panel regardless of what the grid
+        // row decides to do. Tab body still scrolls independently via
+        // overflowY:auto + minHeight:0.
+        position: "sticky",
+        top: 0,
+        alignSelf: "start",
+        maxHeight: "calc(100vh - 7rem)",
         minHeight: 0,
         overflow: "hidden",
       }}
