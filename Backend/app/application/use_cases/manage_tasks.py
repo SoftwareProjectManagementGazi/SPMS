@@ -13,6 +13,7 @@ from app.application.dtos.task_dtos import (
 )
 from app.domain.entities.task import Task
 from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError
+from app.domain.services.workflow_engine import WorkflowEngine
 
 STOP_WORDS = {"the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or", "this", "that", "with"}
 
@@ -22,20 +23,23 @@ def extract_search_words(query: str) -> List[str]:
 
 # --- YARDIMCI MAPPER FONKSİYONU (Logic buraya taşındı) ---
 def map_task_to_response_dto(task: Task) -> TaskResponseDTO:
-    # 1. Status + is_done computation
-    # is_done: language-agnostic — task is done when its column has the
-    # highest order_index among all project columns (covers "Done", "Bitti",
-    # "Tamamlandı", and any custom last-column name).
+    # 1. Status + is_done computation via WorkflowEngine (C6 Strangler step).
+    # Engine handles both is_terminal flag (migration 013 backfilled it from
+    # max(order_index)) and falls back to order_index for legacy / unmigrated
+    # rows. Language-agnostic — covers "Done", "Bitti", "Tamamlandı", and any
+    # custom last-column name.
     status_slug = "todo"
     is_done = False
     if task.column:
         status_slug = task.column.name.lower()
-        if task.project and task.project.columns:
-            max_order = max(
-                (getattr(c, "order_index", 0) for c in task.project.columns),
-                default=0,
-            )
-            is_done = task.column.order_index == max_order
+        # task_workflow lives under project.process_config (V2 schema).
+        # Orphan task (no project) -> engine returns is_terminal=False, preserving
+        # the prior is_done=False behaviour.
+        engine = WorkflowEngine(
+            workflow=(task.project.process_config or {}).get("task_workflow") if task.project else None,
+            columns=(task.project.columns if task.project else []) or [],
+        )
+        is_done = engine.is_terminal(task.column)
 
     # 2. Project Key (Key oluşturmak için gerekli)
     project_key = "TASK"
