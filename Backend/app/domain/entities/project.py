@@ -106,6 +106,26 @@ def _migrate_v1_to_v2(config: dict) -> dict:
             "capabilities": caps,
         }
 
+    # task_workflow placeholder — engine reads it in C5+; safe default is empty.
+    # Idempotency: setdefault on outer key + nested setdefault on capabilities so
+    # that a partially-migrated config (where task_workflow exists without 'capabilities')
+    # is healed without clobbering existing values.
+    tw = new.setdefault("task_workflow", {
+        "capabilities": {
+            "enforce_wip_limits": False,
+            "initial_node_id": None,
+        },
+        "edges": [],
+        "groups": [],
+    })
+    if isinstance(tw, dict):
+        tw.setdefault("capabilities", {})
+        if isinstance(tw["capabilities"], dict):
+            tw["capabilities"].setdefault("enforce_wip_limits", False)
+            tw["capabilities"].setdefault("initial_node_id", None)
+        tw.setdefault("edges", [])
+        tw.setdefault("groups", [])
+
     new["schema_version"] = 2
     return new
 

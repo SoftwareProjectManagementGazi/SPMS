@@ -266,3 +266,38 @@ def test_v1_legacy_workflow_key_renamed_to_phase_workflow():
     assert "phase_workflow" in result, "New phase_workflow key must exist"
     assert result["phase_workflow"]["nodes"][0]["id"] == "n1", "Nodes preserved"
     assert result["phase_workflow"]["mode"] == "flexible", "Mode preserved"
+
+
+# ---------------------------------------------------------------------------
+# C2: task_workflow placeholder in V2 schema
+# ---------------------------------------------------------------------------
+# _migrate_v1_to_v2 now seeds an empty task_workflow block (capabilities +
+# edges + groups). Engine consumes it in C5+. Migration must be idempotent
+# and forward-compatible: any pre-existing task_workflow values are preserved.
+
+
+def test_v2_includes_task_workflow_placeholder():
+    result = _normalize_process_config({"methodology": "SCRUM"})
+    assert result["schema_version"] == 2
+    assert "task_workflow" in result
+    assert result["task_workflow"]["edges"] == []
+    assert result["task_workflow"]["groups"] == []
+    assert result["task_workflow"]["capabilities"]["enforce_wip_limits"] is False
+    assert result["task_workflow"]["capabilities"]["initial_node_id"] is None
+
+
+def test_v1_to_v2_preserves_existing_task_workflow():
+    """If a future caller has pre-populated task_workflow, migration doesn't clobber it."""
+    v1 = {
+        "schema_version": 1,
+        "workflow": {"mode": "flexible", "nodes": [], "edges": [], "groups": []},
+        "task_workflow": {
+            "capabilities": {"enforce_wip_limits": True, "initial_node_id": "tw1"},
+            "edges": [{"id": "te1", "source": "c1", "target": "c2"}],
+            "groups": [],
+        },
+    }
+    result = _normalize_process_config(v1)
+    assert result["task_workflow"]["capabilities"]["enforce_wip_limits"] is True
+    assert result["task_workflow"]["capabilities"]["initial_node_id"] == "tw1"
+    assert result["task_workflow"]["edges"] == [{"id": "te1", "source": "c1", "target": "c2"}]
