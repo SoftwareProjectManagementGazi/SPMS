@@ -190,6 +190,29 @@ class InvalidColumnMoveError(DomainError):
         super().__init__(f"Invalid column move {from_id} -> {to_id}: {reason}")
 
 
+class WipLimitExceededError(DomainError):
+    """Phase 17 C8 — Raised when moving a task into a column would exceed its
+    wip_limit (Kanban WIP enforcement).
+
+    Only fires when project task_workflow.capabilities.enforce_wip_limits=True
+    AND the target column has wip_limit > 0 AND current_count >= wip_limit.
+    Capability defaults to False so existing projects see zero behavioural change
+    until a Kanban project opts in via the workflow editor.
+
+    Router maps to HTTP 409 Conflict (REST semantic for "request conflicts with
+    current state of the resource") with structured detail
+    {error_code: 'WIP_LIMIT_EXCEEDED', column_id, column_name, limit, current}.
+    """
+    def __init__(self, column_id, column_name: str, limit: int, current: int):
+        self.column_id = column_id
+        self.column_name = column_name
+        self.limit = limit
+        self.current = current
+        super().__init__(
+            f"WIP limit {limit} reached for '{column_name}' ({current} tasks)"
+        )
+
+
 class InvalidTransitionError(DomainError):
     """Phase 12 D-16/D-17 — Raised when ExecutePhaseTransitionUseCase finds no edge
     (direct, bidirectional pair-wise reverse, or is_all_gate) connects source to target.

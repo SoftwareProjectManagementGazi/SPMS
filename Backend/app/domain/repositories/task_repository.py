@@ -66,3 +66,18 @@ class ITaskRepository(ABC):
         Passing new_phase_id=None clears the phase (moves to backlog).
         """
         pass
+
+    @abstractmethod
+    async def count_tasks_in_column(
+        self, column_id: int, exclude_task_id: Optional[int] = None
+    ) -> int:
+        """Phase 17 C8 — count active (non-deleted) tasks in a column.
+
+        ``exclude_task_id`` is critical for move semantics: when checking whether
+        a target column can accept an incoming task, the moving task itself must
+        not be counted toward the target's load (otherwise a same-column "move"
+        — or a load-near-limit move — could spuriously trip the WIP limit).
+
+        Returns 0 when the column is empty or non-existent.
+        """
+        pass

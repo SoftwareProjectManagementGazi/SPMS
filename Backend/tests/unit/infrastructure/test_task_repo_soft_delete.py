@@ -218,3 +218,68 @@ async def test_update_task_no_audit_row_for_unchanged_fields():
 async def test_hard_delete_blocked_for_non_admin():
     """Placeholder: hard delete is only allowed for admin users."""
     raise NotImplementedError("Admin-only hard delete not yet implemented")
+
+
+# ---------------------------------------------------------------------------
+# Phase 17 C8 — count_tasks_in_column
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_count_tasks_in_column_excludes_specified_task():
+    """When exclude_task_id is provided, the SQL statement carries an
+    additional ``TaskModel.id != exclude_task_id`` clause.
+
+    We do not actually execute SQL here (no DB); instead we inspect the
+    compiled statement passed to session.execute to assert the predicate
+    structure, then verify the helper returns the scalar count from the
+    session result. This guards against a regression where the exclude_id
+    filter is silently dropped.
+    """
+    from sqlalchemy import select  # local import — keep test free of module-level coupling
+
+    session = MagicMock()
+    session.execute = AsyncMock()
+
+    # Mock the count result: return 3 (any non-zero integer suffices)
+    count_result = MagicMock()
+    count_result.scalar.return_value = 3
+    session.execute.return_value = count_result
+
+    repo = SqlAlchemyTaskRepository(session)
+
+    n = await repo.count_tasks_in_column(column_id=42, exclude_task_id=7)
+
+    assert n == 3
+    session.execute.assert_awaited_once()
+    # Inspect the compiled statement to confirm the exclude clause is present.
+    called_stmt = session.execute.await_args.args[0]
+    rendered = str(called_stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "tasks.column_id = 42" in rendered
+    assert "tasks.is_deleted = false" in rendered
+    # The "id != 7" predicate must be in the WHERE chain (SQLAlchemy emits the
+    # column-qualified form).
+    assert "tasks.id != 7" in rendered
+
+
+@pytest.mark.asyncio
+async def test_count_tasks_in_column_no_exclude_omits_id_filter():
+    """When exclude_task_id is None the id-inequality predicate is NOT
+    emitted — otherwise the query would over-filter and undercount.
+    """
+    session = MagicMock()
+    session.execute = AsyncMock()
+    count_result = MagicMock()
+    count_result.scalar.return_value = 5
+    session.execute.return_value = count_result
+
+    repo = SqlAlchemyTaskRepository(session)
+
+    n = await repo.count_tasks_in_column(column_id=42)
+
+    assert n == 5
+    called_stmt = session.execute.await_args.args[0]
+    rendered = str(called_stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "tasks.column_id = 42" in rendered
+    assert "tasks.is_deleted = false" in rendered
+    assert "tasks.id !=" not in rendered

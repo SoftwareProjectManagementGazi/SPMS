@@ -462,3 +462,23 @@ class SqlAlchemyTaskRepository(ITaskRepository):
             .values(phase_id=new_phase_id)
         )
         await self.session.execute(stmt)
+
+    async def count_tasks_in_column(
+        self, column_id: int, exclude_task_id: Optional[int] = None
+    ) -> int:
+        """Phase 17 C8 — count non-deleted tasks in ``column_id``.
+
+        Mirrors the soft-delete filter used by ``_get_base_query`` and
+        ``count_active_by_assignee`` so the count never includes archived rows.
+        ``exclude_task_id`` is applied at the SQL level (not in Python) so the
+        COUNT(*) executes on the database without materialising rows.
+        """
+        stmt = (
+            select(func.count(TaskModel.id))
+            .where(TaskModel.column_id == column_id)
+            .where(TaskModel.is_deleted == False)  # noqa: E712
+        )
+        if exclude_task_id is not None:
+            stmt = stmt.where(TaskModel.id != exclude_task_id)
+        result = await self.session.execute(stmt)
+        return int(result.scalar() or 0)

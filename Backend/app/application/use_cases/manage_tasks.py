@@ -12,7 +12,12 @@ from app.application.dtos.task_dtos import (
     PaginatedResponse,
 )
 from app.domain.entities.task import Task
-from app.domain.exceptions import TaskNotFoundError, ProjectNotFoundError, InvalidColumnMoveError
+from app.domain.exceptions import (
+    TaskNotFoundError,
+    ProjectNotFoundError,
+    InvalidColumnMoveError,
+    WipLimitExceededError,
+)
 from app.domain.services.workflow_engine import WorkflowEngine
 
 STOP_WORDS = {"the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or", "this", "that", "with"}
@@ -272,6 +277,34 @@ class UpdateTaskUseCase:
                             to_id=dto.column_id,
                             reason=reason or "edge missing",
                         )
+
+                # Phase 17 C8 — WIP limit enforcement.
+                # Same engine instance, same cross-column branch — co-exists with
+                # C7 edge validation. The capability gate keeps default behaviour
+                # unchanged for any project that has not opted in via the
+                # workflow editor; ``check_wip`` itself also short-circuits when
+                # limit<=0 (zero == unlimited).
+                if engine.cap("enforce_wip_limits"):
+                    target_col = next(
+                        (c for c in (project.columns or []) if c.id == dto.column_id),
+                        None,
+                    )
+                    if target_col is not None:
+                        # Exclude self: the moving task is currently NOT in the
+                        # target column, but excluding it is still defensive — it
+                        # guarantees that an in-flight transient state (e.g. the
+                        # row being mid-write) never inflates the count.
+                        current_count = await self.task_repo.count_tasks_in_column(
+                            dto.column_id, exclude_task_id=task_id
+                        )
+                        ok, reason = engine.check_wip(target_col, current_count)
+                        if not ok:
+                            raise WipLimitExceededError(
+                                column_id=target_col.id,
+                                column_name=target_col.name,
+                                limit=target_col.wip_limit,
+                                current=current_count,
+                            )
 
         update_data = dto.model_dump(exclude_unset=True)
 

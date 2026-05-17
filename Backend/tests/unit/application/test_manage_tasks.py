@@ -21,7 +21,7 @@ from app.application.use_cases.manage_tasks import (
 from app.domain.entities.board_column import BoardColumn
 from app.domain.entities.project import Methodology, Project, ProjectStatus
 from app.domain.entities.task import Task, TaskPriority
-from app.domain.exceptions import InvalidColumnMoveError
+from app.domain.exceptions import InvalidColumnMoveError, WipLimitExceededError
 
 
 def _mk_project(columns: list[BoardColumn]) -> Project:
@@ -368,4 +368,173 @@ async def test_update_task_move_same_column_noop_allowed():
     result = await use_case.execute(task_id=42, dto=dto, user_id=99)
 
     assert result.column_id == 1
+    task_repo.update.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# C8 — UpdateTaskUseCase engine-driven WIP enforcement tests
+# ---------------------------------------------------------------------------
+
+
+def _mk_project_with_wip_workflow(
+    *,
+    columns: list[BoardColumn],
+    enforce_wip: bool,
+) -> Project:
+    """Build a Project whose task_workflow toggles ONLY ``enforce_wip_limits``.
+
+    Edge validation capability stays False so the WIP path is exercised in
+    isolation — a denial in these tests must come from WipLimitExceededError,
+    never from InvalidColumnMoveError leaking in.
+    """
+    return Project(
+        id=1,
+        key="K",
+        name="P",
+        start_date=datetime(2026, 1, 1),
+        methodology=Methodology.KANBAN,
+        status=ProjectStatus.ACTIVE,
+        columns=columns,
+        process_config={
+            "schema_version": 2,
+            "phase_workflow": {
+                "mode": "flexible",
+                "capabilities": {
+                    "enforce_wip_limits": False,
+                    "enforce_sequential_dependencies": False,
+                    "restrict_expired_sprints": False,
+                    "initial_node_id": None,
+                },
+                "nodes": [],
+                "edges": [],
+                "groups": [],
+            },
+            "task_workflow": {
+                "capabilities": {
+                    "enforce_wip_limits": enforce_wip,
+                    "enforce_sequential_dependencies": False,
+                    "initial_node_id": None,
+                },
+                "edges": [],
+                "groups": [],
+            },
+            "phase_completion_criteria": {},
+            "enable_phase_assignment": False,
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_wip_enforced_blocks_when_full():
+    """Capability ON + wip_limit=2 + current=2 -> WipLimitExceededError, no update."""
+    todo = BoardColumn(id=1, project_id=1, name="To Do", order_index=0, is_initial=True)
+    doing = BoardColumn(
+        id=2, project_id=1, name="Doing", order_index=1, wip_limit=2,
+    )
+    project = _mk_project_with_wip_workflow(columns=[todo, doing], enforce_wip=True)
+    existing = _mk_existing_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, doing)
+    # Target column already holds 2 active tasks (limit reached).
+    task_repo.count_tasks_in_column = AsyncMock(return_value=2)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=2)
+
+    with pytest.raises(WipLimitExceededError) as ei:
+        await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert ei.value.column_id == 2
+    assert ei.value.column_name == "Doing"
+    assert ei.value.limit == 2
+    assert ei.value.current == 2
+    task_repo.count_tasks_in_column.assert_awaited_once_with(2, exclude_task_id=42)
+    task_repo.update.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_wip_disabled_when_capability_off():
+    """Capability OFF -> count_tasks_in_column is NEVER queried; move succeeds.
+
+    Even with wip_limit=2 and a hypothetical current_count well above the
+    limit, the engine must bypass the WIP branch entirely. This is the
+    zero-regression contract that lets existing projects keep working until
+    they explicitly opt into WIP enforcement.
+    """
+    todo = BoardColumn(id=1, project_id=1, name="To Do", order_index=0, is_initial=True)
+    doing = BoardColumn(
+        id=2, project_id=1, name="Doing", order_index=1, wip_limit=2,
+    )
+    project = _mk_project_with_wip_workflow(columns=[todo, doing], enforce_wip=False)
+    existing = _mk_existing_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, doing)
+    # Make count_tasks_in_column return a tripwire value — if the code path
+    # accidentally calls it, this would still let the move through (count=10
+    # is far above the limit) so we additionally assert it was never awaited.
+    task_repo.count_tasks_in_column = AsyncMock(return_value=10)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=2)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 2
+    task_repo.count_tasks_in_column.assert_not_called()
+    task_repo.update.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_wip_zero_means_unlimited():
+    """Capability ON + wip_limit=0 -> no limit enforced regardless of count.
+
+    ``check_wip`` treats limit<=0 as "unlimited" so a column that was never
+    given an explicit cap (the BoardColumn default) accepts any number of
+    tasks even when the capability is on.
+    """
+    todo = BoardColumn(id=1, project_id=1, name="To Do", order_index=0, is_initial=True)
+    doing = BoardColumn(
+        id=2, project_id=1, name="Doing", order_index=1, wip_limit=0,
+    )
+    project = _mk_project_with_wip_workflow(columns=[todo, doing], enforce_wip=True)
+    existing = _mk_existing_task(column_id=1, column=todo, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, doing)
+    task_repo.count_tasks_in_column = AsyncMock(return_value=100)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    dto = TaskUpdateDTO(column_id=2)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 2
+    # The count IS queried (we entered the capability branch) but the engine
+    # short-circuits because limit==0; no exception is raised.
+    task_repo.count_tasks_in_column.assert_awaited_once_with(2, exclude_task_id=42)
+    task_repo.update.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_wip_excludes_self_when_moving_within():
+    """Same-column "move" -> the engine branch is skipped entirely.
+
+    When dto.column_id == existing_task.column_id the use case must not
+    consult the engine OR the repo's count helper — otherwise a retitle
+    PATCH on a task sitting in a full column would fail with 409.
+    """
+    todo = BoardColumn(id=1, project_id=1, name="To Do", order_index=0, is_initial=True)
+    doing = BoardColumn(
+        id=2, project_id=1, name="Doing", order_index=1, wip_limit=1,
+    )
+    project = _mk_project_with_wip_workflow(columns=[todo, doing], enforce_wip=True)
+    # Task already sits in "Doing" (the full column).
+    existing = _mk_existing_task(column_id=2, column=doing, project=project)
+    task_repo, project_repo = _wire_mocks(existing, project, doing)
+    task_repo.count_tasks_in_column = AsyncMock(return_value=1)
+
+    use_case = UpdateTaskUseCase(task_repo, project_repo)
+    # Same-column "move" — engine block must not be entered.
+    dto = TaskUpdateDTO(column_id=2)
+
+    result = await use_case.execute(task_id=42, dto=dto, user_id=99)
+
+    assert result.column_id == 2
+    task_repo.count_tasks_in_column.assert_not_called()
     task_repo.update.assert_awaited_once()
