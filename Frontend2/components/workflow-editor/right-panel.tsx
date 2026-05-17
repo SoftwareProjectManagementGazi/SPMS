@@ -50,6 +50,12 @@ const TAB_BODY_STYLE: React.CSSProperties = {
   padding: "14px 16px",
   overflowY: "auto",
   flex: 1,
+  // flex items default to min-height: auto, which lets tall content
+  // (NodeEditor with all engine fields expanded) push past the parent
+  // aside's bounds and grow the body-grid row — defeating the height
+  // cap. minHeight:0 allows the flex item to shrink below content size
+  // so overflowY:auto actually engages (2026-05-18 UX fix follow-up).
+  minHeight: 0,
 }
 
 export function RightPanel({
@@ -136,9 +142,10 @@ export function RightPanel({
           gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
           borderBottom: "1px solid var(--border)",
           background: "var(--surface)",
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
+          // flexShrink:0 keeps the tab header at its natural height when
+          // the aside is height-bounded — the tab body absorbs all the
+          // shrinkage via minHeight:0 + overflowY:auto.
+          flexShrink: 0,
         }}
       >
         {tabs.map((tab) => {
