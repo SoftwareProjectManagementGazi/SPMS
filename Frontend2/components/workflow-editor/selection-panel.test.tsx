@@ -1,6 +1,6 @@
 // Unit tests for components/workflow-editor/selection-panel.tsx
-// (Phase 12 Plan 12-07 + Wave 2 W2-C6 — engine field editor + multi-initial
-// warning + status-mode BoardColumn PATCH side-effect).
+// (Phase 12 Plan 12-07 + Wave 2 W2-C6 / W2-C7 — engine field editor +
+// multi-initial warning + mode-aware persistence dispatch).
 //
 // Original 3 cases per 12-07-PLAN.md task 2 <behavior> Tests 3-5:
 //   3. selected = null renders 'Bir düğüm veya bağlantı seçin.' empty state
@@ -22,6 +22,16 @@
 //   13. multi-initial warning AlertBanner renders when another column is also
 //       isInitial; absent when only the current node is initial
 //   14. status-mode is_initial toggle dispatches with is_initial in PATCH
+//
+// W2-C7 additions (lifecycle-mode engine field persistence — JSON-only):
+//   15. lifecycle-mode renders the SAME engine field section as status-mode
+//       (Kategori / Terminal / Maks. süre / Giriş politikası / Çıkış politikası).
+//   16. lifecycle-mode category edit writes the new value into workflow.nodes
+//       via onWorkflowChange (so unmapWorkflowConfig serializes it into
+//       phase_workflow.nodes[i] at Save time) — and NEVER triggers the
+//       BoardColumn PATCH side-effect.
+//   17. lifecycle-mode is_terminal toggle + max_duration_days edit also flow
+//       through onWorkflowChange (not onColumnEngineFieldsChange).
 
 import * as React from "react"
 import { describe, it, expect, vi } from "vitest"
@@ -369,5 +379,134 @@ describe("SelectionPanel — W2-C6 NodeEditor engine fields", () => {
     fireEvent.click(checkbox)
     expect(onCol).toHaveBeenCalledTimes(1)
     expect(onCol).toHaveBeenCalledWith(42, { is_initial: true })
+  })
+})
+
+// ===========================================================================
+// Wave 2 W2-C7 — lifecycle-mode engine field persistence (JSON-only)
+//
+// W2-C7 closes the loop opened in W2-C6: lifecycle-mode NodeEditor already
+// renders the engine field section (same Kategori / Terminal / Maks. süre /
+// Giriş politikası / Çıkış politikası UI as status-mode) and `updateNode`
+// already writes the camelCase patch onto the local workflow state via
+// onWorkflowChange. The W2-C5 mapper (`unmapWorkflowConfig`) serializes those
+// camelCase keys to snake_case `phase_workflow.nodes[i]` entries at Save
+// time, and the W2-C7 backend Pydantic extension on `WorkflowNode` accepts
+// the new keys so they survive the PATCH validation round-trip.
+//
+// These tests pin the contract: lifecycle-mode field edits MUST reach the
+// workflow JSON via onWorkflowChange, and MUST NOT trigger the BoardColumn
+// PATCH side-effect (which is status-mode only).
+// ===========================================================================
+
+/** Build a lifecycle-mode workflow whose node id does NOT match the
+ *  `col_<N>` regex — so `NodeEditor.colIdFromNodeId` returns null and the
+ *  status-mode BoardColumn PATCH side-effect skips silently. */
+function lifecycleModeWorkflow(node: Partial<WorkflowNode> = {}): WorkflowConfig {
+  return {
+    mode: "flexible",
+    nodes: [
+      {
+        id: "nd_lifecycle1",
+        name: "Tasarım",
+        x: 0,
+        y: 0,
+        color: "status-progress",
+        ...node,
+      },
+    ],
+    edges: [],
+    groups: [],
+  }
+}
+
+describe("SelectionPanel — W2-C7 lifecycle-mode engine fields (JSON-only)", () => {
+  it("Test 15: renders the full Engine Fields section for a lifecycle-mode node", () => {
+    // Same field surface as status-mode (Test 6-9). The Kategori dropdown +
+    // Terminal switch + Maks. süre input + entry/exit policy dropdowns all
+    // appear regardless of mode; only the persistence path differs.
+    render(
+      <SelectionPanel
+        workflow={lifecycleModeWorkflow({ category: "in_progress" })}
+        selected={{ type: "node", id: "nd_lifecycle1" }}
+        onWorkflowChange={() => {}}
+        editorMode="lifecycle"
+      />,
+    )
+    expect(screen.getByText("Motor Alanları")).toBeTruthy()
+    const cat = screen.getByLabelText("Kategori") as HTMLSelectElement
+    expect(cat.value).toBe("in_progress")
+    expect(screen.getByText("Terminal düğüm")).toBeTruthy()
+    expect(screen.getByPlaceholderText("sınırsız")).toBeTruthy()
+    expect(screen.getByLabelText("Giriş politikası")).toBeTruthy()
+    expect(screen.getByLabelText("Çıkış politikası")).toBeTruthy()
+  })
+
+  it("Test 16: lifecycle-mode category edit writes into workflow.nodes (no PATCH)", () => {
+    // The save handler in editor-page.tsx feeds this exact `workflow.nodes`
+    // shape into unmapWorkflowConfig, which emits
+    // `phase_workflow.nodes[i].category` (snake_case) into the PATCH body.
+    // So updating the local workflow state IS the persistence path for
+    // lifecycle-mode engine fields — there is no per-field PATCH like
+    // status-mode's BoardColumn endpoint.
+    const onWf = vi.fn()
+    const onCol = vi.fn()
+    render(
+      <SelectionPanel
+        workflow={lifecycleModeWorkflow({ category: "todo" })}
+        selected={{ type: "node", id: "nd_lifecycle1" }}
+        onWorkflowChange={onWf}
+        onColumnEngineFieldsChange={onCol}
+        editorMode="lifecycle"
+      />,
+    )
+    const select = screen.getByLabelText("Kategori") as HTMLSelectElement
+    fireEvent.change(select, { target: { value: "done" } })
+
+    // Workflow state patched with the new category on the right node.
+    expect(onWf).toHaveBeenCalledTimes(1)
+    const next = onWf.mock.calls[0][0] as WorkflowConfig
+    expect(next.nodes).toHaveLength(1)
+    expect(next.nodes[0]).toMatchObject({ id: "nd_lifecycle1", category: "done" })
+
+    // The status-mode PATCH side-effect MUST NOT fire — lifecycle nodes
+    // don't back a BoardColumn row.
+    expect(onCol).not.toHaveBeenCalled()
+  })
+
+  it("Test 17: lifecycle-mode is_terminal + max_duration_days edits flow through onWorkflowChange (no PATCH)", () => {
+    // Sibling coverage to Test 16 — confirms the no-PATCH guard holds for
+    // the remaining engine inputs (not just category).
+    const onWf = vi.fn()
+    const onCol = vi.fn()
+    render(
+      <SelectionPanel
+        workflow={lifecycleModeWorkflow({ isTerminal: false, maxDurationDays: null })}
+        selected={{ type: "node", id: "nd_lifecycle1" }}
+        onWorkflowChange={onWf}
+        onColumnEngineFieldsChange={onCol}
+        editorMode="lifecycle"
+      />,
+    )
+
+    // Toggle Terminal düğüm on.
+    const term = screen.getByRole("switch", { name: "Terminal düğüm" })
+    fireEvent.click(term)
+    expect(onWf).toHaveBeenCalledTimes(1)
+    let next = onWf.mock.calls[0][0] as WorkflowConfig
+    expect(next.nodes[0]).toMatchObject({ isTerminal: true })
+
+    // Edit max_duration_days to 7. The Input's onChange fires once; the
+    // updateNode callback re-derives `nodes` from the original `workflow`
+    // (not the previous onWf call), so we assert against the second mock
+    // call independently rather than expecting a cumulative state.
+    const input = screen.getByPlaceholderText("sınırsız") as HTMLInputElement
+    fireEvent.change(input, { target: { value: "7" } })
+    expect(onWf).toHaveBeenCalledTimes(2)
+    next = onWf.mock.calls[1][0] as WorkflowConfig
+    expect(next.nodes[0]).toMatchObject({ maxDurationDays: 7 })
+
+    // Neither edit fired the BoardColumn PATCH side-effect.
+    expect(onCol).not.toHaveBeenCalled()
   })
 })

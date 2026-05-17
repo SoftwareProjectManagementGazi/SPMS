@@ -25,6 +25,23 @@ class WorkflowNode(BaseModel):
     is_archived: bool = False
     parent_id: Optional[str] = None  # D-24 (group child relation)
     wip_limit: Optional[int] = Field(default=None, ge=0)  # Plan 12-08 SelectionPanel
+    # Wave 2 W2-C7 — engine fields persisted into phase_workflow.nodes JSON.
+    # task_workflow uses BoardColumn DB columns (alembic 013) for the same
+    # surface; mirroring them on WorkflowNode lets lifecycle-mode carry the
+    # same shape end-to-end without a parallel DB table. All fields are
+    # Optional so legacy JSONB rows (no engine keys) still parse — additive
+    # Pydantic only, no schema-version bump (Pitfall 9).
+    #
+    # Senior review #7 (RESOLVED): `category` is persisted on phase_workflow
+    # nodes for UI consistency with status-mode (SelectionPanel renders the
+    # same dropdown in both modes). The engine itself does NOT read this
+    # field on phase nodes in Wave 2 — phase-node category is cosmetic /
+    # future-engine prep until Wave 3+ extends the engine surface.
+    category: Optional[Literal["todo", "in_progress", "done"]] = None
+    is_terminal: bool = False
+    max_duration_days: Optional[int] = Field(default=None, ge=1)
+    entry_policy: Optional[Literal["any", "edges_only", "initial_only"]] = None
+    exit_policy: Optional[Literal["any", "edges_only", "terminal_lock"]] = None
 
     @field_validator("id")
     @classmethod

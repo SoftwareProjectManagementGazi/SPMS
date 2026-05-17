@@ -520,3 +520,129 @@ async def test_patch_capabilities_rejects_non_bool(
         assert r.status_code == 422, (
             f"non-bool capability value must yield 422; got {r.status_code}: {r.text}"
         )
+
+
+# ---------------------------------------------------------------------------
+# W2-C7: phase_workflow.nodes engine field PATCH round-trip.
+#
+# Closes the gap called out in the W2-C3 plan (".../W2-C3 ... engine fields
+# workflow.nodes ile round-trip eden ek bir test yazılabilir (Wave 2'de
+# eklenir; W2-C3'te eksikti). Opsiyonel.") and now-required by W2-C7's
+# WorkflowNode Pydantic extension. Pre-W2-C7 a lifecycle-mode user editing
+# `category` / `is_terminal` / `max_duration_days` / `entry_policy` /
+# `exit_policy` on a phase node would see the field disappear after Save
+# because the Pydantic boundary's `extra="ignore"` silently dropped unknown
+# keys. The new fields on WorkflowNode (W2-C7) close that hole; this
+# integration test pins the contract end-to-end.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_phase_workflow_node_engine_fields_round_trip(
+    authenticated_client, db_session
+):
+    """W2-C7: PATCH phase_workflow.nodes[i].{engine fields} -> GET preserves all keys.
+
+    Mirrors the W2-C3 capability round-trip pattern but at the node level.
+    The lifecycle-mode editor writes the camelCase engine fields onto the
+    workflow state (SelectionPanel.NodeEditor.updateNode, W2-C6) and the
+    save handler emits them as snake_case `phase_workflow.nodes[i]` keys via
+    unmapWorkflowConfig (W2-C5). For that pipeline to actually persist the
+    edits, the API-side Pydantic must accept the new keys instead of
+    silently dropping them — which is exactly what W2-C7 fixes.
+    """
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C7NODE")
+
+    # Initial node carries the full engine field payload; final node remains
+    # bare so the test also confirms the engine fields default to None / False
+    # on unannotated nodes after the round trip (regression against a future
+    # change that accidentally fills defaults on serialize).
+    initial_with_engine = {
+        **_VALID_NODE,
+        "category": "in_progress",
+        "is_terminal": False,
+        "max_duration_days": 14,
+        "entry_policy": "edges_only",
+        "exit_policy": "terminal_lock",
+    }
+
+    body = {
+        "mode": "flexible",
+        "nodes": [initial_with_engine, _VALID_FINAL_NODE],
+        "edges": [
+            {
+                "id": "e1",
+                "source": _VALID_NODE["id"],
+                "target": _VALID_FINAL_NODE["id"],
+                "type": "flow",
+            }
+        ],
+        "groups": [],
+    }
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={"process_config": {"phase_workflow": body}},
+        )
+        assert r.status_code == 200, (
+            f"expected 200, got {r.status_code}: {r.text}"
+        )
+
+        r2 = await client.get(f"/api/v1/projects/{pid}")
+        assert r2.status_code == 200
+        pc = r2.json()["process_config"]
+        pw = pc.get("phase_workflow")
+        assert pw is not None, "GET response missing phase_workflow key"
+
+        got_initial = next(
+            (n for n in pw["nodes"] if n["id"] == _VALID_NODE["id"]), None
+        )
+        assert got_initial is not None, "Initial node missing after round trip"
+        # All 5 engine fields must survive verbatim (W2-C7 regression guard).
+        assert got_initial.get("category") == "in_progress"
+        assert got_initial.get("is_terminal") is False
+        assert got_initial.get("max_duration_days") == 14
+        assert got_initial.get("entry_policy") == "edges_only"
+        assert got_initial.get("exit_policy") == "terminal_lock"
+
+
+@pytest.mark.asyncio
+async def test_patch_phase_workflow_node_invalid_category_rejected(
+    authenticated_client, db_session
+):
+    """W2-C7: a non-enum category value -> 422 (not silent drop)."""
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping integration test")
+
+    pid = await _seed_project(db_session, key="W2C7NODX")
+
+    bad_node = {
+        **_VALID_NODE,
+        "category": "wat",  # not in {todo, in_progress, done}
+    }
+    body = {
+        "mode": "flexible",
+        "nodes": [bad_node, _VALID_FINAL_NODE],
+        "edges": [
+            {
+                "id": "e1",
+                "source": _VALID_NODE["id"],
+                "target": _VALID_FINAL_NODE["id"],
+                "type": "flow",
+            }
+        ],
+        "groups": [],
+    }
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.patch(
+            f"/api/v1/projects/{pid}",
+            json={"process_config": {"phase_workflow": body}},
+        )
+        assert r.status_code == 422, (
+            f"invalid category enum must yield 422; got {r.status_code}: {r.text}"
+        )

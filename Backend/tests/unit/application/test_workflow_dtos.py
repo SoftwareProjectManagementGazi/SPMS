@@ -20,7 +20,11 @@ These tests pin down:
 import pytest
 from pydantic import ValidationError
 
-from app.application.dtos.workflow_dtos import WorkflowCapabilities, WorkflowConfig
+from app.application.dtos.workflow_dtos import (
+    WorkflowCapabilities,
+    WorkflowConfig,
+    WorkflowNode,
+)
 
 
 def _valid_workflow_shell(**overrides):
@@ -134,3 +138,138 @@ class TestWorkflowConfigCapabilitiesRoundTrip:
         )
         with pytest.raises(ValidationError):
             WorkflowConfig.model_validate(shell)
+
+
+class TestWorkflowNodeEngineFields:
+    """W2-C7: WorkflowNode engine field round-trip + validation.
+
+    Wave 2 W2-C7 extends WorkflowNode with the 5 BoardColumn engine fields
+    (category, is_terminal, max_duration_days, entry_policy, exit_policy)
+    so lifecycle-mode nodes can persist them into phase_workflow.nodes JSON.
+    Pre-W2-C7 the editor's SelectionPanel.NodeEditor already surfaced these
+    inputs in both modes (W2-C6) and writes them onto the local workflow
+    state, but `extra="ignore"` on the API boundary silently dropped them at
+    PATCH validation — so a lifecycle-mode user editing `category=in_progress`
+    + Save + reload saw the field disappear. These tests pin the Pydantic
+    fix so the regression cannot recur.
+    """
+
+    def test_engine_fields_default_to_none_or_false(self):
+        node = WorkflowNode.model_validate(
+            {"id": "nd_test000001", "name": "A", "x": 0, "y": 0, "color": "#888"}
+        )
+        assert node.category is None
+        assert node.is_terminal is False
+        assert node.max_duration_days is None
+        assert node.entry_policy is None
+        assert node.exit_policy is None
+
+    def test_engine_fields_round_trip(self):
+        node = WorkflowNode.model_validate(
+            {
+                "id": "nd_test000001",
+                "name": "A",
+                "x": 0,
+                "y": 0,
+                "color": "#888",
+                "category": "in_progress",
+                "is_terminal": True,
+                "max_duration_days": 14,
+                "entry_policy": "edges_only",
+                "exit_policy": "terminal_lock",
+            }
+        )
+        assert node.category == "in_progress"
+        assert node.is_terminal is True
+        assert node.max_duration_days == 14
+        assert node.entry_policy == "edges_only"
+        assert node.exit_policy == "terminal_lock"
+        # And model_dump re-emits them so persistence sees the values.
+        dumped = node.model_dump()
+        assert dumped["category"] == "in_progress"
+        assert dumped["is_terminal"] is True
+        assert dumped["max_duration_days"] == 14
+        assert dumped["entry_policy"] == "edges_only"
+        assert dumped["exit_policy"] == "terminal_lock"
+
+    def test_invalid_category_rejected(self):
+        with pytest.raises(ValidationError):
+            WorkflowNode.model_validate(
+                {
+                    "id": "nd_test000001",
+                    "name": "A",
+                    "x": 0,
+                    "y": 0,
+                    "color": "#888",
+                    "category": "wat",
+                }
+            )
+
+    def test_max_duration_days_zero_rejected(self):
+        # ge=1 mirrors the BoardColumn DB constraint (alembic 013); a 0-day
+        # cap is meaningless and would let the engine flag every task as
+        # over-due immediately on entry.
+        with pytest.raises(ValidationError):
+            WorkflowNode.model_validate(
+                {
+                    "id": "nd_test000001",
+                    "name": "A",
+                    "x": 0,
+                    "y": 0,
+                    "color": "#888",
+                    "max_duration_days": 0,
+                }
+            )
+
+    def test_invalid_entry_policy_rejected(self):
+        with pytest.raises(ValidationError):
+            WorkflowNode.model_validate(
+                {
+                    "id": "nd_test000001",
+                    "name": "A",
+                    "x": 0,
+                    "y": 0,
+                    "color": "#888",
+                    "entry_policy": "freeform",
+                }
+            )
+
+    def test_invalid_exit_policy_rejected(self):
+        with pytest.raises(ValidationError):
+            WorkflowNode.model_validate(
+                {
+                    "id": "nd_test000001",
+                    "name": "A",
+                    "x": 0,
+                    "y": 0,
+                    "color": "#888",
+                    "exit_policy": "locked-tight",
+                }
+            )
+
+    def test_engine_fields_persisted_through_workflow_validate(self):
+        # Full WorkflowConfig round-trip — confirms the engine fields survive
+        # the parent validator (D-19 rule 4) and re-emit through model_dump.
+        shell = _valid_workflow_shell()
+        # Attach engine fields to the initial node.
+        shell["nodes"][0].update(
+            {
+                "category": "todo",
+                "is_terminal": False,
+                "max_duration_days": 7,
+                "entry_policy": "any",
+                "exit_policy": "edges_only",
+            }
+        )
+        wf = WorkflowConfig.model_validate(shell)
+        first = wf.nodes[0]
+        assert first.category == "todo"
+        assert first.max_duration_days == 7
+        assert first.entry_policy == "any"
+        assert first.exit_policy == "edges_only"
+        dumped = wf.model_dump()
+        node_dump = dumped["nodes"][0]
+        assert node_dump["category"] == "todo"
+        assert node_dump["max_duration_days"] == 7
+        assert node_dump["entry_policy"] == "any"
+        assert node_dump["exit_policy"] == "edges_only"
