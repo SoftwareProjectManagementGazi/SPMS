@@ -326,3 +326,75 @@ def test_v1_to_v2_preserves_existing_task_workflow():
     assert result["task_workflow"]["capabilities"]["enforce_wip_limits"] is True
     assert result["task_workflow"]["capabilities"]["initial_node_id"] == "tw1"
     assert result["task_workflow"]["edges"] == [{"id": "te1", "source": "c1", "target": "c2"}]
+
+
+# ---------------------------------------------------------------------------
+# W2-C2: per-field setdefault for phase_workflow.capabilities idempotency
+# ---------------------------------------------------------------------------
+# Wave 2 W2-C2 — `_migrate_v1_to_v2` previously used an outer setdefault on the
+# whole `capabilities` sub-object. If a V1 row arrived with a partial dict (e.g.
+# only `enforce_wip_limits` set), the outer setdefault was a no-op and the rest
+# of the canonical keys were never seeded. The engine's defensive `_caps.get(...)`
+# masked the missing keys at read time, but the persisted JSONB shape was
+# inconsistent across migration runs. W2-C2 fixes this with per-field setdefault.
+
+
+def test_v1_to_v2_partial_phase_capabilities_filled_per_field():
+    """W2-C2: phase_workflow.capabilities partial input -> missing fields default-filled."""
+    v1 = {
+        "schema_version": 1,
+        "workflow": {
+            "mode": "flexible",
+            "nodes": [],
+            "edges": [],
+            "groups": [],
+            "capabilities": {"enforce_wip_limits": True},  # other fields missing
+        },
+    }
+    result = _normalize_process_config(v1)
+    caps = result["phase_workflow"]["capabilities"]
+    assert caps["enforce_wip_limits"] is True  # preserved
+    assert caps["enforce_sequential_dependencies"] is False  # was missing, now defaulted
+    assert caps["restrict_expired_sprints"] is False  # was missing, now defaulted
+    assert caps["initial_node_id"] is None  # was missing, now defaulted
+
+
+def test_v1_to_v2_phase_capabilities_preserves_existing_values():
+    """W2-C2: per-field setdefault must NOT overwrite existing values — only fill gaps."""
+    v1 = {
+        "schema_version": 1,
+        "workflow": {
+            "mode": "flexible",
+            "nodes": [],
+            "edges": [],
+            "groups": [],
+            "capabilities": {
+                "enforce_wip_limits": True,
+                "enforce_sequential_dependencies": True,
+                "restrict_expired_sprints": True,
+                "initial_node_id": "n1",
+            },
+        },
+    }
+    result = _normalize_process_config(v1)
+    caps = result["phase_workflow"]["capabilities"]
+    assert caps["enforce_wip_limits"] is True
+    assert caps["enforce_sequential_dependencies"] is True
+    assert caps["restrict_expired_sprints"] is True
+    assert caps["initial_node_id"] == "n1"  # explicit value preserved, not overwritten
+
+
+def test_v1_to_v2_normalizer_is_strictly_idempotent():
+    """W2-C2 invariant: normalize(normalize(v)) == normalize(v) for any V1 input."""
+    v1 = {
+        "schema_version": 1,
+        "workflow": {
+            "mode": "flexible",
+            "nodes": [{"id": "n1", "is_initial": True}],
+            "edges": [],
+            "groups": [],
+        },
+    }
+    once = _normalize_process_config(v1)
+    twice = _normalize_process_config(once)
+    assert once == twice, "normalizer must be strictly idempotent"

@@ -75,8 +75,8 @@ def _migrate_v1_to_v2(config: dict) -> dict:
         # Both present — keep phase_workflow as canonical, drop the legacy alias.
         new.pop("workflow", None)
 
-    # 2. Build capabilities sub-object by pulling from top-level flags.
-    caps = {
+    # 2. Build capabilities seed by pulling from top-level flags.
+    caps_seed = {
         "enforce_wip_limits": new.pop("enforce_wip_limits", False),
         "enforce_sequential_dependencies": new.pop(
             "enforce_sequential_dependencies", False
@@ -89,11 +89,18 @@ def _migrate_v1_to_v2(config: dict) -> dict:
     if isinstance(pw, dict):
         for n in pw.get("nodes", []) or []:
             if isinstance(n, dict) and n.get("is_initial"):
-                caps["initial_node_id"] = n.get("id")
+                caps_seed["initial_node_id"] = n.get("id")
                 break
-        # Idempotency for partial pre-V2 configs in the wild: only set capabilities
-        # if it isn't already present. Do NOT overwrite a pre-existing block.
-        pw.setdefault("capabilities", caps)
+        # W2-C2: per-field setdefault for partial-capability payloads. If a
+        # `capabilities` dict already exists but is missing some of the canonical
+        # keys (legacy partial config, FE PATCH that only toggled a single flag,
+        # etc.), fill the missing keys with their defaults WITHOUT overwriting
+        # any pre-existing value. This keeps the persisted JSONB shape consistent
+        # across migration runs and makes the normalizer strictly idempotent.
+        existing_caps = pw.setdefault("capabilities", {})
+        if isinstance(existing_caps, dict):
+            for key, default in caps_seed.items():
+                existing_caps.setdefault(key, default)
         new["phase_workflow"] = pw
     else:
         # Highly defensive: phase_workflow was non-dict (e.g. None). Seed a minimal
@@ -103,7 +110,7 @@ def _migrate_v1_to_v2(config: dict) -> dict:
             "nodes": [],
             "edges": [],
             "groups": [],
-            "capabilities": caps,
+            "capabilities": caps_seed,
         }
 
     # task_workflow placeholder — engine reads it in C5+; safe default is empty.
