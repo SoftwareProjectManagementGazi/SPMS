@@ -38,6 +38,13 @@ class SqlAlchemyBoardColumnRepository(IBoardColumnRepository):
             name=column.name,
             order_index=column.order_index,
             wip_limit=column.wip_limit,
+            # Phase 17 — workflow engine fields (migration 013).
+            category=column.category,
+            is_initial=column.is_initial,
+            is_terminal=column.is_terminal,
+            max_duration_days=column.max_duration_days,
+            entry_policy=column.entry_policy,
+            exit_policy=column.exit_policy,
         )
         self.session.add(model)
         await self.session.flush()
@@ -63,6 +70,17 @@ class SqlAlchemyBoardColumnRepository(IBoardColumnRepository):
             model.order_index = column.order_index
         if column.wip_limit is not None:
             model.wip_limit = column.wip_limit
+
+        # Phase 17 — these fields have non-None defaults on the entity (False /
+        # "todo" / "any"), so we always write them through. The UpdateColumnUseCase
+        # is responsible for "leave unchanged" semantics by copying the existing
+        # value into the entity before calling repo.update().
+        model.category = column.category
+        model.is_initial = column.is_initial
+        model.is_terminal = column.is_terminal
+        model.max_duration_days = column.max_duration_days
+        model.entry_policy = column.entry_policy
+        model.exit_policy = column.exit_policy
 
         await self.session.flush()
         await self.session.commit()

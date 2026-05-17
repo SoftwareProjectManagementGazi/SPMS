@@ -18,6 +18,15 @@ def _to_dto(column: BoardColumn, task_count: int = 0) -> BoardColumnDTO:
         order_index=column.order_index,
         wip_limit=column.wip_limit,
         task_count=task_count,
+        # Phase 17 — workflow engine fields. Entity carries defaults so a row
+        # that predates migration 013 (where DB columns are NULL) still
+        # serializes cleanly into the DTO via Pydantic from_attributes coercion.
+        category=column.category,
+        is_initial=column.is_initial,
+        is_terminal=column.is_terminal,
+        max_duration_days=column.max_duration_days,
+        entry_policy=column.entry_policy,
+        exit_policy=column.exit_policy,
     )
 
 
@@ -47,12 +56,30 @@ class CreateColumnUseCase:
         else:
             order_index = dto.order_index if dto.order_index is not None else 0
 
-        column = BoardColumn(
-            project_id=project_id,
-            name=dto.name,
-            order_index=order_index,
-            wip_limit=0,
-        )
+        # Phase 17 — fold optional workflow-engine fields into the entity. We
+        # rely on Pydantic's Literal validation in BoardColumn to reject bad
+        # values, but only pass through what the caller actually supplied so
+        # the entity defaults (todo / False / "any") still drive omitted ones.
+        kwargs = {
+            "project_id": project_id,
+            "name": dto.name,
+            "order_index": order_index,
+            "wip_limit": 0,
+        }
+        if dto.category is not None:
+            kwargs["category"] = dto.category
+        if dto.is_initial is not None:
+            kwargs["is_initial"] = dto.is_initial
+        if dto.is_terminal is not None:
+            kwargs["is_terminal"] = dto.is_terminal
+        if dto.max_duration_days is not None:
+            kwargs["max_duration_days"] = dto.max_duration_days
+        if dto.entry_policy is not None:
+            kwargs["entry_policy"] = dto.entry_policy
+        if dto.exit_policy is not None:
+            kwargs["exit_policy"] = dto.exit_policy
+
+        column = BoardColumn(**kwargs)
         created = await self.column_repo.create(column)
         task_count = await self.column_repo.count_tasks(created.id)
         return _to_dto(created, task_count)
@@ -71,12 +98,21 @@ class UpdateColumnUseCase:
         # Patch only provided fields — None means "leave unchanged" per UpdateColumnDTO.
         # Phase 11 Plan 04: wip_limit now flows through so the Settings > Kolonlar
         # sub-tab can edit WIP caps inline (D-12 — non-Waterfall methodologies).
+        # Phase 17 — same patch semantics for the new workflow-engine fields.
         updated_column = BoardColumn(
             id=existing.id,
             project_id=existing.project_id,
             name=dto.name if dto.name is not None else existing.name,
             order_index=dto.order_index if dto.order_index is not None else existing.order_index,
             wip_limit=dto.wip_limit if dto.wip_limit is not None else existing.wip_limit,
+            category=dto.category if dto.category is not None else existing.category,
+            is_initial=dto.is_initial if dto.is_initial is not None else existing.is_initial,
+            is_terminal=dto.is_terminal if dto.is_terminal is not None else existing.is_terminal,
+            max_duration_days=(
+                dto.max_duration_days if dto.max_duration_days is not None else existing.max_duration_days
+            ),
+            entry_policy=dto.entry_policy if dto.entry_policy is not None else existing.entry_policy,
+            exit_policy=dto.exit_policy if dto.exit_policy is not None else existing.exit_policy,
         )
         saved = await self.column_repo.update(updated_column)
         task_count = await self.column_repo.count_tasks(saved.id)
@@ -121,7 +157,17 @@ class DeleteColumnUseCase:
 
 
 class SeedDefaultColumnsUseCase:
-    DEFAULT_COLUMNS = ["Backlog", "Todo", "In Progress", "In Review", "Done"]
+    # Phase 17 — seeded defaults now carry workflow-engine flags. The engine (C5+)
+    # uses is_initial / is_terminal directly, so seeded projects are wired right
+    # out of the box without relying on the order_index-positional heuristic that
+    # 013's backfill query uses for legacy data.
+    DEFAULT_COLUMNS = [
+        {"name": "Backlog",     "category": "todo",        "is_initial": True,  "is_terminal": False},
+        {"name": "Todo",        "category": "todo",        "is_initial": False, "is_terminal": False},
+        {"name": "In Progress", "category": "in_progress", "is_initial": False, "is_terminal": False},
+        {"name": "In Review",   "category": "in_progress", "is_initial": False, "is_terminal": False},
+        {"name": "Done",        "category": "done",        "is_initial": False, "is_terminal": True},
+    ]
 
     def __init__(self, column_repo: IBoardColumnRepository):
         self.column_repo = column_repo
@@ -129,12 +175,17 @@ class SeedDefaultColumnsUseCase:
     async def execute(self, project_id: int) -> List[BoardColumnDTO]:
         """Insert 5 default columns for a project. Used when a project has no columns."""
         columns = []
-        for i, name in enumerate(self.DEFAULT_COLUMNS):
+        for i, spec in enumerate(self.DEFAULT_COLUMNS):
             column = BoardColumn(
                 project_id=project_id,
-                name=name,
+                name=spec["name"],
                 order_index=i,
                 wip_limit=0,
+                category=spec["category"],
+                is_initial=spec["is_initial"],
+                is_terminal=spec["is_terminal"],
+                # entry_policy / exit_policy / max_duration_days stay at entity
+                # defaults — explicit policies are a C7+ concern.
             )
             created = await self.column_repo.create(column)
             columns.append(_to_dto(created, 0))
