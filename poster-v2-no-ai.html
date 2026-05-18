@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPMS Bitirme Posteri (AI'sız) — BMB-57</title>
+<style>
+  /* ===== A1 BOYUTU: 594mm × 841mm (Portrait) ===== */
+  @page { size: A1 portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:        #16335A;
+    --navy-mid:    #1F4880;
+    --navy-soft:   #2A5FA1;
+    --sky:         #DBE9FA;
+    --sky-pale:    #EEF5FD;
+    --accent:      #E8A020;
+    --accent-soft: #FFE9BF;
+    --text-dark:   #14213D;
+    --text-mid:    #2C3E50;
+    --text-soft:   #5A6B85;
+    --border:      #B6CFE6;
+    --white:       #FFFFFF;
+    --green:       #2E8B57;
+    --red:         #C0392B;
+  }
+
+  body {
+    width: 594mm;
+    min-height: 841mm;
+    background: var(--sky);
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: var(--text-dark);
+    font-size: 9.5pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ===== HEADER ===== */
+  .poster-header {
+    background: var(--navy);
+    color: var(--white);
+    display: grid;
+    grid-template-columns: 90mm 1fr 90mm;
+    align-items: center;
+    padding: 10mm 14mm;
+    border-bottom: 5px solid var(--accent);
+  }
+
+  .logo-circle {
+    width: 70mm;
+    height: 70mm;
+    background: var(--white);
+    border-radius: 50%;
+    border: 4px solid var(--sky);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--navy);
+    font-weight: 800;
+  }
+  .logo-circle.right { background: var(--white); }
+  .logo-circle .l-name { font-size: 16pt; font-weight: 900; letter-spacing: 1px; }
+  .logo-circle .l-script { font-size: 12pt; font-style: italic; font-family: 'Brush Script MT', cursive; color: var(--navy-soft); }
+  .logo-circle .l-year { font-size: 11pt; font-weight: 700; }
+  .logo-circle .l-100 { font-size: 38pt; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 2mm; }
+  .logo-circle .l-uni { font-size: 8pt; color: var(--text-soft); font-weight: 600; }
+
+  .header-center { text-align: center; padding: 0 6mm; }
+
+  .dept-line {
+    font-size: 16pt;
+    font-weight: 700;
+    margin-bottom: 4mm;
+  }
+
+  .project-title {
+    font-size: 36pt;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 4mm;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+
+  .author-line {
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: var(--sky);
+    margin-bottom: 2mm;
+  }
+
+  .advisor-line {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--sky-pale);
+  }
+
+  .group-badge {
+    display: inline-block;
+    background: var(--white);
+    color: var(--navy);
+    padding: 4mm 9mm;
+    border-radius: 30px;
+    font-weight: 900;
+    font-size: 15pt;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    position: relative;
+    top: -16mm;
+    margin-left: 18mm;
+  }
+
+  .header-flex {
+    grid-column: 2;
+    position: relative;
+  }
+
+  /* ===== MAIN GRID ===== */
+  .poster-body {
+    padding: 8mm 12mm 12mm 12mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6mm;
+  }
+
+  .col { display: flex; flex-direction: column; gap: 6mm; }
+
+  /* ===== CARD ===== */
+  .card {
+    background: var(--white);
+    border: 1.2px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(22, 51, 90, 0.06);
+  }
+
+  .card-header {
+    background: linear-gradient(90deg, var(--navy) 0%, var(--navy-mid) 100%);
+    color: var(--white);
+    padding: 3mm 5mm;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-bottom: 3px solid var(--accent);
+  }
+
+  .card-header .icon {
+    font-size: 14pt;
+    line-height: 1;
+  }
+
+  .card-header h2 {
+    font-size: 12pt;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .card-body { padding: 4mm 5mm; }
+
+  /* ===== ÖZET ===== */
+  .abstract-text {
+    font-size: 9.5pt;
+    text-align: justify;
+    color: var(--text-mid);
+    line-height: 1.5;
+  }
+  .abstract-text strong { color: var(--navy); }
+
+  .keyword-row {
+    margin-top: 3mm;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .keyword {
+    background: var(--sky-pale);
+    border: 1px solid var(--border);
+    color: var(--navy);
+    padding: 1.5px 8px;
+    border-radius: 12px;
+    font-size: 8pt;
+    font-weight: 600;
+  }
+
+  /* ===== PROBLEM ===== */
+  .problem-list {
+    list-style: none;
+    padding: 0;
+  }
+  .problem-list li {
+    padding: 2.5mm 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 9.5pt;
+    color: var(--text-mid);
+  }
+  .problem-list li:last-child { border-bottom: 0; }
+  .problem-list .tool {
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .problem-list .tag {
+    display: inline-block;
+    background: var(--red);
+    color: var(--white);
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  .problem-list .tag.ok { background: var(--green); }
+
+  .solution-box {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-soft) 100%);
+    color: var(--white);
+    padding: 4mm;
+    border-radius: 6px;
+    margin-top: 4mm;
+    text-align: center;
+    font-weight: 700;
+    font-size: 10pt;
+  }
+  .solution-box .sol-label {
+    display: block;
+    font-size: 8pt;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2mm;
+  }
+
+  /* ===== SİSTEM MİMARİSİ (BÜYÜK) ===== */
+  .arch-block { padding: 6mm 5mm; }
+
+  .arch-diagram {
+    position: relative;
+    padding: 4mm 0 2mm 0;
+  }
+
+  .arch-layer {
+    position: relative;
+    padding: 4mm 6mm 4mm 22mm;
+    border-radius: 6px;
+    margin-bottom: 3mm;
+    color: var(--white);
+  }
+  .arch-layer:last-child { margin-bottom: 0; }
+
+  .arch-layer .layer-num {
+    position: absolute;
+    left: 6mm;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 11mm;
+    height: 11mm;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    border: 2px solid rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11pt;
+    font-weight: 900;
+  }
+
+  .arch-layer h4 {
+    font-size: 11pt;
+    font-weight: 800;
+    margin-bottom: 1mm;
+    letter-spacing: 0.3px;
+  }
+  .arch-layer p {
+    font-size: 8.5pt;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.92);
+  }
+
+  .arch-presentation { background: linear-gradient(90deg, #16335A 0%, #1F4880 100%); }
+  .arch-infra        { background: linear-gradient(90deg, #1A5276 0%, #2874A6 100%); }
+  .arch-application  { background: linear-gradient(90deg, #2E6DA4 0%, #3B82C5 100%); }
+  .arch-domain       { background: linear-gradient(90deg, #5DADE2 0%, #85C1E9 100%); color: var(--navy); }
+  .arch-domain p { color: var(--navy); }
+
+  .arch-arrow {
+    text-align: center;
+    font-size: 14pt;
+    color: var(--accent);
+    line-height: 0.5;
+    margin: -1mm 0;
+    font-weight: 900;
+  }
+
+  .arch-rule {
+    margin-top: 5mm;
+    padding: 3mm 4mm;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    font-size: 8.5pt;
+    color: var(--text-dark);
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .arch-rule strong { color: var(--navy); }
+
+  .solid-row {
+    margin-top: 4mm;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2mm;
+    text-align: center;
+  }
+  .solid-letter {
+    background: var(--navy);
+    color: var(--white);
+    padding: 3mm 1mm;
+    border-radius: 6px;
+    font-weight: 900;
+  }
+  .solid-letter .ltr { font-size: 14pt; display: block; line-height: 1; }
+  .solid-letter .nm  { font-size: 6.5pt; display: block; margin-top: 1mm; opacity: 0.85; letter-spacing: 0.3px; }
+
+  /* ===== TEKNOLOJİ YIĞINI ===== */
+  .tech-section { margin-top: 0; }
+  .tech-section h4 {
+    font-size: 9pt;
+    color: var(--navy);
+    margin-bottom: 2mm;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-bottom: 1mm;
+    border-bottom: 2px solid var(--accent);
+  }
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2mm;
+  }
+  .tech-item {
+    background: var(--sky-pale);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2.5mm 2mm;
+    text-align: center;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .tech-item .desc {
+    font-size: 7pt;
+    color: var(--text-soft);
+    font-weight: 500;
+    display: block;
+    margin-top: 0.5mm;
+  }
+  .tech-section + .tech-section { margin-top: 4mm; }
+
+  /* ===== METODOLOJİ ===== */
+  .method-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3mm;
+    margin-bottom: 4mm;
+  }
+  .method-card {
+    border-radius: 7px;
+    padding: 4mm 2mm;
+    text-align: center;
+    color: var(--white);
+  }
+  .method-card .m-ico {
+    font-size: 22pt;
+    line-height: 1;
+    margin-bottom: 2mm;
+  }
+  .method-card .m-name {
+    font-size: 10pt;
+    font-weight: 800;
+    margin-bottom: 1mm;
+  }
+  .method-card .m-tag {
+    font-size: 7.5pt;
+    opacity: 0.95;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .m-scrum    { background: linear-gradient(135deg, #1a7fc1, #0e5a8a); }
+  .m-kanban   { background: linear-gradient(135deg, #27ae60, #1a7a42); }
+  .m-waterfall{ background: linear-gradient(135deg, #8e44ad, #5b2c6f); }
+  .m-iter     { background: linear-gradient(135deg, #d35400, #a04000); }
+
+  .template-strip {
+    background: var(--sky-pale);
+    border: 1px dashed var(--border);
+    border-radius: 5px;
+    padding: 3mm;
+  }
+  .template-strip .lbl {
+    font-size: 8pt;
+    color: var(--navy);
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 2mm;
+    text-align: center;
+  }
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5mm;
+  }
+  .template-chip {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5mm 2mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: var(--navy);
+    text-align: center;
+  }
+
+  /* ===== WORKFLOW EDITOR MOCKUP ===== */
+  .wf-mockup {
+    background: #F4F7FB;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 4mm;
+    margin-bottom: 3mm;
+  }
+
+  .wf-toolbar {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5mm 2mm;
+    display: flex;
+    gap: 2mm;
+    margin-bottom: 3mm;
+    align-items: center;
+    font-size: 7.5pt;
+  }
+  .wf-toolbar .tool-btn {
+    background: var(--sky-pale);
+    border: 1px solid var(--border);
+    padding: 1mm 2.5mm;
+    border-radius: 3px;
+    color: var(--navy);
+    font-weight: 600;
+  }
+  .wf-toolbar .validate-btn {
+    background: var(--green);
+    color: var(--white);
+    border: 0;
+    padding: 1mm 3mm;
+    border-radius: 3px;
+    font-weight: 800;
+    margin-left: auto;
+  }
+
+  .wf-canvas {
+    background:
+      radial-gradient(circle, #C8D9EC 1px, transparent 1px) 0 0 / 4mm 4mm;
+    background-color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5mm 3mm;
+    position: relative;
+    height: 50mm;
+  }
+
+  .wf-node {
+    position: absolute;
+    background: var(--white);
+    border: 2px solid var(--navy-soft);
+    border-radius: 6px;
+    padding: 2mm 3mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: var(--navy);
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    min-width: 20mm;
+  }
+  .wf-node.start  { border-color: var(--green); background: #E6F4EA; }
+  .wf-node.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px rgba(232,160,32,0.25); }
+  .wf-node.end    { border-color: var(--red); background: #FBE7E5; }
+  .wf-node .badge-cycle {
+    position: absolute;
+    top: -2mm;
+    right: -2mm;
+    background: var(--accent);
+    color: var(--white);
+    border-radius: 50%;
+    width: 4mm;
+    height: 4mm;
+    font-size: 7pt;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wf-edge {
+    position: absolute;
+    height: 2px;
+    background: var(--navy-soft);
+  }
+  .wf-edge::after {
+    content: '▶';
+    position: absolute;
+    right: -3px;
+    top: -7px;
+    font-size: 8pt;
+    color: var(--navy-soft);
+  }
+
+  .wf-caption {
+    font-size: 8pt;
+    color: var(--text-soft);
+    text-align: center;
+    font-style: italic;
+    margin-top: 2mm;
+  }
+
+  .wf-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2mm;
+    margin-top: 3mm;
+  }
+  .wf-feat {
+    background: var(--sky-pale);
+    border-left: 3px solid var(--navy-soft);
+    padding: 2mm 3mm;
+    border-radius: 3px;
+    font-size: 8pt;
+  }
+  .wf-feat b { color: var(--navy); display: block; font-size: 8.5pt; }
+
+  /* ===== PHASE GATE ===== */
+  .gate-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5mm;
+  }
+  .gate-step {
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    padding: 2mm 3mm;
+    background: var(--sky-pale);
+    border-left: 3px solid var(--navy-soft);
+    border-radius: 4px;
+    font-size: 8.5pt;
+  }
+  .gate-step .num {
+    width: 6mm;
+    height: 6mm;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 8pt;
+    flex-shrink: 0;
+  }
+  .gate-step b { color: var(--navy); }
+
+  /* ===== GÜVENLİK & RBAC ===== */
+  .sec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5mm;
+  }
+  .sec-item {
+    background: var(--sky-pale);
+    border-left: 3px solid var(--navy);
+    border-radius: 4px;
+    padding: 2.5mm 3mm;
+    font-size: 8.5pt;
+  }
+  .sec-item b {
+    display: block;
+    color: var(--navy);
+    font-size: 9pt;
+    margin-bottom: 0.5mm;
+  }
+
+  .rbac-matrix {
+    margin-top: 4mm;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3mm;
+  }
+  .rbac-matrix .lbl {
+    font-size: 8pt;
+    color: var(--navy);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2mm;
+    text-align: center;
+  }
+  .rbac-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.5pt;
+  }
+  .rbac-table th, .rbac-table td {
+    padding: 1.2mm 1.5mm;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .rbac-table th {
+    background: var(--navy);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 7pt;
+  }
+  .rbac-table th:first-child, .rbac-table td:first-child {
+    text-align: left;
+    background: var(--sky-pale);
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .rbac-table .yes { color: var(--green); font-weight: 900; }
+  .rbac-table .no  { color: var(--red); font-weight: 900; }
+
+  /* ===== MODÜLLER ===== */
+  .module-list { list-style: none; }
+  .module-list li {
+    display: grid;
+    grid-template-columns: 18mm 1fr;
+    gap: 3mm;
+    padding: 2mm 0;
+    border-bottom: 1px dashed var(--border);
+    align-items: center;
+    font-size: 8.5pt;
+  }
+  .module-list li:last-child { border-bottom: 0; }
+  .module-list .code {
+    background: var(--navy);
+    color: var(--white);
+    padding: 1mm 2mm;
+    border-radius: 3px;
+    font-size: 7.5pt;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+  .module-list .desc { color: var(--text-mid); line-height: 1.35; }
+  .module-list .desc b { color: var(--navy); display: block; font-size: 9pt; }
+
+  /* ===== KANBAN MOCKUP ===== */
+  .kb-mockup {
+    background: #F4F7FB;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 3mm;
+  }
+  .kb-banner {
+    background: #FBE7E5;
+    border: 1.2px solid var(--red);
+    color: var(--red);
+    border-radius: 4px;
+    padding: 1.5mm 3mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    margin-bottom: 2mm;
+    display: flex;
+    align-items: center;
+    gap: 2mm;
+  }
+  .kb-banner .warn-ico { font-size: 10pt; }
+
+  .kb-board {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2mm;
+  }
+  .kb-col {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2mm;
+    min-height: 38mm;
+  }
+  .kb-col.violation {
+    background: #FFF4E6;
+    border-color: var(--accent);
+    border-width: 1.5px;
+  }
+  .kb-col-title {
+    font-size: 7.5pt;
+    font-weight: 800;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2mm;
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 1mm;
+    border-bottom: 1.5px solid var(--border);
+  }
+  .kb-col-title .wip {
+    background: var(--accent);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 0.5mm 2mm;
+    font-size: 6.5pt;
+    font-weight: 900;
+  }
+  .kb-col-title .wip.violation { background: var(--red); }
+
+  .kb-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1.5mm 2mm;
+    margin-bottom: 1.5mm;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .kb-card .kc-title {
+    font-size: 7pt;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 1mm;
+    line-height: 1.2;
+  }
+  .kb-card .kc-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kc-prio {
+    display: inline-block;
+    padding: 0.3mm 1.5mm;
+    border-radius: 6px;
+    font-size: 6pt;
+    font-weight: 800;
+    color: var(--white);
+  }
+  .kc-prio.h { background: var(--red); }
+  .kc-prio.m { background: var(--accent); }
+  .kc-prio.l { background: var(--green); }
+  .kc-avatar {
+    width: 3mm;
+    height: 3mm;
+    border-radius: 50%;
+    background: var(--navy-soft);
+    display: inline-block;
+  }
+
+  .kb-caption {
+    font-size: 8pt;
+    color: var(--text-soft);
+    text-align: center;
+    font-style: italic;
+    margin-top: 2mm;
+  }
+
+  /* ===== RAKİP KARŞILAŞTIRMA ===== */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+  .comp-table th, .comp-table td {
+    padding: 1.5mm 1.5mm;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .comp-table th {
+    background: var(--navy);
+    color: var(--white);
+    font-weight: 800;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .comp-table th.feat-col { text-align: left; }
+  .comp-table td.feat-cell {
+    text-align: left;
+    font-weight: 600;
+    background: var(--sky-pale);
+    color: var(--navy);
+  }
+  .comp-table .spms-col {
+    background: var(--accent-soft);
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .comp-table thead th.spms-col {
+    background: var(--accent);
+    color: var(--white);
+  }
+  .yes { color: var(--green); font-weight: 900; }
+  .no  { color: var(--red); font-weight: 900; }
+  .mid { color: var(--accent); font-weight: 900; }
+
+  /* ===== SONUÇ ===== */
+  .conclusion-text {
+    font-size: 9pt;
+    line-height: 1.5;
+    color: var(--text-mid);
+    text-align: justify;
+  }
+  .conclusion-text strong { color: var(--navy); }
+  .future-list {
+    margin-top: 3mm;
+    padding-left: 5mm;
+    font-size: 8.5pt;
+    color: var(--text-mid);
+    line-height: 1.6;
+  }
+  .future-list li::marker { color: var(--accent); font-size: 10pt; }
+
+  /* ===== KÖŞE QR ===== */
+  .corner-qr {
+    position: fixed;
+    bottom: 8mm;
+    right: 8mm;
+    background: var(--white);
+    border: 1.5px solid var(--navy);
+    border-radius: 6px;
+    padding: 2.5mm;
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 100;
+  }
+  .qr-svg { width: 18mm; height: 18mm; }
+  .qr-caption {
+    font-size: 7.5pt;
+    color: var(--navy);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .qr-caption b {
+    display: block;
+    font-size: 9pt;
+    color: var(--accent);
+    margin-bottom: 0.5mm;
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="poster-header">
+  <div class="logo-circle">
+    <div class="l-name">GAZİ ÜNİVERSİTESİ</div>
+    <div class="l-script">Gazi</div>
+    <div class="l-year">1926</div>
+  </div>
+
+  <div class="header-flex">
+    <div class="header-center">
+      <div class="dept-line">Mühendislik Fakültesi • Bilgisayar Mühendisliği Bölümü</div>
+      <h1 class="project-title">YAZILIM PROJESİ YÖNETİM YAZILIMI</h1>
+      <div class="author-line">Ayşe ÖZ — 21118080055 &nbsp;•&nbsp; Yusuf Emre BAYRAKCI — 22118080006</div>
+      <div class="advisor-line">Danışman: Prof. Dr. Hacer KARACAN</div>
+    </div>
+    <div class="group-badge">BMB-57</div>
+  </div>
+
+  <div class="logo-circle right">
+    <div class="l-100">100</div>
+    <div class="l-script">Gazi</div>
+    <div class="l-uni">GAZİ ÜNİVERSİTESİ</div>
+  </div>
+</header>
+
+<!-- ========== ANA İÇERİK ========== -->
+<main class="poster-body">
+
+  <!-- =========================== SOL SÜTUN =========================== -->
+  <div class="col">
+
+    <!-- 1. ÖZET -->
+    <section class="card">
+      <div class="card-header"><span class="icon">📋</span><h2>Özet</h2></div>
+      <div class="card-body">
+        <p class="abstract-text">
+          <strong>SPMS</strong>, yazılım geliştirme ekiplerinin proje süreçlerini tek bir platformda yürütebilmelerini sağlayan
+          web tabanlı, metodoloji-bağımsız bir proje yönetim sistemidir. <strong>Scrum, Kanban, Waterfall</strong> ve
+          <strong>İteratif/Artırımlı</strong> süreç modellerinin tamamı aynı kod tabanında desteklenir; kullanıcı projeyi
+          başlatırken metodolojiyi seçer, sistem ilgili kuralları (Sprint zorunluluğu, WIP limit, görev bağımlılığı, faz
+          geçişi) otomatik uygular. Mimari <strong>Clean Architecture + SOLID</strong> ilkelerine göre tasarlanmıştır.
+        </p>
+        <div class="keyword-row">
+          <span class="keyword">Scrum</span>
+          <span class="keyword">Kanban</span>
+          <span class="keyword">Waterfall</span>
+          <span class="keyword">Clean Architecture</span>
+          <span class="keyword">SOLID</span>
+          <span class="keyword">FastAPI</span>
+          <span class="keyword">Next.js</span>
+          <span class="keyword">Phase Gate</span>
+          <span class="keyword">RBAC</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PROBLEM & MOTİVASYON -->
+    <section class="card">
+      <div class="card-header"><span class="icon">⚠️</span><h2>Problem & Motivasyon</h2></div>
+      <div class="card-body">
+        <ul class="problem-list">
+          <li><span class="tag">Pahalı</span><span class="tool">Jira / MS Project</span> — Yüksek lisans ücreti, KOBİ'lere erişim engeli</li>
+          <li><span class="tag">Dar</span><span class="tool">Trello</span> — Görev bağımlılığı/gelişmiş raporlama yok</li>
+          <li><span class="tag">Zor</span><span class="tool">OpenProject</span> — Açık kaynak ama kurulum/UX karmaşık</li>
+          <li><span class="tag">Tek paradigma</span><span class="tool">Hepsi</span> — Ekipler birden çok aracı paralel kullanmak zorunda</li>
+        </ul>
+        <div class="solution-box">
+          <span class="sol-label">SPMS Çözümü</span>
+          Metodoloji çeşitliliği bir <em>mimari sorun</em> olarak ele alınmış; tüm süreç modelleri tek platformda birleştirilmiştir.
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SİSTEM MİMARİSİ (BÜYÜK) -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🏛️</span><h2>Sistem Mimarisi — Clean Architecture</h2></div>
+      <div class="card-body arch-block">
+
+        <div class="arch-diagram">
+          <div class="arch-layer arch-presentation">
+            <div class="layer-num">4</div>
+            <h4>PRESENTATION (API)</h4>
+            <p>FastAPI routers, dependency injection (Depends), HTTP yönlendirme</p>
+          </div>
+          <div class="arch-arrow">▲</div>
+          <div class="arch-layer arch-infra">
+            <div class="layer-num">3</div>
+            <h4>INFRASTRUCTURE</h4>
+            <p>SQLAlchemy modelleri, repository implementasyonları, JWT/bcrypt, SMTP, adaptörler</p>
+          </div>
+          <div class="arch-arrow">▲</div>
+          <div class="arch-layer arch-application">
+            <div class="layer-num">2</div>
+            <h4>APPLICATION (Use Cases)</h4>
+            <p>İş orkestrasyonu, DTO'lar, port arayüzleri — yalnızca Domain'e bağımlı</p>
+          </div>
+          <div class="arch-arrow">▲</div>
+          <div class="arch-layer arch-domain">
+            <div class="layer-num">1</div>
+            <h4>DOMAIN (Çekirdek)</h4>
+            <p>Entity'ler (Pydantic), repository arayüzleri (ABC), domain hataları — saf Python</p>
+          </div>
+        </div>
+
+        <div class="arch-rule">
+          <strong>Bağımlılık Kuralı:</strong> Bağımlılıklar yalnızca <em>içe doğru</em> gösterir. Domain ve Application
+          katmanları altyapı kütüphanelerini içe aktarmaz → <strong>Dependency Inversion Principle</strong>.
+        </div>
+
+        <div class="solid-row">
+          <div class="solid-letter"><span class="ltr">S</span><span class="nm">Single Resp.</span></div>
+          <div class="solid-letter"><span class="ltr">O</span><span class="nm">Open/Closed</span></div>
+          <div class="solid-letter"><span class="ltr">L</span><span class="nm">Liskov Sub.</span></div>
+          <div class="solid-letter"><span class="ltr">I</span><span class="nm">Interface Seg.</span></div>
+          <div class="solid-letter"><span class="ltr">D</span><span class="nm">Dep. Inversion</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TEKNOLOJİ YIĞINI -->
+    <section class="card">
+      <div class="card-header"><span class="icon">⚙️</span><h2>Teknoloji Yığını</h2></div>
+      <div class="card-body">
+        <div class="tech-section">
+          <h4>Backend</h4>
+          <div class="tech-grid">
+            <div class="tech-item">Python 3.12<span class="desc">async/await</span></div>
+            <div class="tech-item">FastAPI<span class="desc">REST + DI</span></div>
+            <div class="tech-item">SQLAlchemy 2<span class="desc">async ORM</span></div>
+            <div class="tech-item">PostgreSQL 15<span class="desc">RDBMS</span></div>
+            <div class="tech-item">Pydantic v2<span class="desc">validation</span></div>
+            <div class="tech-item">JWT + bcrypt<span class="desc">auth</span></div>
+          </div>
+        </div>
+        <div class="tech-section">
+          <h4>Frontend</h4>
+          <div class="tech-grid">
+            <div class="tech-item">TypeScript<span class="desc">strict mode</span></div>
+            <div class="tech-item">Next.js<span class="desc">App Router</span></div>
+            <div class="tech-item">React 18<span class="desc">UI library</span></div>
+            <div class="tech-item">TailwindCSS<span class="desc">utility</span></div>
+            <div class="tech-item">TanStack Query<span class="desc">cache</span></div>
+            <div class="tech-item">React Flow<span class="desc">workflow</span></div>
+          </div>
+        </div>
+        <div class="tech-section">
+          <h4>DevOps & Test</h4>
+          <div class="tech-grid">
+            <div class="tech-item">Docker<span class="desc">container</span></div>
+            <div class="tech-item">pytest<span class="desc">unit/integ.</span></div>
+            <div class="tech-item">Playwright<span class="desc">E2E</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- =========================== ORTA SÜTUN =========================== -->
+  <div class="col">
+
+    <!-- 5. ÇOKLU METODOLOJİ -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🎯</span><h2>Çoklu Metodoloji Desteği</h2></div>
+      <div class="card-body">
+        <div class="method-row">
+          <div class="method-card m-scrum">
+            <div class="m-ico">🏃</div>
+            <div class="m-name">SCRUM</div>
+            <div class="m-tag">Sprint + Burndown</div>
+          </div>
+          <div class="method-card m-kanban">
+            <div class="m-ico">📋</div>
+            <div class="m-name">KANBAN</div>
+            <div class="m-tag">WIP + CFD</div>
+          </div>
+          <div class="method-card m-waterfall">
+            <div class="m-ico">📊</div>
+            <div class="m-name">WATERFALL</div>
+            <div class="m-tag">Faz kilidi</div>
+          </div>
+          <div class="method-card m-iter">
+            <div class="m-ico">🔄</div>
+            <div class="m-name">İTERATİF</div>
+            <div class="m-tag">V/Spiral/RAD</div>
+          </div>
+        </div>
+
+        <div class="template-strip">
+          <div class="lbl">9 Hazır Yaşam Döngüsü Şablonu</div>
+          <div class="template-grid">
+            <div class="template-chip">Scrum</div>
+            <div class="template-chip">Waterfall</div>
+            <div class="template-chip">Kanban</div>
+            <div class="template-chip">Iterative</div>
+            <div class="template-chip">V-Model</div>
+            <div class="template-chip">Spiral</div>
+            <div class="template-chip">Incremental</div>
+            <div class="template-chip">Evolutionary</div>
+            <div class="template-chip">RAD</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. YAŞAM DÖNGÜSÜ + WORKFLOW EDITOR -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🧩</span><h2>Yaşam Döngüsü & Workflow Editor</h2></div>
+      <div class="card-body">
+
+        <div class="wf-mockup">
+          <div class="wf-toolbar">
+            <span class="tool-btn">＋ Faz</span>
+            <span class="tool-btn">↗ Bağlantı</span>
+            <span class="tool-btn">▣ Grup</span>
+            <span class="tool-btn">⏷ Şablon</span>
+            <span class="validate-btn">✓ Doğrula</span>
+          </div>
+
+          <div class="wf-canvas">
+            <div class="wf-node start" style="left: 4mm; top: 14mm;">Başlat</div>
+            <div class="wf-node" style="left: 36mm; top: 6mm;">Planlama</div>
+            <div class="wf-node active" style="left: 36mm; top: 26mm;">
+              Yürütme
+              <span class="badge-cycle">2</span>
+            </div>
+            <div class="wf-node" style="left: 78mm; top: 14mm;">İnceleme</div>
+            <div class="wf-node end" style="right: 4mm; top: 14mm;">Kapanış</div>
+
+            <div class="wf-edge" style="left: 27mm; top: 16mm; width: 8mm;"></div>
+            <div class="wf-edge" style="left: 27mm; top: 32mm; width: 8mm;"></div>
+            <div class="wf-edge" style="left: 64mm; top: 12mm; width: 13mm;"></div>
+            <div class="wf-edge" style="left: 64mm; top: 32mm; width: 13mm;"></div>
+            <div class="wf-edge" style="left: 105mm; top: 18mm; width: 8mm;"></div>
+          </div>
+
+          <div class="wf-caption">React Flow tabanlı görsel süreç tasarımcısı — sürükle-bırak ile faz ve geçiş tanımı</div>
+        </div>
+
+        <div class="wf-features">
+          <div class="wf-feat"><b>4 Akış Modu</b>Esnek / Sıralı-kilitli / Sıralı-esnek / Sürekli</div>
+          <div class="wf-feat"><b>BFS Aktif Faz</b>Paralel akış desteği — aynı anda çoklu aktif faz</div>
+          <div class="wf-feat"><b>Döngü Sayacı</b>Her fazın kaç kez kapatıldığını rozet olarak gösterir</div>
+          <div class="wf-feat"><b>Şema Doğrulama</b>Başlangıç/son faz, izole node ve cycle kontrolü</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. PHASE GATE -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🚦</span><h2>Phase Gate Mekanizması</h2></div>
+      <div class="card-body">
+        <div class="gate-pipeline">
+          <div class="gate-step"><div class="num">1</div><div><b>Yetki kontrolü</b> — Faz geçişi yetkisi olan kullanıcı mı?</div></div>
+          <div class="gate-step"><div class="num">2</div><div><b>Hız sınırı</b> — Aynı kullanıcı-proje çifti için pencere kontrolü</div></div>
+          <div class="gate-step"><div class="num">3</div><div><b>Idempotency</b> — Aynı isteğin iki kez işlenmemesi</div></div>
+          <div class="gate-step"><div class="num">4</div><div><b>Otomatik kriter</b> — Tüm görevler tamam mı? Blocker var mı?</div></div>
+          <div class="gate-step"><div class="num">5</div><div><b>Manuel kriter</b> — PM'in çek listesi onayı</div></div>
+          <div class="gate-step"><div class="num">6</div><div><b>Eşzamanlılık kilidi</b> — Veritabanı tabanlı race-condition koruması</div></div>
+          <div class="gate-step"><div class="num">7</div><div><b>Audit log</b> — Tüm metadata kaydedilir (kaynak/hedef faz, döngü no, override)</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. GÜVENLİK & RBAC (AI yerine) -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🔐</span><h2>Güvenlik Mimarisi & RBAC</h2></div>
+      <div class="card-body">
+        <div class="sec-grid">
+          <div class="sec-item"><b>JWT (HS256)</b>30 dk geçerlilik, Bearer token</div>
+          <div class="sec-item"><b>bcrypt</b>Parola hashleme — cleartext yok</div>
+          <div class="sec-item"><b>Hesap kilitleme</b>Tekrarlanan hatalı girişlerde geçici kilit</div>
+          <div class="sec-item"><b>Rate limiting</b>Login + kritik endpoint koruması</div>
+          <div class="sec-item"><b>SQL Injection</b>ORM parametrik sorgular</div>
+          <div class="sec-item"><b>XSS</b>DOMPurify sanitize</div>
+          <div class="sec-item"><b>CORS</b>Allow-list tabanlı kaynak kontrolü</div>
+          <div class="sec-item"><b>Audit Log</b>JSON formatında yapısal denetim</div>
+        </div>
+
+        <div class="rbac-matrix">
+          <div class="lbl">RBAC — İzin Matrisi (Örnek)</div>
+          <table class="rbac-table">
+            <thead>
+              <tr>
+                <th>İzin</th>
+                <th>Admin</th>
+                <th>PM</th>
+                <th>Member</th>
+                <th>Guest</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Proje oluştur</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Faz geçişi</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Görev güncelle</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">✗</td></tr>
+              <tr><td>Kullanıcı davet</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Audit log oku</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- =========================== SAĞ SÜTUN =========================== -->
+  <div class="col">
+
+    <!-- 9. ANA MODÜLLER -->
+    <section class="card">
+      <div class="card-header"><span class="icon">📦</span><h2>Ana Modüller</h2></div>
+      <div class="card-body">
+        <ul class="module-list">
+          <li>
+            <span class="code">AUTH</span>
+            <div class="desc"><b>Kullanıcı & Yetkilendirme</b>JWT, RBAC, davet bazlı kayıt, izin matrisi</div>
+          </li>
+          <li>
+            <span class="code">TASK</span>
+            <div class="desc"><b>Görev Yönetimi</b>Alt görev, bağımlılık, tekrarlayan görev, sprint, etiket</div>
+          </li>
+          <li>
+            <span class="code">NOTIF</span>
+            <div class="desc"><b>Bildirim</b>In-app + e-posta + watcher mekanizması</div>
+          </li>
+          <li>
+            <span class="code">REPORT</span>
+            <div class="desc"><b>Raporlama</b>Burndown, CFD, Lead/Cycle, Gantt, PDF/Excel export</div>
+          </li>
+          <li>
+            <span class="code">PROCESS</span>
+            <div class="desc"><b>Süreç Modeli</b>Metodoloji seçimi, Lifecycle, Workflow Editor, Phase Gate</div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 10. KANBAN BOARD -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🗂️</span><h2>Kanban Tahtası — WIP Limit Korumalı</h2></div>
+      <div class="card-body">
+        <div class="kb-mockup">
+          <div class="kb-banner">
+            <span class="warn-ico">⚠</span>
+            WIP limit aşıldı: "Yapılıyor" sütununda 4/3 görev — taşıma engellendi
+          </div>
+          <div class="kb-board">
+            <div class="kb-col">
+              <div class="kb-col-title">
+                <span>Yapılacak</span>
+                <span class="wip">∞</span>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">Login form validation</div>
+                <div class="kc-meta"><span class="kc-prio l">Low</span><span class="kc-avatar"></span></div>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">PDF export button</div>
+                <div class="kc-meta"><span class="kc-prio m">Med</span><span class="kc-avatar"></span></div>
+              </div>
+            </div>
+            <div class="kb-col violation">
+              <div class="kb-col-title">
+                <span>Yapılıyor</span>
+                <span class="wip violation">4/3</span>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">JWT refresh logic</div>
+                <div class="kc-meta"><span class="kc-prio h">High</span><span class="kc-avatar"></span></div>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">Phase gate criteria UI</div>
+                <div class="kc-meta"><span class="kc-prio h">High</span><span class="kc-avatar"></span></div>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">CFD chart filter</div>
+                <div class="kc-meta"><span class="kc-prio m">Med</span><span class="kc-avatar"></span></div>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">Audit log query</div>
+                <div class="kc-meta"><span class="kc-prio m">Med</span><span class="kc-avatar"></span></div>
+              </div>
+            </div>
+            <div class="kb-col">
+              <div class="kb-col-title">
+                <span>Tamam</span>
+                <span class="wip">∞</span>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">Workflow editor v1</div>
+                <div class="kc-meta"><span class="kc-prio h">High</span><span class="kc-avatar"></span></div>
+              </div>
+              <div class="kb-card">
+                <div class="kc-title">RBAC matrix</div>
+                <div class="kc-meta"><span class="kc-prio m">Med</span><span class="kc-avatar"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="kb-caption">Sürükle-bırak Kanban — WIP limit aşıldığında sütun rengi değişir, taşıma engellenir, toast bildirimi gösterilir.</div>
+      </div>
+    </section>
+
+    <!-- 11. RAKİP KARŞILAŞTIRMA -->
+    <section class="card">
+      <div class="card-header"><span class="icon">📊</span><h2>Rakiplerle Karşılaştırma</h2></div>
+      <div class="card-body">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th class="feat-col">Özellik</th>
+              <th>Jira</th>
+              <th>Trello</th>
+              <th>MS Proj.</th>
+              <th>OpenProj.</th>
+              <th class="spms-col">SPMS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="feat-cell">Çoklu metodoloji</td>
+              <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="mid">◐</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">Phase Gate (otomatik)</td>
+              <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">Görsel Workflow Editor</td>
+              <td class="mid">◐</td><td class="no">✗</td><td class="yes">✓</td><td class="mid">◐</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">CFD + Lead/Cycle</td>
+              <td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td><td class="mid">◐</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">RBAC izin matrisi</td>
+              <td class="mid">◐</td><td class="no">✗</td><td class="mid">◐</td><td class="yes">✓</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">Açık kaynak</td>
+              <td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td>
+              <td class="spms-col yes">✓</td>
+            </tr>
+            <tr>
+              <td class="feat-cell">Lisans maliyeti</td>
+              <td class="no">Yüksek</td><td class="mid">Orta</td><td class="no">Yüksek</td><td class="yes">Yok</td>
+              <td class="spms-col yes">Yok</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12. SONUÇ -->
+    <section class="card">
+      <div class="card-header"><span class="icon">🎓</span><h2>Sonuç & Gelecek Çalışmalar</h2></div>
+      <div class="card-body">
+        <p class="conclusion-text">
+          SPMS, ticari araçların metodoloji bağımlılığını <strong>mimari düzeyde aşan</strong> birleşik bir
+          platform sunmuştur. Clean Architecture ve SOLID prensiplerinin disiplinli uygulanması; yeni metodoloji,
+          rapor ve adaptörlerin sisteme <strong>OCP'ye uygun</strong> biçimde eklenebilmesini sağlamaktadır.
+          KOBİ ölçekli ekiplere ücretsiz, açık kaynak ve genişletilebilir bir alternatif sunar.
+        </p>
+        <ul class="future-list">
+          <li>WebSocket gerçek zamanlı bildirim (adaptör arayüzü hazır)</li>
+          <li>Multi-tenant (çoklu kiracı) mimariye geçiş</li>
+          <li>Mobil uygulama (React Native)</li>
+          <li>Yapay zekâ destekli workflow önerisi (sonraki sürüm)</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<!-- ========== KÖŞE QR ========== -->
+<div class="corner-qr">
+  <svg class="qr-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="QR — Demo & GitHub">
+    <rect width="100" height="100" fill="#fff"/>
+    <g fill="#16335A">
+      <rect x="5"  y="5"  width="22" height="22"/>
+      <rect x="9"  y="9"  width="14" height="14" fill="#fff"/>
+      <rect x="13" y="13" width="6"  height="6"/>
+      <rect x="73" y="5"  width="22" height="22"/>
+      <rect x="77" y="9"  width="14" height="14" fill="#fff"/>
+      <rect x="81" y="13" width="6"  height="6"/>
+      <rect x="5"  y="73" width="22" height="22"/>
+      <rect x="9"  y="77" width="14" height="14" fill="#fff"/>
+      <rect x="13" y="81" width="6"  height="6"/>
+      <rect x="32" y="8"  width="3" height="3"/><rect x="38" y="8"  width="3" height="3"/>
+      <rect x="44" y="14" width="3" height="3"/><rect x="50" y="8"  width="3" height="3"/>
+      <rect x="56" y="14" width="3" height="3"/><rect x="62" y="8"  width="3" height="3"/>
+      <rect x="32" y="20" width="3" height="3"/><rect x="44" y="26" width="3" height="3"/>
+      <rect x="56" y="20" width="3" height="3"/><rect x="68" y="32" width="3" height="3"/>
+      <rect x="8"  y="38" width="3" height="3"/><rect x="20" y="44" width="3" height="3"/>
+      <rect x="32" y="38" width="3" height="3"/><rect x="38" y="44" width="3" height="3"/>
+      <rect x="50" y="38" width="3" height="3"/><rect x="62" y="44" width="3" height="3"/>
+      <rect x="74" y="38" width="3" height="3"/><rect x="86" y="44" width="3" height="3"/>
+      <rect x="8"  y="56" width="3" height="3"/><rect x="20" y="62" width="3" height="3"/>
+      <rect x="32" y="56" width="3" height="3"/><rect x="44" y="62" width="3" height="3"/>
+      <rect x="56" y="56" width="3" height="3"/><rect x="68" y="62" width="3" height="3"/>
+      <rect x="80" y="56" width="3" height="3"/><rect x="92" y="62" width="3" height="3"/>
+      <rect x="32" y="74" width="3" height="3"/><rect x="44" y="80" width="3" height="3"/>
+      <rect x="56" y="74" width="3" height="3"/><rect x="68" y="80" width="3" height="3"/>
+      <rect x="80" y="74" width="3" height="3"/><rect x="92" y="80" width="3" height="3"/>
+      <rect x="38" y="86" width="3" height="3"/><rect x="50" y="92" width="3" height="3"/>
+      <rect x="62" y="86" width="3" height="3"/><rect x="74" y="92" width="3" height="3"/>
+    </g>
+  </svg>
+  <div class="qr-caption">
+    <b>Demo & Repo</b>
+    Tara → GitHub<br/>+ Canlı demo
+  </div>
+</div>
+
+</body>
+</html>
