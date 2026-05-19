@@ -6,13 +6,16 @@
 //   [+ Düğüm] [↪ Bağlantı] [▢ Grup] [Sınıflandır ▾]  |  [✦ AI öner]
 //
 // Plan 12-07 ships the structural buttons with disabled handlers (Plan
-// 12-08 wires the real DnD/grouping/align actions). The "AI öner" button
-// is permanently disabled with a "Yakında" Badge per CONTEXT D-33.
+// 12-08 wires the real DnD/grouping/align actions).
+//
+// v3.0 Wave 2: "AI öner" button activated — "Yakında" Badge removed,
+// onAISuggest callback wired to open AI Workflow Modal in parent.
+// Plan ref: .planning/ai-workflow-generator-plan.md Wave 2.6.
 
 import * as React from "react"
 import { Plus, ArrowRight, Square, AlignVerticalJustifyCenter, Sparkles } from "lucide-react"
 
-import { Badge, Button } from "@/components/primitives"
+import { Button } from "@/components/primitives"
 import { Tooltip } from "./tooltip"
 import { useApp } from "@/context/app-context"
 
@@ -28,6 +31,8 @@ export interface BottomToolbarProps {
       | "center-v"
       | "center-h",
   ) => void
+  /** v3.0 Wave 2: opens AI Workflow Modal. Parent decides variant by current tab. */
+  onAISuggest?: () => void
 }
 
 export function BottomToolbar(props: BottomToolbarProps) {
@@ -173,27 +178,32 @@ export function BottomToolbar(props: BottomToolbarProps) {
       />
       <Tooltip
         text={T(
-          "AI önerileri gelecek sürümde aktif olacak.",
-          "AI suggestions will be active in a future version.",
+          "AI ile workflow oluştur (Yaşam Döngüsü)",
+          "Generate workflow with AI (Lifecycle)",
         )}
       >
         <Button
           variant="ghost"
           size="sm"
-          icon={<Sparkles size={14} />}
-          disabled
-          title={T("AI öner — yakında", "AI suggest — soon")}
+          icon={
+            <span className="ai-sparkle-idle" style={{ display: "inline-flex" }}>
+              <Sparkles size={14} style={{ color: "var(--ai-accent)" }} />
+            </span>
+          }
+          onClick={props.onAISuggest}
+          disabled={!props.onAISuggest}
+          title={T("AI ile oluştur", "Generate with AI")}
           aria-label={T(
-            "Yakında — bu özellik gelecek sürümde aktif olacak",
-            "Soon — this feature will be active in a future version",
+            "AI ile workflow oluştur",
+            "Generate workflow with AI",
           )}
+          style={
+            props.onAISuggest
+              ? { color: "var(--ai-accent)" }
+              : undefined
+          }
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            {T("AI öner", "AI suggest")}
-            <Badge size="xs" tone="neutral">
-              {T("Yakında", "Soon")}
-            </Badge>
-          </span>
+          {T("AI öner", "AI suggest")}
         </Button>
       </Tooltip>
     </div>

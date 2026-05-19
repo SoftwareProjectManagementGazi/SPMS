@@ -99,6 +99,7 @@ import { RightPanel } from "./right-panel"
 import type { WorkflowCapabilities } from "./capabilities-panel"
 import type { ColumnEngineFieldsPatch } from "./selection-panel"
 import { BottomToolbar } from "./bottom-toolbar"
+import { AIWorkflowModal } from "@/components/ai-workflow/ai-workflow-modal"
 import { ModeBanner } from "./mode-banner"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
 import { DirtySaveDialog } from "./dirty-save-dialog"
@@ -335,6 +336,10 @@ export function EditorPage({ project }: EditorPageProps) {
     [language],
   )
   const canEdit = useTransitionAuthority(project)
+
+  // v3.0 Wave 2 — AI Workflow Modal open/close state. Variant determined by
+  // current editor `mode` ("lifecycle" → lifecycle AI, "status" → task_status AI).
+  const [aiModalOpen, setAiModalOpen] = React.useState(false)
 
   // Working-copy workflows. We track lifecycle and status flows
   // independently (triage #1) so switching modes shows the right canvas.
@@ -2037,6 +2042,7 @@ export function EditorPage({ project }: EditorPageProps) {
               }
             }}
             onAlign={handleAlign}
+            onAISuggest={canEdit ? () => setAiModalOpen(true) : undefined}
           />
           <ContextMenu
             open={contextMenu !== null}
@@ -2076,6 +2082,15 @@ export function EditorPage({ project }: EditorPageProps) {
             setPendingNavigation(null)
           }
         }}
+      />
+
+      {/* v3.0 Wave 2 — AI Workflow Modal. Variant follows current editor mode. */}
+      <AIWorkflowModal
+        open={aiModalOpen}
+        variant={mode === "status" ? "task_status" : "lifecycle"}
+        contextLabel={project.name}
+        existingNodeCount={workflow.nodes.length}
+        onClose={() => setAiModalOpen(false)}
       />
     </div>
   )
