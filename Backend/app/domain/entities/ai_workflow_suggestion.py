@@ -17,7 +17,13 @@ from typing import Literal
 
 
 class SuggestedNode(BaseModel):
-    """Single phase node in a lifecycle suggestion."""
+    """Single phase node in a lifecycle suggestion.
+
+    Coordinates are emitted by the adapter (methodology-aware layout) — e.g.
+    V-Model returns a V-shape, RAD returns parallel branches. Frontend renders
+    nodes at these exact positions instead of re-layouting client-side, which
+    avoids React Flow's auto-fit jitter as nodes stream in.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,6 +37,8 @@ class SuggestedNode(BaseModel):
         "status-done",
         "status-blocked",
     ] = "status-todo"
+    x: int = Field(default=0, description="Layout X (adapter-decided)")
+    y: int = Field(default=0, description="Layout Y (adapter-decided)")
 
 
 class SuggestedEdge(BaseModel):

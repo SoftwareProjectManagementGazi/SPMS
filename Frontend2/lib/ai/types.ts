@@ -81,6 +81,10 @@ export interface SuggestedNodePayload {
   label: string
   description: string
   color: "status-todo" | "status-progress" | "status-review" | "status-done" | "status-blocked"
+  /** Adapter-decided layout — frontend renders nodes at these exact coords
+   *  so React Flow's auto-fit doesn't shuffle them during streaming. */
+  x: number
+  y: number
 }
 
 export interface SuggestedEdgePayload {

@@ -9,8 +9,9 @@
 ## Progress Tracker
 
 - [x] **Wave 1 — Foundation** (2026-05-19) — Domain + Application + Mock Adapter + SSE endpoints + Frontend stream client. 15 unit tests pass, curl SSE verified.
-- [ ] **Wave 2 — UI Shell** — Modal + Lifecycle/Task Status forms + bottom-toolbar activation
-- [ ] **Wave 3 — Live Generation** — Live canvas drawing, chat log, rationale card, done state
+- [x] **Wave 2 — UI Shell** (2026-05-19) — Modal opens from bottom-toolbar, lifecycle + task status forms render, submit triggers SSE, chat log populates. Smoke-tested end-to-end with mock adapter.
+- [x] **Wave 3 — Live Generation** (2026-05-20) — Lifecycle live canvas (React Flow w/ disableAutoFit), task-status kanban, chat log w/ blinking cursor, rationale card, done state pill. Backend mock adapter emits methodology-aware coordinates (V-Model, RAD Y-fork, Scrum retro loop, etc.). Node+edge stream interleaved. KNOWN ISSUE / DEFERRED: nodes still visibly "settle into place" on first paint — RF internal state adoption glitch suspected. Functional, cosmetic only. Revisit before final polish.
+- [ ] **Wave 4 — Gemini Integration** — Real LLM adapter, prompt builders, multi-project keys
 - [ ] **Wave 4 — Gemini Integration** — Real LLM adapter, prompt builders, multi-project keys
 - [ ] **Wave 5 — Apply & Error Handling** — Apply confirmation, undo toast, error states, rate limiter
 - [ ] **Wave 6 — Polish & Test** — Accessibility, bilingual, smoke tests, prefers-reduced-motion

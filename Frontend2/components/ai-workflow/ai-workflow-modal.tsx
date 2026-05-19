@@ -23,9 +23,13 @@ import type {
 import { useAIWorkflowStream } from "@/hooks/use-ai-workflow-stream"
 import { useApp } from "@/context/app-context"
 
+import { AIChatLog, formatUserPrompt } from "./ai-chat-log"
 import { AIContextBadge } from "./ai-context-badge"
 import { AILifecycleForm } from "./ai-lifecycle-form"
+import { AILiveCanvas } from "./ai-live-canvas"
+import { AIRationaleCard } from "./ai-rationale-card"
 import { AITaskStatusForm } from "./ai-task-status-form"
+import { AITaskStatusKanban } from "./ai-task-status-kanban"
 
 export type AIWorkflowVariant = "lifecycle" | "task_status"
 
@@ -57,6 +61,13 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
   const { state, generateLifecycle, generateTaskStatus, cancel, reset } =
     useAIWorkflowStream()
 
+  // Remember last submitted form so we can render the "Sen" prompt + context
+  // chip during generating / done states (the form unmounts after submit).
+  const [lastLifecycleForm, setLastLifecycleForm] =
+    React.useState<LifecycleFormDTO | null>(null)
+  const [lastTaskStatusForm, setLastTaskStatusForm] =
+    React.useState<TaskStatusFormDTO | null>(null)
+
   // -------------------------------------------------------------------------
   // Lifecycle: ESC to close (but only when in idle/done/error — not mid-stream)
   // -------------------------------------------------------------------------
@@ -86,19 +97,43 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
   // -------------------------------------------------------------------------
 
   const handleLifecycleSubmit = async (form: LifecycleFormDTO) => {
+    setLastLifecycleForm(form)
+    setLastTaskStatusForm(null)
     await generateLifecycle(form)
   }
 
   const handleTaskStatusSubmit = async (form: TaskStatusFormDTO) => {
+    setLastTaskStatusForm(form)
+    setLastLifecycleForm(null)
     await generateTaskStatus(form)
   }
 
-  const handleCancelClose = () => {
+  /**
+   * Footer "İptal" button — never closes the modal, always brings the user
+   * back to idle (form view). Modal closing is reserved for the X button +
+   * ESC key + backdrop click. This matches the Claude.ai artifacts model
+   * where Cancel = reset, not dismiss.
+   */
+  const handleFooterCancel = () => {
     if (state.status === "generating") {
-      // Cancel the in-flight stream, stay in modal
-      cancel()
+      cancel() // hook resets to idle after AbortError catch
       return
     }
+    if (state.status === "done" || state.status === "error") {
+      reset() // explicit reset to idle for done / error
+      return
+    }
+    // From idle, "İptal" simply closes (it's the only escape there)
+    onClose()
+  }
+
+  /**
+   * Backdrop click + ESC — these are modal-dismiss affordances. Mid-generation
+   * we soft-cancel the stream first (so the request doesn't keep running)
+   * but still close because the user clearly wants out.
+   */
+  const handleBackdropDismiss = () => {
+    if (state.status === "generating") cancel()
     onClose()
   }
 
@@ -121,7 +156,7 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
         background: "oklch(0 0 0 / 0.5)",
         backdropFilter: "blur(4px)",
       }}
-      onClick={handleCancelClose}
+      onClick={handleBackdropDismiss}
     >
       <div
         style={{
@@ -231,28 +266,31 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
               <AITaskStatusForm onSubmit={handleTaskStatusSubmit} />
             )}
 
-            {state.status === "generating" && (
-              <div style={{ color: "var(--fg-muted)", fontSize: 13 }}>
-                {T(
-                  "AI üretiyor… (canlı çizim Wave 3'te aktif olacak)",
-                  "Generating… (live drawing arrives in Wave 3)",
+            {(state.status === "generating" || state.status === "done") && (
+              <AIChatLog
+                contextSummary={buildContextSummary(
+                  variant,
+                  lastLifecycleForm,
+                  lastTaskStatusForm,
                 )}
-                <ul style={{ marginTop: 12, paddingLeft: 20 }}>
-                  {state.chatLog.map((line, i) => (
-                    <li key={i} style={{ marginBottom: 4 }}>
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                userPrompt={buildUserPrompt(
+                  variant,
+                  lastLifecycleForm,
+                  lastTaskStatusForm,
+                )}
+                aiIntro={state.status === "generating" ? state.currentText : ""}
+                actionLines={
+                  state.status === "generating"
+                    ? state.chatLog
+                    : state.chatLog
+                }
+                isGenerating={state.status === "generating"}
+              />
             )}
 
-            {state.status === "done" && (
-              <div style={{ color: "var(--fg-muted)", fontSize: 13 }}>
-                ✓ {T("Üretim tamamlandı", "Generation done")} —{" "}
-                {state.variant === "lifecycle"
-                  ? `${state.nodes.length} ${T("faz", "phases")}, ${state.edges.length} ${T("bağlantı", "edges")}`
-                  : `${state.columns.length} ${T("sütun", "columns")}`}
+            {state.status === "done" && state.rationale && (
+              <div style={{ marginTop: 16 }}>
+                <AIRationaleCard text={state.rationale} />
               </div>
             )}
 
@@ -279,33 +317,96 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
             )}
           </aside>
 
-          {/* RIGHT — Canvas / Preview area (Wave 3 fills this with live drawing) */}
+          {/* RIGHT — Live canvas (lifecycle = React Flow, task_status = kanban) */}
           <main
             style={{
               background: "var(--bg)",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 24,
-              backgroundImage:
-                "radial-gradient(circle, var(--border) 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
-              backgroundPosition: "12px 12px",
+              alignItems: "stretch",
+              justifyContent: "stretch",
+              position: "relative",
+              minWidth: 0,
+              minHeight: 0,
             }}
           >
             {state.status === "idle" && (
-              <IdleCanvasPlaceholder variant={variant} T={T} />
-            )}
-            {state.status === "generating" && (
-              <div style={{ color: "var(--fg-muted)", fontSize: 14 }}>
-                {T("Çizim Wave 3'te canlı olacak…", "Live drawing in Wave 3…")}
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 24,
+                  backgroundImage:
+                    "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                  backgroundPosition: "12px 12px",
+                }}
+              >
+                <IdleCanvasPlaceholder variant={variant} T={T} />
               </div>
             )}
-            {state.status === "done" && (
-              <div style={{ color: "var(--fg-muted)", fontSize: 14 }}>
+
+            {(state.status === "generating" || state.status === "done") && (
+              <>
+                {/* Header pill — progress / completion summary */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    background: "var(--surface)",
+                    color: state.status === "done" ? "var(--status-done)" : "var(--fg-muted)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    boxShadow: "var(--shadow-sm), inset 0 0 0 1px var(--border)",
+                    zIndex: 5,
+                  }}
+                >
+                  {state.status === "generating"
+                    ? variant === "lifecycle"
+                      ? `${state.nodes.length} ${T("faz", "phases")} · ${state.edges.length} ${T("bağlantı", "edges")}`
+                      : `${state.columns.length} ${T("sütun", "columns")}`
+                    : `✓ ${T("Tamamlandı", "Done")} · ${
+                        state.variant === "lifecycle"
+                          ? `${state.nodes.length} ${T("faz", "phases")} · ${state.edges.length} ${T("bağlantı", "edges")}`
+                          : `${state.columns.length} ${T("sütun", "columns")}`
+                      }`}
+                </div>
+
+                {variant === "lifecycle" && (
+                  <AILiveCanvas
+                    nodes={state.status === "generating" ? state.nodes : state.nodes}
+                    edges={state.status === "generating" ? state.edges : state.edges}
+                    isGenerating={state.status === "generating"}
+                  />
+                )}
+                {variant === "task_status" && (
+                  <AITaskStatusKanban
+                    columns={state.status === "generating" ? state.columns : state.columns}
+                    isGenerating={state.status === "generating"}
+                  />
+                )}
+              </>
+            )}
+
+            {state.status === "error" && (
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 24,
+                  color: "var(--fg-muted)",
+                  fontSize: 13,
+                }}
+              >
                 {T(
-                  "Workflow hazır. Canvas Wave 3'te.",
-                  "Workflow ready. Canvas in Wave 3.",
+                  "Önce sol panelden tekrar üretmeyi dene veya kapat.",
+                  "Try again from the left panel or close.",
                 )}
               </div>
             )}
@@ -326,7 +427,7 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
         >
           <button
             type="button"
-            onClick={handleCancelClose}
+            onClick={handleFooterCancel}
             style={{
               padding: "8px 16px",
               borderRadius: 6,
@@ -340,8 +441,13 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent"
             }}
+            title={
+              state.status === "idle"
+                ? T("Modalı kapat", "Close modal")
+                : T("Forma geri dön", "Back to form")
+            }
           >
-            {state.status === "generating" ? T("İptal", "Cancel") : T("Kapat", "Close")}
+            {T("İptal", "Cancel")}
           </button>
 
           <div style={{ display: "flex", gap: 8 }}>
@@ -390,6 +496,98 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
       </div>
     </div>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Form → display helpers (used by chat log during generating/done)
+// ---------------------------------------------------------------------------
+
+/** Build the small context chip text shown at top of chat log. */
+function buildContextSummary(
+  variant: AIWorkflowVariant,
+  lifecycleForm: LifecycleFormDTO | null,
+  taskStatusForm: TaskStatusFormDTO | null,
+): string {
+  if (variant === "lifecycle" && lifecycleForm) {
+    const parts: string[] = [lifecycleForm.methodology]
+    if (lifecycleForm.team_size) parts.push(`${lifecycleForm.team_size} kişi`)
+    if (lifecycleForm.sector) parts.push(formatSector(lifecycleForm.sector))
+    return parts.join(" · ")
+  }
+  if (variant === "task_status" && taskStatusForm) {
+    const parts: string[] = [taskStatusForm.methodology]
+    if (taskStatusForm.target_column_count) {
+      parts.push(`${taskStatusForm.target_column_count} sütun`)
+    } else {
+      parts.push("AI karar versin")
+    }
+    const flags: string[] = []
+    if (taskStatusForm.has_code_review) flags.push("CR")
+    if (taskStatusForm.has_qa_column) flags.push("QA")
+    if (taskStatusForm.has_uat) flags.push("UAT")
+    if (flags.length) parts.push(flags.join(" + "))
+    return parts.join(" · ")
+  }
+  return ""
+}
+
+/** Build the user prompt summary shown under "Sen" label. */
+function buildUserPrompt(
+  variant: AIWorkflowVariant,
+  lifecycleForm: LifecycleFormDTO | null,
+  taskStatusForm: TaskStatusFormDTO | null,
+): string {
+  if (variant === "lifecycle" && lifecycleForm) {
+    return formatUserPrompt({
+      variant: "lifecycle",
+      methodology: lifecycleForm.methodology,
+      teamSize: lifecycleForm.team_size,
+      duration:
+        lifecycleForm.duration_value && lifecycleForm.duration_unit
+          ? {
+              value: lifecycleForm.duration_value,
+              unit: lifecycleForm.duration_unit,
+            }
+          : null,
+      openEnded: lifecycleForm.open_ended,
+      qualitySummary: [
+        lifecycleForm.quality_code_review && "Code review",
+        lifecycleForm.quality_ci && "CI",
+        lifecycleForm.quality_manual_qa && "QA",
+        lifecycleForm.quality_uat && "UAT",
+        lifecycleForm.quality_security_audit && "Güvenlik",
+      ]
+        .filter(Boolean)
+        .join(" + ") || undefined,
+    })
+  }
+  if (variant === "task_status" && taskStatusForm) {
+    return formatUserPrompt({
+      variant: "task_status",
+      methodology: taskStatusForm.methodology,
+      qualitySummary: [
+        taskStatusForm.has_code_review && "Code review",
+        taskStatusForm.has_qa_column && "QA",
+        taskStatusForm.has_uat && "UAT",
+        taskStatusForm.bug_extra_verification && "Bug doğrulama",
+      ]
+        .filter(Boolean)
+        .join(" + ") || undefined,
+    })
+  }
+  return ""
+}
+
+function formatSector(sectorId: string): string {
+  // Chip IDs use snake_case; fallback to raw string for free-text "Diğer"
+  const map: Record<string, string> = {
+    web_saas: "Web/SaaS",
+    mobile: "Mobile",
+    finans: "Finans",
+    saglik: "Sağlık",
+    egitim: "Eğitim",
+  }
+  return map[sectorId] ?? sectorId
 }
 
 // ---------------------------------------------------------------------------

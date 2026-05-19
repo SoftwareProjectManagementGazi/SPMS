@@ -69,6 +69,11 @@ export interface WorkflowCanvasInnerProps {
   edges: RFEdge[]
   readOnly?: boolean
   showMiniMap?: boolean
+  /** v3.0 — when true, disables RF's `fitView` auto-zoom so nodes stay at
+   *  their exact emitted coordinates. AI live canvas uses this since the
+   *  adapter ships methodology-aware positions and auto-fit makes streaming
+   *  nodes look like they "jump into place". Default: false (legacy fit). */
+  disableAutoFit?: boolean
   /** Optional ref to access zoomIn / zoomOut / fitView from outside. */
   controlsRef?: React.RefObject<CanvasControlsHandle | null>
   /** Called when a node is clicked. */
@@ -150,7 +155,21 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}
-        fitView
+        // v3.0 — When AI canvas is in use, kill ALL auto-fit behavior and pin
+        // the viewport at a known origin so streaming-added nodes don't shift
+        // the camera. fitView=false alone isn't enough — RF's React-state
+        // adoption still recenters the first frame; defaultViewport pins it.
+        fitView={props.disableAutoFit ? false : true}
+        fitViewOptions={props.disableAutoFit ? undefined : { padding: 0.15 }}
+        defaultViewport={
+          props.disableAutoFit
+            ? { x: 40, y: 40, zoom: 0.9 }
+            : { x: 0, y: 0, zoom: 1 }
+        }
+        // Lock origin so transformed positions match exactly what we emit.
+        // RF default is [0, 0] (top-left). We make it explicit so AI canvas
+        // doesn't drift if the host theme changes the default.
+        nodeOrigin={[0, 0]}
         onNodeClick={props.onNodeClick}
         onEdgeClick={props.onEdgeClick}
         onNodesChange={props.onNodesChange as never}
