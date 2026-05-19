@@ -1,0 +1,2399 @@
+<!doctype html>
+<html lang="tr" data-mode="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI İş Akışı Üretici v3 (final) — Implementation Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ──────────────────────────────────────────────────────────────
+   SPMS tokens (globals.css'ten birebir kopya).
+   --ai-accent çifti production'a alınırken globals.css :root +
+   [data-mode="dark"] bloklarına eklenir.
+   ────────────────────────────────────────────────────────────── */
+:root {
+  --font-sans: "Geist","Geist Fallback",ui-sans-serif,system-ui,sans-serif;
+  --font-mono: "Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+
+  --bg: oklch(0.985 0.006 75);
+  --bg-2: oklch(0.97 0.008 70);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.975 0.006 70);
+
+  --fg: oklch(0.20 0.025 50);
+  --fg-muted: oklch(0.48 0.018 55);
+  --fg-subtle: oklch(0.62 0.012 60);
+
+  --border: oklch(0.90 0.01 65);
+  --border-strong: oklch(0.82 0.015 60);
+
+  --primary: oklch(0.60 0.17 40);
+  --primary-fg: oklch(0.985 0.005 75);
+  --primary-hover: oklch(0.55 0.18 40);
+
+  --accent: oklch(0.93 0.03 50);
+  --accent-fg: oklch(0.25 0.04 50);
+  --ring: oklch(0.60 0.17 40 / 0.4);
+
+  --status-todo: oklch(0.62 0.012 60);
+  --status-progress: oklch(0.55 0.15 230);
+  --status-review: oklch(0.65 0.15 65);
+  --status-done: oklch(0.58 0.14 150);
+  --status-blocked: oklch(0.58 0.20 25);
+
+  --priority-critical: oklch(0.58 0.22 25);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.06);
+  --shadow: 0 2px 8px oklch(0 0 0 / 0.08), 0 1px 3px oklch(0 0 0 / 0.05);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.1), 0 2px 4px oklch(0 0 0 / 0.06);
+  --shadow-lg: 0 12px 28px oklch(0 0 0 / 0.12), 0 4px 8px oklch(0 0 0 / 0.08);
+  --shadow-xl: 0 20px 40px oklch(0 0 0 / 0.14), 0 8px 16px oklch(0 0 0 / 0.1);
+
+  --inset-top: inset 0 1px 0 oklch(1 0 0 / 0.65);
+  --inset-bottom: inset 0 -1px 0 oklch(0.2 0 0 / 0.10);
+
+  --ai-accent: oklch(0.62 0.20 290);
+  --ai-accent-hover: oklch(0.57 0.21 290);
+  --ai-accent-soft: oklch(0.96 0.04 290);
+  --ai-accent-fg: oklch(0.985 0.005 290);
+}
+[data-mode="dark"] {
+  --bg: oklch(0.17 0.02 280);
+  --bg-2: oklch(0.20 0.025 280);
+  --surface: oklch(0.22 0.025 280);
+  --surface-2: oklch(0.25 0.028 280);
+  --fg: oklch(0.96 0.01 280);
+  --fg-muted: oklch(0.70 0.02 280);
+  --fg-subtle: oklch(0.55 0.02 280);
+  --border: oklch(0.32 0.025 280);
+  --border-strong: oklch(0.42 0.03 280);
+  --primary: oklch(0.72 0.17 290);
+  --primary-fg: oklch(0.15 0.02 280);
+  --accent: oklch(0.32 0.04 280);
+  --accent-fg: oklch(0.95 0.01 280);
+  --ai-accent: oklch(0.74 0.18 290);
+  --ai-accent-hover: oklch(0.80 0.19 290);
+  --ai-accent-soft: oklch(0.28 0.06 290);
+  --inset-top: inset 0 1px 0 oklch(0.30 0 0 / 0.50);
+  --inset-bottom: inset 0 -1px 0 oklch(0.10 0 0 / 0.70);
+}
+
+/* --d non-inheriting (her element kendi display tipini deklare etsin) */
+@property --d {
+  syntax: "*";
+  inherits: false;
+  initial-value: block;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11","ss01","ss03";
+  overflow: hidden;
+}
+button { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; padding: 0; }
+input, textarea, select { font-family: inherit; color: inherit; outline: none; border: 0; background: transparent; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.mono { font-family: var(--font-mono); font-feature-settings: "ss01"; font-variant-numeric: tabular-nums; }
+svg { display: block; }
+
+/* ──────────────────────────────────────────────────────────────
+   Debug bar (production'da görünmez) — 32px, --bg-2 nötr, minimal.
+   ────────────────────────────────────────────────────────────── */
+.debug-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 32px; z-index: 2000;
+  background: var(--bg-2);
+  color: var(--fg-muted);
+  display: flex; align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.dbg-seg {
+  display: inline-flex;
+  background: var(--surface);
+  border-radius: 5px;
+  padding: 2px;
+  box-shadow: inset 0 0 0 1px var(--border);
+  gap: 1px;
+}
+.dbg-seg button {
+  padding: 3px 9px;
+  font-size: 11px;
+  color: var(--fg-subtle);
+  border-radius: 3px;
+  transition: background 0.1s ease, color 0.1s ease;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 500;
+}
+.dbg-seg button:hover { color: var(--fg); }
+.dbg-seg button.active {
+  background: var(--surface-2);
+  color: var(--fg);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05), inset 0 0 0 1px var(--border-strong);
+}
+.dbg-seg.variant button.active { color: var(--ai-accent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 40%, transparent); }
+.debug-bar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.debug-bar .theme-toggle {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  color: var(--fg-subtle);
+}
+.debug-bar .theme-toggle:hover { background: var(--surface); color: var(--fg); }
+.debug-bar .meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  letter-spacing: 0.02em;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   MODAL SHELL — full viewport (32px üstte debug için ayrılmış)
+   ────────────────────────────────────────────────────────────── */
+.modal {
+  position: fixed; top: 32px; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+}
+
+/* HEADER — SPMS workflow editor tonuna yakın
+   - 60px height, 24px L padding, 16px R padding
+   - Sol: proj badge + breadcrumb
+   - Orta: AI title (sparkle ile)
+   - Sağ: yardım + kapat */
+.modal-header {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 0 16px 0 24px;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+.crumb {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px;
+  color: var(--fg-muted);
+  min-width: 0;
+}
+.crumb .proj {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 10.5px; font-weight: 600;
+  flex-shrink: 0;
+}
+.crumb .sep { color: var(--border-strong); }
+.crumb .var-tag {
+  color: var(--fg);
+  font-weight: 500;
+}
+.modal-header .title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+.modal-header .title .spark {
+  color: var(--ai-accent);
+  display: inline-flex; align-items: center;
+}
+.modal-header .right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.icon-btn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--fg); }
+
+/* BODY split: 420px form + canvas */
+.modal-body {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   LEFT PANEL — form
+   ────────────────────────────────────────────────────────────── */
+.left {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+.left-scroll { flex: 1; overflow-y: auto; padding: 20px 22px; }
+
+/* Error states dim the form */
+[data-state="error-down"] .left-scroll,
+[data-state="error-rate"] .left-scroll { opacity: 0.5; pointer-events: none; }
+
+/* Context badge */
+.context-badge {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 13px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 12.5px;
+  margin-bottom: 20px;
+}
+.context-badge .cb-icon {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--fg-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.context-badge .cb-body { min-width: 0; flex: 1; }
+.context-badge .cb-kind { font-weight: 600; color: var(--fg); margin-bottom: 1px; }
+.context-badge .cb-target { color: var(--fg-muted); font-size: 12px; }
+.context-badge .cb-target b { color: var(--fg); font-weight: 500; }
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 9px 0;
+  display: flex; align-items: center; gap: 5px;
+}
+.section-label .opt {
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  font-size: 11px; color: var(--fg-subtle); opacity: 0.85;
+}
+.section + .section { margin-top: 20px; }
+
+/* Segmented */
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+  gap: 2px;
+  width: 100%;
+}
+.segmented button {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  border-radius: 4px;
+  transition: background 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
+  white-space: nowrap;
+}
+.segmented button:hover { color: var(--fg); }
+.segmented button.active {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.06), inset 0 0 0 1px var(--border);
+}
+
+/* Chips */
+.chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: background 0.1s ease, color 0.1s ease, box-shadow 0.1s ease;
+  white-space: nowrap;
+}
+.chip:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.chip.selected {
+  color: var(--ai-accent);
+  background: var(--ai-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 35%, transparent);
+}
+.chip .info {
+  width: 12px; height: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-subtle);
+  opacity: 0.7;
+}
+.chip:hover .info { opacity: 1; }
+
+/* Inline-edit chip ("Diğer") */
+.chip-other {
+  padding-right: 6px;
+}
+.chip-other[data-mode="open"] {
+  padding: 0 6px 0 11px;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--ai-accent);
+}
+.chip-other input {
+  height: 22px;
+  width: 110px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--surface-2);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.chip-other input:focus-visible { box-shadow: inset 0 0 0 1px var(--ai-accent); outline: none; }
+.chip-other[data-mode="closed"] input { display: none; }
+.chip-other[data-mode="open"] .chip-other-label { color: var(--ai-accent); margin-right: 6px; font-weight: 500; }
+.chip-other[data-mode="open"] .chip-other-label::after { content: ":"; opacity: 0.6; margin-left: 2px; }
+
+/* Number input */
+.num-input {
+  height: 36px;
+  width: 76px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+  -moz-appearance: textfield;
+}
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.num-input::placeholder { color: var(--fg-subtle); font-family: var(--font-sans); }
+.num-input:focus-visible { box-shadow: inset 0 0 0 1px var(--ai-accent), 0 0 0 3px var(--ai-accent-soft); outline: none; }
+.num-input[disabled] { opacity: 0.55; cursor: not-allowed; background: var(--surface-2); }
+
+.num-row {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+}
+.num-row .num-unit { color: var(--fg-muted); font-size: 13px; }
+.num-row .divider { color: var(--fg-subtle); font-size: 12px; padding: 0 2px; }
+
+/* Compound input (number + select with shared border feel) */
+.compound {
+  display: inline-flex;
+  height: 36px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+.compound .num-input {
+  box-shadow: none;
+  border-radius: 0;
+  border-right: 1px solid var(--border);
+}
+.compound select {
+  height: 100%;
+  padding: 0 28px 0 12px;
+  font-size: 13px;
+  color: var(--fg);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 10px center;
+  appearance: none;
+  background-color: var(--surface);
+  cursor: pointer;
+}
+.compound select:disabled { opacity: 0.55; cursor: not-allowed; }
+.compound:has(select:focus-visible),
+.compound:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--ai-accent), 0 0 0 3px var(--ai-accent-soft);
+}
+
+/* Süresiz / AI karar versin — link-like radio toggle */
+.link-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  transition: color 0.1s ease;
+}
+.link-toggle:hover { color: var(--fg); }
+.link-toggle .rb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+  background: var(--surface);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.link-toggle.on { color: var(--ai-accent); }
+.link-toggle.on .rb { box-shadow: inset 0 0 0 1.5px var(--ai-accent); }
+.link-toggle.on .rb::after {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ai-accent);
+}
+
+/* Checkbox */
+.cb-row {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.cb {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: transparent;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+}
+.cb-row.on .cb {
+  background: var(--ai-accent);
+  box-shadow: inset 0 0 0 1.5px var(--ai-accent);
+  color: var(--ai-accent-fg);
+}
+.cb svg { width: 11px; height: 11px; }
+
+/* Toggle row (quality control list) */
+.toggle-row {
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.toggle-row:hover { background: var(--surface-2); }
+.toggle-row + .toggle-row { margin-top: 2px; }
+.toggle-row .tr-body { flex: 1; min-width: 0; }
+.toggle-row .tr-label { font-size: 13px; font-weight: 500; color: var(--fg); display: flex; align-items: center; gap: 6px; }
+.toggle-row .tr-label .badge-new {
+  font-size: 9.5px; font-weight: 600;
+  padding: 0 5px;
+  height: 14px;
+  display: inline-flex; align-items: center;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--status-progress) 14%, transparent);
+  color: var(--status-progress);
+  letter-spacing: 0.04em;
+}
+.toggle-row .tr-hint { font-size: 11.5px; color: var(--fg-subtle); margin-top: 2px; line-height: 1.4; }
+.toggle {
+  flex-shrink: 0;
+  width: 32px; height: 18px;
+  border-radius: 10px;
+  background: var(--border-strong);
+  position: relative;
+  transition: background 0.15s ease;
+}
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: oklch(1 0 0);
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.2);
+}
+.toggle.on { background: var(--ai-accent); }
+.toggle.on::after { transform: translateX(14px); }
+
+/* Textarea */
+.textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: box-shadow 0.1s ease;
+}
+.textarea::placeholder { color: var(--fg-subtle); }
+.textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--ai-accent), 0 0 0 3px var(--ai-accent-soft); }
+
+/* Hint below target-status when user types <5 */
+.below-min-hint {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: color-mix(in oklch, var(--status-review) 80%, var(--fg));
+  display: none;
+  align-items: center; gap: 6px;
+  line-height: 1.4;
+}
+.target-row.below-min .below-min-hint { display: inline-flex; }
+
+/* Big AI button */
+.btn-ai {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--ai-accent);
+  color: var(--ai-accent-fg);
+  box-shadow:
+    0 2px 6px color-mix(in oklch, var(--ai-accent) 30%, transparent),
+    0 1px 2px oklch(0 0 0 / 0.08),
+    inset 0 1px 0 oklch(1 0 0 / 0.20),
+    inset 0 -1px 0 oklch(0.1 0.05 290 / 0.30);
+  transition: transform 0.08s ease, background 0.1s ease;
+  margin-top: 18px;
+}
+.btn-ai:hover { background: var(--ai-accent-hover); }
+.btn-ai:active { transform: translateY(0.5px); }
+.btn-ai[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* Generic btn */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  transition: transform 0.08s ease, background 0.1s ease;
+}
+.btn:active:not([disabled]) { transform: translateY(0.5px); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--fg); }
+.btn-ghost:hover:not([disabled]) { background: var(--surface-2); }
+.btn-secondary {
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.05),
+    var(--inset-top), var(--inset-bottom),
+    inset 0 0 0 1px var(--border-strong);
+}
+.btn-secondary:hover:not([disabled]) { background: var(--surface-2); }
+.btn-primary-ai {
+  background: var(--ai-accent);
+  color: var(--ai-accent-fg);
+  box-shadow:
+    0 2px 6px color-mix(in oklch, var(--ai-accent) 28%, transparent),
+    0 1px 2px oklch(0 0 0 / 0.08),
+    inset 0 1px 0 oklch(1 0 0 / 0.20),
+    inset 0 -1px 0 oklch(0.1 0.05 290 / 0.30);
+}
+.btn-primary-ai:hover:not([disabled]) { background: var(--ai-accent-hover); }
+
+/* Context pill (generating/done) */
+.context-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 11px 5px 8px;
+  background: var(--ai-accent-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ai-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 25%, transparent);
+}
+.context-pill .dot {
+  width: 14px; height: 14px; border-radius: 4px;
+  background: var(--ai-accent); color: var(--ai-accent-fg);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.context-pill .pipe { color: color-mix(in oklch, var(--ai-accent) 50%, transparent); }
+
+/* Chat */
+.chat { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; }
+.chat-turn .who {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--fg-subtle);
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chat-turn.ai .who { color: var(--ai-accent); }
+.chat-turn .text { font-size: 13.5px; color: var(--fg); line-height: 1.55; }
+.chat-turn .text p { margin: 0 0 6px 0; }
+.chat-turn .text p:last-child { margin-bottom: 0; }
+.event-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.event-line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.event-line .arrow { color: var(--ai-accent); font-weight: 600; }
+.event-line .item { color: var(--fg); }
+.event-line.live { color: var(--fg); }
+
+.cursor {
+  display: inline-block;
+  width: 7px; height: 14px;
+  vertical-align: -2px;
+  background: var(--ai-accent);
+  margin-left: 4px;
+  animation: blink 1s steps(2, end) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Summary */
+.summary {
+  margin-top: 4px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 13px;
+}
+.summary-head { font-weight: 600; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 6px; color: var(--fg); }
+.summary ul { margin: 0; padding: 0; list-style: none; }
+.summary li { display: flex; align-items: center; gap: 8px; padding: 2px 0; color: var(--fg-muted); font-size: 13px; }
+.summary li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--fg-subtle); }
+.summary li b { color: var(--fg); font-weight: 600; }
+
+/* Suggestion chips — "+" kaldırıldı */
+.chat-suggestions { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-suggest {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ai-accent);
+  background: var(--ai-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 25%, transparent);
+}
+.chip-suggest:hover { background: color-mix(in oklch, var(--ai-accent-soft) 70%, var(--ai-accent) 5%); }
+
+/* Bottom prompt bar */
+.left-bottom {
+  flex-shrink: 0;
+  padding: 12px 18px 16px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.prompt-bar {
+  display: flex; align-items: center;
+  height: 38px;
+  padding: 0 4px 0 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.prompt-bar input { flex: 1; font-size: 13px; color: var(--fg); }
+.prompt-bar input::placeholder { color: var(--fg-subtle); }
+.prompt-bar .send { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--fg-subtle); }
+.prompt-bar .send:hover { background: var(--surface); color: var(--ai-accent); }
+
+/* ──────────────────────────────────────────────────────────────
+   CANVAS pane
+   ────────────────────────────────────────────────────────────── */
+.canvas-pane {
+  position: relative;
+  background:
+    radial-gradient(circle, oklch(0.85 0.01 65) 1px, transparent 1px) 0 0 / 20px 20px,
+    var(--bg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+[data-mode="dark"] .canvas-pane {
+  background:
+    radial-gradient(circle, oklch(0.32 0.02 280) 1px, transparent 1px) 0 0 / 20px 20px,
+    var(--bg);
+}
+
+.canvas-status {
+  position: absolute; top: 18px; right: 18px;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border);
+  z-index: 5;
+}
+.canvas-status .check { color: var(--status-done); display: inline-flex; }
+.canvas-status .count { color: var(--fg); }
+.canvas-status .dim { color: var(--fg-subtle); }
+
+.canvas-drawing-pill {
+  position: absolute; bottom: 18px; left: 18px;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 30px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: var(--ai-accent-soft);
+  color: var(--ai-accent);
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 30%, transparent);
+  z-index: 5;
+}
+.canvas-drawing-pill .pulse {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ai-accent);
+  animation: pulseDot 1.2s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--ai-accent) 60%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--ai-accent) 0%, transparent); }
+}
+
+.canvas-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+
+/* Idle placeholder */
+.idle-placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 22px;
+  padding: 40px;
+  pointer-events: none;
+}
+.idle-placeholder .ip-icon {
+  width: 56px; height: 56px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 14px;
+  background: var(--ai-accent-soft);
+  color: var(--ai-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 25%, transparent);
+}
+.idle-placeholder .ip-text { text-align: center; max-width: 420px; }
+.idle-placeholder .ip-text h3 { margin: 0 0 6px 0; font-size: 15px; font-weight: 600; color: var(--fg); letter-spacing: -0.01em; }
+.idle-placeholder .ip-text p { margin: 0; font-size: 13px; color: var(--fg-muted); line-height: 1.55; }
+.idle-placeholder .hints { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 460px; pointer-events: auto; }
+.hint-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border);
+  transition: color 0.1s ease;
+}
+.hint-chip:hover { color: var(--fg); }
+.hint-chip .q { color: var(--fg-subtle); }
+
+/* ─── LIFECYCLE canvas — 2x3 grid (Iterative methodology) ─── */
+.phase-node {
+  position: absolute;
+  width: 144px; height: 60px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--border-strong), var(--shadow-sm);
+  user-select: none;
+}
+.phase-node .status-dot { position: absolute; top: 8px; left: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--status-todo); }
+.phase-node[data-color="primary"] .status-dot { background: var(--primary); }
+.phase-node[data-color="progress"] .status-dot { background: var(--status-progress); }
+.phase-node[data-color="done"] .status-dot { background: var(--status-done); }
+.phase-node[data-color="review"] .status-dot { background: var(--status-review); }
+.phase-node .name { margin-left: 14px; font-weight: 600; font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phase-node .desc { margin-left: 14px; margin-top: 2px; font-size: 11px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 2x3 grid layout — Iterative phases */
+.node-1 { left: 18%;  top: 28%; transform: translate(-50%, -50%); }
+.node-2 { left: 50%;  top: 28%; transform: translate(-50%, -50%); }
+.node-3 { left: 82%;  top: 28%; transform: translate(-50%, -50%); }
+.node-4 { left: 18%;  top: 72%; transform: translate(-50%, -50%); }
+.node-5 { left: 50%;  top: 72%; transform: translate(-50%, -50%); }
+.node-6 { left: 82%;  top: 72%; transform: translate(-50%, -50%); }
+
+.phase-node.entered { animation: phaseEnter 0.35s ease-out backwards; }
+@keyframes phaseEnter {
+  from { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+.phase-node.appearing { animation: phaseAppear 0.4s cubic-bezier(0.34, 1.4, 0.64, 1); position: relative; }
+.phase-node.appearing::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 0 color-mix(in oklch, var(--ai-accent) 50%, transparent);
+  animation: nodeHalo 1.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes phaseAppear {
+  from { transform: translate(-50%, -50%) scale(0.85); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes nodeHalo {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--ai-accent) 50%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in oklch, var(--ai-accent) 0%, transparent); }
+}
+
+/* SVG edges */
+.edges { position: absolute; inset: 0; pointer-events: none; }
+.edge { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke: var(--border-strong); }
+.edge.flow { stroke: var(--ai-accent); stroke-width: 1.75; }
+.edge.feedback {
+  stroke: color-mix(in oklch, var(--ai-accent) 55%, transparent);
+  stroke-dasharray: 5 4;
+  stroke-width: 1.5;
+}
+.edge.live { stroke-dasharray: 6 5; animation: marchEdge 0.8s linear infinite; }
+@keyframes marchEdge { to { stroke-dashoffset: -22; } }
+
+/* Edge labels — small white-bg mini pill inline (SPMS workflow editor pattern) */
+.edge-label-pill {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.edge-label-text {
+  font-size: 9.5px;
+  font-weight: 500;
+  fill: var(--fg-muted);
+  font-family: var(--font-mono);
+}
+
+/* ─── TASK STATUS canvas — 5 Scrum sütun ─── */
+.task-stage {
+  position: absolute; inset: 0;
+  padding: 56px 28px 70px 28px;
+  display: flex; align-items: center; justify-content: center;
+}
+.task-stage-inner {
+  display: flex; align-items: flex-start; gap: 0;
+  flex: 1; max-width: 1080px;
+}
+.task-col {
+  flex: 1;
+  min-width: 0;
+  max-width: 180px;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--border), var(--shadow-sm);
+  overflow: hidden;
+}
+.task-col-head {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 12px 9px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.task-col-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-todo); flex-shrink: 0; }
+.task-col[data-status="todo"]     .dot { background: var(--status-todo); }
+.task-col[data-status="progress"] .dot { background: var(--status-progress); }
+.task-col[data-status="review"]   .dot { background: var(--status-review); }
+.task-col[data-status="test"]     .dot { background: var(--status-review); }
+.task-col[data-status="done"]     .dot { background: var(--status-done); }
+.task-col-head .name { font-size: 12.5px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-col-head .count { margin-left: auto; font-size: 10.5px; color: var(--fg-subtle); font-variant-numeric: tabular-nums; }
+.task-col-body { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 140px; }
+.task-card {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 11px;
+  display: flex; align-items: center; gap: 6px;
+  color: var(--fg-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.task-card .tk-key { font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle); font-weight: 500; flex-shrink: 0; }
+.task-card .tk-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 500; }
+.task-card .tk-av {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: oklch(0.65 0.10 28);
+  color: oklch(0.98 0.005 28);
+  font-size: 8.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.task-card[data-av="2"] .tk-av { background: oklch(0.65 0.08 250); }
+.task-card[data-av="3"] .tk-av { background: oklch(0.66 0.09 145); }
+.task-card[data-av="4"] .tk-av { background: oklch(0.66 0.08 320); }
+.task-card[data-av="5"] .tk-av { background: oklch(0.65 0.10 50); }
+.task-card.done { color: var(--fg-subtle); }
+.task-card.done .tk-title { color: var(--fg-muted); text-decoration: line-through; text-decoration-color: var(--fg-subtle); }
+.task-card-more {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  padding: 4px 0;
+  font-family: var(--font-mono);
+}
+.task-col-foot {
+  border-top: 1px solid var(--border);
+  padding: 7px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+}
+.task-col-foot .wip-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--status-review) 12%, transparent);
+  color: color-mix(in oklch, var(--status-review) 85%, var(--fg));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-review) 30%, transparent);
+  font-size: 10px;
+  font-weight: 500;
+}
+.task-col-foot .wip-pill.unlimited {
+  background: var(--surface-2);
+  color: var(--fg-subtle);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Task column appearing (generating) */
+.task-col.appearing { animation: colAppear 0.4s cubic-bezier(0.34, 1.4, 0.64, 1); position: relative; }
+.task-col.appearing::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 0 color-mix(in oklch, var(--ai-accent) 50%, transparent);
+  animation: nodeHalo 1.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes colAppear { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.task-arrow {
+  flex-shrink: 0;
+  width: 28px;
+  display: flex; align-items: flex-start; justify-content: center;
+  color: var(--ai-accent);
+  padding-top: 40px;
+}
+.task-arrow.dim { color: var(--border-strong); }
+
+/* Special status strip */
+.special-status-strip {
+  position: absolute; bottom: 18px; left: 28px; right: 28px;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.special-status-strip .strip-inner {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border);
+  pointer-events: auto;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.special-status-strip .label {
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.special-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.special-tag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-subtle); }
+.special-tag[data-kind="blocked"]   { color: var(--status-blocked); background: color-mix(in oklch, var(--status-blocked) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-blocked) 28%, transparent); }
+.special-tag[data-kind="blocked"] .dot { background: var(--status-blocked); }
+.special-tag[data-kind="dep"]       { color: var(--status-review); background: color-mix(in oklch, var(--status-review) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-review) 30%, transparent); }
+.special-tag[data-kind="dep"] .dot { background: var(--status-review); }
+.special-tag[data-kind="cancelled"] { text-decoration: line-through; text-decoration-color: var(--fg-subtle); }
+
+/* Rationale */
+.rationale-wrap {
+  flex-shrink: 0;
+  padding: 14px 22px 18px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.rationale {
+  display: flex; gap: 12px;
+  padding: 14px 16px;
+  background: var(--ai-accent-soft);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 30%, transparent);
+}
+.rationale .r-icon {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--ai-accent) 18%, transparent);
+  color: var(--ai-accent);
+}
+.rationale .r-body { flex: 1; min-width: 0; }
+.rationale h4 { margin: 0 0 4px 0; font-size: 13px; font-weight: 600; color: var(--ai-accent); display: inline-flex; align-items: center; gap: 6px; }
+.rationale p { margin: 0; font-size: 13px; color: color-mix(in oklch, var(--ai-accent) 60%, var(--fg) 60%); line-height: 1.55; }
+.rationale p .key { color: var(--ai-accent); font-weight: 600; }
+
+/* ─── ALERT BANNER (error states) ─── */
+.alert-pane {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px;
+}
+.alert-card {
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  box-shadow: var(--shadow-md);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+}
+.alert-card .icon {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--status-review) 14%, transparent);
+  color: color-mix(in oklch, var(--status-review) 85%, var(--fg));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-review) 25%, transparent);
+}
+.alert-card[data-kind="rate"] .icon {
+  background: color-mix(in oklch, var(--status-progress) 12%, transparent);
+  color: var(--status-progress);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-progress) 25%, transparent);
+}
+.alert-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.alert-card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--fg-muted);
+  line-height: 1.55;
+}
+.alert-card .countdown {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.alert-card .countdown b { color: var(--fg); font-weight: 600; }
+.alert-card .actions { display: flex; gap: 8px; margin-top: 2px; }
+
+/* ─── FOOTER ─── */
+.modal-footer {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 0 22px;
+  border-top: 1px solid var(--border);
+  gap: 12px;
+}
+.modal-footer .center { display: flex; justify-content: center; flex: 1; }
+.modal-footer .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ─── APPLY CONFIRMATION ─── */
+.confirm-scrim {
+  position: fixed; top: 32px; left: 0; right: 0; bottom: 0;
+  background: oklch(0 0 0 / 0.35);
+  backdrop-filter: blur(1px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.18s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.confirm-card {
+  width: 480px; max-width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  animation: confirmIn 0.22s cubic-bezier(0.2, 0.9, 0.4, 1);
+}
+@keyframes confirmIn { from { transform: translateY(4px) scale(0.985); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.confirm-card h2 {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 8px 0;
+  font-size: 16px; font-weight: 600; color: var(--fg);
+  letter-spacing: -0.01em;
+}
+.confirm-card h2 .warn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--status-review) 18%, transparent);
+  color: color-mix(in oklch, var(--status-review) 85%, var(--fg));
+}
+.confirm-card .lede { margin: 0 0 18px 0; font-size: 13.5px; color: var(--fg-muted); line-height: 1.55; }
+.confirm-card .lede b { color: var(--fg); font-weight: 600; }
+.radio-card { display: flex; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); cursor: pointer; }
+.radio-card + .radio-card { margin-top: 8px; }
+.radio-card:hover { background: var(--surface-2); }
+.radio-card.selected { background: var(--ai-accent-soft); box-shadow: inset 0 0 0 1px var(--ai-accent); }
+.radio-card .radio { flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; margin-top: 2px; box-shadow: inset 0 0 0 1.5px var(--border-strong); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; }
+.radio-card.selected .radio { box-shadow: inset 0 0 0 1.5px var(--ai-accent); }
+.radio-card.selected .radio::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ai-accent); }
+.radio-card .rc-body { flex: 1; min-width: 0; }
+.radio-card .rc-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--fg); margin-bottom: 2px; }
+.radio-card .rc-title .rec {
+  font-size: 10.5px; font-weight: 500;
+  padding: 1px 6px; border-radius: 999px;
+  color: var(--ai-accent);
+  background: color-mix(in oklch, var(--ai-accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ai-accent) 25%, transparent);
+}
+.radio-card .rc-desc { font-size: 12.5px; color: var(--fg-muted); line-height: 1.5; }
+.radio-card .rc-desc .warn { color: color-mix(in oklch, var(--priority-critical) 70%, var(--fg)); font-weight: 500; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* Apply state body dimming (only while confirm card is shown, not toast) */
+[data-state="apply"]:not([data-applied="true"]) .modal-body,
+[data-state="apply"]:not([data-applied="true"]) .modal-footer { opacity: 0.55; pointer-events: none; }
+
+/* ─── UNDO TOAST ─── */
+.undo-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  min-width: 360px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: toastUp 0.3s cubic-bezier(0.2, 0.9, 0.4, 1);
+}
+@keyframes toastUp { from { transform: translate(-50%, 8px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.undo-toast .toast-body {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px;
+}
+.undo-toast .toast-check {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+  background: color-mix(in oklch, var(--status-done) 16%, transparent);
+  color: var(--status-done);
+  flex-shrink: 0;
+}
+.undo-toast .toast-text {
+  flex: 1; min-width: 0;
+  font-size: 13.5px;
+  color: var(--fg);
+}
+.undo-toast .toast-undo {
+  color: var(--ai-accent);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.1s ease;
+}
+.undo-toast .toast-undo:hover { background: var(--ai-accent-soft); }
+.undo-toast .toast-close {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+}
+.undo-toast .toast-close:hover { background: var(--surface-2); color: var(--fg); }
+.undo-toast .countdown-bar {
+  height: 3px;
+  background: var(--ai-accent);
+  width: 100%;
+  transform-origin: left center;
+  animation: countdownShrink 10s linear forwards;
+}
+@keyframes countdownShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ──────────────────────────────────────────────────────────────
+   VISIBILITY: variant × state cross-product (6 state).
+   ────────────────────────────────────────────────────────────── */
+.only-idle, .only-gen, .only-done, .only-gendone, .only-confirm,
+.only-error-down, .only-error-rate, .only-error,
+.only-lifecycle, .only-task, .only-toast { display: none !important; }
+
+/* State-only shows (variant kısıtı YOK) */
+[data-state="idle"]         .only-idle:not(.only-lifecycle):not(.only-task),
+[data-state="generating"]   .only-gen:not(.only-lifecycle):not(.only-task),
+[data-state="done"]         .only-done:not(.only-lifecycle):not(.only-task),
+[data-state="generating"]   .only-gendone:not(.only-lifecycle):not(.only-task),
+[data-state="done"]         .only-gendone:not(.only-lifecycle):not(.only-task),
+[data-state="apply"]        .only-done:not(.only-lifecycle):not(.only-task),
+[data-state="apply"]        .only-gendone:not(.only-lifecycle):not(.only-task),
+[data-state="error-down"]   .only-error-down:not(.only-lifecycle):not(.only-task),
+[data-state="error-rate"]   .only-error-rate:not(.only-lifecycle):not(.only-task),
+[data-state="error-down"]   .only-error:not(.only-lifecycle):not(.only-task),
+[data-state="error-rate"]   .only-error:not(.only-lifecycle):not(.only-task)
+{ display: var(--d, block) !important; }
+
+/* Variant-only shows */
+[data-variant="lifecycle"] .only-lifecycle:not(.only-idle):not(.only-gen):not(.only-done):not(.only-gendone):not(.only-error),
+[data-variant="task"]      .only-task:not(.only-idle):not(.only-gen):not(.only-done):not(.only-gendone):not(.only-error)
+{ display: var(--d, block) !important; }
+
+/* Both constraints */
+[data-state="idle"][data-variant="lifecycle"]       .only-idle.only-lifecycle,
+[data-state="generating"][data-variant="lifecycle"] .only-gen.only-lifecycle,
+[data-state="done"][data-variant="lifecycle"]       .only-done.only-lifecycle,
+[data-state="generating"][data-variant="lifecycle"] .only-gendone.only-lifecycle,
+[data-state="done"][data-variant="lifecycle"]       .only-gendone.only-lifecycle,
+[data-state="apply"][data-variant="lifecycle"]      .only-done.only-lifecycle,
+[data-state="apply"][data-variant="lifecycle"]      .only-gendone.only-lifecycle,
+[data-state="idle"][data-variant="task"]       .only-idle.only-task,
+[data-state="generating"][data-variant="task"] .only-gen.only-task,
+[data-state="done"][data-variant="task"]       .only-done.only-task,
+[data-state="generating"][data-variant="task"] .only-gendone.only-task,
+[data-state="done"][data-variant="task"]       .only-gendone.only-task,
+[data-state="apply"][data-variant="task"]      .only-done.only-task,
+[data-state="apply"][data-variant="task"]      .only-gendone.only-task
+{ display: var(--d, block) !important; }
+
+/* Confirm overlay (only on apply, only while not yet applied) */
+[data-state="apply"]:not([data-applied="true"]) .only-confirm { display: flex !important; }
+
+/* Toast appears in apply state AFTER user confirms (data-applied="true") */
+[data-state="apply"][data-applied="true"] .only-toast { display: block !important; }
+
+/* Per-element display kinds */
+.btn, .context-pill, .canvas-status, .canvas-drawing-pill,
+.chat-suggestions, .toggle-row, .event-line, .special-tag,
+.task-arrow, .num-row, .compound, .link-toggle, .cb-row { --d: inline-flex; }
+.modal-header .crumb, .modal-header .title, .modal-footer { --d: flex; }
+.idle-placeholder, .special-status-strip, .alert-pane { --d: flex; }
+.confirm-scrim, .undo-toast { --d: flex; }
+.context-badge { --d: flex; }
+.chip { --d: inline-flex; }
+/* Inline-text variant spans inside flex parents */
+.crumb .only-lifecycle, .crumb .only-task,
+.modal-header .title .only-lifecycle, .modal-header .title .only-task,
+.rc-title .only-lifecycle, .rc-title .only-task,
+.rc-desc .only-lifecycle, .rc-desc .only-task,
+.lede .only-lifecycle, .lede .only-task { --d: inline; }
+
+/* Generating: future nodes/cols invisible */
+[data-state="generating"][data-variant="lifecycle"] .node-6,
+[data-state="generating"][data-variant="lifecycle"] .edge-5,
+[data-state="generating"][data-variant="lifecycle"] .edge-feedback-2 { visibility: hidden; }
+[data-state="generating"][data-variant="task"] .task-col-test,
+[data-state="generating"][data-variant="task"] .task-col-done,
+[data-state="generating"][data-variant="task"] .task-arrow-3,
+[data-state="generating"][data-variant="task"] .task-arrow-4 { visibility: hidden; }
+[data-state="generating"][data-variant="task"] .special-status-strip,
+[data-state="generating"][data-variant="lifecycle"] .rationale-wrap { display: none !important; }
+
+/* Idle: hide all canvas drawing */
+[data-state="idle"] .phase-node,
+[data-state="idle"] .edges,
+[data-state="idle"] .task-stage,
+[data-state="idle"] .special-status-strip,
+[data-state="idle"] .canvas-status,
+[data-state="idle"] .canvas-drawing-pill,
+[data-state="idle"] .rationale-wrap { display: none !important; }
+
+/* Error states: hide all canvas content except alert; hide rationale/strip */
+[data-state="error-down"] .phase-node,
+[data-state="error-down"] .edges,
+[data-state="error-down"] .task-stage,
+[data-state="error-down"] .special-status-strip,
+[data-state="error-down"] .canvas-status,
+[data-state="error-down"] .canvas-drawing-pill,
+[data-state="error-down"] .rationale-wrap,
+[data-state="error-down"] .idle-placeholder,
+[data-state="error-rate"] .phase-node,
+[data-state="error-rate"] .edges,
+[data-state="error-rate"] .task-stage,
+[data-state="error-rate"] .special-status-strip,
+[data-state="error-rate"] .canvas-status,
+[data-state="error-rate"] .canvas-drawing-pill,
+[data-state="error-rate"] .rationale-wrap,
+[data-state="error-rate"] .idle-placeholder { display: none !important; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cursor,
+  .canvas-drawing-pill .pulse,
+  .phase-node.appearing, .phase-node.appearing::after,
+  .phase-node.entered,
+  .task-col.appearing, .task-col.appearing::after,
+  .edge.live, .confirm-card, .confirm-scrim,
+  .undo-toast, .undo-toast .countdown-bar { animation: none !important; }
+}
+</style>
+</head>
+<body data-variant="lifecycle" data-state="generating">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Debug bar (production'da render edilmez)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="debug-bar" role="toolbar" aria-label="Mockup state switcher">
+  <div class="dbg-seg variant" data-group="variant">
+    <button data-target="lifecycle" class="active">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg>
+      Yaşam Döngüsü
+    </button>
+    <button data-target="task">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="16" rx="1"/><rect x="11" y="4" width="6" height="16" rx="1"/></svg>
+      Görev Durumu
+    </button>
+  </div>
+  <div class="dbg-seg" data-group="state">
+    <button data-target="idle">1·Idle</button>
+    <button data-target="generating" class="active">2·Generating</button>
+    <button data-target="done">3·Done</button>
+    <button data-target="apply">4·Apply</button>
+    <button data-target="error-down">5·Error</button>
+    <button data-target="error-rate">6·Rate</button>
+  </div>
+  <span class="meta">AI Workflow Generator v3 · Implementation Reference</span>
+  <div class="right">
+    <button class="theme-toggle" id="themeToggle" aria-label="Tema değiştir">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal" id="modal">
+
+  <header class="modal-header">
+    <div class="crumb">
+      <span class="proj">SP</span>
+      <span class="only-lifecycle">SPMS Geliştirme</span>
+      <span class="only-task">Backend Geliştirme</span>
+      <span class="sep">/</span>
+      <span class="var-tag only-lifecycle">Yaşam Döngüsü</span>
+      <span class="var-tag only-task">Görev Durumu</span>
+    </div>
+    <div class="title">
+      <span class="spark">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5zM19 14l.9 2.7 2.7.9-2.7.9L19 21l-.9-2.5-2.7-.9 2.7-.9L19 14zM5 14l.7 2.1 2.1.7-2.1.7L5 19.6l-.7-2.1-2.1-.7 2.1-.7L5 14z"/></svg>
+      </span>
+      AI ile Oluştur
+    </div>
+    <div class="right">
+      <button class="icon-btn" aria-label="Yardım" title="Bu özellik nasıl çalışır?">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="Kapat" title="Kapat (Esc)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="modal-body">
+
+    <!-- ═══════════════ LEFT PANEL ═══════════════ -->
+    <aside class="left">
+      <div class="left-scroll">
+
+        <!-- Context badge -->
+        <div class="context-badge only-lifecycle">
+          <div class="cb-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg>
+          </div>
+          <div class="cb-body">
+            <div class="cb-kind">Yaşam Döngüsü Diyagramı</div>
+            <div class="cb-target"><b>SPMS Geliştirme</b> projesinin workflow'u</div>
+          </div>
+        </div>
+        <div class="context-badge only-task">
+          <div class="cb-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="16" rx="1"/><rect x="11" y="4" width="6" height="16" rx="1"/></svg>
+          </div>
+          <div class="cb-body">
+            <div class="cb-kind">Görev Durumu Diyagramı</div>
+            <div class="cb-target"><b>Backend Geliştirme</b> takımının görev akışı</div>
+          </div>
+        </div>
+
+        <!-- ═══ LIFECYCLE FORM (idle) ═══ -->
+        <div class="only-idle only-lifecycle">
+
+          <div class="section">
+            <p class="section-label">Metodoloji</p>
+            <div class="chip-group">
+              <button class="chip" title="Sprint tabanlı, iterative çevik metodoloji">Scrum<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Sürekli akış, WIP limitli">Kanban<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Sıralı kilitli faz akışı">Waterfall<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip selected" title="Tekrarlı geliştirme döngüleri">Iterative<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Parçalı teslim, her artım çalışan ürün">Incremental<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Prototip ile başlayıp evrilen yaklaşım">Evolutionary<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Hızlı uygulama geliştirme, paralel kollarla">RAD<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Takım Büyüklüğü</p>
+            <div class="num-row">
+              <input type="number" class="num-input" min="1" max="999" placeholder="Örn. 6" title="Yaklaşık bir değer yeter" />
+              <span class="num-unit">kişi</span>
+              <label class="cb-row" data-cb="cross-team" style="margin-left:auto;">
+                <span class="cb"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+                Birden fazla takım
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Proje Süresi</p>
+            <div class="num-row">
+              <div class="compound">
+                <input type="number" class="num-input" min="1" placeholder="3" />
+                <select>
+                  <option>ay</option>
+                  <option>hafta</option>
+                  <option>yıl</option>
+                </select>
+              </div>
+              <span class="divider">veya</span>
+              <button class="link-toggle" data-toggle="indefinite">
+                <span class="rb"></span> Süresiz
+              </button>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Kalite Kontrolü</p>
+            <div>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Code review zorunlu</div>
+                  <div class="tr-hint">Pull request gate'i ve doğrulama edge'i eklenir</div>
+                </div>
+                <span class="toggle on"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Otomatik testler (CI/CD)</div>
+                  <div class="tr-hint">Her commit'te test koşulur, başarısızsa geri besleme döngüsü</div>
+                </div>
+                <span class="toggle on"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Manuel QA fazı</div>
+                  <div class="tr-hint">Bağımsız test fazı eklenir</div>
+                </div>
+                <span class="toggle"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Müşteri / PO onayı (UAT)</div>
+                  <div class="tr-hint">Final öncesi kabul testi fazı eklenir</div>
+                </div>
+                <span class="toggle on"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Güvenlik denetimi <span class="badge-new">YENİ</span></div>
+                  <div class="tr-hint" title="Finans, sağlık, kamu projelerinde önerilir">Penetrasyon testi ve compliance gate'i eklenir</div>
+                </div>
+                <span class="toggle"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Sektör <span class="opt">— opsiyonel</span></p>
+            <div class="chip-group">
+              <button class="chip selected">Web/SaaS</button>
+              <button class="chip">Mobile</button>
+              <button class="chip">Finans</button>
+              <button class="chip">Sağlık</button>
+              <button class="chip">Eğitim</button>
+              <button class="chip chip-other" data-mode="closed">
+                <span class="chip-other-label">Diğer</span>
+                <input type="text" placeholder="örn. lojistik" />
+              </button>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Dağıtım Modeli</p>
+            <div class="chip-group">
+              <button class="chip selected">SaaS · Sürekli</button>
+              <button class="chip">Versiyonlu</button>
+              <button class="chip">Mobil App Store</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Ek Bağlam <span class="opt">— opsiyonel</span></p>
+            <textarea class="textarea" rows="3" placeholder="Projeye özel kısıt, tercih veya alışkanlık varsa kısaca yaz (opsiyonel)..."></textarea>
+          </div>
+
+          <button class="btn-ai">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg>
+            Yaşam Döngüsünü Oluştur
+          </button>
+
+          <p style="margin:10px 0 0 0;font-size:11px;color:var(--fg-subtle);line-height:1.5;">
+            Mevcut workflow Apply'a kadar değiştirilmez.
+          </p>
+        </div>
+
+        <!-- ═══ TASK STATUS FORM (idle) ═══ -->
+        <div class="only-idle only-task">
+
+          <div class="section">
+            <p class="section-label">Metodoloji</p>
+            <div class="chip-group">
+              <button class="chip selected" title="Sprint tabanlı, iterative çevik metodoloji">Scrum<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Sürekli akış, WIP limitli">Kanban<span class="info"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span></button>
+              <button class="chip" title="Sıralı kilitli faz akışı">Waterfall</button>
+              <button class="chip" title="Tekrarlı geliştirme döngüleri">Iterative</button>
+              <button class="chip" title="Parçalı teslim, her artım çalışan ürün">Incremental</button>
+              <button class="chip" title="Prototip ile başlayıp evrilen yaklaşım">Evolutionary</button>
+              <button class="chip" title="Hızlı uygulama geliştirme, paralel kollarla">RAD</button>
+            </div>
+          </div>
+
+          <div class="section target-row" id="targetRow">
+            <p class="section-label">Hedef Durum Sayısı <span class="opt">— opsiyonel</span></p>
+            <div class="num-row">
+              <input type="number" class="num-input" min="3" max="20" placeholder="—" id="targetCount" disabled />
+              <span class="num-unit">durum</span>
+              <span class="divider">veya</span>
+              <button class="link-toggle on" data-toggle="ai-decide" id="aiDecide">
+                <span class="rb"></span> AI karar versin
+              </button>
+            </div>
+            <div class="below-min-hint">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              5'ten az durum için AI'a gerek yok, manuel olarak ekleyebilirsiniz.
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Onay ve İnceleme</p>
+            <div>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Code review aşaması</div>
+                  <div class="tr-hint">Pull Request gate'i ayrı sütun olur</div>
+                </div>
+                <span class="toggle on"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">QA / Test ayrı sütun</div>
+                  <div class="tr-hint">Test ekibi için bağımsız akış noktası</div>
+                </div>
+                <span class="toggle on"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Müşteri / PO onayı (UAT)</div>
+                  <div class="tr-hint">Approve sütunu eklenir, Bitti öncesi kapı</div>
+                </div>
+                <span class="toggle"></span>
+              </label>
+              <label class="toggle-row">
+                <div class="tr-body">
+                  <div class="tr-label">Güvenlik denetimi <span class="badge-new">YENİ</span></div>
+                  <div class="tr-hint" title="Finans, sağlık, kamu projelerinde önerilir">Penetrasyon / compliance sütunu</div>
+                </div>
+                <span class="toggle"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Özel Durumlar <span class="opt">— çoklu seçim</span></p>
+            <div class="chip-group" data-multi="true">
+              <button class="chip selected">Blocked</button>
+              <button class="chip">On Hold</button>
+              <button class="chip selected">Cancelled</button>
+              <button class="chip">Rejected</button>
+              <button class="chip">Müşteri Onayı Bekliyor</button>
+              <button class="chip selected">Dış Bağımlılık</button>
+              <button class="chip">Yeniden Açıldı</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Görev Tipleri <span class="opt">— çoklu seçim</span></p>
+            <div class="chip-group" data-multi="true">
+              <button class="chip">Story</button>
+              <button class="chip">Bug</button>
+              <button class="chip">Task</button>
+              <button class="chip">Spike</button>
+              <button class="chip">Epic</button>
+            </div>
+            <p style="margin:6px 0 0 0;font-size:11.5px;color:var(--fg-subtle);line-height:1.4;">
+              Seçtiğin tipler için AI alternatif akış kolu önerebilir (örn. Bug → Triage / Reproducing / Fixing).
+            </p>
+          </div>
+
+          <div class="section">
+            <p class="section-label">WIP Limiti</p>
+            <label class="toggle-row" style="padding:8px 10px;">
+              <div class="tr-body">
+                <div class="tr-label">WIP limitleri olsun</div>
+                <div class="tr-hint">AI her sütun için eşzamanlı görev üst sınırı önerir</div>
+              </div>
+              <span class="toggle on"></span>
+            </label>
+          </div>
+
+          <div class="section">
+            <p class="section-label">Ek Bağlam <span class="opt">— opsiyonel</span></p>
+            <textarea class="textarea" rows="3" placeholder="Takıma özel bir kural veya alışkanlık var mı?"></textarea>
+          </div>
+
+          <button class="btn-ai">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg>
+            Görev Durumlarını Oluştur
+          </button>
+
+          <p style="margin:10px 0 0 0;font-size:11px;color:var(--fg-subtle);line-height:1.5;">
+            Devam eden görevler en yakın eşleşen duruma taşınır.
+          </p>
+        </div>
+
+        <!-- ═══ GENERATING + DONE chat block ═══ -->
+        <div class="only-gendone">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span class="context-pill only-lifecycle">
+              <span class="dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span>
+              Iterative <span class="pipe">·</span> 6 kişi <span class="pipe">·</span> Web/SaaS · SaaS
+            </span>
+            <span class="context-pill only-task">
+              <span class="dot"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span>
+              Scrum <span class="pipe">·</span> AI karar versin · CR + QA
+            </span>
+          </div>
+
+          <div class="chat">
+
+            <div class="chat-turn only-lifecycle">
+              <div class="who">Sen</div>
+              <div class="text"><p>Iterative · 6 kişi · 3 ay · Web/SaaS · SaaS-Sürekli dağıtım · Code review + CI + UAT.</p></div>
+            </div>
+            <div class="chat-turn only-task">
+              <div class="who">Sen</div>
+              <div class="text"><p>Scrum · AI karar versin · Code review + QA · WIP açık · Blocked + Cancelled + Dış Bağımlılık.</p></div>
+            </div>
+
+            <!-- AI generating — lifecycle -->
+            <div class="chat-turn ai only-gen only-lifecycle">
+              <div class="who"><span style="color:var(--ai-accent);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span> AI</div>
+              <div class="text">
+                <p>Iterative bir akış kuruyorum — her döngüde test sonuçlarını Tasarım'a geri besliyorum.</p>
+                <div class="event-list">
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Keşif"</span><span>eklendi</span></div>
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Tasarım"</span><span>eklendi</span></div>
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Modülleme"</span><span>eklendi</span></div>
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Geliştirme"</span><span>eklendi</span></div>
+                  <div class="event-line live"><span class="arrow">→</span>"Test" fazı yerleştiriliyor<span class="cursor" aria-hidden="true"></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI generating — task -->
+            <div class="chat-turn ai only-gen only-task">
+              <div class="who"><span style="color:var(--ai-accent);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span> AI</div>
+              <div class="text">
+                <p>Scrum için Sprint Backlog + 4 aktif sütundan oluşan bir akış kuruyorum.</p>
+                <div class="event-list">
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Sprint Backlog"</span><span>eklendi</span></div>
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"Devam Ediyor"</span><span>eklendi · WIP: 3</span></div>
+                  <div class="event-line"><span class="arrow">→</span><span class="item">"İnceleme"</span><span>eklendi · WIP: 2</span></div>
+                  <div class="event-line live"><span class="arrow">→</span>"Test" sütunu yerleştiriliyor<span class="cursor" aria-hidden="true"></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI done — lifecycle -->
+            <div class="chat-turn ai only-done only-lifecycle">
+              <div class="who"><span style="color:var(--ai-accent);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span> AI</div>
+              <div class="text">
+                <p style="display:inline-flex;align-items:center;gap:6px;">
+                  <span style="color:var(--status-done);display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+                  Yaşam döngüsü hazır.
+                </p>
+                <div class="summary">
+                  <div class="summary-head">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fg-muted);"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                    Özet
+                  </div>
+                  <ul>
+                    <li><b>6</b>&nbsp;faz</li>
+                    <li><b>7</b>&nbsp;bağlantı <span style="color:var(--fg-subtle);">(5 akış · 2 geri besleme)</span></li>
+                    <li><b>1</b>&nbsp;döngü <span style="color:var(--fg-subtle);">(Test → Tasarım)</span></li>
+                  </ul>
+                </div>
+                <p style="margin-top:12px;color:var(--fg-muted);font-size:13px;">Şu değişiklikleri deneyebilirsin:</p>
+                <div class="chat-suggestions">
+                  <button class="chip-suggest">Bir faz daha öner</button>
+                  <button class="chip-suggest">Güvenlik gate'i ekle</button>
+                  <button class="chip-suggest">Paralel test kolu</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI done — task -->
+            <div class="chat-turn ai only-done only-task">
+              <div class="who"><span style="color:var(--ai-accent);"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></span> AI</div>
+              <div class="text">
+                <p style="display:inline-flex;align-items:center;gap:6px;">
+                  <span style="color:var(--status-done);display:inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+                  Görev durumu workflow'u hazır.
+                </p>
+                <div class="summary">
+                  <div class="summary-head">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fg-muted);"><rect x="3" y="4" width="6" height="16" rx="1"/><rect x="11" y="4" width="6" height="16" rx="1"/></svg>
+                    Özet
+                  </div>
+                  <ul>
+                    <li><b>5</b>&nbsp;durum sütunu</li>
+                    <li><b>3</b>&nbsp;WIP limiti <span style="color:var(--fg-subtle);">(Devam · İnceleme · Test)</span></li>
+                    <li><b>3</b>&nbsp;özel durum <span style="color:var(--fg-subtle);">(Blocked · Cancelled · Dış Bağımlılık)</span></li>
+                  </ul>
+                </div>
+                <p style="margin-top:12px;color:var(--fg-muted);font-size:13px;">Şu değişiklikleri deneyebilirsin:</p>
+                <div class="chat-suggestions">
+                  <button class="chip-suggest">Onay gate'i ekle</button>
+                  <button class="chip-suggest">On Hold durumu ekle</button>
+                  <button class="chip-suggest">WIP'i gevşet</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom prompt bar (done only) -->
+      <div class="left-bottom only-done">
+        <div class="prompt-bar">
+          <input type="text" placeholder="Yeni bir şey iste…" disabled />
+          <button class="send" aria-label="Gönder">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══════════════ RIGHT PANEL — CANVAS ═══════════════ -->
+    <section class="canvas-pane">
+
+      <!-- IDLE placeholders -->
+      <div class="idle-placeholder only-idle only-lifecycle">
+        <div class="ip-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5zM19 14l.9 2.7 2.7.9-2.7.9L19 21l-.9-2.5-2.7-.9 2.7-.9L19 14zM5 14l.7 2.1 2.1.7-2.1.7L5 19.6l-.7-2.1-2.1-.7 2.1-.7L5 14z"/></svg></div>
+        <div class="ip-text">
+          <h3>Soldan tercihlerini işaretle, AI yaşam döngüsünü çizsin</h3>
+          <p>Metodoloji, takım büyüklüğü, süre, kalite kontrolü — birkaç tık yeter.<br>Üretim bitene kadar mevcut workflow'a dokunulmaz.</p>
+        </div>
+        <div class="hints">
+          <button class="hint-chip"><span class="q">?</span> Iterative nedir</button>
+          <button class="hint-chip"><span class="q">?</span> Scrum vs Kanban</button>
+          <button class="hint-chip"><span class="q">?</span> Metodoloji rehberi</button>
+        </div>
+      </div>
+
+      <div class="idle-placeholder only-idle only-task">
+        <div class="ip-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5zM19 14l.9 2.7 2.7.9-2.7.9L19 21l-.9-2.5-2.7-.9 2.7-.9L19 14zM5 14l.7 2.1 2.1.7-2.1.7L5 19.6l-.7-2.1-2.1-.7 2.1-.7L5 14z"/></svg></div>
+        <div class="ip-text">
+          <h3>Soldan kuralları işaretle, AI görev sütunlarını kursun</h3>
+          <p>Karmaşıklık, onay gate'leri, özel durumlar — birkaç tık yeter.<br>Devam eden görevler en yakın eşleşen duruma taşınır.</p>
+        </div>
+        <div class="hints">
+          <button class="hint-chip"><span class="q">?</span> WIP limiti nedir</button>
+          <button class="hint-chip"><span class="q">?</span> Code review gate'i ne zaman</button>
+          <button class="hint-chip"><span class="q">?</span> Scrum vs Kanban</button>
+        </div>
+      </div>
+
+      <!-- Canvas status badges -->
+      <div class="canvas-status only-gen only-lifecycle"><span class="count">4</span><span class="dim">/ 6 faz</span></div>
+      <div class="canvas-status only-gen only-task"><span class="count">3</span><span class="dim">/ 5 sütun</span></div>
+      <div class="canvas-status only-done only-lifecycle">
+        <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <span>Tamamlandı</span><span class="dim">·</span>
+        <span class="count">6 faz</span><span class="dim">·</span>
+        <span class="count">7 bağlantı</span>
+      </div>
+      <div class="canvas-status only-done only-task">
+        <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <span>Tamamlandı</span><span class="dim">·</span>
+        <span class="count">5 sütun</span><span class="dim">·</span>
+        <span class="count">3 WIP limiti</span>
+      </div>
+
+      <div class="canvas-drawing-pill only-gen">
+        <span class="pulse"></span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg>
+        AI çiziyor…
+      </div>
+
+      <!-- CANVAS STAGE -->
+      <div class="canvas-stage">
+
+        <!-- ═══ LIFECYCLE canvas — Iterative 2x3 grid ═══ -->
+        <div class="only-lifecycle" style="position:absolute;inset:0;">
+          <svg class="edges" viewBox="0 0 940 500" preserveAspectRatio="xMidYMid meet">
+            <!-- Flow edges (sequential 5 edges) -->
+            <path class="edge flow edge-1" d="M 250 140 L 420 140"/>
+            <path class="edge flow edge-2" d="M 570 140 L 740 140"/>
+            <path class="edge flow edge-3" d="M 770 175 C 770 240, 280 240, 250 320"/>
+            <path class="edge flow edge-4" d="M 250 360 L 420 360"/>
+            <path class="edge flow edge-5" d="M 570 360 L 740 360"/>
+            <!-- Feedback edges (2 dashed cycle-back) -->
+            <path class="edge feedback edge-feedback-1" d="M 510 330 C 540 280, 520 200, 500 170"/>
+            <path class="edge feedback edge-feedback-2" d="M 770 330 C 850 240, 850 150, 250 110"/>
+
+            <!-- Mini edge label pills (centered on each edge) -->
+            <g class="only-gendone" transform="translate(810, 230)">
+              <rect class="edge-label-pill" x="-46" y="-9" width="92" height="18" rx="9"/>
+              <text class="edge-label-text" x="0" y="3.5" text-anchor="middle">Yayın → Keşif</text>
+            </g>
+            <g class="only-done" transform="translate(508, 248)">
+              <rect class="edge-label-pill" x="-38" y="-9" width="76" height="18" rx="9"/>
+              <text class="edge-label-text" x="0" y="3.5" text-anchor="middle">Test → Tasarım</text>
+            </g>
+          </svg>
+
+          <div class="phase-node node-1 entered" data-color="primary"><span class="status-dot"></span><div class="name">Keşif</div><div class="desc">Gereksinim toplama</div></div>
+          <div class="phase-node node-2 entered" data-color="progress" style="animation-delay:0.05s;"><span class="status-dot"></span><div class="name">Tasarım</div><div class="desc">Mimari ve modüller</div></div>
+          <div class="phase-node node-3 entered" data-color="progress" style="animation-delay:0.1s;"><span class="status-dot"></span><div class="name">Modülleme</div><div class="desc">Alt sistem detayı</div></div>
+          <div class="phase-node node-4 entered" data-color="review" style="animation-delay:0.15s;"><span class="status-dot"></span><div class="name">Geliştirme</div><div class="desc">Sprint geliştirme</div></div>
+          <div class="phase-node node-5 entered" data-color="review" style="animation-delay:0.2s;"><span class="status-dot"></span><div class="name">Test</div><div class="desc">QA + kabul</div></div>
+          <div class="phase-node node-6 entered" data-color="done" style="animation-delay:0.25s;"><span class="status-dot"></span><div class="name">Yayın</div><div class="desc">Canary + monitor</div></div>
+        </div>
+
+        <!-- ═══ TASK STATUS canvas ═══ -->
+        <div class="only-task" style="position:absolute;inset:0;">
+          <div class="task-stage">
+            <div class="task-stage-inner">
+
+              <div class="task-col" data-status="todo">
+                <div class="task-col-head"><span class="dot"></span><span class="name">Sprint Backlog</span><span class="count">5</span></div>
+                <div class="task-col-body">
+                  <div class="task-card" data-av="1"><span class="tk-key">SPMS-12</span><span class="tk-title">Login akışı</span><span class="tk-av">AÖ</span></div>
+                  <div class="task-card" data-av="2"><span class="tk-key">SPMS-14</span><span class="tk-title">Audit log şeması</span><span class="tk-av">YE</span></div>
+                  <div class="task-card-more">+3 görev</div>
+                </div>
+                <div class="task-col-foot">
+                  <span>WIP</span>
+                  <span class="wip-pill unlimited">∞</span>
+                </div>
+              </div>
+
+              <div class="task-arrow task-arrow-1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+
+              <div class="task-col" data-status="progress">
+                <div class="task-col-head"><span class="dot"></span><span class="name">Devam Ediyor</span><span class="count">2</span></div>
+                <div class="task-col-body">
+                  <div class="task-card" data-av="3"><span class="tk-key">SPMS-9</span><span class="tk-title">JWT refresh</span><span class="tk-av">SY</span></div>
+                  <div class="task-card" data-av="4"><span class="tk-key">SPMS-11</span><span class="tk-title">Filtre API'si</span><span class="tk-av">ZE</span></div>
+                </div>
+                <div class="task-col-foot">
+                  <span>WIP</span>
+                  <span class="wip-pill">2 / 3</span>
+                </div>
+              </div>
+
+              <div class="task-arrow task-arrow-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+
+              <div class="task-col task-col-review appearing" data-status="review">
+                <div class="task-col-head"><span class="dot"></span><span class="name">İnceleme</span><span class="count">1</span></div>
+                <div class="task-col-body">
+                  <div class="task-card" data-av="1"><span class="tk-key">SPMS-7</span><span class="tk-title">CSRF token</span><span class="tk-av">AÖ</span></div>
+                </div>
+                <div class="task-col-foot">
+                  <span>WIP</span>
+                  <span class="wip-pill">1 / 2</span>
+                </div>
+              </div>
+
+              <div class="task-arrow task-arrow-3 dim">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+
+              <div class="task-col task-col-test" data-status="test">
+                <div class="task-col-head"><span class="dot"></span><span class="name">Test</span><span class="count">2</span></div>
+                <div class="task-col-body">
+                  <div class="task-card" data-av="2"><span class="tk-key">SPMS-3</span><span class="tk-title">Burndown chart</span><span class="tk-av">YE</span></div>
+                  <div class="task-card" data-av="5"><span class="tk-key">SPMS-5</span><span class="tk-title">Mail bildirim</span><span class="tk-av">MD</span></div>
+                </div>
+                <div class="task-col-foot">
+                  <span>WIP</span>
+                  <span class="wip-pill">2 / 2</span>
+                </div>
+              </div>
+
+              <div class="task-arrow task-arrow-4 dim">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+
+              <div class="task-col task-col-done" data-status="done">
+                <div class="task-col-head"><span class="dot"></span><span class="name">Bitti</span><span class="count">12</span></div>
+                <div class="task-col-body">
+                  <div class="task-card done" data-av="3"><span class="tk-key">SPMS-1</span><span class="tk-title">Repo iskeleti</span><span class="tk-av">SY</span></div>
+                  <div class="task-card done" data-av="4"><span class="tk-key">SPMS-2</span><span class="tk-title">DB migration</span><span class="tk-av">ZE</span></div>
+                  <div class="task-card-more">+10 tamamlandı</div>
+                </div>
+                <div class="task-col-foot">
+                  <span>WIP</span>
+                  <span class="wip-pill unlimited">∞</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="special-status-strip only-done">
+            <div class="strip-inner">
+              <span class="label">Özel</span>
+              <span class="special-tag" data-kind="blocked"><span class="dot"></span> Blocked</span>
+              <span class="special-tag" data-kind="cancelled"><span class="dot"></span> Cancelled</span>
+              <span class="special-tag" data-kind="dep"><span class="dot"></span> Dış Bağımlılık</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ ERROR — AI Servisine Ulaşılamıyor ═══ -->
+        <div class="alert-pane only-error-down">
+          <div class="alert-card">
+            <div class="icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.5A4.5 4.5 0 0 1 6.5 4h11A4.5 4.5 0 0 1 22 8.5v7a4.5 4.5 0 0 1-4.5 4.5h-11A4.5 4.5 0 0 1 2 15.5z"/><path d="M12 9v4M12 17h.01"/></svg>
+            </div>
+            <h3>AI servisine şu an ulaşılamıyor</h3>
+            <p>Sunucu kısa süreli yanıt vermiyor. Birkaç dakika sonra tekrar dene — ya da kayıtlı şablonlardan birini kullanabilirsin.</p>
+            <div class="actions">
+              <button class="btn btn-secondary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                Şablonlara Git
+              </button>
+              <button class="btn btn-primary-ai">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Tekrar Dene
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ ERROR — Rate Limit ═══ -->
+        <div class="alert-pane only-error-rate">
+          <div class="alert-card" data-kind="rate">
+            <div class="icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3>Günlük AI kullanım sınırına ulaştın</h3>
+            <p>Bugün için sınıra ulaştın — yarın tekrar dene. (Akademik proje için ücretsiz kotamız sınırlı tutuluyor.)</p>
+            <div class="countdown">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Sonraki sıfırlanma: <b>14 saat 23 dakika</b>
+            </div>
+            <div class="actions">
+              <button class="btn btn-secondary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                Şablonlara Git
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Rationale (done) — vurgu sadece methodology + bir kelime -->
+      <div class="rationale-wrap only-done only-lifecycle">
+        <div class="rationale">
+          <div class="r-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></div>
+          <div class="r-body">
+            <h4>Neden bu yaşam döngüsü?</h4>
+            <p>
+              <span class="key">Iterative</span> seçtiğin için her döngünün sonunda Test fazını Tasarım'a geri besleyen bir <span class="key">geri besleme</span> edge'i ekledim. 6 kişilik takım için tek geliştirme apex bıraktım; UAT açık olduğu için Yayın öncesi kabul testi gate'i kurdum.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rationale-wrap only-done only-task">
+        <div class="rationale">
+          <div class="r-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.8 5.4 5.4 1.8-5.4 1.8L12 16.9l-1.8-5.4-5.4-1.8 5.4-1.8L12 2.5z"/></svg></div>
+          <div class="r-body">
+            <h4>Neden bu durum şeması?</h4>
+            <p>
+              <span class="key">Scrum</span> seçtiğin için Sprint Backlog başlangıç sütununu ayrı tuttum. Code review ve QA isteklerine göre <span class="key">5 sütunlu</span> standart bir akış kurdum; WIP limitlerini takım büyüklüğüne göre 2-3 arasında önerdim.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FOOTER — justify-between, no hint text
+       ═══════════════════════════════════════════════════════════════ -->
+  <footer class="modal-footer">
+
+    <!-- IDLE -->
+    <button class="btn btn-ghost only-idle">İptal</button>
+    <div class="center only-idle"></div>
+    <div class="right only-idle">
+      <button class="btn btn-secondary" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+        Uygula
+      </button>
+    </div>
+
+    <!-- GENERATING -->
+    <button class="btn btn-ghost only-gen">İptal</button>
+    <div class="center only-gen"></div>
+    <div class="right only-gen">
+      <button class="btn btn-secondary" disabled>Henüz oluşturuluyor…</button>
+    </div>
+
+    <!-- DONE / APPLY: 3-button layout -->
+    <button class="btn btn-ghost only-done">İptal</button>
+    <div class="center only-done">
+      <button class="btn btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Tekrar Üret
+      </button>
+    </div>
+    <div class="right only-done">
+      <button class="btn btn-primary-ai" id="applyBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+        Uygula
+      </button>
+    </div>
+
+    <!-- ERROR (both kinds): only Close -->
+    <div class="center only-error" style="--d:flex;"></div>
+    <div class="right only-error" style="--d:flex;">
+      <button class="btn btn-secondary">Kapat</button>
+    </div>
+
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APPLY CONFIRMATION (state=apply, before user confirms)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="confirm-scrim only-confirm">
+  <div class="confirm-card" role="dialog" aria-modal="true">
+
+    <div class="only-lifecycle">
+      <h2>
+        <span class="warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        Mevcut yaşam döngünüz değiştirilecek
+      </h2>
+      <p class="lede">
+        <b>"SPMS Geliştirme"</b> projesinin workflow'unda şu anda <b>4 faz</b> var.
+        Bu işlem onları AI'ın ürettiği yeni <b>6 fazla</b> değiştirecek. Faz isimleri yenilenir; mevcut görevler korunur.
+      </p>
+    </div>
+
+    <div class="only-task">
+      <h2>
+        <span class="warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        Görev durumlarınız değiştirilecek
+      </h2>
+      <p class="lede">
+        <b>"Backend Geliştirme"</b> takımının görev durumları değişecek. Mevcut <b>3 durum</b> yerine
+        <b>5 durumlu</b> yeni workflow gelecek. Devam eden görevler en yakın eşleşen duruma taşınır.
+      </p>
+    </div>
+
+    <div class="radio-card selected" data-radio="new" tabindex="0">
+      <span class="radio" aria-hidden="true"></span>
+      <div class="rc-body">
+        <div class="rc-title">
+          <span class="only-lifecycle">Mevcut workflow'u koru, yeni proje oluştur</span>
+          <span class="only-task">Mevcut durumları koru, yeni takım workflow'u oluştur</span>
+          <span class="rec">Önerilen</span>
+        </div>
+        <div class="rc-desc">
+          <span class="only-lifecycle">"SPMS Geliştirme (AI önerisi)" adıyla yeni bir proje açılır. Mevcut ekibin ve görevlerin etkilenmez.</span>
+          <span class="only-task">Mevcut takıma dokunulmaz; yeni şema farklı bir görev workflow'u olarak kaydedilir.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="radio-card" data-radio="replace" tabindex="0">
+      <span class="radio" aria-hidden="true"></span>
+      <div class="rc-body">
+        <div class="rc-title">
+          <span class="only-lifecycle">Mevcut yaşam döngüsünü tamamen değiştir</span>
+          <span class="only-task">Mevcut görev durumlarını tamamen değiştir</span>
+        </div>
+        <div class="rc-desc">
+          <span class="only-lifecycle">Tüm fazlar yenisiyle değiştirilir.</span>
+          <span class="only-task">Devam eden görevler en yakın yeni duruma taşınır.</span>
+          <span class="warn"> ⚠ Bu işlem geri alınamaz.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" data-action="cancel">Vazgeç</button>
+      <button class="btn btn-primary-ai" id="confirmBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+        Onaylıyorum
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     UNDO TOAST (state=apply AND data-applied=true)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="undo-toast only-toast">
+  <div class="toast-body">
+    <span class="toast-check">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+    </span>
+    <span class="toast-text">AI önerisi uygulandı.</span>
+    <button class="toast-undo">Geri Al</button>
+    <button class="toast-close" aria-label="Kapat">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="countdown-bar"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JS — state + variant + applied + chip behavior
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  const STATES = ["idle", "generating", "done", "apply", "error-down", "error-rate"];
+  const VARIANTS = ["lifecycle", "task"];
+  const root = document.body;
+
+  function setState(s) {
+    if (!STATES.includes(s)) return;
+    root.setAttribute("data-state", s);
+    root.removeAttribute("data-applied"); // reset post-apply view
+    document.querySelectorAll('.dbg-seg[data-group="state"] button')
+      .forEach(b => b.classList.toggle("active", b.dataset.target === s));
+  }
+  function setVariant(v) {
+    if (!VARIANTS.includes(v)) return;
+    root.setAttribute("data-variant", v);
+    document.querySelectorAll('.dbg-seg[data-group="variant"] button')
+      .forEach(b => b.classList.toggle("active", b.dataset.target === v));
+  }
+
+  document.querySelectorAll('.dbg-seg[data-group="state"] button').forEach(b =>
+    b.addEventListener("click", () => setState(b.dataset.target)));
+  document.querySelectorAll('.dbg-seg[data-group="variant"] button').forEach(b =>
+    b.addEventListener("click", () => setVariant(b.dataset.target)));
+
+  // Theme toggle
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const html = document.documentElement;
+    html.setAttribute("data-mode", html.getAttribute("data-mode") === "dark" ? "light" : "dark");
+  });
+
+  // Apply button → state=apply
+  document.getElementById("applyBtn").addEventListener("click", () => setState("apply"));
+
+  // Onaylıyorum: switch to "applied" view, show toast for 10s, then go to done
+  let toastTimer = null;
+  document.getElementById("confirmBtn").addEventListener("click", () => {
+    root.setAttribute("data-applied", "true");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      // After 10s, conceptually commit & return to done view
+      root.removeAttribute("data-applied");
+      setState("done");
+    }, 10000);
+  });
+
+  // Toast close button → commit immediately
+  document.querySelector(".undo-toast .toast-close").addEventListener("click", () => {
+    if (toastTimer) clearTimeout(toastTimer);
+    root.removeAttribute("data-applied");
+    setState("done");
+  });
+
+  // Undo button — bring user back to done (i.e. preview), pretend the change was reverted
+  document.querySelector(".undo-toast .toast-undo").addEventListener("click", () => {
+    if (toastTimer) clearTimeout(toastTimer);
+    root.removeAttribute("data-applied");
+    setState("done");
+  });
+
+  // Confirm cancel
+  document.querySelector('[data-action="cancel"]').addEventListener("click", () => setState("done"));
+
+  // Radios in confirm card
+  document.querySelectorAll(".radio-card").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll(".radio-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+    });
+  });
+
+  // Chip groups: single vs multi-select
+  document.querySelectorAll(".chip-group").forEach(group => {
+    const isMulti = group.dataset.multi === "true";
+    group.querySelectorAll(".chip").forEach(c => {
+      if (c.classList.contains("chip-other")) return; // handled separately
+      c.addEventListener("click", () => {
+        if (isMulti) c.classList.toggle("selected");
+        else {
+          group.querySelectorAll(".chip:not(.chip-other)").forEach(x => x.classList.remove("selected"));
+          c.classList.add("selected");
+        }
+      });
+    });
+  });
+
+  // "Diğer" inline-edit chip
+  document.querySelectorAll(".chip-other").forEach(chip => {
+    const input = chip.querySelector("input");
+    chip.addEventListener("click", (e) => {
+      // Toggle to open mode
+      if (chip.dataset.mode === "closed") {
+        // close all OTHER single-select chips in the group
+        const group = chip.parentElement;
+        if (group?.dataset.multi !== "true") {
+          group.querySelectorAll(".chip:not(.chip-other)").forEach(x => x.classList.remove("selected"));
+        }
+        chip.dataset.mode = "open";
+        chip.classList.add("selected");
+        setTimeout(() => input.focus(), 10);
+      }
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+      if (e.key === "Escape") {
+        input.value = "";
+        chip.dataset.mode = "closed";
+        chip.classList.remove("selected");
+      }
+    });
+    input.addEventListener("blur", () => {
+      if (!input.value.trim()) {
+        chip.dataset.mode = "closed";
+        chip.classList.remove("selected");
+      }
+    });
+  });
+
+  // Segmented
+  document.querySelectorAll(".segmented").forEach(g => {
+    g.querySelectorAll("button").forEach(b => {
+      b.addEventListener("click", () => {
+        g.querySelectorAll("button").forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+      });
+    });
+  });
+
+  // Toggles
+  document.querySelectorAll(".toggle-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      e.preventDefault();
+      row.querySelector(".toggle")?.classList.toggle("on");
+    });
+  });
+
+  // Checkboxes
+  document.querySelectorAll(".cb-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      e.preventDefault();
+      row.classList.toggle("on");
+    });
+  });
+
+  // AI-decide toggle (task variant): toggles num-input enabled/disabled
+  const aiDecide = document.getElementById("aiDecide");
+  const targetCount = document.getElementById("targetCount");
+  const targetRow = document.getElementById("targetRow");
+  if (aiDecide && targetCount) {
+    aiDecide.addEventListener("click", () => {
+      const on = aiDecide.classList.toggle("on");
+      targetCount.disabled = on;
+      if (on) {
+        targetCount.value = "";
+        targetRow.classList.remove("below-min");
+      } else {
+        setTimeout(() => targetCount.focus(), 10);
+      }
+    });
+    targetCount.addEventListener("input", () => {
+      const v = parseInt(targetCount.value, 10);
+      targetRow.classList.toggle("below-min", !isNaN(v) && v < 5);
+    });
+  }
+
+  // Süresiz toggle (lifecycle): disables compound
+  document.querySelectorAll('[data-toggle="indefinite"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const on = btn.classList.toggle("on");
+      const compound = btn.closest(".num-row").querySelector(".compound");
+      compound.querySelector("input").disabled = on;
+      compound.querySelector("select").disabled = on;
+    });
+  });
+
+  // Big AI buttons → start generating
+  document.querySelectorAll(".btn-ai").forEach(b =>
+    b.addEventListener("click", () => setState("generating")));
+
+  // Keyboard navigation
+  window.addEventListener("keydown", (e) => {
+    if (e.target.matches("input, textarea, select")) return;
+    const sCur = root.getAttribute("data-state");
+    const vCur = root.getAttribute("data-variant");
+    if (e.shiftKey && (e.key === "V" || e.key === "v")) {
+      e.preventDefault();
+      setVariant(vCur === "lifecycle" ? "task" : "lifecycle");
+      return;
+    }
+    if (e.key === "ArrowRight") setState(STATES[Math.min(STATES.length - 1, STATES.indexOf(sCur) + 1)]);
+    else if (e.key === "ArrowLeft") setState(STATES[Math.max(0, STATES.indexOf(sCur) - 1)]);
+    else if (e.key === "Escape" && sCur === "apply") setState("done");
+  });
+})();
+</script>
+
+</body>
+</html>
