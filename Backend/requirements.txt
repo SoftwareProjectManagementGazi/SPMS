@@ -18,3 +18,5 @@ apscheduler
 fastapi-mail
 openpyxl
 fpdf2
+google-genai>=0.3.0
+greenlet

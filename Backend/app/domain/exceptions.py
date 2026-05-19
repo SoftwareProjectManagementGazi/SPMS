@@ -311,3 +311,37 @@ class PermissionDeniedError(DomainError):
     def __init__(self, missing_permission: str):
         self.missing_permission = missing_permission
         super().__init__(f"Permission '{missing_permission}' required")
+
+
+# ---------------------------------------------------------------------------
+# v3.0 — AI Workflow Generator exceptions
+# Plan ref: .planning/ai-workflow-generator-plan.md §4.1.2
+# ---------------------------------------------------------------------------
+
+
+class AIWorkflowGenerationError(DomainError):
+    """Base class for AI generation failures. Router maps to appropriate HTTP code."""
+    pass
+
+
+class AIServiceUnavailableError(AIWorkflowGenerationError):
+    """Provider unreachable, timeout, or 5xx. Router maps to 503."""
+    def __init__(self, reason: str = "AI servisine şu an ulaşılamıyor"):
+        super().__init__(reason)
+
+
+class RateLimitExceededError(AIWorkflowGenerationError):
+    """Free tier daily quota hit. Router maps to 429 with Retry-After header.
+    Carries `reset_in_seconds` so frontend can show countdown."""
+    def __init__(self, reset_in_seconds: int, kind: str = "user_daily"):
+        self.reset_in_seconds = reset_in_seconds
+        self.kind = kind  # user_hourly | user_daily | project_quota
+        super().__init__(f"Rate limit ({kind}). Resets in {reset_in_seconds}s.")
+
+
+class InvalidWorkflowSuggestionError(AIWorkflowGenerationError):
+    """LLM returned schema-valid but domain-invalid workflow.
+    Carries `errors` list from validator for debugging/retry decisions."""
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__(f"Invalid workflow suggestion: {'; '.join(errors)}")

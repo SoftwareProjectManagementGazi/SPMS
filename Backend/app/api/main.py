@@ -179,6 +179,10 @@ app.include_router(milestones_router.router, prefix="/api/v1", tags=["milestones
 app.include_router(artifacts_router.router, prefix="/api/v1", tags=["artifacts"])
 app.include_router(phase_reports_router.router, prefix="/api/v1", tags=["phase_reports"])
 
+# v3.0 — AI Workflow Generator (ai-workflow-generator-plan.md Wave 1)
+from app.api.v1 import ai_workflow as ai_workflow_router
+app.include_router(ai_workflow_router.router, prefix="/api/v1/ai", tags=["AI Workflow"])
+
 # Phase 14 Plan 14-01 — admin panel routers (5 NEW, all under /api/v1 with
 # Depends(require_admin) gate; PM-side join-request create endpoint uses
 # require_project_transition_authority).

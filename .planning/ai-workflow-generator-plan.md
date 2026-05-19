@@ -1,10 +1,19 @@
 # AI Workflow Generator — Implementation Master Plan
 
 **Created:** 2026-05-19
-**Last Updated:** 2026-05-19 (Locked-In Decisions D-01..D-06 added)
-**Status:** ✅ Decisions locked — ready for Wave 1
+**Last Updated:** 2026-05-19 (Wave 1 completed)
+**Status:** 🟢 Wave 1 ✅ done · Wave 2 in progress
 **Milestone:** v3.0 (deferred from Phase 12 per PROJECT.md "Out of Scope")
 **Owner:** Frontend + Backend tracks parallel
+
+## Progress Tracker
+
+- [x] **Wave 1 — Foundation** (2026-05-19) — Domain + Application + Mock Adapter + SSE endpoints + Frontend stream client. 15 unit tests pass, curl SSE verified.
+- [ ] **Wave 2 — UI Shell** — Modal + Lifecycle/Task Status forms + bottom-toolbar activation
+- [ ] **Wave 3 — Live Generation** — Live canvas drawing, chat log, rationale card, done state
+- [ ] **Wave 4 — Gemini Integration** — Real LLM adapter, prompt builders, multi-project keys
+- [ ] **Wave 5 — Apply & Error Handling** — Apply confirmation, undo toast, error states, rate limiter
+- [ ] **Wave 6 — Polish & Test** — Accessibility, bilingual, smoke tests, prefers-reduced-motion
 
 ---
 

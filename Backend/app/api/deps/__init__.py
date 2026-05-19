@@ -21,3 +21,5 @@ from app.api.deps.security import *  # noqa: F401, F403
 from app.api.deps.milestone import *  # noqa: F401, F403
 from app.api.deps.artifact import *  # noqa: F401, F403
 from app.api.deps.phase_report import *  # noqa: F401, F403
+# v3.0 — AI Workflow Generator (ai-workflow-generator-plan.md §4.4.1)
+from app.api.deps.ai import *  # noqa: F401, F403

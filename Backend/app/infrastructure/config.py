@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     # more leeway because the user may not check email immediately.
     INVITE_TOKEN_TTL_DAYS: int = 7
 
+    # AI Workflow Generator (v3.0) — pluggable provider config
+    AI_PROVIDER: str = "mock"            # mock | gemini | ollama
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GOOGLE_API_KEY: str = ""             # active key (copy from one of below)
+    GOOGLE_API_KEY_DEV: str = ""         # spms-dev project
+    GOOGLE_API_KEY_STAGING: str = ""     # spms-staging project
+    GOOGLE_API_KEY_DEMO: str = ""        # spms-demo project (fresh quota on demo day)
+    OLLAMA_HOST: str = "http://localhost:11434"  # offline fallback
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -39,6 +48,6 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
-    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()
