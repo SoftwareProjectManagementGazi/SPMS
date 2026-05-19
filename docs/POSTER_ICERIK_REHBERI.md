@@ -68,17 +68,22 @@ SPMS'nin tek paragraflık tanımı + anahtar kelime şeridi.
 ### 2️⃣ Problem & Motivasyon
 
 **Ne gösterir:**
-4 satırlık problem listesi (Jira→pahalı, Trello→dar, OpenProject→zor, hepsi→tek paradigma) + lacivert kutu içinde SPMS çözümü.
+4 numaralı problem kategorisi (Yüksek Lisans Maliyetleri / Metodoloji Esnekliği Yokluğu / Açık Kaynak UX Yetersizliği / Paralel Araç Zorunluluğu) + lacivert kutu içinde SPMS Çözümü.
 
 **Ne anlatmalı:**
-- **Capterra anketine göre** ekipler genellikle birden çok proje yönetim aracını paralel kullanmak zorunda kalıyor (operasyonel sürtünme).
-- **Jira/MS Project pahalı** → KOBİ'ler için maliyet engeli.
-- **Trello dar kapsamlı** → görev bağımlılığı ve gelişmiş raporlama yok.
-- **OpenProject açık kaynak** ama kullanımı ve kurulumu karmaşık.
-- **Hepsi tek paradigmaya odaklı** — bir ekip Scrum, diğeri Kanban kullanıyorsa iki ayrı araç gerekiyor.
+
+1. **Yüksek Lisans Maliyetleri** — Jira, MS Project gibi profesyonel araçların kullanıcı başına aylık ücreti, KOBİ ölçekli ekipler için ciddi maliyet engeli yaratıyor. Bir ekip için yıllık binlerce dolar gerekiyor.
+2. **Metodoloji Esnekliğinin Yokluğu** — Her araç tek bir paradigmaya odaklı: Jira çevik takımlar için optimize, MS Project klasik Waterfall için, Trello basit Kanban için. Hibrit kullanım için **birden çok araç** gerekiyor.
+3. **Açık Kaynak UX Yetersizliği** — OpenProject gibi ücretsiz alternatifler lisans maliyetini çözüyor ama **kurulum karmaşık** ve **kullanıcı arayüzü** modern ticari alternatiflerin gerisinde kalıyor.
+4. **Paralel Araç Zorunluluğu** — Aynı şirkette farklı ekipler farklı metodolojiler kullandığında birden çok aracı **paralel işletmek** gerekiyor → veri silosu, eğitim yükü, lisans çoğalması, operasyonel sürtünme.
+
+**Capterra anketi** (literatürden, [6]): Kullanıcılar %65 raporlama, %64 doküman, %60 iş birliği ihtiyacını tek araçtan karşılayamıyor.
 
 **Jüri sorabilir:** *"Niye başka bir araç gerekiyordu?"*
-**Yanıtınız:** *"Mevcutlar tek paradigmaya odaklı. Bizim katkımız bunu **mimari bir sorun** olarak ele alıp tek platformda çözmek. Lacivert kutudaki cümle bu."*
+**Yanıtınız:** *"4 ayrı problem var: maliyet, metodoloji esnekliği, açık kaynak UX'i, paralel araç zorunluluğu. SPMS bunların hepsini tek üründe çözüyor — ücretsiz, 4 metodoloji destekli, modern arayüzlü, açık kaynak."*
+
+**Jüri sorabilir:** *"Sizin çözümünüz spesifik olarak ne?"*
+**Yanıtınız:** *"Lacivert kutudaki cümle: Metodoloji çeşitliliği bir **mimari sorun** olarak ele alınıp tek açık kaynak platformda + modern UX + Phase Gate ile disiplinli süreç yönetimi sunulur."*
 
 ---
 

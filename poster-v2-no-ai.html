@@ -635,30 +635,46 @@
   .rbac-table .yes { color: var(--green); font-weight: 900; }
   .rbac-table .no  { color: var(--red); font-weight: 900; }
 
-  /* ===== MODÜLLER ===== */
-  .module-list { list-style: none; }
-  .module-list li {
+  /* ===== ÖNE ÇIKAN ÖZELLİKLER ===== */
+  .features-grid {
     display: grid;
-    grid-template-columns: 18mm 1fr;
-    gap: 3mm;
-    padding: 2mm 0;
-    border-bottom: 1px dashed var(--border);
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5mm;
+  }
+  .feature-card {
+    background: var(--sky-pale);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 5px;
+    padding: 3mm 3.5mm;
+  }
+  .feature-card .f-head {
+    display: flex;
     align-items: center;
-    font-size: 8.5pt;
+    gap: 2mm;
+    margin-bottom: 1.5mm;
   }
-  .module-list li:last-child { border-bottom: 0; }
-  .module-list .code {
-    background: var(--navy);
-    color: var(--white);
-    padding: 1mm 2mm;
-    border-radius: 3px;
-    font-size: 7.5pt;
+  .feature-card .f-icon {
+    font-size: 14pt;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .feature-card .f-title {
     font-weight: 800;
-    text-align: center;
-    letter-spacing: 0.3px;
+    color: var(--navy);
+    font-size: 9pt;
+    line-height: 1.15;
   }
-  .module-list .desc { color: var(--text-mid); line-height: 1.35; }
-  .module-list .desc b { color: var(--navy); display: block; font-size: 9pt; }
+  .feature-card .f-desc {
+    font-size: 8pt;
+    color: var(--text-mid);
+    line-height: 1.35;
+  }
+  .feature-card.highlight {
+    background: linear-gradient(135deg, #E8F4F8 0%, #B6DDE8 100%);
+    border-left-color: #16335A;
+  }
+  .feature-card.highlight .f-title { color: #16335A; }
 
   /* ===== KANBAN MOCKUP ===== */
   .kb-mockup {
@@ -917,14 +933,14 @@
       <div class="card-header"><span class="icon">⚠️</span><h2>Problem & Motivasyon</h2></div>
       <div class="card-body">
         <ul class="problem-list">
-          <li><span class="tag">Pahalı</span><span class="tool">Jira / MS Project</span> — Yüksek lisans ücreti, KOBİ'lere erişim engeli</li>
-          <li><span class="tag">Dar</span><span class="tool">Trello</span> — Görev bağımlılığı/gelişmiş raporlama yok</li>
-          <li><span class="tag">Zor</span><span class="tool">OpenProject</span> — Açık kaynak ama kurulum/UX karmaşık</li>
-          <li><span class="tag">Tek paradigma</span><span class="tool">Hepsi</span> — Ekipler birden çok aracı paralel kullanmak zorunda</li>
+          <li><span class="tag" style="background: var(--navy);">1</span><span class="tool">Yüksek Lisans Maliyetleri</span> — Jira, MS Project gibi profesyonel araçlar KOBİ ölçekli ekipler için ciddi maliyet engeli yaratmakta.</li>
+          <li><span class="tag" style="background: var(--navy);">2</span><span class="tool">Metodoloji Esnekliğinin Yokluğu</span> — Mevcut araçlar tek paradigmaya odaklı: Jira → çevik, MS Project → klasik, Trello → basit Kanban.</li>
+          <li><span class="tag" style="background: var(--navy);">3</span><span class="tool">Açık Kaynak UX Yetersizliği</span> — OpenProject gibi ücretsiz alternatifler kurulum ve modern arayüz açısından zayıf kalmakta.</li>
+          <li><span class="tag" style="background: var(--navy);">4</span><span class="tool">Paralel Araç Zorunluluğu</span> — Farklı ekipler farklı metodolojiler kullandığında birden çok araç paralel işletilmek zorunda → operasyonel sürtünme.</li>
         </ul>
         <div class="solution-box">
           <span class="sol-label">SPMS Çözümü</span>
-          Metodoloji çeşitliliği bir <em>mimari sorun</em> olarak ele alınmış; tüm süreç modelleri tek platformda birleştirilmiştir.
+          Tüm bu eksiklikleri <em>tek bir açık kaynak platformda</em> giderir: 4 metodoloji desteği + modern UX + Phase Gate ile disiplinli süreç yönetimi.
         </div>
       </div>
     </section>
