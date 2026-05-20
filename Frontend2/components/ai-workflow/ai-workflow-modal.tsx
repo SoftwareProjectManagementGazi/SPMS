@@ -23,6 +23,13 @@ import type {
 import { useAIWorkflowStream } from "@/hooks/use-ai-workflow-stream"
 import { useApp } from "@/context/app-context"
 
+import {
+  applyLifecycleSuggestion,
+  applyTaskStatusSuggestion,
+  type ApplyMode,
+} from "@/lib/ai/apply-ai-workflow"
+
+import { AIApplyConfirmation } from "./ai-apply-confirmation"
 import { AIChatLog, formatUserPrompt } from "./ai-chat-log"
 import { AIContextBadge } from "./ai-context-badge"
 import { AILifecycleForm } from "./ai-lifecycle-form"
@@ -40,18 +47,28 @@ export interface AIWorkflowModalProps {
   contextLabel: string
   /** Number of nodes/columns in the existing workflow — drives Apply warning copy */
   existingNodeCount: number
+  /** Project id for the apply backend call (Wave 5) */
+  projectId: number
+  /** Existing process_config so we can splice in only phase_workflow on replace */
+  existingProcessConfig: Record<string, unknown>
   onClose: () => void
-  /** Called when user confirms Apply; parent handles persistence. */
-  onApply?: (
-    suggestion:
-      | { variant: "lifecycle"; nodes: unknown[]; edges: unknown[] }
-      | { variant: "task_status"; columns: unknown[] },
-    mode: "replace" | "new_project",
-  ) => Promise<void>
+  /**
+   * Fired AFTER backend apply succeeds. Parent uses this to invalidate the
+   * project query so the workflow editor canvas re-renders with the new
+   * shape. The args mirror what was applied so parent can also show toast.
+   */
+  onApplied?: (result: {
+    mode: ApplyMode
+    appliedProjectId: number
+    isNewProject: boolean
+  }) => void
 }
 
 export function AIWorkflowModal(props: AIWorkflowModalProps) {
-  const { open, variant, contextLabel, onClose } = props
+  const {
+    open, variant, contextLabel, projectId,
+    existingProcessConfig, existingNodeCount, onClose, onApplied,
+  } = props
   const { language } = useApp()
   const T = React.useCallback(
     (tr: string, en: string) => (language === "tr" ? tr : en),
@@ -67,6 +84,12 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
     React.useState<LifecycleFormDTO | null>(null)
   const [lastTaskStatusForm, setLastTaskStatusForm] =
     React.useState<TaskStatusFormDTO | null>(null)
+
+  // Wave 5 — Apply confirmation overlay toggled on by footer "Uygula" click,
+  // gated to done state. Closes back to done on cancel; on confirm fires the
+  // applyAIWorkflow service and bubbles result up via onApplied callback.
+  const [applyOpen, setApplyOpen] = React.useState(false)
+  const [applyError, setApplyError] = React.useState<string | null>(null)
 
   // -------------------------------------------------------------------------
   // Lifecycle: ESC to close (but only when in idle/done/error — not mid-stream)
@@ -244,8 +267,85 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
             gridTemplateColumns: "380px 1fr",
             minHeight: 0, // critical for nested scroll containers
             overflow: "hidden",
+            position: "relative",
           }}
         >
+          {/* Apply confirmation — overlays the whole body (D-01 / D-02) */}
+          {applyOpen && state.status === "done" && (
+            <AIApplyConfirmation
+              contextLabel={contextLabel}
+              variant={variant}
+              existingCount={existingNodeCount}
+              newCount={
+                variant === "lifecycle"
+                  ? state.nodes.length
+                  : state.columns.length
+              }
+              defaultMode="replace"
+              onCancel={() => {
+                setApplyOpen(false)
+                setApplyError(null)
+              }}
+              onConfirm={async (mode) => {
+                setApplyError(null)
+                try {
+                  let result
+                  if (variant === "lifecycle") {
+                    result = await applyLifecycleSuggestion({
+                      mode,
+                      projectId,
+                      projectName: contextLabel,
+                      existingProcessConfig,
+                      nodes: state.nodes,
+                      edges: state.edges,
+                      methodology: state.methodology,
+                    })
+                  } else {
+                    result = await applyTaskStatusSuggestion({
+                      mode,
+                      projectId,
+                      projectName: contextLabel,
+                      existingProcessConfig,
+                      columns: state.columns,
+                      methodology: state.methodology,
+                    })
+                  }
+                  // Bubble up to parent — parent closes modal + invalidates query
+                  setApplyOpen(false)
+                  onApplied?.({
+                    mode,
+                    appliedProjectId: result.projectId,
+                    isNewProject: result.isNewProject,
+                  })
+                } catch (e) {
+                  setApplyError(
+                    e instanceof Error ? e.message : "Bilinmeyen bir hata oluştu",
+                  )
+                }
+              }}
+            />
+          )}
+
+          {/* Apply error banner — sits above main body if last apply failed */}
+          {applyError && (
+            <div
+              role="alert"
+              style={{
+                position: "absolute",
+                top: 12,
+                left: 12,
+                right: 12,
+                padding: 12,
+                borderRadius: 8,
+                background: "oklch(0.96 0.06 25)",
+                color: "oklch(0.4 0.2 25)",
+                fontSize: 13,
+                zIndex: 5,
+              }}
+            >
+              ⚠ {applyError}
+            </div>
+          )}
           {/* LEFT — Form / Chat */}
           <aside
             style={{
@@ -472,21 +572,26 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
             {state.status === "done" && (
               <button
                 type="button"
-                disabled
+                onClick={() => setApplyOpen(true)}
                 style={{
                   padding: "8px 16px",
                   borderRadius: 6,
                   background: "var(--ai-accent)",
                   color: "var(--ai-accent-fg)",
                   fontSize: 13,
-                  fontWeight: 500,
-                  opacity: 0.6,
-                  cursor: "not-allowed",
+                  fontWeight: 600,
+                  boxShadow: "0 2px 4px var(--ai-accent-ring)",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
-                title={T(
-                  "Apply Confirmation Wave 5'te aktif olacak",
-                  "Apply Confirmation arrives in Wave 5",
-                )}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--ai-accent-hover)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--ai-accent)"
+                }}
               >
                 ✓ {T("Uygula", "Apply")}
               </button>

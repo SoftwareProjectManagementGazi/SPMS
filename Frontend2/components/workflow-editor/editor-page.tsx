@@ -2090,7 +2090,47 @@ export function EditorPage({ project }: EditorPageProps) {
         variant={mode === "status" ? "task_status" : "lifecycle"}
         contextLabel={project.name}
         existingNodeCount={workflow.nodes.length}
+        projectId={project.id}
+        existingProcessConfig={(project.processConfig ?? {}) as Record<string, unknown>}
         onClose={() => setAiModalOpen(false)}
+        onApplied={({ mode: applyMode, appliedProjectId, isNewProject }) => {
+          // Wave 5 — refresh project query so the editor canvas re-renders
+          // with the new workflow shape.
+          qc.invalidateQueries({ queryKey: ["project", appliedProjectId] })
+          qc.invalidateQueries({ queryKey: ["projects"] })
+
+          setAiModalOpen(false)
+
+          if (isNewProject) {
+            showToast({
+              variant: "success",
+              message: T(
+                `Yeni proje açıldı: "${project.name} (AI önerisi)"`,
+                `New project created: "${project.name} (AI suggestion)"`,
+              ),
+            })
+            // Navigate to the new project's workflow editor — push triggers
+            // a fresh mount of EditorPage so local workflow state is reset
+            // from the new project's payload.
+            router.push(`/workflow-editor?projectId=${appliedProjectId}&mode=${mode}`)
+          } else {
+            showToast({
+              variant: "success",
+              message: T("AI workflow uygulandı.", "AI workflow applied."),
+            })
+            // EditorPage holds workflow in local React state (initialLifecycle)
+            // so drag-stop positions survive across re-renders. Cache
+            // invalidation refetches the project but EditorPage doesn't
+            // re-derive its working copy from the new data. Cleanest reset:
+            // a hard reload. Done after a tiny delay so the toast is visible.
+            window.setTimeout(() => {
+              window.location.reload()
+            }, 800)
+          }
+          // applyMode currently only differentiates the toast copy; both
+          // success paths invalidate the project query identically.
+          void applyMode
+        }}
       />
     </div>
   )

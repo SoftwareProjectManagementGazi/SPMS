@@ -80,8 +80,9 @@ workflow'u tasarlamak.
   · Paralel kollar varsa: üst y=100, alt y=300
   · Feedback/verification edge'ler için ekstra y kayması yok — node ana
     akışta kalır.
-- node.id: stabil ve unique. "nd_" prefix + 8 karakter snake_case key
-  (örn. "nd_planning1", "nd_proto_a").
+- node.id: stabil ve unique. Format ZORUNLU: "nd_" + TAM 10 karakter
+  (sadece a-z, A-Z, 0-9, _, -). Örn. "nd_planning0", "nd_prototype0",
+  "nd_codereview", "nd_testdoneOK". 10 karakterden az/fazla OLMASIN.
 - edges: source_id ve target_id mutlaka var olan node id olmalı.
 - edges.edge_type: "flow" (ana akış), "verification" (doğrulama, kalite
   kontrolünde), "feedback" (geri besleme, döngü).
