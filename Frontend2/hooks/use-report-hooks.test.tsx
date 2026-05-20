@@ -45,7 +45,9 @@ function makeWrapper() {
   return { qc, Wrapper }
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 // ---------------------------------------------------------------------------
 // useSummary

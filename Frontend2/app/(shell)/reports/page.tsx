@@ -221,9 +221,17 @@ function ReportsPageInner() {
   const iterationSprints = iterationQuery.data?.sprints ?? []
   const latestSprint = iterationSprints[iterationSprints.length - 1]
   const prevSprint = iterationSprints[iterationSprints.length - 2]
-  const velocityValue = latestSprint?.completed ?? null
+  // Defensive: Number.isFinite guards against null / NaN / non-numeric
+  // values the backend might surface from a malformed snapshot. The UI
+  // renders an em-dash for non-finite values via formatValue / formatDelta.
+  const velocityValue = Number.isFinite(latestSprint?.completed)
+    ? (latestSprint!.completed as number)
+    : null
   const velocityDelta =
-    latestSprint && prevSprint
+    latestSprint &&
+    prevSprint &&
+    Number.isFinite(latestSprint.completed) &&
+    Number.isFinite(prevSprint.completed)
       ? latestSprint.completed - prevSprint.completed
       : null
 
