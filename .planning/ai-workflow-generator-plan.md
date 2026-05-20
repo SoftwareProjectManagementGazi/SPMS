@@ -827,8 +827,19 @@ GOOGLE_API_KEY_DEMO=
 
 ### 6.2 Free Tier Limitleri ve Caching
 
-- **Limit:** 500 RPD, 10 RPM, 250K TPM (Aralık 2025 düşüşü sonrası)
-- **Akademik demo için yeterli:** günlük ~150 gerçek kullanım buffer var
+⚠️ **2026-05-20 GÜNCEL GERÇEK:** Google free tier limitleri planda yazdığımızdan
+çok daha düşük çıktı. Wave 6 smoke testinde tükendi:
+
+| Model | Gerçek Daily Limit (free tier) | Notlar |
+|---|---|---|
+| **gemini-2.5-flash** | **20 RPD** | 500'den 20'ye düşmüş — %96 azalma |
+| **gemini-2.5-flash-lite** | ~1000 RPD | Daha yüksek limit, biraz daha düşük kalite |
+| **gemini-2.0-flash** | ~200 RPD | Eski sürüm ama hala destekli |
+
+**Strateji güncellemesi:**
+- Geliştirme + demo için **`GEMINI_MODEL=gemini-2.5-flash-lite`** kullan
+- "Doğru senaryo" demosu için flash key'ini sakla (20 quota titiz kullanım)
+- Multi-project (D-06) hala geçerli — her project ayrı 20 quota
 
 **Prompt caching (Gemini özelliği):**
 Sistem promptu ve few-shot örnekleri cache'le:
@@ -1271,7 +1282,7 @@ Multi-select chip (Story/Bug/Task/Spike/Epic) **kaldırıldı**. Yerine **tek to
 
 ```python
 USER_HOURLY_LIMIT = 8       # request/saat (sliding window)
-USER_DAILY_LIMIT = 25       # request/gün (UTC midnight reset)
+USER_DAILY_LIMIT = 50       # request/gün (UTC midnight reset) — Wave 6 retune
 PROJECT_DAILY_LIMIT = 400   # request/gün (Gemini 500 RPD'nin %80'i)
 ```
 

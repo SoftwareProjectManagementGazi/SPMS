@@ -20,6 +20,7 @@ Plan ref: .planning/ai-workflow-generator-plan.md §10.1
 from __future__ import annotations
 
 import logging
+import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from time import time
@@ -29,10 +30,21 @@ from fastapi import HTTPException, Request, status
 logger = logging.getLogger(__name__)
 
 
-# Tunables — keep at module level so monkey-patching in tests is trivial
+# Tunables — keep at module level so monkey-patching in tests is trivial.
 USER_HOURLY_LIMIT = 8
-USER_DAILY_LIMIT = 25
+USER_DAILY_LIMIT = 50
 PROJECT_DAILY_LIMIT = 400
+
+# Wave 6 retune (2026-05-20) — development + demo escape hatch.
+# Setting AI_RATE_LIMIT_DISABLED=true in .env bypasses the two USER tiers
+# entirely (project_daily ceiling still applies as a Gemini quota guard).
+# Intended for:
+#   - Active development (constant prompt iteration)
+#   - Demo dry runs (multiple attendees hammering the same key)
+# Default false → production-safe.
+_LIMITER_DISABLED = os.getenv("AI_RATE_LIMIT_DISABLED", "false").lower() in (
+    "true", "1", "yes",
+)
 
 
 class _RateLimiter:
@@ -61,6 +73,9 @@ class _RateLimiter:
 
         Three tiers checked in increasing scope. The first one that's hit wins —
         the call isn't recorded, so retries after window slide naturally succeed.
+        AI_RATE_LIMIT_DISABLED env flag bypasses user-tier checks; the project
+        ceiling still runs because we never want to silently burn through the
+        Gemini free-tier quota.
         """
         now = time()
 
@@ -72,6 +87,25 @@ class _RateLimiter:
             t for t in self.user_day[user_id] if now - t < 86400
         ]
         self.project_day = [t for t in self.project_day if now - t < 86400]
+
+        if _LIMITER_DISABLED:
+            # Dev/demo bypass — still track the project ceiling so we don't
+            # accidentally drain the day's Gemini quota.
+            if len(self.project_day) >= PROJECT_DAILY_LIMIT:
+                reset_in = self._seconds_until_utc_midnight()
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "kind": "project_quota",
+                        "reset_in_seconds": reset_in,
+                        "message": "AI servisi şu an meşgul, yarın tekrar dene.",
+                    },
+                )
+            # Record but don't enforce user tiers
+            self.user_hour[user_id].append(now)
+            self.user_day[user_id].append(now)
+            self.project_day.append(now)
+            return
 
         # Tier 1: user hourly
         if len(self.user_hour[user_id]) >= USER_HOURLY_LIMIT:

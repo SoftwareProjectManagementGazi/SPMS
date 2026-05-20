@@ -555,6 +555,11 @@ async def _handle_gemini_error(e: Exception) -> AsyncIterator[WorkflowEventDTO]:
     google-genai raises `genai.errors.APIError` with `.code` for HTTP-style
     errors. Rate limits surface as 429, transient unavailability as 5xx.
     We catch broadly since the SDK's exception hierarchy is still maturing.
+
+    Retry-Delay parsing: Gemini's 429 response embeds the actual retry window
+    in the error body (either "Please retry in X.Ys" prose or a structured
+    `retryDelay` field). We surface the real number to the frontend instead
+    of a misleading sabit 1-hour wait.
     """
     err_repr = repr(e)
     logger.error("Gemini call failed: %s", err_repr)
@@ -562,7 +567,6 @@ async def _handle_gemini_error(e: Exception) -> AsyncIterator[WorkflowEventDTO]:
     # Best-effort status code extraction
     code: int | None = getattr(e, "code", None) or getattr(e, "status_code", None)
     if code is None:
-        # Fall back to scanning the message for "429" / "503" patterns
         msg = str(e)
         if "429" in msg or "quota" in msg.lower() or "rate" in msg.lower():
             code = 429
@@ -570,12 +574,21 @@ async def _handle_gemini_error(e: Exception) -> AsyncIterator[WorkflowEventDTO]:
             code = 503
 
     if code == 429:
+        reset_in = _extract_retry_seconds(e)
+        # Distinguish RPM (short wait) vs RPD (long wait) for clearer UX copy
+        is_short_wait = reset_in <= 120
+        message = (
+            f"AI kısa süreli yoğun — {reset_in} saniye sonra tekrar dene."
+            if is_short_wait
+            else "Günlük AI kullanım kotası doldu — yarın tekrar dene "
+                 "(veya yeni bir API key kullan)."
+        )
         yield WorkflowEventDTO(
             type="error",
             payload={
                 "kind": "rate_limit",
-                "reset_in_seconds": 3600,  # Gemini doesn't always tell us; 1h is safe
-                "message": "Gemini API kotası geçici olarak doldu",
+                "reset_in_seconds": reset_in,
+                "message": message,
             },
         )
     else:
@@ -586,3 +599,41 @@ async def _handle_gemini_error(e: Exception) -> AsyncIterator[WorkflowEventDTO]:
                 "message": "AI servisine ulaşılamıyor",
             },
         )
+
+
+def _extract_retry_seconds(e: Exception) -> int:
+    """Parse Gemini's 429 error body for the real retry delay.
+
+    Gemini surfaces the wait time in two places:
+      1. Plain prose: "Please retry in 47.82727737s."
+      2. Structured RetryInfo with `retryDelay: '47s'`
+
+    We try both and clamp to [1, 86400]. Falls back to 60s if nothing parsable
+    surfaces — better default than hardcoded 1h because most Gemini 429s on
+    free tier are RPM-flavored short waits, not daily-quota long waits.
+    """
+    import re
+
+    text = str(e)
+
+    # Pattern A — prose
+    m = re.search(r"retry in ([\d.]+)s", text, flags=re.IGNORECASE)
+    if m:
+        try:
+            return max(1, min(86400, int(float(m.group(1)) + 1)))  # round up
+        except (ValueError, OverflowError):
+            pass
+
+    # Pattern B — RetryInfo: 'retryDelay': '47s'
+    m = re.search(r"retryDelay['\"]?\s*:\s*['\"](\d+)s", text)
+    if m:
+        try:
+            return max(1, min(86400, int(m.group(1))))
+        except (ValueError, OverflowError):
+            pass
+
+    # Pattern C — daily quota messages usually omit retry; assume long wait
+    if "PerDay" in text or "daily" in text.lower():
+        return 3600 * 4  # 4 hours — frontend shows "saat" instead of "dakika"
+
+    return 60  # safe RPM-flavored default
