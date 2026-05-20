@@ -72,8 +72,11 @@ export async function applyLifecycleSuggestion(
   const created = await projectService.create({
     name: `${args.projectName} (AI önerisi)`,
     description: `AI tarafından üretilen ${args.methodology} workflow'u`,
+    key: makeProjectKey(args.projectName),
+    start_date: todayIso(),
+    methodology: args.methodology,
     process_config: nextConfig,
-  } as never) // CreateProjectDTO accepts process_config (Phase 7 D-22)
+  })
   return { projectId: created.id, isNewProject: true }
 }
 
@@ -148,9 +151,45 @@ export async function applyTaskStatusSuggestion(
   const created = await projectService.create({
     name: `${args.projectName} (AI önerisi)`,
     description: `AI tarafından üretilen ${args.methodology} görev durumu workflow'u`,
+    key: makeProjectKey(args.projectName),
+    start_date: todayIso(),
+    methodology: args.methodology,
     process_config: nextConfig,
-  } as never)
+  })
   return { projectId: created.id, isNewProject: true }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — CreateProjectDTO required-field synthesis (new_project mode)
+// ---------------------------------------------------------------------------
+
+/**
+ * Backend POST /projects requires a project `key` — short uppercase identifier
+ * usually 3-5 chars. We derive a deterministic-ish key from the project name
+ * (consonants only, uppercased, capped at 4 chars) plus a 3-char timestamp
+ * suffix so back-to-back AI applies don't collide on the same key.
+ */
+function makeProjectKey(name: string): string {
+  // Strip everything non-alphanumeric, take first 4 letters of consonants
+  const consonants = name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .replace(/[AEIOU]/g, "")
+    .slice(0, 4)
+  // Fallback: if name was all vowels/punct (very unlikely) use "AI"
+  const prefix = consonants || "AI"
+  // 3-char base36 suffix from current ms timestamp for uniqueness
+  const suffix = Date.now().toString(36).slice(-3).toUpperCase()
+  return `${prefix}${suffix}`
+}
+
+/** ISO date (YYYY-MM-DD) for today — backend `start_date` is a date, not datetime. */
+function todayIso(): string {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const dd = String(d.getDate()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd}`
 }
 
 // ---------------------------------------------------------------------------

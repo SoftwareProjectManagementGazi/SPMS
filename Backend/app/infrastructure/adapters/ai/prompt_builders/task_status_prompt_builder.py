@@ -43,7 +43,13 @@ TASK_METHODOLOGY_HINTS_TR: dict[str, str] = {
 
 SYSTEM_PROMPT = """\
 Sen bir kıdemli yazılım proje yönetimi danışmanısın. Görevin: aşağıdaki \
-takım bağlamına uygun bir görev durumu (kanban-style) workflow'u tasarlamak.
+takım bağlamına uygun bir GÖREV DURUMU (kanban-style) workflow'u tasarlamak.
+
+KRİTİK: "Görev durumu" = TEK BİR GÖREVİN yaşam boyunca geçtiği durumlardır \
+(Yapılacak → Devam Ediyor → İnceleme → Test → Bitti). Bunlar projenin üst \
+düzey FAZLARI (Gereksinim, Tasarım, Yayın gibi) DEĞİLDİR. Faz isimleri \
+KULLANMA — sütun isimleri görev hareketini tanımlamalı, projenin nerede \
+olduğunu değil.
 
 ÇIKTI KURALLARI (response_schema zorunlu, JSON dışı metin yazma):
 

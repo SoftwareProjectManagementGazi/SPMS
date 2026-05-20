@@ -18,32 +18,46 @@ from app.application.dtos.ai_workflow_dto import LifecycleFormDTO
 
 METHODOLOGY_EXPLAINERS_TR: dict[str, str] = {
     "SCRUM": (
-        "Sprint tabanlı, iteratif çevik metodoloji. Sprint planlama → "
-        "yürütme → izleme döngüsü tipik. Retro geri besleme edge'i ekle."
+        "Scrum PROJE yaşam döngüsü — projenin başlangıçtan sonuna geçtiği "
+        "üst düzey fazlar (Başlatma → Planlama (Product Backlog) → Yürütme "
+        "(sprint döngüleri) → İzleme (metrikler/retro) → Kapanış). "
+        "İzleme'den Yürütme'ye geri besleme edge'i ekle (sprint retro). "
+        "ÖNEMLİ: 'Sprint Planning', 'Daily Standup', 'Sprint Review', "
+        "'Retrospective' gibi sprint İÇİNDEKİ ceremonies'leri faz YAPMA; "
+        "'Geliştirme', 'Kod İnceleme', 'Test' gibi görev DURUMLARINI da faz "
+        "yapma. Bunlar proje seviyesi değil."
     ),
     "KANBAN": (
-        "Sürekli akış (sprint yok). WIP limitli, durumlar arasında "
-        "sürekli geçiş. Faz sayısı az ve net olmalı."
+        "Kanban PROJE yaşam döngüsü — sürekli akış metodolojisinde bile "
+        "projenin başlangıç-yürütme-kapanış aşamaları vardır. 4-5 üst düzey "
+        "faz: Başlatma → Hazırlık (backlog) → Sürekli Akış → Kapanış. "
+        "ÖNEMLİ: 'To Do', 'In Progress', 'Done' gibi görev durumlarını faz "
+        "YAPMA — onlar Görev Durumu diyagramına aittir, yaşam döngüsüne değil."
     ),
     "WATERFALL": (
-        "Sıralı kilitli faz akışı. Her faz tamamlanmadan sonraki başlamaz. "
-        "Geri besleme edge'i YOK. Klasik 5-6 fazlı yapı."
+        "Waterfall — sıralı kilitli proje fazları. Her faz tamamlanmadan "
+        "sonraki başlamaz. Geri besleme edge'i YOK. Klasik 5-6 faz: "
+        "Gereksinimler → Tasarım → Uygulama → Test → Yayın → Bakım."
     ),
     "ITERATIVE": (
-        "Tekrarlı geliştirme döngüleri. Test fazından Tasarım fazına geri "
-        "besleme edge'i zorunlu."
+        "Iterative — tekrarlı proje fazları. Üst düzey fazlar (Keşif → "
+        "Tasarım → Geliştirme → Test → Yayın) ve Test fazından Tasarım "
+        "fazına geri besleme edge'i. Sprint ceremonies veya görev durumları "
+        "ile karıştırma — bunlar proje seviyesi fazlar."
     ),
     "INCREMENTAL": (
-        "Parçalı teslim. Her artım çalışan ürün üretir. Teslim sonrası bir "
-        "sonraki artıma dönüş edge'i."
+        "Incremental — parçalı proje teslimi. Her artım çalışan ürün üretir. "
+        "Üst düzey fazlar: Planlama → Tasarım → Geliştirme → Test → Teslim. "
+        "Teslim'den Planlama'ya 'Sonraki Artım' geri besleme edge'i."
     ),
     "EVOLUTIONARY": (
-        "Prototip ile başlayıp evrilen yaklaşım. Test fazından Prototip "
-        "fazına dönüş edge'i zorunlu."
+        "Evolutionary — prototip ile başlayıp evrilen proje. Üst düzey "
+        "fazlar: Prototip → Değerlendir → Geliştirme → Test → Teslim. "
+        "Test'ten Prototip'e 'Yeni Prototip' geri besleme edge'i."
     ),
     "RAD": (
-        "Hızlı uygulama geliştirme — paralel kollar. Plan sonrası 2 paralel "
-        "prototip kolu, Entegrasyon fazında birleşir."
+        "RAD — hızlı uygulama geliştirme. Plan sonrası 2 paralel prototip "
+        "kolu, Entegrasyon'da birleşir, sonra Test → Yayın. 6 faz."
     ),
 }
 
@@ -65,8 +79,15 @@ DEPLOYMENT_LABEL_TR: dict[str, str] = {
 
 SYSTEM_PROMPT = """\
 Sen bir kıdemli yazılım proje yönetimi danışmanısın. Görevin: aşağıdaki \
-bağlama uygun, gerçek hayatta uygulanabilir bir proje yaşam döngüsü \
+bağlama uygun, gerçek hayatta uygulanabilir bir PROJE YAŞAM DÖNGÜSÜ \
 workflow'u tasarlamak.
+
+KRİTİK: "Yaşam döngüsü" = PROJENİN başlangıçtan sonuna geçtiği ÜST DÜZEY \
+fazlardır. Bunlar sprint içi aktiviteler (Sprint Planning, Daily, Review, \
+Retro) veya görev durumları (To Do, In Progress, Done) DEĞİLDİR. \
+Tipik fazlar: Başlatma / Gereksinim / Planlama / Tasarım / Geliştirme / \
+Test / Yayın / Bakım — bunlar proje seviyesinde aşamalardır, sprint veya \
+görev seviyesinde değil.
 
 ÇIKTI KURALLARI (response_schema ile zorunlu, JSON dışında metin yazma):
 - 4-10 arası faz (node). Takım küçükse az, büyükse fazla.
