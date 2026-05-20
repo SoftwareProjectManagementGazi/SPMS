@@ -488,12 +488,19 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         with no matching status row are counted in `todo` so the daily totals
         sum to the project's task count.
         """
-        # Pitfall (Phase 13 latent bug surfaced by Reports v2 manual QA):
-        # asyncpg + SQLAlchemy text() chokes on `:name::type` because the
-        # `::` cast operator collides with the `:name` named-param pattern.
-        # Rewrote every cast to the standard SQL `CAST(...)` form so the
-        # parser unambiguously consumes the bound parameter first, then
-        # applies the cast as a separate expression.
+        # Pitfall (Phase 13 latent bugs surfaced by Reports v2 manual QA):
+        #
+        # (a) asyncpg + SQLAlchemy text() chokes on `:name::type` because the
+        #     `::` cast operator collides with the `:name` named-param pattern.
+        #     Every cast is written as `CAST(... AS type)` so the parser
+        #     consumes the bound parameter first, then applies the cast.
+        #
+        # (b) audit_log.new_value for field_name='column_id' is column NAME
+        #     in production data (e.g. "Code Review"), not the integer id.
+        #     Casting to int blows up on real data. The JOIN matches on
+        #     name primarily, with an id fallback for any forward-write that
+        #     uses ids. `bc.project_id = :project_id` is required because
+        #     column names ("Done", "Test") repeat across projects.
         sql = text("""
         WITH days AS (
           SELECT generate_series(CAST(:date_from AS date), CAST(:date_to AS date), INTERVAL '1 day')::date AS day
@@ -508,7 +515,12 @@ class SqlAlchemyAuditRepository(IAuditRepository):
             (
               SELECT bc.name
               FROM audit_log al
-              JOIN board_columns bc ON bc.id = CAST(al.new_value AS INTEGER)
+              JOIN board_columns bc
+                ON bc.project_id = :project_id
+               AND (
+                     bc.name = al.new_value
+                  OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
+               )
               WHERE al.entity_type = 'task'
                 AND al.entity_id = t.id
                 AND al.field_name = 'column_id'
@@ -557,6 +569,10 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         EXCLUDED from cycle (NULL cycle_days). Done → in_progress → done
         corrections use FIRST done; subsequent toggles are ignored.
         """
+        # Same name-vs-id audit_log JOIN pitfall as get_cfd_snapshots —
+        # see that method's docstring for the full rationale. bc.project_id
+        # binding scopes the JOIN to this project's columns so "Done" /
+        # "Code Review" name collisions across projects don't double-count.
         sql = text("""
         WITH task_times AS (
           SELECT
@@ -564,13 +580,23 @@ class SqlAlchemyAuditRepository(IAuditRepository):
             t.created_at,
             (SELECT MIN(al.timestamp)
              FROM audit_log al
-             JOIN board_columns bc ON bc.id = CAST(al.new_value AS INTEGER)
+             JOIN board_columns bc
+               ON bc.project_id = :project_id
+              AND (
+                    bc.name = al.new_value
+                 OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
+              )
              WHERE al.entity_id = t.id AND al.entity_type = 'task'
                AND al.field_name = 'column_id' AND bc.name ILIKE '%done%'
             ) AS first_done,
             (SELECT MIN(al.timestamp)
              FROM audit_log al
-             JOIN board_columns bc ON bc.id = CAST(al.new_value AS INTEGER)
+             JOIN board_columns bc
+               ON bc.project_id = :project_id
+              AND (
+                    bc.name = al.new_value
+                 OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
+              )
              WHERE al.entity_id = t.id AND al.entity_type = 'task'
                AND al.field_name = 'column_id' AND bc.name ILIKE '%progress%'
             ) AS first_in_progress
