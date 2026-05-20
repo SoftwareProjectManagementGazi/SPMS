@@ -134,10 +134,14 @@ export async function applyTaskStatusSuggestion(
   }
   const workflowDTO = unmapWorkflowConfig(workflow)
 
+  // Task-status canonical field is `task_workflow` (Wave 2 W2-C5 rename;
+  // older payloads still carry `status_workflow` as a read-side fallback).
+  // Writing to `task_workflow` is what makes the editor's status-mode canvas
+  // pick up the new shape — `phase_workflow` only drives lifecycle mode.
   if (args.mode === "replace") {
     const nextConfig: Record<string, unknown> = {
       ...args.existingProcessConfig,
-      phase_workflow: workflowDTO,
+      task_workflow: workflowDTO,
     }
     await projectService.updateProcessConfig(args.projectId, nextConfig)
     return { projectId: args.projectId, isNewProject: false }
@@ -145,7 +149,7 @@ export async function applyTaskStatusSuggestion(
 
   const nextConfig: Record<string, unknown> = {
     ...args.existingProcessConfig,
-    phase_workflow: workflowDTO,
+    task_workflow: workflowDTO,
     methodology: args.methodology,
   }
   const created = await projectService.create({

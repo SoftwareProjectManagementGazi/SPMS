@@ -832,14 +832,17 @@ GOOGLE_API_KEY_DEMO=
 
 | Model | Gerçek Daily Limit (free tier) | Notlar |
 |---|---|---|
+| **gemini-2.5-pro** | **0 RPD** (PAID only!) | Free tier'da TAMAMEN KAPALI — kredi kartı gerek |
 | **gemini-2.5-flash** | **20 RPD** | 500'den 20'ye düşmüş — %96 azalma |
 | **gemini-2.5-flash-lite** | ~1000 RPD | Daha yüksek limit, biraz daha düşük kalite |
 | **gemini-2.0-flash** | ~200 RPD | Eski sürüm ama hala destekli |
 
-**Strateji güncellemesi:**
-- Geliştirme + demo için **`GEMINI_MODEL=gemini-2.5-flash-lite`** kullan
-- "Doğru senaryo" demosu için flash key'ini sakla (20 quota titiz kullanım)
-- Multi-project (D-06) hala geçerli — her project ayrı 20 quota
+**Strateji güncellemesi (kesin):**
+- Üretim/demo modeli: **`GEMINI_MODEL=gemini-2.5-flash-lite`** (en yüksek free quota)
+- Pro denenmemeli (limit: 0, çağrı doğrudan 429 atar)
+- Multi-project (D-06) hala geçerli — her project ayrı flash-lite 1000 quota
+- Demo için sakince başlat: flash-lite reasoning workflow generation için yeterli,
+  Türkçe akıcı, structured output garantili.
 
 **Prompt caching (Gemini özelliği):**
 Sistem promptu ve few-shot örnekleri cache'le:
