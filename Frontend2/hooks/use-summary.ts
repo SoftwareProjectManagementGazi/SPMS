@@ -18,5 +18,6 @@ export function useSummary(filters: ReportFilters, enabled: boolean = true) {
     enabled: enabled && filters.projectId != null,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    retry: 1,
   })
 }

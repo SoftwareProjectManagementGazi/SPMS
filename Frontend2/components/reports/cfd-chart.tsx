@@ -41,6 +41,7 @@ import { useApp } from "@/context/app-context"
 import { useCFD } from "@/hooks/use-cfd"
 import { ChartCard } from "./chart-card"
 import { CFDSkeleton } from "./cfd-skeleton"
+import { ChartTooltip } from "./chart-tooltip"
 
 type CFDRange = 7 | 30 | 90
 
@@ -50,54 +51,6 @@ export interface CFDChartProps {
   /** Capability gate from useChartCapabilities (Reports v2 Strategy D):
    *  false → AlertBanner; true → chart; null → idle/loading. */
   applicable: boolean | null
-}
-
-interface RechartsTooltipPayload {
-  name?: string
-  value?: number | string
-  fill?: string
-}
-
-interface RechartsTooltipProps {
-  active?: boolean
-  payload?: RechartsTooltipPayload[]
-  label?: string | number
-}
-
-function CustomTooltip({ active, payload, label }: RechartsTooltipProps) {
-  if (!active || !payload?.length) return null
-  return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: "8px 10px",
-        boxShadow: "var(--shadow-lg)",
-        fontSize: 11.5,
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      {payload.map((p) => (
-        <div
-          key={String(p.name)}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
-              background: p.fill,
-              display: "inline-block",
-            }}
-          />
-          <span>{p.name}:</span>
-          <span className="mono">{p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) {
@@ -247,7 +200,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
               }}
             />
             <Tooltip
-              content={<CustomTooltip />}
+              content={<ChartTooltip />}
               cursor={{ stroke: "var(--border-strong)" }}
             />
             <Area
@@ -256,6 +209,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
               name={T("Yapılacak", "To Do")}
               fill="color-mix(in oklch, var(--status-todo) 40%, transparent)"
               stroke="var(--status-todo)"
+              isAnimationActive={false}
             />
             <Area
               dataKey="progress"
@@ -263,6 +217,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
               name={T("Devam Ediyor", "In Progress")}
               fill="color-mix(in oklch, var(--status-progress) 40%, transparent)"
               stroke="var(--status-progress)"
+              isAnimationActive={false}
             />
             <Area
               dataKey="review"
@@ -270,6 +225,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
               name={T("İncelemede", "Review")}
               fill="color-mix(in oklch, var(--status-review) 40%, transparent)"
               stroke="var(--status-review)"
+              isAnimationActive={false}
             />
             <Area
               dataKey="done"
@@ -277,6 +233,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
               name={T("Tamamlandı", "Done")}
               fill="color-mix(in oklch, var(--status-done) 40%, transparent)"
               stroke="var(--status-done)"
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

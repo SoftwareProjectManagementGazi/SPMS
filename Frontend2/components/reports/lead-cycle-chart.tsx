@@ -34,6 +34,7 @@ import { useApp } from "@/context/app-context"
 import { useLeadCycle } from "@/hooks/use-lead-cycle"
 import { ChartCard } from "./chart-card"
 import { LeadCycleSkeleton } from "./lead-cycle-skeleton"
+import { ChartTooltip } from "./chart-tooltip"
 
 export type LeadCycleKind = "lead" | "cycle"
 type LeadCycleRange = 7 | 30 | 90
@@ -42,54 +43,6 @@ export interface LeadCycleChartProps {
   projectId: number | null
   kind: LeadCycleKind
   globalRange: LeadCycleRange
-}
-
-interface RechartsTooltipPayload {
-  name?: string
-  value?: number | string
-  fill?: string
-}
-
-interface RechartsTooltipProps {
-  active?: boolean
-  payload?: RechartsTooltipPayload[]
-  label?: string | number
-}
-
-function CustomTooltip({ active, payload, label }: RechartsTooltipProps) {
-  if (!active || !payload?.length) return null
-  return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: "8px 10px",
-        boxShadow: "var(--shadow-lg)",
-        fontSize: 11.5,
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      {payload.map((p) => (
-        <div
-          key={String(p.name)}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
-              background: p.fill,
-              display: "inline-block",
-            }}
-          />
-          <span>{p.name}:</span>
-          <span className="mono">{p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 export function LeadCycleChart({
@@ -159,7 +112,7 @@ export function LeadCycleChart({
               }}
             />
             <Tooltip
-              content={<CustomTooltip />}
+              content={<ChartTooltip />}
               cursor={{
                 fill: "color-mix(in oklch, var(--primary) 8%, transparent)",
               }}
@@ -169,6 +122,7 @@ export function LeadCycleChart({
               name={seriesName}
               fill={barColor}
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
           </BarChart>
         </ResponsiveContainer>

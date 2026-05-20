@@ -41,6 +41,7 @@ import { useBurndown } from "@/hooks/use-burndown"
 import type { BurndownData, BurndownPoint } from "@/services/report-service"
 import { ChartCard } from "./chart-card"
 import { BurndownSkeleton } from "./burndown-skeleton"
+import { ChartTooltip } from "./chart-tooltip"
 
 export interface BurndownChartProps {
   projectId: number | null
@@ -53,56 +54,6 @@ export interface BurndownChartProps {
 
 interface ChartRow extends BurndownPoint {
   ideal: number
-}
-
-interface RechartsTooltipPayload {
-  name?: string
-  value?: number | string
-  stroke?: string
-  color?: string
-  dataKey?: string
-}
-
-interface RechartsTooltipProps {
-  active?: boolean
-  payload?: RechartsTooltipPayload[]
-  label?: string | number
-}
-
-function CustomTooltip({ active, payload, label }: RechartsTooltipProps) {
-  if (!active || !payload?.length) return null
-  return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: "8px 10px",
-        boxShadow: "var(--shadow-lg)",
-        fontSize: 11.5,
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      {payload.map((p) => (
-        <div
-          key={String(p.dataKey)}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
-              background: p.stroke ?? p.color ?? "var(--fg-muted)",
-              display: "inline-block",
-            }}
-          />
-          <span>{p.name}:</span>
-          <span className="mono">{p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 /** Compute ideal-burndown line from the actual series.
@@ -249,7 +200,7 @@ export function BurndownChart({ projectId, applicable }: BurndownChartProps) {
               }}
             />
             <Tooltip
-              content={<CustomTooltip />}
+              content={<ChartTooltip />}
               cursor={{ stroke: "var(--border-strong)" }}
             />
             <Line

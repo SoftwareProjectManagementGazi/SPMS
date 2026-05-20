@@ -23,5 +23,6 @@ export function usePhaseProgress(
     enabled: enabled && !!projectId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    retry: 1,
   })
 }

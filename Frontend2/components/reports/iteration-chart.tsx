@@ -44,61 +44,14 @@ import { useApp } from "@/context/app-context"
 import { useIteration } from "@/hooks/use-iteration"
 import { ChartCard } from "./chart-card"
 import { IterationSkeleton } from "./iteration-skeleton"
+import { ChartTooltip } from "./chart-tooltip"
 
 type IterationCount = 3 | 4 | 6
 
 export interface IterationChartProps {
   projectId: number | null
-  /** D-A4 methodology gate: false → return null entirely. */
+  /** Capability gate (Reports v2 Strategy D): false → return null entirely. */
   applicable: boolean | null
-}
-
-interface RechartsTooltipPayload {
-  name?: string
-  value?: number | string
-  fill?: string
-}
-
-interface RechartsTooltipProps {
-  active?: boolean
-  payload?: RechartsTooltipPayload[]
-  label?: string | number
-}
-
-function CustomTooltip({ active, payload, label }: RechartsTooltipProps) {
-  if (!active || !payload?.length) return null
-  return (
-    <div
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: "8px 10px",
-        boxShadow: "var(--shadow-lg)",
-        fontSize: 11.5,
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      {payload.map((p) => (
-        <div
-          key={String(p.name)}
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
-              background: p.fill,
-              display: "inline-block",
-            }}
-          />
-          <span>{p.name}:</span>
-          <span className="mono">{p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 const PLANNED_FILL = "color-mix(in oklch, var(--status-progress) 60%, transparent)"
@@ -229,7 +182,7 @@ export function IterationChart({ projectId, applicable }: IterationChartProps) {
               }}
             />
             <Tooltip
-              content={<CustomTooltip />}
+              content={<ChartTooltip />}
               cursor={{
                 fill: "color-mix(in oklch, var(--primary) 8%, transparent)",
               }}
@@ -239,18 +192,21 @@ export function IterationChart({ projectId, applicable }: IterationChartProps) {
               name={T("Planlanan", "Planned")}
               fill={PLANNED_FILL}
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
             <Bar
               dataKey="completed"
               name={T("Tamamlanan", "Completed")}
               fill={COMPLETED_FILL}
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
             <Bar
               dataKey="carried"
               name={T("Taşınan", "Carried")}
               fill={CARRIED_FILL}
               radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
             />
           </BarChart>
         </ResponsiveContainer>

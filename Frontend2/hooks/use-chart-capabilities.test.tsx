@@ -89,7 +89,7 @@ describe("useChartCapabilities", () => {
     expect(captured.current?.isLoading).toBe(false)
   })
 
-  it("propagates server errors as isError=true", async () => {
+  it("propagates server errors as isError=true (after retry)", async () => {
     ;(apiClient.get as any).mockRejectedValue(
       Object.assign(new Error("boom"), {
         response: { status: 404, data: { error_code: "PROJECT_NOT_FOUND" } },
@@ -100,8 +100,15 @@ describe("useChartCapabilities", () => {
 
     render(<Probe />, { wrapper: Wrapper })
 
-    await waitFor(() => expect(captured.current?.isError).toBe(true))
+    // The hook ships `retry: 1` (Wave 4 perf-default) so a 404 path needs
+    // ~1s for the single retry to elapse before the query marks itself
+    // errored. Bump the waitFor timeout to comfortably accommodate.
+    await waitFor(() => expect(captured.current?.isError).toBe(true), {
+      timeout: 4000,
+    })
     expect(captured.current?.data).toBeUndefined()
+    // Hook fired twice: initial attempt + the 1-retry.
+    expect((apiClient.get as any).mock.calls.length).toBe(2)
   })
 
   it("uses a stable cache key per projectId so two consumers share the fetch", async () => {

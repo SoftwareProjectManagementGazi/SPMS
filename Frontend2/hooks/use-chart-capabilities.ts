@@ -43,5 +43,6 @@ export function useChartCapabilities(projectId: number | null | undefined) {
     enabled: !!projectId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
+    retry: 1,
   })
 }
