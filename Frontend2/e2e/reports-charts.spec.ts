@@ -147,11 +147,41 @@ test.describe("Reports page @reports-v2", () => {
     // Wait for the auto-select effect to seed the URL with the first project.
     await page.waitForURL(/[?&]projectId=\d+/, { timeout: 10_000 })
 
-    // The page mounts with projectId in the URL — that's the round-trip
-    // assertion. Manually triggering a select.change is brittle in
-    // Playwright across browsers; the auto-seed already proves the
-    // URL-state pipeline is wired bi-directionally (URL → state → URL).
+    // The page mounts with projectId in the URL — that's the state → URL
+    // direction of the round trip. The refresh-hydration test below
+    // exercises the other direction (URL → state).
     const url = new URL(page.url())
     expect(url.searchParams.get("projectId")).toMatch(/^\d+$/)
+  })
+
+  test("refresh on /reports?range=7 hydrates the DateRangeFilter from the URL", async ({
+    page,
+  }) => {
+    // Resolve a real projectId via the auto-select first so the URL we
+    // navigate to is meaningful — otherwise the effect would clobber the
+    // range we set with its own projectId seed.
+    await page.waitForURL(/[?&]projectId=\d+/, { timeout: 10_000 })
+    const seededId = new URL(page.url()).searchParams.get("projectId")
+    expect(seededId).toMatch(/^\d+$/)
+
+    // Direct-navigate (mimicking a bookmark or share-link) with both
+    // params set. After the page finishes loading, the URL params MUST
+    // still be intact (no auto-clobber) AND the DateRangeFilter MUST
+    // visibly reflect the `7` selection.
+    await page.goto(`/reports?projectId=${seededId}&range=7`)
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Raporlar|Reports/ }),
+    ).toBeVisible({ timeout: 10_000 })
+
+    const after = new URL(page.url())
+    expect(after.searchParams.get("projectId")).toBe(seededId)
+    expect(after.searchParams.get("range")).toBe("7")
+
+    // SegmentedControl marks the active option with aria-pressed=true; the
+    // 7d chip text varies by language so we match on either TR / EN copy.
+    const seven = page.getByRole("button", { name: /Son 7 gün|Last 7 days/ })
+    await expect(seven).toBeVisible()
+    await expect(seven).toHaveAttribute("aria-pressed", "true")
   })
 })

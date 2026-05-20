@@ -51,6 +51,10 @@ export function SegmentedControl({
             type="button"
             key={opt.id}
             onClick={() => onChange(opt.id)}
+            // aria-pressed gives the segmented-control radio-like semantics
+            // for screen readers + lets E2E asserts detect the active chip
+            // without inspecting inline styles (Reports v2 Wave 6 a11y fix).
+            aria-pressed={isActive}
             style={{
               padding: size === "xs" ? "3px 8px" : "4px 10px",
               fontSize: size === "xs" ? 11 : 11.5,

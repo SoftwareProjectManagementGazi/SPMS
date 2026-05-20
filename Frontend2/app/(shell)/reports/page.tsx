@@ -55,6 +55,7 @@ import {
 import { PhaseReportsSection } from "@/components/reports/phase-reports-section"
 import { useChartCapabilities } from "@/hooks/use-chart-capabilities"
 import { useSummary } from "@/hooks/use-summary"
+import { useIteration } from "@/hooks/use-iteration"
 import type { ReportFilters } from "@/services/report-service"
 
 // ---------------------------------------------------------------------------
@@ -198,6 +199,34 @@ function ReportsPageInner() {
   const summaryQuery = useSummary(filters, caps?.summary === true)
   const summary = summaryQuery.data
 
+  // Sprint Velocity StatCard derivation (Wave 6 Bulgu A fix).
+  //
+  // Background: the prototype shows the velocity card as "48 +6 pts" — an
+  // absolute value with a period-over-period delta. The Wave 1a SummaryDTO
+  // shipped `velocityDelta` as an Optional field but no canonical absolute
+  // value, because the v1.0 BE never aggregated "sprint velocity" into the
+  // /reports/summary payload. Rather than add a new BE endpoint we reuse
+  // useIteration (already mounted by IterationChart with count=4 below),
+  // which returns the last N sprints with their `completed` counts. The
+  // most recent sprint's `completed` is the canonical sprint-level velocity;
+  // the delta is the diff to the previous sprint.
+  //
+  // The hook share the queryKey ["chart","iteration",projectId,4] with
+  // IterationChart so a single network call services both consumers.
+  // Capability-gating piggybacks on caps.iteration (sprint_count > 0).
+  const iterationQuery = useIteration(
+    caps?.iteration === true ? selectedProjectId : null,
+    4,
+  )
+  const iterationSprints = iterationQuery.data?.sprints ?? []
+  const latestSprint = iterationSprints[iterationSprints.length - 1]
+  const prevSprint = iterationSprints[iterationSprints.length - 2]
+  const velocityValue = latestSprint?.completed ?? null
+  const velocityDelta =
+    latestSprint && prevSprint
+      ? latestSprint.completed - prevSprint.completed
+      : null
+
   // --- Capability flags as boolean | null (null = loading) -------------
   // null while the caps query is in flight; charts treat null as "idle"
   // and render the skeleton/placeholder branch.
@@ -296,8 +325,8 @@ function ReportsPageInner() {
       >
         <StatCard
           label={T("Sprint Velocity", "Sprint velocity")}
-          value={formatValue(summary?.velocityDelta ?? null)}
-          delta={formatDelta(summary?.velocityDelta ?? null, T(" pts", " pts"))}
+          value={formatValue(velocityValue)}
+          delta={formatDelta(velocityDelta, T(" görev", " tasks"))}
           tone="primary"
           icon={<ListChecks size={14} />}
         />
