@@ -488,9 +488,15 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         with no matching status row are counted in `todo` so the daily totals
         sum to the project's task count.
         """
+        # Pitfall (Phase 13 latent bug surfaced by Reports v2 manual QA):
+        # asyncpg + SQLAlchemy text() chokes on `:name::type` because the
+        # `::` cast operator collides with the `:name` named-param pattern.
+        # Rewrote every cast to the standard SQL `CAST(...)` form so the
+        # parser unambiguously consumes the bound parameter first, then
+        # applies the cast as a separate expression.
         sql = text("""
         WITH days AS (
-          SELECT generate_series(:date_from::date, :date_to::date, '1 day'::interval)::date AS day
+          SELECT generate_series(CAST(:date_from AS date), CAST(:date_to AS date), INTERVAL '1 day')::date AS day
         ),
         project_tasks AS (
           SELECT id FROM tasks WHERE project_id = :project_id
@@ -506,7 +512,7 @@ class SqlAlchemyAuditRepository(IAuditRepository):
               WHERE al.entity_type = 'task'
                 AND al.entity_id = t.id
                 AND al.field_name = 'column_id'
-                AND al.timestamp <= (d.day + INTERVAL '1 day - 1 second')
+                AND al.timestamp < (d.day + INTERVAL '1 day')
               ORDER BY al.timestamp DESC
               LIMIT 1
             ) AS status_name
@@ -570,7 +576,7 @@ class SqlAlchemyAuditRepository(IAuditRepository):
             ) AS first_in_progress
           FROM tasks t
           WHERE t.project_id = :project_id
-            AND t.created_at >= NOW() - (:range_days || ' days')::INTERVAL
+            AND t.created_at >= NOW() - make_interval(days => :range_days)
         ),
         durations AS (
           SELECT
