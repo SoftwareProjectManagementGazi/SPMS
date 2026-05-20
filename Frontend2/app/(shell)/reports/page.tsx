@@ -1,22 +1,24 @@
 "use client"
 
-// Reports migration v2 (Strategy D) Wave 1b — page rewire.
+// Reports migration v2 (Strategy D) Wave 5 — page rewire.
 //
-// Changes vs Phase 13:
-// - URL-state filters (D-C5-style) so /reports?projectId=42&range=30 round-
-//   trips through refresh / bookmark / share. Adopts the audit-page pattern
-//   at app/(shell)/admin/audit/page.tsx (Suspense wrapping + useSearchParams
-//   + router.replace).
-// - Capability gating moved to backend via useChartCapabilities — the FE
-//   never reads project.methodology to decide what to render. CFD / Lead /
-//   Iteration chart cards still receive an `applicable: boolean | null`
-//   prop for prop-API stability, but the boolean now comes from the
-//   backend capability response instead of the deleted FE applicability
-//   mirror (chartApplicabilityFor).
-// - Wave 2 will wire StatCards / Burndown / TeamLoad. Wave 3 adds the new
-//   chart components. This commit deliberately keeps the placeholder cards
-//   intact (still showing the prototype's v1.0 shell) so the page layout
-//   is stable for the data/chart rewire in subsequent waves.
+// Mounts every Wave 3 chart component (BurndownChart, TeamLoadCard,
+// PhaseProgressChart) and wires the 4 StatCards to useSummary. The Wave
+// 1b Suspense + URL-state + capability gating from useChartCapabilities
+// is preserved end-to-end.
+//
+// Filter pipeline:
+//   URL ?projectId=X&range=Y
+//      → globalRange (7|30|90|q2)
+//      → chartRange (7|30|90 for chart endpoints that need a window)
+//      → filters: ReportFilters { projectId, dateFrom, dateTo }
+//        built from globalRange via today() - N days ... today()
+//
+// Layout matches the prototype (New_Frontend/src/pages/misc.jsx:356-534)
+// with one deliberate prototype extension: a full-width PhaseProgressChart
+// between Iteration and PhaseReports — justified in
+// .planning/REPORTS-MIGRATION-PLAN.md §1 as the Strategy D differentiator
+// for projects whose methodology gates Burndown/Iteration out.
 
 import * as React from "react"
 import {
@@ -25,13 +27,12 @@ import {
   usePathname,
 } from "next/navigation"
 import {
-  Download,
   Folder,
   ListChecks,
   CheckCircle2,
   AlertOctagon,
 } from "lucide-react"
-import { Card, Button, ProgressBar } from "@/components/primitives"
+import { AlertBanner } from "@/components/primitives"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { useApp } from "@/context/app-context"
 import { useProjects } from "@/hooks/use-projects"
@@ -44,8 +45,17 @@ import {
 import { CFDChart } from "@/components/reports/cfd-chart"
 import { LeadCycleChart } from "@/components/reports/lead-cycle-chart"
 import { IterationChart } from "@/components/reports/iteration-chart"
+import { BurndownChart } from "@/components/reports/burndown-chart"
+import { TeamLoadCard } from "@/components/reports/team-load-card"
+import { PhaseProgressChart } from "@/components/reports/phase-progress-chart"
+import {
+  ExportButton,
+  type ExportMessage,
+} from "@/components/reports/export-button"
 import { PhaseReportsSection } from "@/components/reports/phase-reports-section"
 import { useChartCapabilities } from "@/hooks/use-chart-capabilities"
+import { useSummary } from "@/hooks/use-summary"
+import type { ReportFilters } from "@/services/report-service"
 
 // ---------------------------------------------------------------------------
 // URL <-> filter encoding
@@ -67,6 +77,45 @@ function parseRange(raw: string | null): DateRange {
   return (VALID_RANGES as Array<DateRange | number>).includes(n)
     ? (n as DateRange)
     : DEFAULT_RANGE
+}
+
+/** Convert the global DateRange chip to a {dateFrom, dateTo} pair for
+ *  the v1 report endpoints. "q2" decorative chip falls back to 90 days. */
+function rangeToFilters(
+  projectId: number | null,
+  range: DateRange,
+): ReportFilters {
+  const dayCount = range === "q2" ? 90 : (range as 7 | 30 | 90)
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(from.getDate() - dayCount + 1)
+  return {
+    projectId,
+    dateFrom: from.toISOString().slice(0, 10),
+    dateTo: today.toISOString().slice(0, 10),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers — StatCard value/delta formatting
+// ---------------------------------------------------------------------------
+
+const EM_DASH = "—"
+
+function formatValue(value: number | null | undefined): string {
+  if (value === null || value === undefined) return EM_DASH
+  if (Number.isInteger(value)) return String(value)
+  return value.toFixed(1)
+}
+
+function formatDelta(
+  value: number | null | undefined,
+  suffix: string = "",
+): string | undefined {
+  if (value === null || value === undefined) return undefined
+  const sign = value > 0 ? "+" : ""
+  const rendered = Number.isInteger(value) ? String(value) : value.toFixed(1)
+  return `${sign}${rendered}${suffix}`
 }
 
 // ---------------------------------------------------------------------------
@@ -92,8 +141,6 @@ function ReportsPageInner() {
   const { data: projects } = useProjects("ACTIVE,COMPLETED")
   const projectList = (projects as Project[] | undefined) ?? []
 
-  // URL is the source of truth — re-derive every render so refresh /
-  // bookmark / share works.
   const selectedProjectId = React.useMemo(
     () => parseProjectId(searchParams?.get("projectId") ?? null),
     [searchParams],
@@ -125,35 +172,59 @@ function ReportsPageInner() {
     [updateParams],
   )
   const setGlobalRange = React.useCallback(
-    (next: DateRange) =>
-      updateParams({ range: String(next) }),
+    (next: DateRange) => updateParams({ range: String(next) }),
     [updateParams],
   )
 
-  // First-paint convenience: when no projectId is in the URL and the project
-  // list resolves, seed the URL with the first project so the page is not
-  // empty on /reports landings (e.g. nav-tab click without a query string).
   React.useEffect(() => {
     if (selectedProjectId == null && projectList.length > 0) {
       setSelectedProjectId(projectList[0].id)
     }
   }, [projectList, selectedProjectId, setSelectedProjectId])
 
-  // Backend is the single source of truth for chart visibility. We never
-  // re-derive capabilities from project.methodology on the FE.
+  // --- Capability + filter derivation ----------------------------------
   const capsQuery = useChartCapabilities(selectedProjectId)
   const caps = capsQuery.data
 
-  // Charts only consume 7 | 30 | 90; the "q2" decorative chip falls back to
-  // 90d so the chart series still load coherently.
+  const filters = React.useMemo(
+    () => rangeToFilters(selectedProjectId, globalRange),
+    [selectedProjectId, globalRange],
+  )
+
   const chartRange: 7 | 30 | 90 =
     globalRange === "q2" ? 90 : (globalRange as 7 | 30 | 90)
 
-  // While caps are loading we surface `null` to legacy chart props so they
-  // sit in the "idle" branch (skeleton via DataState) instead of flashing
-  // a methodology-mismatch banner. Once resolved we pass the actual bool.
+  // --- Data hooks ------------------------------------------------------
+  const summaryQuery = useSummary(filters, caps?.summary === true)
+  const summary = summaryQuery.data
+
+  // --- Capability flags as boolean | null (null = loading) -------------
+  // null while the caps query is in flight; charts treat null as "idle"
+  // and render the skeleton/placeholder branch.
   const cfdApplicable: boolean | null = caps ? caps.cfd : null
   const iterationApplicable: boolean | null = caps ? caps.iteration : null
+  const burndownApplicable: boolean | null = caps ? caps.burndown : null
+  const teamLoadApplicable: boolean | null = caps ? caps.team_load : null
+  const phaseProgressApplicable: boolean | null = caps
+    ? caps.phase_progress
+    : null
+
+  // --- Export message strip --------------------------------------------
+  // ExportButton dispatches success/failure into this transient AlertBanner.
+  // Auto-clears after 3s — no Toast primitive shipped (peer review §2.8).
+  const [exportMsg, setExportMsg] = React.useState<ExportMessage | null>(null)
+  const clearTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleExportMessage = React.useCallback((msg: ExportMessage) => {
+    setExportMsg(msg)
+    if (clearTimer.current) clearTimeout(clearTimer.current)
+    clearTimer.current = setTimeout(() => setExportMsg(null), 3_000)
+  }, [])
+  React.useEffect(
+    () => () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current)
+    },
+    [],
+  )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -193,15 +264,28 @@ function ReportsPageInner() {
             onChange={setSelectedProjectId}
           />
           <DateRangeFilter value={globalRange} onChange={setGlobalRange} />
-          <Button variant="secondary" size="sm" icon={<Download size={13} />}>
-            PDF
-          </Button>
+          <ExportButton
+            filters={filters}
+            disabled={selectedProjectId == null}
+            onMessage={handleExportMessage}
+          />
         </div>
       </div>
 
-      {/* 4 StatCards row — Wave 2 will wire these to /reports/summary.
-          Until then the prototype shell stays so the page layout doesn't
-          shift between Wave 1b and Wave 2 commits. */}
+      {/* Transient export feedback (replaces Toast primitive per peer review) */}
+      {exportMsg ? (
+        <AlertBanner
+          tone={exportMsg.variant === "success" ? "success" : "danger"}
+        >
+          {exportMsg.text}
+        </AlertBanner>
+      ) : null}
+
+      {/* 4 StatCards — wired to /reports/summary in Wave 5. Velocity +
+          blockers come from optional SummaryDTO delta fields (Wave 1a
+          added them as Optional with `null` default; backend delta
+          computation lands as a follow-up). Cycle time + completion
+          flow from the same payload's primary fields. */}
       <div
         className="reports-stat-grid"
         style={{
@@ -212,34 +296,42 @@ function ReportsPageInner() {
       >
         <StatCard
           label={T("Sprint Velocity", "Sprint velocity")}
-          value="—"
+          value={formatValue(summary?.velocityDelta ?? null)}
+          delta={formatDelta(summary?.velocityDelta ?? null, T(" pts", " pts"))}
           tone="primary"
           icon={<ListChecks size={14} />}
         />
         <StatCard
           label={T("Döngü Süresi", "Cycle time")}
-          value="—"
+          value={
+            summary?.cycleTimeAvgDays != null
+              ? `${formatValue(summary.cycleTimeAvgDays)}${T("g", "d")}`
+              : EM_DASH
+          }
+          delta={formatDelta(
+            summary?.cycleTimeDeltaDays ?? null,
+            T("g", "d"),
+          )}
           tone="info"
           icon={<Folder size={14} />}
         />
         <StatCard
           label={T("Tamamlanan", "Completed")}
-          value="—"
+          value={formatValue(summary?.completedTasks)}
+          delta={formatDelta(summary?.completedDeltaPct ?? null, "%")}
           tone="success"
           icon={<CheckCircle2 size={14} />}
         />
         <StatCard
           label={T("Engeller", "Blockers")}
-          value="—"
+          value={formatValue(summary?.blockersCount ?? null)}
+          delta={formatDelta(summary?.blockersDelta ?? null, "")}
           tone="danger"
           icon={<AlertOctagon size={14} />}
         />
       </div>
 
-      {/* Burndown + Team Load row — Wave 3 will replace these placeholder
-          shells with <BurndownChart> and <TeamLoadCard>. Layout (1.5fr /
-          1fr) is the prototype's contract; preserved across the rewire so
-          the visual rhythm is stable mid-migration. */}
+      {/* Burndown + Team Load row — now wired to real components. */}
       <div
         className="reports-burndown-grid"
         style={{
@@ -248,49 +340,17 @@ function ReportsPageInner() {
           gap: 16,
         }}
       >
-        <Card padding={16}>
-          <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            {T("Burndown — Sprint 23", "Burndown — Sprint 23")}
-          </h3>
-          <div
-            style={{
-              height: 160,
-              color: "var(--fg-subtle)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-            }}
-          >
-            {T("Burndown grafiği — v1.0 verisi", "Burndown chart — v1.0 data")}
-          </div>
-        </Card>
-        <Card padding={16}>
-          <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
-            {T("Takım Yükü", "Team Load")}
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ padding: "7px 0" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 12,
-                  marginBottom: 4,
-                }}
-              >
-                <span>—</span>
-                <span className="mono">0%</span>
-              </div>
-              <ProgressBar value={0} max={100} />
-            </div>
-          </div>
-        </Card>
+        <BurndownChart
+          projectId={selectedProjectId}
+          applicable={burndownApplicable}
+        />
+        <TeamLoadCard
+          filters={filters}
+          applicable={teamLoadApplicable}
+        />
       </div>
 
-      {/* CFD card — capability-gated (Strategy D). Backend returns
-          caps.cfd=true iff the project has the {todo, in_progress, done}
-          category triple in its columns. */}
+      {/* CFD card — Strategy D: gated on column-category triple presence. */}
       <CFDChart
         projectId={selectedProjectId}
         globalRange={chartRange}
@@ -318,18 +378,19 @@ function ReportsPageInner() {
         />
       </div>
 
-      {/* Iteration card — capability-gated. Backend returns caps.iteration
-          based on sprint presence (sprint_count > 0), NOT methodology. A
-          custom workflow project with sprints gets the chart; a Scrum-named
-          project with zero sprints does not. */}
+      {/* Iteration card — Strategy D: gated on sprint presence. */}
       <IterationChart
         projectId={selectedProjectId}
         applicable={iterationApplicable}
       />
 
-      {/* Phase Reports — independent surface (own pickers). Wave 3 will
-          insert a Phase Progress chart between Iteration and this section
-          for projects with phase_workflow.nodes. */}
+      {/* Phase Progress — NEW Strategy D differentiator. Renders for any
+          project with phase_workflow.nodes (Waterfall + custom workflows). */}
+      <PhaseProgressChart
+        projectId={selectedProjectId}
+        applicable={phaseProgressApplicable}
+      />
+
       <PhaseReportsSection />
     </div>
   )
