@@ -538,14 +538,23 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         )
 
         # JSONB path: process_config -> 'phase_workflow' -> 'nodes' is the
-        # canonical V2 location (schema_version=2 per project.py:62-104). The
-        # COALESCE keeps the result well-typed when the path is missing or
-        # null. The CASE prevents jsonb_array_length from erroring on
-        # non-array values (defensive — should never happen with normalized
-        # configs but cheap to guard against).
-        process_config_path = ProjectModel.process_config["phase_workflow"]["nodes"]
+        # canonical V2 location (schema_version=2 per project.py:62-104).
+        # The Project entity normalizer (entities/project.py) lazy-migrates
+        # V1 → V2 in Python on load, but row-level SQL aggregates here run
+        # against the raw stored JSONB which may still carry the V1 shape
+        # (`workflow.nodes` instead of `phase_workflow.nodes`). 18/20 of the
+        # current seed projects sit on V1 — without this COALESCE every
+        # Waterfall project incorrectly reports `phase_node_count=0` and the
+        # Phase Progress capability gate evaluates to false even though the
+        # endpoint itself (using the entity layer) would have returned data.
+        # Reads BOTH keys so the capability check agrees with the endpoint
+        # regardless of whether the row has been touched (and rewritten by
+        # the entity normalizer) since the V2 migration landed.
+        v2_path = ProjectModel.process_config["phase_workflow"]["nodes"]
+        v1_path = ProjectModel.process_config["workflow"]["nodes"]
         phase_node_count_expr = func.coalesce(
-            func.jsonb_array_length(process_config_path),
+            func.jsonb_array_length(v2_path),
+            func.jsonb_array_length(v1_path),
             0,
         )
 

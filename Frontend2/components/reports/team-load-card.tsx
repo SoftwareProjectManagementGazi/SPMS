@@ -123,7 +123,12 @@ export function TeamLoadCard({
         </AlertBanner>
       ) : (
         <DataState
-          loading={query.isLoading}
+          // Reports v2 audit FE-2: when capabilities are still loading
+          // (applicable === null) the hook is disabled, so query.isLoading
+          // is false → DataState would skip to empty/no-data. Force-loading
+          // until caps resolve avoids the misleading "No active tasks"
+          // flash before we know whether the card should render at all.
+          loading={applicable === null || query.isLoading}
           loadingFallback={
             <div aria-busy="true" aria-label="Yükleniyor" style={{ minHeight: 160 }}>
               {Array.from({ length: 3 }).map((_, i) => (

@@ -48,6 +48,48 @@ def _parse_assignee_ids(assignee_ids: Optional[str]) -> Optional[List[int]]:
         return None
 
 
+async def _ensure_project_access(
+    project_id: int,
+    current_user: User,
+    project_repo: IProjectRepository,
+) -> None:
+    """Shared 404/403 guard for /reports endpoints.
+
+    Reports v2 audit (BUG-C): previously these endpoints used an inline
+    membership check that admin bypassed entirely. Result: admin getting
+    200+empty for non-existent project IDs, no diagnostic for the FE.
+    This helper unifies the contract: 404 on missing project (admin or
+    non-admin), 403 on non-member of existing project.
+
+    Behaviorally identical to api/deps/project.get_project_member, but
+    inlined because reports.py endpoints don't take project_id as a
+    dependency parameter — they accept it as a query string, so the
+    existing `Depends(get_project_member)` shape can't be reused
+    without restructuring every endpoint signature.
+    """
+    if _is_admin(current_user):
+        project = await project_repo.get_by_id(project_id)
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error_code": "PROJECT_NOT_FOUND", "project_id": project_id},
+            )
+        return
+    project = await project_repo.get_by_id_and_user(project_id, current_user.id)
+    if project is None:
+        # Disambiguate 404 vs 403 — non-member of an existing project
+        # still gets 403 to avoid leaking project enumeration.
+        exists = await project_repo.get_by_id(project_id)
+        if exists is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error_code": "PROJECT_NOT_FOUND", "project_id": project_id},
+            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member",
+        )
+
+
 @router.get("/summary", response_model=SummaryDTO)
 async def get_summary(
     project_id: int,
@@ -58,10 +100,7 @@ async def get_summary(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     parsed_ids = _parse_assignee_ids(assignee_ids)
     use_case = GetSummaryUseCase(report_repo)
@@ -76,10 +115,7 @@ async def get_burndown(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     use_case = GetBurndownUseCase(report_repo)
     return await use_case.execute(project_id, sprint_id)
@@ -94,10 +130,7 @@ async def get_velocity(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     use_case = GetVelocityUseCase(report_repo)
     return await use_case.execute(project_id, date_from, date_to)
@@ -114,10 +147,7 @@ async def get_distribution(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     parsed_ids = _parse_assignee_ids(assignee_ids)
     use_case = GetDistributionUseCase(report_repo)
@@ -134,10 +164,7 @@ async def get_performance(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     parsed_ids = _parse_assignee_ids(assignee_ids)
     use_case = GetPerformanceUseCase(report_repo)
@@ -154,10 +181,7 @@ async def export_pdf(
     project_repo: IProjectRepository = Depends(get_project_repo),
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     try:
         project_obj = await project_repo.get_by_id(project_id)
@@ -266,10 +290,7 @@ async def export_excel(
     report_repo: IReportRepository = Depends(get_report_repo),
 ):
     # Same membership check as PDF
-    if not _is_admin(current_user):
-        project = await project_repo.get_by_id_and_user(project_id, current_user.id)
-        if project is None:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    await _ensure_project_access(project_id, current_user, project_repo)
 
     try:
         project_obj = await project_repo.get_by_id(project_id)

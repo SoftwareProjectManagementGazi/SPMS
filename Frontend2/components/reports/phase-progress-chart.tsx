@@ -114,7 +114,11 @@ export function PhaseProgressChart({
         </AlertBanner>
       ) : (
         <DataState
-          loading={query.isLoading}
+          // Reports v2 audit FE-2: applicable === null (caps in flight)
+          // forces the loading skeleton; without this the disabled hook
+          // would surface an empty-state copy before we know if the card
+          // should render. Same pattern as TeamLoadCard.
+          loading={applicable === null || query.isLoading}
           loadingFallback={
             <div
               aria-busy="true"

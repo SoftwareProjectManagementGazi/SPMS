@@ -164,6 +164,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
       }
       query={query}
       loadingFallback={<CFDSkeleton />}
+      applicableLoading={applicable === null}
       empty={!query.data?.days?.length}
     >
       <div

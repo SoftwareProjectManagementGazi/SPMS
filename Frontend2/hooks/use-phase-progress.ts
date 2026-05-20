@@ -7,7 +7,7 @@
 // The BE response is already pre-ordered + zipped with archived nodes
 // skipped — the hook just needs to surface the data.
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import {
   reportService,
   type PhaseProgressData,
@@ -24,5 +24,6 @@ export function usePhaseProgress(
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    placeholderData: keepPreviousData,
   })
 }

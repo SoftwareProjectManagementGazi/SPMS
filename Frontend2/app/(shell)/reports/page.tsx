@@ -237,7 +237,8 @@ function ReportsPageInner() {
 
   // --- Capability flags as boolean | null (null = loading) -------------
   // null while the caps query is in flight; charts treat null as "idle"
-  // and render the skeleton/placeholder branch.
+  // and render the skeleton (Reports v2 audit FE-2 fix via ChartCard
+  // `applicableLoading` + TeamLoad/PhaseProgress inline branches).
   const cfdApplicable: boolean | null = caps ? caps.cfd : null
   const iterationApplicable: boolean | null = caps ? caps.iteration : null
   const burndownApplicable: boolean | null = caps ? caps.burndown : null
@@ -245,6 +246,24 @@ function ReportsPageInner() {
   const phaseProgressApplicable: boolean | null = caps
     ? caps.phase_progress
     : null
+  // FE-3 (cross-component consistency): wire caps.lead_cycle through even
+  // though the BE rule is currently always-true. Keeps the contract
+  // uniform across all 6 chart cards and surfaces a clean null/idle
+  // state during capability resolution.
+  const leadCycleApplicable: boolean | null = caps ? caps.lead_cycle : null
+
+  // --- 404 / invalid project error banner (Reports v2 audit FE-4) ------
+  // When the URL carries a projectId that doesn't exist, capsQuery's
+  // fetch returns 404. Without surfacing it the page renders 6+ empty
+  // cards with no diagnostic — user can't tell whether the project is
+  // empty or the URL is broken. Detect the 404 specifically (other
+  // errors like 5xx fall through to the per-chart error states).
+  const capsError = capsQuery.error as
+    | { response?: { status?: number; data?: { error_code?: string } } }
+    | undefined
+  const projectNotFound =
+    capsError?.response?.status === 404 ||
+    capsError?.response?.data?.error_code === "PROJECT_NOT_FOUND"
 
   // --- Export message strip --------------------------------------------
   // ExportButton dispatches success/failure into this transient AlertBanner.
@@ -308,6 +327,19 @@ function ReportsPageInner() {
           />
         </div>
       </div>
+
+      {/* Reports v2 audit FE-4: top-level error banner when the URL
+          points at a non-existent project. capsQuery 404 is the canary —
+          all per-chart hooks gated on caps would render as empty/idle
+          otherwise, leaving the user with no diagnostic. */}
+      {projectNotFound ? (
+        <AlertBanner tone="danger">
+          {T(
+            "Bu proje bulunamadı. Lütfen yukarıdaki listeden bir proje seçin.",
+            "This project doesn't exist. Pick one from the list above.",
+          )}
+        </AlertBanner>
+      ) : null}
 
       {/* Transient export feedback (replaces Toast primitive per peer review) */}
       {exportMsg ? (
@@ -407,11 +439,13 @@ function ReportsPageInner() {
           projectId={selectedProjectId}
           kind="lead"
           globalRange={chartRange}
+          applicable={leadCycleApplicable}
         />
         <LeadCycleChart
           projectId={selectedProjectId}
           kind="cycle"
           globalRange={chartRange}
+          applicable={leadCycleApplicable}
         />
       </div>
 

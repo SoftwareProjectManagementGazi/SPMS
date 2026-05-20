@@ -9,6 +9,20 @@ Methodology-agnostic by design — any project that has phase workflow nodes
 gets meaningful visualization, including Waterfall and custom workflows
 that don't fit the legacy SCRUM/KANBAN binary.
 
+Known data dependency (Reports v2 audit Bulgu BE-B):
+    The chart's task aggregates require ``tasks.phase_id`` to be populated.
+    As of 2026-05-21 every seeded task has ``phase_id IS NULL``, so the
+    repository's GROUP-BY query returns zero rows for every project and
+    the Phase Progress endpoint surfaces all phases with total=0. This is
+    NOT a code defect — the aggregation logic is correct — but the chart
+    will appear "decorative" (all bars at 0%) until either:
+      (a) UpdateTaskUseCase starts writing ``phase_id`` when a task is
+          moved into a column belonging to a phase node, OR
+      (b) a backfill migration derives ``phase_id`` from existing
+          ``column_id`` → workflow node mappings.
+    Backlogged for a future phase; the FE handles the all-zero case
+    cleanly via its empty-state copy.
+
 DIP: only domain repository interfaces + DTOs imported. No SQLAlchemy.
 """
 from typing import Any, Dict, List

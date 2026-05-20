@@ -488,55 +488,130 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         with no matching status row are counted in `todo` so the daily totals
         sum to the project's task count.
         """
-        # Pitfall (Phase 13 latent bugs surfaced by Reports v2 manual QA):
+        # Pitfalls handled (all Phase 13 latent bugs surfaced during Reports v2 QA):
         #
         # (a) asyncpg + SQLAlchemy text() chokes on `:name::type` because the
         #     `::` cast operator collides with the `:name` named-param pattern.
-        #     Every cast is written as `CAST(... AS type)` so the parser
-        #     consumes the bound parameter first, then applies the cast.
+        #     Every cast uses CAST(...) syntax instead.
         #
-        # (b) audit_log.new_value for field_name='column_id' is column NAME
-        #     in production data (e.g. "Code Review"), not the integer id.
-        #     Casting to int blows up on real data. The JOIN matches on
-        #     name primarily, with an id fallback for any forward-write that
-        #     uses ids. `bc.project_id = :project_id` is required because
-        #     column names ("Done", "Test") repeat across projects.
+        # (b) audit_log.new_value for column transitions stores the column NAME
+        #     (e.g. "Code Review"), not the integer id. The JOIN matches by
+        #     name with a numeric-id fallback for any forward-write that uses
+        #     ids. bc.project_id is required because names repeat across projects.
+        #
+        # (c) Both `field_name='column_id'` AND legacy `field_name='status'`
+        #     audit rows contain the column name. Older projects (e.g. PIDs
+        #     1-4 on this DB) only have 'status' rows — restricting to
+        #     'column_id' alone leaves them invisible to the CFD.
+        #
+        # (d) Category-first bucketing (data-driven per CLAUDE.md §4.1 OCP):
+        #     bucketing reads `bc.category` ('todo' / 'in_progress' / 'done')
+        #     so Turkish-named columns ("Bakım", "Tasarım", "Code Review")
+        #     resolve correctly. ILIKE fallback only when category is NULL
+        #     (pre-Phase-17 columns not yet backfilled) so Strategy D holds
+        #     end-to-end.
+        #
+        # (e) Tasks with no audit history fall back to their current
+        #     `tasks.column_id` snapshot. Without this fallback every task
+        #     in PIDs 1-4 (with only legacy 'status' audits whose name
+        #     doesn't match any bc.name like the literal 'Open') would be
+        #     mis-counted as 'todo'.
         sql = text("""
         WITH days AS (
           SELECT generate_series(CAST(:date_from AS date), CAST(:date_to AS date), INTERVAL '1 day')::date AS day
         ),
         project_tasks AS (
-          SELECT id FROM tasks WHERE project_id = :project_id
+          SELECT id, column_id FROM tasks WHERE project_id = :project_id
         ),
         task_status_per_day AS (
           SELECT
             d.day,
             t.id AS task_id,
-            (
-              SELECT bc.name
-              FROM audit_log al
-              JOIN board_columns bc
-                ON bc.project_id = :project_id
-               AND (
-                     bc.name = al.new_value
-                  OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
-               )
-              WHERE al.entity_type = 'task'
-                AND al.entity_id = t.id
-                AND al.field_name = 'column_id'
-                AND al.timestamp < (d.day + INTERVAL '1 day')
-              ORDER BY al.timestamp DESC
-              LIMIT 1
+            COALESCE(
+              -- Last audit-derived category as of day-end.
+              (
+                SELECT bc.category
+                FROM audit_log al
+                JOIN board_columns bc
+                  ON bc.project_id = :project_id
+                 AND (
+                       bc.name = al.new_value
+                    OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
+                 )
+                WHERE al.entity_type = 'task'
+                  AND al.entity_id = t.id
+                  AND al.field_name IN ('column_id', 'status')
+                  AND al.timestamp < (d.day + INTERVAL '1 day')
+                ORDER BY al.timestamp DESC
+                LIMIT 1
+              ),
+              -- Fallback: current column snapshot (best-effort for tasks
+              -- whose audit row name doesn't match any bc — e.g. legacy
+              -- 'Open' status string with no corresponding column).
+              (SELECT bc2.category FROM board_columns bc2
+                WHERE bc2.id = t.column_id AND bc2.project_id = :project_id)
+            ) AS status_category,
+            -- Same chain but for name, used by the ILIKE fallback bucket
+            -- when category is NULL (pre-Phase-17 backfill not yet run).
+            COALESCE(
+              (
+                SELECT bc.name
+                FROM audit_log al
+                JOIN board_columns bc
+                  ON bc.project_id = :project_id
+                 AND (
+                       bc.name = al.new_value
+                    OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
+                 )
+                WHERE al.entity_type = 'task'
+                  AND al.entity_id = t.id
+                  AND al.field_name IN ('column_id', 'status')
+                  AND al.timestamp < (d.day + INTERVAL '1 day')
+                ORDER BY al.timestamp DESC
+                LIMIT 1
+              ),
+              (SELECT bc2.name FROM board_columns bc2
+                WHERE bc2.id = t.column_id AND bc2.project_id = :project_id)
             ) AS status_name
           FROM days d
           CROSS JOIN project_tasks t
         )
+        -- Bucket priority (every task counted in exactly one band):
+        --   1. review  — name reads as 'Review' / 'QA' (engine has no
+        --                'review' category; UI splits it out of in_progress
+        --                via name for the visual band).
+        --   2. done    — category='done' OR legacy name fallback.
+        --   3. progress — category='in_progress' OR legacy name fallback.
+        --   4. todo    — everything else (default bucket).
+        -- Each CASE checks the prior priorities first and returns 0,
+        -- ensuring no task is double-counted across bands.
         SELECT
           day::text AS date,
-          SUM(CASE WHEN status_name ILIKE '%todo%' OR status_name ILIKE '%backlog%' OR status_name IS NULL THEN 1 ELSE 0 END) AS todo,
-          SUM(CASE WHEN status_name ILIKE '%progress%' OR status_name ILIKE '%doing%' THEN 1 ELSE 0 END) AS progress,
-          SUM(CASE WHEN status_name ILIKE '%review%' OR status_name ILIKE '%qa%' THEN 1 ELSE 0 END) AS review,
-          SUM(CASE WHEN status_name ILIKE '%done%' OR status_name ILIKE '%complete%' THEN 1 ELSE 0 END) AS done
+          SUM(CASE
+                WHEN status_name ILIKE '%review%' OR status_name ILIKE '%qa%' THEN 0
+                WHEN status_category = 'done' THEN 0
+                WHEN status_category = 'in_progress' THEN 0
+                WHEN status_category IS NULL AND (status_name ILIKE '%done%' OR status_name ILIKE '%complete%') THEN 0
+                WHEN status_category IS NULL AND (status_name ILIKE '%progress%' OR status_name ILIKE '%doing%') THEN 0
+                ELSE 1
+              END) AS todo,
+          SUM(CASE
+                WHEN status_name ILIKE '%review%' OR status_name ILIKE '%qa%' THEN 0
+                WHEN status_category = 'done' THEN 0
+                WHEN status_category = 'in_progress' THEN 1
+                WHEN status_category IS NULL AND (status_name ILIKE '%progress%' OR status_name ILIKE '%doing%') THEN 1
+                ELSE 0
+              END) AS progress,
+          SUM(CASE
+                WHEN status_name ILIKE '%review%' OR status_name ILIKE '%qa%' THEN 1
+                ELSE 0
+              END) AS review,
+          SUM(CASE
+                WHEN status_name ILIKE '%review%' OR status_name ILIKE '%qa%' THEN 0
+                WHEN status_category = 'done' THEN 1
+                WHEN status_category IS NULL AND (status_name ILIKE '%done%' OR status_name ILIKE '%complete%') THEN 1
+                ELSE 0
+              END) AS done
         FROM task_status_per_day
         GROUP BY day
         ORDER BY day
@@ -569,10 +644,17 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         EXCLUDED from cycle (NULL cycle_days). Done → in_progress → done
         corrections use FIRST done; subsequent toggles are ignored.
         """
-        # Same name-vs-id audit_log JOIN pitfall as get_cfd_snapshots —
-        # see that method's docstring for the full rationale. bc.project_id
-        # binding scopes the JOIN to this project's columns so "Done" /
-        # "Code Review" name collisions across projects don't double-count.
+        # Same name-vs-id audit_log JOIN pitfall + Turkish-column blindness
+        # as get_cfd_snapshots — full rationale in that method's docstring.
+        #
+        # field_name IN ('column_id', 'status') catches projects (PIDs 1-4)
+        # that only have legacy 'status' audit rows.
+        #
+        # bc.category-first filter ('done' / 'in_progress') is the data-driven
+        # replacement for the prior `bc.name ILIKE '%done%'` heuristic that
+        # missed Turkish column names like "Bakım" (done) and "Tasarım" /
+        # "Analiz" (in_progress). ILIKE remains as a fallback only when
+        # bc.category IS NULL (pre-Phase-17 columns).
         sql = text("""
         WITH task_times AS (
           SELECT
@@ -587,7 +669,9 @@ class SqlAlchemyAuditRepository(IAuditRepository):
                  OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
               )
              WHERE al.entity_id = t.id AND al.entity_type = 'task'
-               AND al.field_name = 'column_id' AND bc.name ILIKE '%done%'
+               AND al.field_name IN ('column_id', 'status')
+               AND (bc.category = 'done'
+                 OR (bc.category IS NULL AND (bc.name ILIKE '%done%' OR bc.name ILIKE '%complete%')))
             ) AS first_done,
             (SELECT MIN(al.timestamp)
              FROM audit_log al
@@ -598,7 +682,9 @@ class SqlAlchemyAuditRepository(IAuditRepository):
                  OR (al.new_value ~ '^[0-9]+$' AND bc.id = CAST(al.new_value AS INTEGER))
               )
              WHERE al.entity_id = t.id AND al.entity_type = 'task'
-               AND al.field_name = 'column_id' AND bc.name ILIKE '%progress%'
+               AND al.field_name IN ('column_id', 'status')
+               AND (bc.category = 'in_progress'
+                 OR (bc.category IS NULL AND (bc.name ILIKE '%progress%' OR bc.name ILIKE '%doing%')))
             ) AS first_in_progress
           FROM tasks t
           WHERE t.project_id = :project_id
@@ -678,12 +764,16 @@ class SqlAlchemyAuditRepository(IAuditRepository):
           (SELECT COUNT(*) FROM tasks t
            JOIN board_columns bc ON bc.id = t.column_id
            WHERE t.sprint_id = ls.id
-             AND bc.name ILIKE '%done%'
+             AND (bc.category = 'done'
+               OR (bc.category IS NULL AND (bc.name ILIKE '%done%' OR bc.name ILIKE '%complete%')))
              AND t.updated_at <= (ls.end_date + INTERVAL '1 day')) AS completed,
           (SELECT COUNT(*) FROM tasks t
            JOIN board_columns bc ON bc.id = t.column_id
            WHERE t.sprint_id = ls.id
-             AND NOT (bc.name ILIKE '%done%')) AS carried
+             AND NOT (
+                  bc.category = 'done'
+               OR (bc.category IS NULL AND (bc.name ILIKE '%done%' OR bc.name ILIKE '%complete%'))
+             )) AS carried
         FROM last_sprints ls
         ORDER BY ls.end_date ASC
         """)

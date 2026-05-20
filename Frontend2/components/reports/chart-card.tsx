@@ -40,6 +40,14 @@ export interface ChartCardProps {
   emptyFallback?: React.ReactNode
   /** Toggle for the empty state (DataState convention). */
   empty?: boolean
+  /** Reports v2 audit fix (Bulgu FE-2): when true, force the loading
+   *  fallback even though `query.isLoading` is false. Used by chart
+   *  components when their `applicable` prop is `null` (capabilities
+   *  query in flight) — without this the per-chart hook is `enabled:
+   *  false`, `isLoading: false`, `data: undefined`, and DataState
+   *  falls through to the empty fallback before we even know whether
+   *  the card should render at all. */
+  applicableLoading?: boolean
   /** The chart SVG body. */
   children: React.ReactNode
 }
@@ -54,6 +62,7 @@ export function ChartCard({
   loadingFallback,
   emptyFallback,
   empty,
+  applicableLoading,
   children,
 }: ChartCardProps) {
   return (
@@ -74,7 +83,7 @@ export function ChartCard({
         <AlertBanner tone="info">{methodologyMessage}</AlertBanner>
       ) : (
         <DataState
-          loading={query.isLoading}
+          loading={applicableLoading || query.isLoading}
           loadingFallback={loadingFallback}
           error={query.error}
           empty={empty}

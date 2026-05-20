@@ -8,7 +8,7 @@
 // matching the v1.0 BE behaviour. The Burndown card may eventually let
 // the user pick a sprint, in which case the URL state will carry sprintId.
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import {
   reportService,
   type BurndownData,
@@ -26,5 +26,8 @@ export function useBurndown(
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    // Keep the previous sprint visible while switching sprintId to
+    // avoid the skeleton flash; cross-hook consistency with use-cfd.
+    placeholderData: keepPreviousData,
   })
 }

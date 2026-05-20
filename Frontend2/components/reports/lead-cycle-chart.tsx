@@ -43,17 +43,30 @@ export interface LeadCycleChartProps {
   projectId: number | null
   kind: LeadCycleKind
   globalRange: LeadCycleRange
+  /** Capability gate from useChartCapabilities. Reports v2 audit FE-3:
+   *  added for cross-component consistency with the other 5 chart cards.
+   *  Backend currently sets `lead_cycle=true` for every project (the rule
+   *  registry's always-true clause), but accepting the prop closes the
+   *  "what if it goes false later" contract gap AND lets the card sit in
+   *  the loading skeleton during capability resolution (instead of
+   *  flashing the empty state). */
+  applicable?: boolean | null
 }
 
 export function LeadCycleChart({
   projectId,
   kind,
   globalRange,
+  applicable = true,
 }: LeadCycleChartProps) {
   const { language } = useApp()
   const T = (tr: string, en: string) => (language === "tr" ? tr : en)
 
-  const query = useLeadCycle(projectId, globalRange)
+  // When applicable is explicitly false (future rule change) we disable
+  // the fetch entirely and render the empty/CTA branch. null = caps in
+  // flight → keep the request gated so we don't pull data for a card we
+  // might not render.
+  const query = useLeadCycle(applicable === true ? projectId : null, globalRange)
 
   const data = kind === "lead" ? query.data?.lead : query.data?.cycle
   const buckets = data?.buckets ?? []
@@ -66,10 +79,14 @@ export function LeadCycleChart({
   const title = kind === "lead" ? "Lead Time" : "Cycle Time"
   const seriesName = kind === "lead" ? T("Lead Time", "Lead Time") : T("Cycle Time", "Cycle Time")
 
+  // Defensive: data fields could be null when BE returns no completed
+  // tasks in the range. toFixed() throws on null/NaN so guard each one.
+  const fmt = (v: number | null | undefined) =>
+    v == null || !Number.isFinite(v) ? "—" : v.toFixed(1)
   const footer = data ? (
     <span className="mono" style={{ color: "var(--fg-muted)" }}>
-      P50: {data.p50.toFixed(1)} · P85: {data.p85.toFixed(1)} · P95:{" "}
-      {data.p95.toFixed(1)} {T("g", "d")}
+      P50: {fmt(data.p50)} · P85: {fmt(data.p85)} · P95:{" "}
+      {fmt(data.p95)} {T("g", "d")}
     </span>
   ) : null
 
@@ -78,7 +95,23 @@ export function LeadCycleChart({
       title={title}
       query={query}
       loadingFallback={<LeadCycleSkeleton />}
+      applicableLoading={applicable === null}
       empty={!buckets.length}
+      emptyFallback={
+        <div
+          style={{
+            padding: 24,
+            textAlign: "center",
+            color: "var(--fg-subtle)",
+            fontSize: 13,
+          }}
+        >
+          {T(
+            "Bu dönem için tamamlanmış görev verisi yok.",
+            "No completed-task data in this period.",
+          )}
+        </div>
+      }
       footerMetrics={footer}
     >
       <div

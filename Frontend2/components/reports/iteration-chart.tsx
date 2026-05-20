@@ -137,6 +137,7 @@ export function IterationChart({ projectId, applicable }: IterationChartProps) {
       legend={legend}
       query={query}
       loadingFallback={<IterationSkeleton />}
+      applicableLoading={applicable === null}
       empty={!query.data?.sprints?.length}
       emptyFallback={
         <div

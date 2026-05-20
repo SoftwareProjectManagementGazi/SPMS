@@ -7,7 +7,7 @@
 //
 // Capability-gated by caps.team_load (= member_count > 0).
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import {
   reportService,
   type ReportFilters,
@@ -22,5 +22,7 @@ export function useTeamLoad(filters: ReportFilters, enabled: boolean = true) {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    // Keep previous load list visible while filters refetch.
+    placeholderData: keepPreviousData,
   })
 }

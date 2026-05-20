@@ -25,11 +25,9 @@ from app.domain.repositories.sprint_repository import ISprintRepository
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.audit_repository import IAuditRepository
 from app.domain.entities.user import User
-from app.domain.entities.project import Methodology
 from app.domain.exceptions import (
     SprintNotFoundError,
     ActiveSprintAlreadyExistsError,
-    InvalidMethodologyForSprintError,
 )
 
 
@@ -40,25 +38,29 @@ class CloseSprintDTO(BaseModel):
 router = APIRouter()
 
 
-async def _require_scrum_project(
+async def _require_project_exists(
     project_id: int,
     current_user: User,
     project_repo: IProjectRepository,
 ) -> None:
-    """Raise 422 if the project is not SCRUM methodology."""
+    """Raise 404 if the project does not exist.
+
+    Reports v2 Strategy D refactor: the previous version rejected any
+    non-SCRUM project with a 422 INVALID_METHODOLOGY, but Strategy D
+    moved the cycle/sprint concept off the methodology enum and onto
+    workflow capabilities (see chart_applicability.py). Methodology is
+    now a default preset, not a hard gate.
+
+    Any project (Kanban + occasional sprints; custom hybrid workflows)
+    is allowed to create sprints. The Iteration / Burndown charts
+    already capability-gate on sprint presence, not methodology, so the
+    rest of the pipeline handles this correctly downstream.
+    """
     project = await project_repo.get_by_id(project_id)
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project {project_id} not found",
-        )
-    if project.methodology != Methodology.SCRUM:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Project uses '{project.methodology.value}' methodology. "
-                "Sprints are only supported for SCRUM projects."
-            ),
         )
 
 
@@ -79,8 +81,8 @@ async def create_sprint(
     sprint_repo: ISprintRepository = Depends(get_sprint_repo),
     project_repo: IProjectRepository = Depends(get_project_repo),
 ):
-    # Methodology guard
-    await _require_scrum_project(dto.project_id, current_user, project_repo)
+    # Project-existence guard (Strategy D: no methodology gate)
+    await _require_project_exists(dto.project_id, current_user, project_repo)
 
     # Membership check for non-admins
     if not _is_admin(current_user):

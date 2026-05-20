@@ -4,7 +4,7 @@
 // page (Sprint Velocity / Cycle Time / Completed / Blockers). Gated by
 // caps.summary which is always true — the hook just needs a projectId.
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import {
   reportService,
   type ReportFilters,
@@ -19,5 +19,9 @@ export function useSummary(filters: ReportFilters, enabled: boolean = true) {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
     retry: 1,
+    // Wave 8 polish: keep previous summary visible while a date-range
+    // change refetches. Prevents the StatCards from flashing to em-dash
+    // (Wave 5 verify Bulgu — cross-hook consistency with use-cfd).
+    placeholderData: keepPreviousData,
   })
 }

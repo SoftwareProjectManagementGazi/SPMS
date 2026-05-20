@@ -149,6 +149,7 @@ export function BurndownChart({ projectId, applicable }: BurndownChartProps) {
       }
       query={query}
       loadingFallback={<BurndownSkeleton />}
+      applicableLoading={applicable === null}
       empty={!chartData.length}
       emptyFallback={
         <div
