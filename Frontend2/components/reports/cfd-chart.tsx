@@ -13,16 +13,18 @@
 //     fights dark mode + token theming.
 //   - ResponsiveContainer parent has explicit `height: 200`
 //     (RESEARCH §Pitfall 12 — % heights collapse without an absolute parent).
-//   - Methodology gate (D-A4) — non-Kanban projects show an info AlertBanner.
-//     Lead/Cycle is all-methodology, but CFD is Kanban-only.
+//   - Capability gate (Reports v2 Strategy D) — projects without the
+//     {todo, in_progress, done} category triple show an info AlertBanner.
+//     The gate is data-driven (BoardColumn.category presence), NOT
+//     methodology-derived as in Phase 13.
 //   - Per-card range picker (D-A5) — overrides the global range FOR THAT
 //     CARD ONLY; never writes back to the global state.
 //
 // The `applicable` prop is `boolean | null`:
-//   - `null` while methodology is unknown (no project picked yet) → show
-//     the chart shell with empty data; the picker placeholder communicates
-//     the missing project.
-//   - `false` → render the methodology gate AlertBanner.
+//   - `null` while capabilities are loading (no project picked yet or
+//     /chart-capabilities still in flight) → show the chart shell with
+//     empty data; the picker placeholder communicates the missing project.
+//   - `false` → render the capability gate AlertBanner.
 //   - `true` → render the chart.
 
 import * as React from "react"
@@ -45,7 +47,8 @@ type CFDRange = 7 | 30 | 90
 export interface CFDChartProps {
   projectId: number | null
   globalRange: CFDRange
-  /** D-A4 methodology gate: false → AlertBanner; true → chart; null → idle. */
+  /** Capability gate from useChartCapabilities (Reports v2 Strategy D):
+   *  false → AlertBanner; true → chart; null → idle/loading. */
   applicable: boolean | null
 }
 
@@ -104,7 +107,7 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
   const [override, setOverride] = React.useState<CFDRange | null>(null)
   const range: CFDRange = override ?? globalRange
 
-  // Always call useCFD (Rules of Hooks) — the methodology gate hides the
+  // Always call useCFD (Rules of Hooks) — the capability gate hides the
   // chart but keeps the hook in the call tree.
   const query = useCFD(projectId, range)
 

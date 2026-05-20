@@ -1,8 +1,21 @@
 import { apiClient } from '@/lib/api-client';
 
+/** Workflow engine column category (Phase 17 backend addition).
+ *  Frontend uses it as the canonical "is this a Done/In Progress/To Do"
+ *  signal instead of name-based heuristics. Optional on the legacy shape
+ *  because pre-Phase-17 projects may not have it populated yet. */
+export type ColumnCategory = 'todo' | 'in_progress' | 'done';
+
 export interface BoardColumnLite {
   id: number;
   name: string;
+  /** Reports migration v2 — Strategy D CFD capability gate reads this to
+   *  decide if the project has a {todo, in_progress, done} triple. */
+  category?: ColumnCategory;
+  /** Workflow engine boundary fields (Phase 17). Optional because pre-17
+   *  rows have them as NULL until the backfill migration runs. */
+  isInitial?: boolean;
+  isTerminal?: boolean;
 }
 
 export interface Project {
@@ -50,6 +63,19 @@ export interface CreateProjectDTO {
   process_config?: Record<string, unknown>;
 }
 
+/** Column shape as returned by the BE — extended in Phase 17 with the
+ *  workflow engine fields. String form is the very-legacy fallback that
+ *  some older endpoints still emit. */
+type ProjectResponseColumn =
+  | string
+  | {
+      id: number;
+      name: string;
+      category?: ColumnCategory;
+      is_initial?: boolean;
+      is_terminal?: boolean;
+    };
+
 interface ProjectResponseDTO {
   id: number;
   key: string;
@@ -65,7 +91,7 @@ interface ProjectResponseDTO {
   manager_name: string | null;
   manager_avatar: string | null;
   progress?: number;
-  columns?: Array<{ id: number; name: string } | string>;
+  columns?: ProjectResponseColumn[];
   process_config?: Record<string, unknown>;
   created_at: string;
   /** Plan 14-05 follow-up — admin-bypass populates these for /admin/projects.
@@ -96,8 +122,21 @@ function mapProject(data: ProjectResponseDTO): Project {
     // boardColumns preserves the {id, name} pairs that PATCH consumers need
     // (status updates → column_id). String entries lose the id, so they get
     // a synthetic 0 — InlineEdit guards against that.
+    //
+    // Reports migration v2: also carries the Phase 17 engine fields
+    // (category, isInitial, isTerminal) so the chart capability layer can
+    // read them without an additional fetch. Legacy string entries default
+    // to undefined which the CFD gate treats as "not categorized".
     boardColumns: (data.columns ?? []).map((c) =>
-      typeof c === 'string' ? { id: 0, name: c } : { id: c.id, name: c.name }
+      typeof c === 'string'
+        ? { id: 0, name: c }
+        : {
+            id: c.id,
+            name: c.name,
+            category: c.category,
+            isInitial: c.is_initial,
+            isTerminal: c.is_terminal,
+          }
     ),
     processConfig: data.process_config ?? null,
     createdAt: data.created_at,

@@ -14,18 +14,19 @@
 //     dark mode + token theming.
 //   - ResponsiveContainer parent has explicit `height: 180`
 //     (RESEARCH §Pitfall 12 — % heights collapse without an absolute parent).
-//   - Methodology gate (D-A4) — non-cycle methodologies HIDE THE CARD ENTIRELY
-//     (return null). This is different from CFD's gate (which renders an info
-//     AlertBanner). For iteration, the card is removed from the layout flow
-//     because it represents work that simply does not exist for non-cycle
-//     methodologies. Cycle methodologies = Scrum / Iterative / Incremental /
-//     Evolutionary / RAD per chartApplicabilityFor().
+//   - Capability gate (Reports v2 Strategy D) — when the backend reports
+//     iteration=false for the project, this card HIDES ENTIRELY (return
+//     null). This differs from CFD's gate (which renders an info banner)
+//     because for iteration the card represents work that simply doesn't
+//     exist when the project has no sprints. The backend gate is now
+//     sprint-presence (sprint_count > 0), NOT methodology.
 //   - Per-card N override (D-A6) — local React.useState; never writes back to
 //     a global filter.
 //
 // The `applicable` prop is `boolean | null`:
-//   - `null` while methodology is unknown (no project picked yet) → render the
-//     card with empty data so it's visible while the page hydrates.
+//   - `null` while capabilities are loading (no project picked yet or
+//     /chart-capabilities request in flight) → render the card with empty
+//     data so it's visible while the page hydrates.
 //   - `false` → return null (the card disappears from the layout).
 //   - `true` → render the chart.
 

@@ -1,31 +1,29 @@
 "use client"
 
-// Phase 13 Plan 13-07 — Reports page REWRITE.
+// Reports migration v2 (Strategy D) Wave 1b — page rewire.
 //
-// Replaces the 12-line Phase 8 stub with the full prototype-faithful
-// ReportsPage:
-//   - Header (title + subtitle on the left, ProjectPicker + DateRangeFilter
-//     + PDF Button on the right per D-A1 + D-A5).
-//   - 4 StatCards row (Sprint Velocity / Cycle Time / Completed / Blockers)
-//     verbatim from prototype line 374–379 (D-A2 — keep v1.0 layout).
-//   - Burndown + Team Load row (1.5fr / 1fr) — preserved per D-A2 last
-//     sentence. Phase 13 keeps the v1.0 surface intact and adds new charts
-//     below.
-//   - CFDChart (Kanban-only, methodology-gated per D-A4).
-//   - Lead/Cycle row pair (1fr / 1fr — all methodologies per D-A4).
-//
-// Plan 13-08 will append IterationChart and PhaseReportsSection BELOW the
-// Lead/Cycle row. The current layout intentionally leaves space at the
-// bottom so 13-08 can mount its components without re-architecting this
-// file.
-//
-// StatCards / Burndown / Team Load values are placeholders ("—"): D-A2
-// requires the v1.0 prototype layout to be preserved exactly while the
-// underlying summary endpoint wiring lands as a follow-up. Rendering an
-// empty-shell card now is honest about where the data is missing without
-// removing the visual section the user is used to seeing.
+// Changes vs Phase 13:
+// - URL-state filters (D-C5-style) so /reports?projectId=42&range=30 round-
+//   trips through refresh / bookmark / share. Adopts the audit-page pattern
+//   at app/(shell)/admin/audit/page.tsx (Suspense wrapping + useSearchParams
+//   + router.replace).
+// - Capability gating moved to backend via useChartCapabilities — the FE
+//   never reads project.methodology to decide what to render. CFD / Lead /
+//   Iteration chart cards still receive an `applicable: boolean | null`
+//   prop for prop-API stability, but the boolean now comes from the
+//   backend capability response instead of the deleted FE applicability
+//   mirror (chartApplicabilityFor).
+// - Wave 2 will wire StatCards / Burndown / TeamLoad. Wave 3 adds the new
+//   chart components. This commit deliberately keeps the placeholder cards
+//   intact (still showing the prototype's v1.0 shell) so the page layout
+//   is stable for the data/chart rewire in subsequent waves.
 
 import * as React from "react"
+import {
+  useSearchParams,
+  useRouter,
+  usePathname,
+} from "next/navigation"
 import {
   Download,
   Folder,
@@ -47,36 +45,115 @@ import { CFDChart } from "@/components/reports/cfd-chart"
 import { LeadCycleChart } from "@/components/reports/lead-cycle-chart"
 import { IterationChart } from "@/components/reports/iteration-chart"
 import { PhaseReportsSection } from "@/components/reports/phase-reports-section"
-import { chartApplicabilityFor } from "@/lib/charts/applicability"
-import type { Methodology } from "@/lib/methodology-matrix"
+import { useChartCapabilities } from "@/hooks/use-chart-capabilities"
+
+// ---------------------------------------------------------------------------
+// URL <-> filter encoding
+// ---------------------------------------------------------------------------
+
+const DEFAULT_RANGE: DateRange = 30
+const VALID_RANGES: DateRange[] = [7, 30, 90, "q2"]
+
+function parseProjectId(raw: string | null): number | null {
+  if (!raw) return null
+  const n = parseInt(raw, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function parseRange(raw: string | null): DateRange {
+  if (!raw) return DEFAULT_RANGE
+  if (raw === "q2") return "q2"
+  const n = parseInt(raw, 10)
+  return (VALID_RANGES as Array<DateRange | number>).includes(n)
+    ? (n as DateRange)
+    : DEFAULT_RANGE
+}
+
+// ---------------------------------------------------------------------------
+// Default export — Suspense wrapper (Next.js 16 useSearchParams CSR-bailout)
+// ---------------------------------------------------------------------------
 
 export default function ReportsPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <ReportsPageInner />
+    </React.Suspense>
+  )
+}
+
+function ReportsPageInner() {
   const { language } = useApp()
   const T = (tr: string, en: string) => (language === "tr" ? tr : en)
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname() ?? "/reports"
 
   const { data: projects } = useProjects("ACTIVE,COMPLETED")
   const projectList = (projects as Project[] | undefined) ?? []
 
-  const [selectedProjectId, setSelectedProjectId] = React.useState<number | null>(null)
-  const [globalRange, setGlobalRange] = React.useState<DateRange>(30)
+  // URL is the source of truth — re-derive every render so refresh /
+  // bookmark / share works.
+  const selectedProjectId = React.useMemo(
+    () => parseProjectId(searchParams?.get("projectId") ?? null),
+    [searchParams],
+  )
+  const globalRange = React.useMemo(
+    () => parseRange(searchParams?.get("range") ?? null),
+    [searchParams],
+  )
 
-  // Auto-select the first project once the list resolves so the page is not
-  // empty on first paint after sign-in.
+  const updateParams = React.useCallback(
+    (patch: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams?.toString() ?? "")
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === "") {
+          next.delete(key)
+        } else {
+          next.set(key, value)
+        }
+      }
+      const qs = next.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    },
+    [pathname, router, searchParams],
+  )
+
+  const setSelectedProjectId = React.useCallback(
+    (id: number | null) =>
+      updateParams({ projectId: id == null ? null : String(id) }),
+    [updateParams],
+  )
+  const setGlobalRange = React.useCallback(
+    (next: DateRange) =>
+      updateParams({ range: String(next) }),
+    [updateParams],
+  )
+
+  // First-paint convenience: when no projectId is in the URL and the project
+  // list resolves, seed the URL with the first project so the page is not
+  // empty on /reports landings (e.g. nav-tab click without a query string).
   React.useEffect(() => {
     if (selectedProjectId == null && projectList.length > 0) {
       setSelectedProjectId(projectList[0].id)
     }
-  }, [projectList, selectedProjectId])
+  }, [projectList, selectedProjectId, setSelectedProjectId])
 
-  const project = projectList.find((p) => p.id === selectedProjectId)
-  const applicable = project
-    ? chartApplicabilityFor(project.methodology as Methodology)
-    : null
+  // Backend is the single source of truth for chart visibility. We never
+  // re-derive capabilities from project.methodology on the FE.
+  const capsQuery = useChartCapabilities(selectedProjectId)
+  const caps = capsQuery.data
 
   // Charts only consume 7 | 30 | 90; the "q2" decorative chip falls back to
   // 90d so the chart series still load coherently.
   const chartRange: 7 | 30 | 90 =
     globalRange === "q2" ? 90 : (globalRange as 7 | 30 | 90)
+
+  // While caps are loading we surface `null` to legacy chart props so they
+  // sit in the "idle" branch (skeleton via DataState) instead of flashing
+  // a methodology-mismatch banner. Once resolved we pass the actual bool.
+  const cfdApplicable: boolean | null = caps ? caps.cfd : null
+  const iterationApplicable: boolean | null = caps ? caps.iteration : null
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -122,10 +199,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* 4 StatCards row — verbatim layout from prototype line 374–379.
-          Values are placeholders until the v1.0 summary endpoint is wired
-          to this page; the visible-but-empty cards preserve the prototype
-          layout per D-A2. */}
+      {/* 4 StatCards row — Wave 2 will wire these to /reports/summary.
+          Until then the prototype shell stays so the page layout doesn't
+          shift between Wave 1b and Wave 2 commits. */}
       <div
         className="reports-stat-grid"
         style={{
@@ -160,10 +236,10 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Burndown + Team Load row — preserved 1.5fr/1fr layout per D-A2.
-          Both cards render the prototype shells with placeholder content
-          until the v1.0 burndown / team-load data layer ships. New Phase 13
-          charts go BELOW this row. */}
+      {/* Burndown + Team Load row — Wave 3 will replace these placeholder
+          shells with <BurndownChart> and <TeamLoadCard>. Layout (1.5fr /
+          1fr) is the prototype's contract; preserved across the rewire so
+          the visual rhythm is stable mid-migration. */}
       <div
         className="reports-burndown-grid"
         style={{
@@ -212,16 +288,16 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      {/* CFD card — Kanban only (D-A4 methodology gate). The chart hides
-          itself behind an info AlertBanner for non-Kanban projects. */}
+      {/* CFD card — capability-gated (Strategy D). Backend returns
+          caps.cfd=true iff the project has the {todo, in_progress, done}
+          category triple in its columns. */}
       <CFDChart
         projectId={selectedProjectId}
         globalRange={chartRange}
-        applicable={applicable?.cfd ?? null}
+        applicable={cfdApplicable}
       />
 
-      {/* Lead/Cycle row — all methodologies per D-A4. Plan 13-08 will append
-          IterationChart + PhaseReportsSection BELOW this row. */}
+      {/* Lead/Cycle row — always applicable per the rule registry. */}
       <div
         className="reports-leadcycle-grid"
         style={{
@@ -242,23 +318,18 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Iteration card — Scrum / Iterative / Incremental / Evolutionary /
-          RAD only (D-A4). Returns null entirely for non-cycle methodologies
-          (different gate strategy than CFD's AlertBanner — for iteration the
-          card is removed from the layout flow because the data simply does
-          not exist for non-cycle workflows). */}
+      {/* Iteration card — capability-gated. Backend returns caps.iteration
+          based on sprint presence (sprint_count > 0), NOT methodology. A
+          custom workflow project with sprints gets the chart; a Scrum-named
+          project with zero sprints does not. */}
       <IterationChart
         projectId={selectedProjectId}
-        applicable={applicable?.iteration ?? null}
+        applicable={iterationApplicable}
       />
 
-      {/* Faz Raporları section — 2-tab outer Tabs (Aktif+Tamamlanan /
-          Arşivlenmiş) + cascading project/phase pickers + inline
-          EvaluationReportCard expand (Phase 12 reuse, read-only per D-E2).
-          Independent of the page's selectedProjectId / chartRange — the
-          section maintains its own picker state because users may want to
-          look at a different project's reports than the one they're viewing
-          charts for (D-E1). */}
+      {/* Phase Reports — independent surface (own pickers). Wave 3 will
+          insert a Phase Progress chart between Iteration and this section
+          for projects with phase_workflow.nodes. */}
       <PhaseReportsSection />
     </div>
   )
