@@ -226,17 +226,35 @@ async def create_project(
     return _sanitize_process_config(project)
 
 
+def _parse_status_filter(raw: Optional[str]) -> Optional[List[str]]:
+    """Parse a single OR comma-separated status query value.
+
+    Reports v2 + Phase 13 callers pass multiple statuses in one query
+    (`?status=ACTIVE,COMPLETED`) so the ProjectPicker / PhaseReportsSection
+    can show ACTIVE + COMPLETED projects in a single dropdown. The
+    pre-Reports-v2 code only accepted a single value, which broke every
+    multi-status caller — empty picker, broken capability gates, empty
+    reports. Splitting on `,` keeps single-value callers working without
+    a contract change.
+    """
+    if raw is None:
+        return None
+    parts = [p.strip().upper() for p in raw.split(",") if p.strip()]
+    return parts or None
+
+
 @router.get("/", response_model=List[ProjectResponseDTO])
 async def list_projects(
-    status: Optional[str] = Query(default=None, description="API-04: filter by project status (ACTIVE, COMPLETED, ON_HOLD, ARCHIVED)"),
+    status: Optional[str] = Query(default=None, description="API-04: filter by project status (single or comma-separated subset of ACTIVE, COMPLETED, ON_HOLD, ARCHIVED)"),
     project_repo: IProjectRepository = Depends(get_project_repo),
     current_user: User = Depends(get_current_user),
 ):
     # Admin bypass: admins see every non-deleted project regardless of membership.
     # Without this, GET /projects falls through to ListProjectsUseCase which filters
     # by manager_id/member and returns an empty list for admins who manage nothing.
+    status_filter = _parse_status_filter(status)
     if _is_admin(current_user):
-        statuses = [status] if status is not None else ["ACTIVE", "COMPLETED", "ON_HOLD", "ARCHIVED"]
+        statuses = status_filter or ["ACTIVE", "COMPLETED", "ON_HOLD", "ARCHIVED"]
         results = await project_repo.list_by_status(statuses)
         # Plan 14-05 follow-up — populate task_count + task_done_count for the
         # /admin/projects table progress bar. Single aggregate query against
@@ -256,9 +274,11 @@ async def list_projects(
             enriched.append(sanitized)
         return enriched
 
-    # API-04: if status param provided, delegate to list_by_status
-    if status is not None:
-        results = await project_repo.list_by_status([status])
+    # API-04: if status param provided, delegate to list_by_status.
+    # Reuses the comma-aware parser so non-admin callers also support
+    # multi-status filters (Reports v2 ProjectPicker etc.).
+    if status_filter is not None:
+        results = await project_repo.list_by_status(status_filter)
         return [_sanitize_process_config(r) for r in results]
     use_case = ListProjectsUseCase(project_repo)
     results = await use_case.execute(current_user.id)  # type: ignore
