@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.deps.ai import get_ai_workflow_port
 from app.api.deps.auth import get_current_user
+from app.api.middleware.ai_rate_limit import _limiter as _ai_limiter
 from app.application.dtos.ai_workflow_dto import (
     LifecycleFormDTO,
     TaskStatusFormDTO,
@@ -54,6 +55,13 @@ async def generate_lifecycle(
     ai_port: IAIWorkflowSuggestionPort = Depends(get_ai_workflow_port),
     current_user=Depends(get_current_user),
 ):
+    # 3-tier rate limit (D-05) — user-hour=8, user-day=25, project-day=400.
+    # Inline call (not via Depends) because we need current_user resolved first.
+    # Raises HTTPException 429/503 if any tier is exceeded; FastAPI returns
+    # the body before any stream events fire, so the frontend never sees an
+    # empty SSE stream — it sees a clean 429/503 it can map to State 6 / 5.
+    _ai_limiter.check_and_increment(str(current_user.email))
+
     use_case = GenerateLifecycleWorkflowUseCase(ai_port)
 
     async def event_stream():
@@ -95,6 +103,9 @@ async def generate_task_status(
     ai_port: IAIWorkflowSuggestionPort = Depends(get_ai_workflow_port),
     current_user=Depends(get_current_user),
 ):
+    # See generate_lifecycle for rate-limit rationale.
+    _ai_limiter.check_and_increment(str(current_user.email))
+
     use_case = GenerateTaskStatusWorkflowUseCase(ai_port)
 
     async def event_stream():

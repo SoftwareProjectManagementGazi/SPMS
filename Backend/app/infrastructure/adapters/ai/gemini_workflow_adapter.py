@@ -151,6 +151,16 @@ class GeminiWorkflowAdapter(IAIWorkflowSuggestionPort):
     ) -> AsyncIterator[WorkflowEventDTO]:
         prompt = build_lifecycle_prompt(form)
 
+        # Cold-start UX (Wave 5.5) — Gemini's first call after key-issue can
+        # take 5-10s. Emit an early text_token so the frontend chat log starts
+        # populating immediately; otherwise the user stares at an empty modal
+        # and assumes the request died. The chunked text shows up as the AI
+        # "preparing" before its real answer arrives.
+        yield WorkflowEventDTO(
+            type="text_token",
+            payload={"text": f"{form.methodology} için workflow tasarlanıyor... "},
+        )
+
         # Phase 1 — fetch + parse (single Gemini call, blocking from the
         # frontend's perspective until the first event arrives).
         try:
@@ -220,6 +230,12 @@ class GeminiWorkflowAdapter(IAIWorkflowSuggestionPort):
         language: str,
     ) -> AsyncIterator[WorkflowEventDTO]:
         prompt = build_task_status_prompt(form)
+
+        # See generate_lifecycle_stream for cold-start UX rationale.
+        yield WorkflowEventDTO(
+            type="text_token",
+            payload={"text": f"{form.methodology} görev workflow'u tasarlanıyor... "},
+        )
 
         try:
             response = await self._client.aio.models.generate_content(

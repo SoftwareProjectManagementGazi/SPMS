@@ -32,6 +32,7 @@ import {
 import { AIApplyConfirmation } from "./ai-apply-confirmation"
 import { AIChatLog, formatUserPrompt } from "./ai-chat-log"
 import { AIContextBadge } from "./ai-context-badge"
+import { AIErrorState } from "./ai-error-state"
 import { AILifecycleForm } from "./ai-lifecycle-form"
 import { AILiveCanvas } from "./ai-live-canvas"
 import { AIRationaleCard } from "./ai-rationale-card"
@@ -394,25 +395,22 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
               </div>
             )}
 
+            {/* Left-pane error stays minimal — the real error UI lives in
+                the right canvas (AIErrorState component below) where the
+                user's attention is already focused. */}
             {state.status === "error" && (
               <div
                 style={{
                   padding: 12,
                   borderRadius: 8,
-                  background: "oklch(0.96 0.04 25)",
-                  color: "oklch(0.4 0.2 25)",
-                  fontSize: 13,
+                  background: "var(--surface-2)",
+                  color: "var(--fg-muted)",
+                  fontSize: 12,
+                  textAlign: "center",
                 }}
               >
-                {state.kind === "rate_limit"
-                  ? T(
-                      "Günlük AI kullanım sınırına ulaştın.",
-                      "Daily AI usage limit reached.",
-                    )
-                  : T(
-                      "AI servisine şu an ulaşılamıyor.",
-                      "AI service is currently unavailable.",
-                    )}
+                {T("AI üretimi başarısız oldu — sağda detay var.",
+                  "AI generation failed — see details on the right.")}
               </div>
             )}
           </aside>
@@ -500,14 +498,16 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
                   alignItems: "center",
                   justifyContent: "center",
                   padding: 24,
-                  color: "var(--fg-muted)",
-                  fontSize: 13,
                 }}
               >
-                {T(
-                  "Önce sol panelden tekrar üretmeyi dene veya kapat.",
-                  "Try again from the left panel or close.",
-                )}
+                <AIErrorState
+                  // The hook keeps "service_down" | "rate_limit" | "invalid";
+                  // map "invalid" to service_down for the UI (same affordance).
+                  kind={state.kind === "rate_limit" ? "rate_limit" : "service_down"}
+                  resetInSeconds={state.resetInSeconds}
+                  onRetry={() => reset()}
+                  onGoToTemplates={() => onClose()}
+                />
               </div>
             )}
           </main>

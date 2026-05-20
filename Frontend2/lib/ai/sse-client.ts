@@ -46,11 +46,27 @@ export async function* streamAIWorkflow<E extends Endpoint>(
   // Same quoted-token guard as api-client.ts (defensive)
   const token = rawToken?.replace(/^"|"$/g, "") ?? ""
 
+  // Cold-start guard (Wave 5.5) — Gemini's first call can take 8-10s on
+  // a freshly-issued key. The default browser fetch has no explicit timeout
+  // for the request itself (only inactive-socket timeouts that vary), so we
+  // wire an internal AbortSignal that fires after 60s. Caller-supplied signal
+  // (from the React hook's AbortController) still wins if user clicks cancel.
+  const COLD_START_TIMEOUT_MS = 60_000
+  const timeoutController = new AbortController()
+  const timeoutId = window.setTimeout(
+    () => timeoutController.abort(),
+    COLD_START_TIMEOUT_MS,
+  )
+  // Combine signals: abort if either fires
+  signal.addEventListener("abort", () => timeoutController.abort(), {
+    once: true,
+  })
+
   let res: Response
   try {
     res = await fetch(url, {
       method: "POST",
-      signal,
+      signal: timeoutController.signal,
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
@@ -59,11 +75,23 @@ export async function* streamAIWorkflow<E extends Endpoint>(
       body: JSON.stringify(form),
     })
   } catch (e) {
-    if ((e as Error).name === "AbortError") throw e
+    window.clearTimeout(timeoutId)
+    // If our internal timeout fired (caller didn't abort), surface as
+    // service-unavailable with a clear message; AbortError from the caller
+    // signal stays as AbortError so the hook can return cleanly.
+    if ((e as Error).name === "AbortError") {
+      if (signal.aborted) throw e
+      throw new AIServiceUnavailableError(
+        "AI servisi zaman aşımına uğradı (60sn). Tekrar dener misin?",
+      )
+    }
     throw new AIServiceUnavailableError(
       "AI servisine bağlanılamadı (ağ hatası).",
     )
   }
+  // Once headers arrive, clear the timeout — stream may legitimately take
+  // longer than 60s for large workflows.
+  window.clearTimeout(timeoutId)
 
   // -------------------------------------------------------------------------
   // Error responses (429, 503, etc.) — parse body for context, throw typed
