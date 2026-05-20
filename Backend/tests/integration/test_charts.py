@@ -13,10 +13,14 @@ import pytest
 from app.application.use_cases.get_project_cfd import GetProjectCFDUseCase
 from app.application.use_cases.get_project_lead_cycle import GetProjectLeadCycleUseCase
 from app.application.use_cases.get_project_iteration import GetProjectIterationUseCase
-from app.domain.exceptions import InvalidMethodologyError
+from app.application.use_cases.get_chart_capabilities import GetChartCapabilitiesUseCase
+from app.application.use_cases.get_project_phase_progress import (
+    GetProjectPhaseProgressUseCase,
+)
 from app.domain.services.chart_applicability import (
-    chart_applicability_for,
-    ITERATION_METHODOLOGIES,
+    CHART_CAPABILITY_RULES,
+    CapabilityInputs,
+    chart_capabilities,
 )
 
 # Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
@@ -32,16 +36,42 @@ pytestmark = pytest.mark.requires_db
 class FakeProject:
     id: int
     methodology: str = "SCRUM"
+    process_config: Optional[dict] = None
 
 
 class FakeProjectRepo:
-    def __init__(self, project: Optional[FakeProject]):
+    def __init__(
+        self,
+        project: Optional[FakeProject],
+        capability_inputs: Optional[CapabilityInputs] = None,
+    ):
         self._project = project
+        self._capability_inputs = capability_inputs or CapabilityInputs(
+            sprint_count=0,
+            closed_sprint_count=0,
+            phase_node_count=0,
+            column_count=0,
+            member_count=0,
+            has_all_categories=False,
+        )
 
     async def get_by_id(self, project_id: int):
         if self._project is None or self._project.id != project_id:
             return None
         return self._project
+
+    async def get_capability_inputs(self, project_id: int) -> CapabilityInputs:
+        return self._capability_inputs
+
+
+class FakeReportRepo:
+    """Fake report repo for the phase-progress use case test."""
+
+    def __init__(self, phase_progress: Optional[List[dict]] = None):
+        self._phase_progress = phase_progress or []
+
+    async def get_phase_progress(self, project_id: int) -> List[dict]:
+        return list(self._phase_progress)
 
 
 class FakeAuditRepo:
@@ -217,13 +247,13 @@ async def test_lead_cycle_excludes_no_in_progress_from_cycle():
 
 @pytest.mark.asyncio
 async def test_iteration_returns_last_n_sprints():
+    """Iteration use case no longer needs project_repo — Strategy D refactor."""
     sprints = [
         {"id": i, "name": f"Sprint {i}", "planned": 10, "completed": 8, "carried": 2}
         for i in range(1, 7)
     ]
     use_case = GetProjectIterationUseCase(
         audit_repo=FakeAuditRepo(iteration_data=sprints),
-        project_repo=FakeProjectRepo(FakeProject(id=42, methodology="SCRUM")),
     )
     result = await use_case.execute(project_id=42, count=4)
     assert len(result.sprints) == 4
@@ -231,67 +261,193 @@ async def test_iteration_returns_last_n_sprints():
 
 
 # ---------------------------------------------------------------------------
-# Test 7: Iteration raises InvalidMethodologyError for non-cycle methodology
+# Reports migration v2 (Strategy D) — iteration is methodology-agnostic
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_iteration_invalid_methodology_raises():
-    use_case = GetProjectIterationUseCase(
-        audit_repo=FakeAuditRepo(),
-        project_repo=FakeProjectRepo(FakeProject(id=42, methodology="WATERFALL")),
-    )
-    with pytest.raises(InvalidMethodologyError) as exc_info:
-        await use_case.execute(project_id=42, count=4)
-    assert exc_info.value.methodology == "WATERFALL"
-    assert "SCRUM" in exc_info.value.required
+async def test_iteration_empty_when_no_sprints():
+    """Strategy D: no sprints = empty result, NOT 422. Replaces the old
+    InvalidMethodologyError tests — iteration endpoint no longer cares about
+    the methodology enum."""
+    use_case = GetProjectIterationUseCase(audit_repo=FakeAuditRepo(iteration_data=[]))
+    result = await use_case.execute(project_id=42, count=4)
+    assert result.sprints == []
 
 
 @pytest.mark.asyncio
-async def test_iteration_kanban_also_raises():
-    """KANBAN is non-cycle even though some tooling treats it as iterative-ish."""
-    use_case = GetProjectIterationUseCase(
-        audit_repo=FakeAuditRepo(),
-        project_repo=FakeProjectRepo(FakeProject(id=42, methodology="KANBAN")),
+@pytest.mark.parametrize(
+    "methodology", ["SCRUM", "KANBAN", "WATERFALL", "ITERATIVE", "INCREMENTAL", "EVOLUTIONARY", "RAD"]
+)
+async def test_iteration_returns_data_for_any_methodology_with_sprints(methodology):
+    """Strategy D: methodology never gates iteration. Any project with sprint
+    records gets data; non-applicable methodologies are no longer rejected at
+    the backend — gating is FE-side via /chart-capabilities."""
+    sprints = [{"id": 1, "name": "Sprint 1", "planned": 10, "completed": 8, "carried": 2}]
+    use_case = GetProjectIterationUseCase(audit_repo=FakeAuditRepo(iteration_data=sprints))
+    result = await use_case.execute(project_id=42, count=4)
+    assert len(result.sprints) == 1
+
+
+# ---------------------------------------------------------------------------
+# Reports migration v2 (Strategy D) — capability rule registry
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "inputs,expected",
+    [
+        # Scrum-like project with sprints + categorised columns
+        (
+            CapabilityInputs(
+                sprint_count=3, closed_sprint_count=2, phase_node_count=0,
+                column_count=4, member_count=5, has_all_categories=True,
+            ),
+            {"burndown": True, "iteration": True, "cfd": True, "lead_cycle": True,
+             "phase_progress": False, "team_load": True, "summary": True},
+        ),
+        # Kanban project — no sprints, has all categories
+        (
+            CapabilityInputs(
+                sprint_count=0, closed_sprint_count=0, phase_node_count=0,
+                column_count=3, member_count=4, has_all_categories=True,
+            ),
+            {"burndown": False, "iteration": False, "cfd": True, "lead_cycle": True,
+             "phase_progress": False, "team_load": True, "summary": True},
+        ),
+        # Waterfall project — phase nodes, no sprints
+        (
+            CapabilityInputs(
+                sprint_count=0, closed_sprint_count=0, phase_node_count=5,
+                column_count=2, member_count=3, has_all_categories=False,
+            ),
+            {"burndown": False, "iteration": False, "cfd": False, "lead_cycle": True,
+             "phase_progress": True, "team_load": True, "summary": True},
+        ),
+        # Empty project — defaults
+        (
+            CapabilityInputs(
+                sprint_count=0, closed_sprint_count=0, phase_node_count=0,
+                column_count=0, member_count=0, has_all_categories=False,
+            ),
+            {"burndown": False, "iteration": False, "cfd": False, "lead_cycle": True,
+             "phase_progress": False, "team_load": False, "summary": True},
+        ),
+    ],
+)
+def test_chart_capability_rules_per_project_shape(inputs, expected):
+    """Rule registry resolves every chart's gate from CapabilityInputs only.
+    Methodology enum is never consulted (Strategy D)."""
+    fake_project = FakeProject(id=42, methodology="ANYTHING")
+    result = chart_capabilities(fake_project, inputs)
+    assert result == expected
+
+
+def test_chart_capability_registry_covers_expected_charts():
+    """Hardlock the chart name set so dropping a chart is a deliberate edit."""
+    assert set(CHART_CAPABILITY_RULES) == {
+        "burndown", "iteration", "cfd", "lead_cycle",
+        "phase_progress", "team_load", "summary",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Reports migration v2 — capability use case (integration with rule registry)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_chart_capabilities_use_case_returns_dict():
+    """Use case combines repo inputs + rule registry into a flat dict."""
+    inputs = CapabilityInputs(
+        sprint_count=2, closed_sprint_count=1, phase_node_count=3,
+        column_count=4, member_count=5, has_all_categories=True,
     )
-    with pytest.raises(InvalidMethodologyError):
-        await use_case.execute(project_id=42, count=4)
+    use_case = GetChartCapabilitiesUseCase(
+        project_repo=FakeProjectRepo(
+            FakeProject(id=42, methodology="SCRUM"),
+            capability_inputs=inputs,
+        ),
+    )
+    caps = await use_case.execute(project_id=42)
+    assert caps["burndown"] is True
+    assert caps["iteration"] is True
+    assert caps["cfd"] is True
+    assert caps["phase_progress"] is True
+    assert caps["lead_cycle"] is True
+    assert caps["team_load"] is True
+    assert caps["summary"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_chart_capabilities_raises_on_unknown_project():
+    from app.domain.exceptions import ProjectNotFoundError
+    use_case = GetChartCapabilitiesUseCase(project_repo=FakeProjectRepo(project=None))
+    with pytest.raises(ProjectNotFoundError):
+        await use_case.execute(project_id=999)
 
 
 # ---------------------------------------------------------------------------
-# Test 8: Chart applicability strategy (Strategy Pattern per CLAUDE.md OCP)
+# Reports migration v2 — phase-progress use case
 # ---------------------------------------------------------------------------
 
 
-def test_chart_applicability_strategy_kanban():
-    a = chart_applicability_for("KANBAN")
-    assert a.cfd is True
-    assert a.iteration is False
-    assert a.lead_cycle is True
-    assert a.burndown is False
+@pytest.mark.asyncio
+async def test_phase_progress_returns_empty_when_no_workflow_nodes():
+    project = FakeProject(id=42, process_config=None)
+    use_case = GetProjectPhaseProgressUseCase(
+        project_repo=FakeProjectRepo(project),
+        report_repo=FakeReportRepo(),
+    )
+    result = await use_case.execute(project_id=42)
+    assert result.phases == []
 
 
-def test_chart_applicability_strategy_scrum():
-    a = chart_applicability_for("SCRUM")
-    assert a.cfd is False
-    assert a.iteration is True
-    assert a.burndown is True
-    assert a.lead_cycle is True
+@pytest.mark.asyncio
+async def test_phase_progress_preserves_node_order_and_zips_aggregates():
+    process_config = {
+        "phase_workflow": {
+            "nodes": [
+                {"id": "design", "name": "Design"},
+                {"id": "build", "name": "Build"},
+                {"id": "test", "name": "Test"},  # no tasks — should still appear
+            ],
+        },
+    }
+    project = FakeProject(id=42, process_config=process_config)
+    aggregates = [
+        {"phase_id": "build", "total": 5, "done": 2, "in_progress": 2, "todo": 1},
+        {"phase_id": "design", "total": 3, "done": 3, "in_progress": 0, "todo": 0},
+    ]
+    use_case = GetProjectPhaseProgressUseCase(
+        project_repo=FakeProjectRepo(project),
+        report_repo=FakeReportRepo(phase_progress=aggregates),
+    )
+    result = await use_case.execute(project_id=42)
+    assert [p.id for p in result.phases] == ["design", "build", "test"]
+    assert result.phases[0].done == 3  # Design: all done
+    assert result.phases[1].in_progress == 2  # Build: 2 in progress
+    assert result.phases[2].total == 0  # Test: no tasks but card slot reserved
 
 
-def test_chart_applicability_strategy_waterfall():
-    a = chart_applicability_for("WATERFALL")
-    assert a.cfd is False
-    assert a.iteration is False
-    assert a.burndown is False
-    assert a.lead_cycle is True  # always available
-
-
-def test_chart_applicability_iteration_methodologies_set():
-    """Hardlock the 5-member set — adding a methodology should be a deliberate edit."""
-    assert ITERATION_METHODOLOGIES == frozenset({
-        "SCRUM", "ITERATIVE", "INCREMENTAL", "EVOLUTIONARY", "RAD",
-    })
+@pytest.mark.asyncio
+async def test_phase_progress_skips_archived_nodes():
+    process_config = {
+        "phase_workflow": {
+            "nodes": [
+                {"id": "design", "name": "Design"},
+                {"id": "old", "name": "Old phase", "archived": True},
+                {"id": "build", "name": "Build"},
+            ],
+        },
+    }
+    project = FakeProject(id=42, process_config=process_config)
+    use_case = GetProjectPhaseProgressUseCase(
+        project_repo=FakeProjectRepo(project),
+        report_repo=FakeReportRepo(),
+    )
+    result = await use_case.execute(project_id=42)
+    assert [p.id for p in result.phases] == ["design", "build"]
 
 
 # ---------------------------------------------------------------------------

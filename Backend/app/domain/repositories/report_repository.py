@@ -59,3 +59,20 @@ class IReportRepository(ABC):
         date_from: Optional[date],
         date_to: Optional[date],
     ) -> List[TaskExportRowDTO]: ...
+
+    # ------------------------------------------------------------------
+    # Reports migration v2 (Strategy D) — phase progress aggregation
+    # ------------------------------------------------------------------
+
+    async def get_phase_progress(self, project_id: int) -> List[dict]:
+        """Aggregate tasks per ``phase_id`` broken down by column category.
+
+        Returns ordered list of dicts:
+            {phase_id, total, done, in_progress, todo}
+        ``phase_id`` is the raw ``tasks.phase_id`` string; the use case
+        zips it with ``project.process_config['phase_workflow']['nodes']``
+        to attach human-readable names and the canonical order.
+
+        Default returns empty list so test fakes can override.
+        """
+        return []

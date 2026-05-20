@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 from app.domain.entities.project import Project
 from app.domain.entities.user import User
+from app.domain.services.chart_applicability import CapabilityInputs
 
 
 class IProjectRepository(ABC):
@@ -104,3 +105,28 @@ class IProjectRepository(ABC):
         Default returns empty dict so test fakes can override.
         """
         return {}
+
+    # ------------------------------------------------------------------
+    # Reports migration v2 (Strategy D) — chart capability gating inputs
+    # ------------------------------------------------------------------
+
+    async def get_capability_inputs(self, project_id: int) -> CapabilityInputs:
+        """Aggregated project-state inputs for chart capability gating.
+
+        Returns a ``CapabilityInputs`` snapshot used by
+        ``chart_applicability.chart_capabilities`` to decide which chart cards
+        are renderable for the given project. Implementations MUST use a single
+        round trip (no N+1) — scalar subqueries / JSONB introspection on the
+        live DB is the canonical approach.
+
+        Default returns a zero-snapshot so test fakes can override without
+        having to spin up a full DB. Production must override.
+        """
+        return CapabilityInputs(
+            sprint_count=0,
+            closed_sprint_count=0,
+            phase_node_count=0,
+            column_count=0,
+            member_count=0,
+            has_all_categories=False,
+        )

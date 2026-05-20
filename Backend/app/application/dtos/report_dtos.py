@@ -10,6 +10,18 @@ class SummaryDTO(BaseModel):
     total_tasks: int
     completion_rate: float  # percentage 0-100
 
+    # Reports migration v2 — prototype StatCards expose period-over-period
+    # deltas (e.g. "Sprint Velocity 48 +6 pts"). Each delta is computed as
+    # current_period - previous_period of the same length; ``None`` means
+    # the previous period had no data (first run / fresh project) and the
+    # frontend renders an em-dash placeholder instead of "+0".
+    velocity_delta: Optional[float] = None  # absolute change in completed_tasks vs prev period
+    completed_delta_pct: Optional[float] = None  # percent change in completion_rate vs prev period
+    cycle_time_avg_days: Optional[float] = None  # avg cycle time over current period (computed from audit_log)
+    cycle_time_delta_days: Optional[float] = None  # days change in cycle time vs prev period
+    blockers_count: Optional[int] = None  # count of tasks in BLOCKED status (column.category = 'blocked' or name match)
+    blockers_delta: Optional[int] = None  # absolute change in blockers vs prev period
+
 
 class BurndownPointDTO(BaseModel):
     date: str  # ISO date string "YYYY-MM-DD"

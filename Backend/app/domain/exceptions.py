@@ -229,18 +229,10 @@ class InvalidTransitionError(DomainError):
         )
 
 
-class InvalidMethodologyError(ValueError):
-    """Phase 13 D-X3 — raised when a methodology-gated operation is invoked
-    against a non-applicable methodology.
-
-    Router maps to HTTP 422 with error_code INVALID_METHODOLOGY (Phase 9 taxonomy).
-    Inherits from ValueError so callers can catch with a single except clause when
-    they don't need to inspect ``methodology`` / ``required``.
-    """
-    def __init__(self, methodology: str, required: str):
-        super().__init__(f"Methodology '{methodology}' not in required set: {required}")
-        self.methodology = methodology
-        self.required = required
+# Reports migration v2 (Strategy D): InvalidMethodologyError was deleted.
+# Iteration chart no longer gates on methodology; capability gating happens
+# on the FE via /chart-capabilities. If you find a reference to this class
+# in legacy code, replace with a capability check.
 
 
 # ---------------------------------------------------------------------------

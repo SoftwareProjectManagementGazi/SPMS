@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, distinct, and_, or_, union
+from sqlalchemy import select, func, distinct, and_, or_, union, case
 
 from app.domain.repositories.report_repository import IReportRepository
 from app.application.dtos.report_dtos import (
@@ -22,6 +22,7 @@ from app.infrastructure.database.models.sprint_snapshot import SprintSnapshotMod
 from app.infrastructure.database.models.board_column import BoardColumnModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
 from app.infrastructure.database.models.user import UserModel
+from app.infrastructure.database.util.done_columns import resolve_done_column_ids
 
 
 class SqlAlchemyReportRepository(IReportRepository):
@@ -29,13 +30,18 @@ class SqlAlchemyReportRepository(IReportRepository):
         self.session = session
 
     async def _get_done_column_ids(self, project_id: int) -> List[int]:
-        """Return IDs of columns whose name contains 'done' (case-insensitive)."""
-        stmt = select(BoardColumnModel.id).where(
-            BoardColumnModel.project_id == project_id,
-            BoardColumnModel.name.ilike("%done%"),
+        """Return IDs of columns categorised as ``done``.
+
+        Delegates to the shared ``resolve_done_column_ids`` helper which:
+          1. Looks up ``BoardColumn.category == 'done'`` first (Phase 17+).
+          2. Falls back to ``name ILIKE '%done%'`` for pre-Phase-17 projects,
+             logging a WARN + bumping a Prometheus counter so operators can
+             see which projects need backfilling.
+        """
+        done_ids, _used_fallback = await resolve_done_column_ids(
+            self.session, project_id
         )
-        result = await self.session.execute(stmt)
-        return [row[0] for row in result.all()]
+        return done_ids
 
     async def get_summary(
         self,
@@ -511,5 +517,72 @@ class SqlAlchemyReportRepository(IReportRepository):
                 updated_at=row.updated_at,
                 reporter=row.reporter,
             )
+            for row in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # Reports migration v2 (Strategy D) — phase progress aggregation
+    # ------------------------------------------------------------------
+
+    async def get_phase_progress(self, project_id: int) -> List[dict]:
+        """Aggregate tasks per ``phase_id`` broken down by column category.
+
+        Single GROUP-BY query joining ``tasks`` LEFT JOIN ``board_columns`` so
+        the breakdown buckets fall out of one round trip. Tasks with NULL
+        ``phase_id`` are excluded — the FE only renders phases declared in
+        ``process_config.phase_workflow.nodes``, so unphased tasks don't
+        belong in the visualisation.
+
+        Returns list of dicts: ``{phase_id, total, done, in_progress, todo}``.
+        The use case is responsible for zipping these with the project's node
+        order and resolving display labels.
+        """
+        stmt = (
+            select(
+                TaskModel.phase_id,
+                func.count(TaskModel.id).label("total"),
+                func.coalesce(
+                    func.sum(
+                        case((BoardColumnModel.category == "done", 1), else_=0)
+                    ),
+                    0,
+                ).label("done"),
+                func.coalesce(
+                    func.sum(
+                        case((BoardColumnModel.category == "in_progress", 1), else_=0)
+                    ),
+                    0,
+                ).label("in_progress"),
+                func.coalesce(
+                    func.sum(
+                        case((BoardColumnModel.category == "todo", 1), else_=0)
+                    ),
+                    0,
+                ).label("todo"),
+            )
+            .select_from(TaskModel)
+            .join(
+                BoardColumnModel,
+                TaskModel.column_id == BoardColumnModel.id,
+                isouter=True,
+            )
+            .where(
+                TaskModel.project_id == project_id,
+                TaskModel.phase_id.is_not(None),
+                TaskModel.deleted_at.is_(None),
+            )
+            .group_by(TaskModel.phase_id)
+        )
+
+        result = await self.session.execute(stmt)
+        rows = result.all()
+        return [
+            {
+                "phase_id": row.phase_id,
+                "total": int(row.total or 0),
+                "done": int(row.done or 0),
+                "in_progress": int(row.in_progress or 0),
+                "todo": int(row.todo or 0),
+            }
             for row in rows
         ]

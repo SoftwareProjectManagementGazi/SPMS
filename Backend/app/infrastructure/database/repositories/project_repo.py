@@ -1,14 +1,16 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, insert, delete
+from sqlalchemy import select, or_, insert, delete, func, and_, exists, literal, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.domain.entities.project import Project
 from app.domain.entities.user import User
 from app.domain.repositories.project_repository import IProjectRepository
+from app.domain.services.chart_applicability import CapabilityInputs
 from app.infrastructure.database.models.project import ProjectModel, project_members
 from app.infrastructure.database.models.user import UserModel
 from app.infrastructure.database.models.board_column import BoardColumnModel
+from app.infrastructure.database.models.sprint import SprintModel
 from app.infrastructure.database.models.audit_log import AuditLogModel
 from sqlalchemy.orm import joinedload
 
@@ -469,3 +471,112 @@ class SqlAlchemyProjectRepository(IProjectRepository):
                 "done": int(row.done or 0),
             }
         return out
+
+    # ------------------------------------------------------------------
+    # Reports migration v2 (Strategy D) — chart capability gating inputs
+    # ------------------------------------------------------------------
+
+    async def get_capability_inputs(self, project_id: int) -> CapabilityInputs:
+        """Single-query aggregation of the 6 capability-gate inputs.
+
+        Returns zero-snapshot if the project does not exist (caller handles
+        404 separately via ``get_by_id``). All counts via scalar subqueries
+        so the result is one round trip on Postgres regardless of how many
+        sprints/columns/members live under the project.
+
+        ``phase_node_count`` reads ``process_config->'phase_workflow'->'nodes'``
+        as a JSONB array; ``jsonb_array_length`` returns NULL when the path is
+        missing or the value isn't an array, hence the COALESCE wrapper.
+        """
+        # Independent scalar subqueries (each one round-trips through Postgres'
+        # query planner once, all in the same prepared statement).
+        sprint_count_sq = (
+            select(func.count(SprintModel.id))
+            .where(SprintModel.project_id == project_id)
+            .scalar_subquery()
+        )
+        closed_sprint_count_sq = (
+            select(func.count(SprintModel.id))
+            .where(SprintModel.project_id == project_id)
+            .where(SprintModel.status == "CLOSED")
+            .scalar_subquery()
+        )
+        column_count_sq = (
+            select(func.count(BoardColumnModel.id))
+            .where(BoardColumnModel.project_id == project_id)
+            .scalar_subquery()
+        )
+        member_count_sq = (
+            select(func.count(project_members.c.user_id))
+            .where(project_members.c.project_id == project_id)
+            .scalar_subquery()
+        )
+
+        has_todo = (
+            select(literal(1))
+            .where(
+                BoardColumnModel.project_id == project_id,
+                BoardColumnModel.category == "todo",
+            )
+            .exists()
+        )
+        has_progress = (
+            select(literal(1))
+            .where(
+                BoardColumnModel.project_id == project_id,
+                BoardColumnModel.category == "in_progress",
+            )
+            .exists()
+        )
+        has_done = (
+            select(literal(1))
+            .where(
+                BoardColumnModel.project_id == project_id,
+                BoardColumnModel.category == "done",
+            )
+            .exists()
+        )
+
+        # JSONB path: process_config -> 'phase_workflow' -> 'nodes' is the
+        # canonical V2 location (schema_version=2 per project.py:62-104). The
+        # COALESCE keeps the result well-typed when the path is missing or
+        # null. The CASE prevents jsonb_array_length from erroring on
+        # non-array values (defensive — should never happen with normalized
+        # configs but cheap to guard against).
+        process_config_path = ProjectModel.process_config["phase_workflow"]["nodes"]
+        phase_node_count_expr = func.coalesce(
+            func.jsonb_array_length(process_config_path),
+            0,
+        )
+
+        stmt = (
+            select(
+                sprint_count_sq.label("sprint_count"),
+                closed_sprint_count_sq.label("closed_sprint_count"),
+                column_count_sq.label("column_count"),
+                member_count_sq.label("member_count"),
+                and_(has_todo, has_progress, has_done).label("has_all_categories"),
+                phase_node_count_expr.label("phase_node_count"),
+            )
+            .select_from(ProjectModel)
+            .where(ProjectModel.id == project_id)
+        )
+
+        row = (await self.session.execute(stmt)).one_or_none()
+        if row is None:
+            return CapabilityInputs(
+                sprint_count=0,
+                closed_sprint_count=0,
+                phase_node_count=0,
+                column_count=0,
+                member_count=0,
+                has_all_categories=False,
+            )
+        return CapabilityInputs(
+            sprint_count=int(row.sprint_count or 0),
+            closed_sprint_count=int(row.closed_sprint_count or 0),
+            phase_node_count=int(row.phase_node_count or 0),
+            column_count=int(row.column_count or 0),
+            member_count=int(row.member_count or 0),
+            has_all_categories=bool(row.has_all_categories),
+        )
