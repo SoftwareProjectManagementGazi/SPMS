@@ -374,17 +374,15 @@ svg { display: block; }
  * =========================================================================== */
 
 @keyframes ai-node-appear {
-  /* Subtle fade + slight scale-up. No translateY — node materializes
-     in-place rather than sliding from above. transform-origin stays at
-     center so the node grows out of its center, not its top-left. */
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  /* Wave 6.1 — opacity-only fade. Earlier versions used `transform: scale()`
+     which conflicts with React Flow's per-node `transform: translate(x, y)`
+     applied to the same wrapper element. RF re-applies the translate on
+     every render, momentarily overriding our scale and causing nodes to
+     appear in a different position before "snapping" into place. Sticking
+     to opacity keeps the entrance feel intact while leaving RF's transform
+     pipeline untouched. */
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes ai-edge-draw {
@@ -412,8 +410,8 @@ svg { display: block; }
 }
 
 .ai-generated-node {
-  animation: ai-node-appear 240ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  transform-origin: center center;
+  /* Opacity-only fade. NO transform here — see ai-node-appear comment. */
+  animation: ai-node-appear 220ms ease-out backwards;
 }
 
 .ai-generating-pulse {
