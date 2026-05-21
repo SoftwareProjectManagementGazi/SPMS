@@ -32,8 +32,13 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
       {/* Header row — UI-sweep: standardize letterSpacing 0.4 -> 0.5 (uppercase Section labels) */}
       <div style={{
         display: "grid",
-        // UI-sweep: drop empty Team column until project member endpoint ships.
-        gridTemplateColumns: "2fr 90px 120px 90px 90px",
+        // Method column widened 90 -> 140 to fit full Turkish template names
+        // ("PRINCE2 (Proje Yönetimi)", "SAFe (Ölçekli Çevik)", …) — prototype
+        // only carried short methodology slugs (scrum/kanban/waterfall).
+        // columnGap prevents minor badge overflow from visually colliding
+        // with the Yönetici/Lead column.
+        gridTemplateColumns: "2fr 140px 120px 90px 90px",
+        columnGap: 10,
         padding: "10px 16px",
         fontSize: 11,
         textTransform: "uppercase",
@@ -92,9 +97,9 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
             className="hover-row"
             style={{
               display: "grid",
-              // UI-sweep: drop empty AvatarStack column until project member endpoint ships.
-              gridTemplateColumns: "2fr 90px 120px 90px 90px",
-              // UI-sweep: row pad 11px -> 10px to match header (matches prototype).
+              // Keep column track widths and gap aligned with the header above.
+              gridTemplateColumns: "2fr 140px 120px 90px 90px",
+              columnGap: 10,
               padding: "10px 16px",
               alignItems: "center",
               fontSize: 13,
@@ -128,11 +133,25 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               </div>
             </div>
 
-            {/* Method badge */}
-            <div>
+            {/* Method badge — minWidth:0 + overflow:hidden lets the badge
+                truncate on the 30-char outliers ("V-Modeli + Scrum İç
+                Döngüleri", "RAD (Hızlı Uygulama Geliştirme)") instead of
+                overflowing into the Yönetici column. */}
+            <div style={{ minWidth: 0, overflow: "hidden" }}>
               {templateLabel && (
-                <Badge tone={methodTone} size="xs">
-                  {templateLabel}
+                <Badge tone={methodTone} size="xs" style={{ maxWidth: "100%" }}>
+                  <span
+                    title={templateLabel}
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      display: "block",
+                      minWidth: 0,
+                    }}
+                  >
+                    {templateLabel}
+                  </span>
                 </Badge>
               )}
             </div>
