@@ -470,6 +470,7 @@ class SqlAlchemyReportRepository(IReportRepository):
 
         stmt = (
             select(
+                TaskModel.id.label("task_id"),
                 TaskModel.task_key,
                 TaskModel.title,
                 BoardColumnModel.name.label("status"),
@@ -505,6 +506,7 @@ class SqlAlchemyReportRepository(IReportRepository):
 
         return [
             TaskExportRowDTO(
+                task_id=row.task_id,
                 task_key=row.task_key,
                 title=row.title,
                 status=row.status,

@@ -250,6 +250,23 @@ async def export_pdf(
             pdf.cell(w, 8, safe(h), border=1, fill=True)
         pdf.ln()
 
+        # task_key fallback (Reports v2 audit): seed data + several
+        # pre-Phase-13 create paths leave tasks.task_key NULL, so the
+        # "Kod" column would render blank for almost every project. Derive
+        # `<project.key>-<task_id>` at render time when task_key is
+        # missing (matches the canonical Phase-3 task-key format from
+        # tasks.task_key generation).
+        project_key_for_fallback = getattr(project_obj, "key", "") or ""
+
+        def _task_code(t) -> str:
+            if t.task_key:
+                return t.task_key
+            if t.task_id and project_key_for_fallback:
+                return f"{project_key_for_fallback}-{t.task_id}"
+            if t.task_id:
+                return f"#{t.task_id}"
+            return ""
+
         # Data rows
         pdf.set_text_color(0, 0, 0)
         pdf.set_font(fn, size=8)
@@ -257,7 +274,7 @@ async def export_pdf(
         for task in tasks:
             pdf.set_fill_color(248, 248, 248) if alt else pdf.set_fill_color(255, 255, 255)
             row_vals = [
-                task.task_key or "",
+                _task_code(task),
                 (task.title or "")[:50],
                 task.status or "",
                 task.assignee or "",
@@ -342,10 +359,25 @@ async def export_excel(
 
         ws.row_dimensions[1].height = 20
 
+        # Same task_key fallback as PDF — see _task_code in the PDF export
+        # endpoint above. Mirrored verbatim here so Excel doesn't render
+        # a blank "Gorev Kodu" column for projects whose tasks.task_key
+        # is NULL (the seed-data state).
+        excel_project_key = getattr(project_obj, "key", "") or ""
+
+        def _excel_task_code(t) -> str:
+            if t.task_key:
+                return t.task_key
+            if t.task_id and excel_project_key:
+                return f"{excel_project_key}-{t.task_id}"
+            if t.task_id:
+                return f"#{t.task_id}"
+            return ""
+
         data_alignment = Alignment(horizontal="left", vertical="center")
         for row_idx, task in enumerate(tasks, 2):
             row_data = [
-                task.task_key or "",
+                _excel_task_code(task),
                 task.title,
                 task.status or "",
                 task.assignee or "",

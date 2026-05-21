@@ -71,6 +71,13 @@ class PerformanceDTO(BaseModel):
 
 
 class TaskExportRowDTO(BaseModel):
+    # Reports v2 audit: legacy DB rows have task_key=NULL because the
+    # task_key writer didn't fire for seed data + several pre-Phase-13
+    # create paths. The PDF/Excel exporters fall back to
+    # f"{project.key}-{task_id}" when task_key is missing, so we now
+    # carry task_id through the DTO for that derivation. Kept Optional
+    # for backward-compat with any test fake that doesn't populate it.
+    task_id: Optional[int] = None
     task_key: Optional[str]
     title: str
     status: Optional[str]  # column name
