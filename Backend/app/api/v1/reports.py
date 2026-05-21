@@ -31,6 +31,7 @@ from app.application.use_cases.generate_reports import (
 from app.domain.entities.user import User
 from app.domain.repositories.project_repository import IProjectRepository
 from app.domain.repositories.report_repository import IReportRepository
+from app.infrastructure.pdf.unicode_font import find_unicode_font, to_ascii
 
 router = APIRouter()
 
@@ -203,7 +204,6 @@ async def export_pdf(
 
         from fpdf import FPDF
 
-        UNICODE_FONT = "/Library/Fonts/Arial Unicode.ttf"
         # Landscape A4: 297mm wide. With 15mm margins each side → 267mm usable.
         MARGIN = 15
         pdf = FPDF(orientation="L", unit="mm", format="A4")
@@ -211,20 +211,31 @@ async def export_pdf(
         pdf.set_auto_page_break(auto=True, margin=MARGIN)
         pdf.add_page()
 
-        if Path(UNICODE_FONT).exists():
-            pdf.add_font("uni", fname=UNICODE_FONT)
+        # Cross-platform Unicode font resolution (replaces the old
+        # macOS-hardcoded /Library/Fonts/Arial Unicode.ttf which crashed
+        # every Windows / Linux export with FPDFUnicodeEncodingException
+        # on Turkish characters). The helper sweeps OS-specific candidates
+        # at first call and caches the result. If absolutely no Unicode
+        # TTF exists on the host, `safe()` transliterates Turkish glyphs
+        # to ASCII so the export still produces a valid PDF instead of a
+        # 500.
+        font_path = find_unicode_font()
+        if font_path:
+            pdf.add_font("uni", fname=font_path)
             fn = "uni"
+            safe = lambda s: s  # noqa: E731 — identity when font handles unicode
         else:
             fn = "Helvetica"
+            safe = to_ascii  # noqa: E731 — last-resort transliteration
 
         # Title
         pdf.set_font(fn, size=14)
-        pdf.cell(0, 10, f"SPMS Raporu - {project_obj.name}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, safe(f"SPMS Raporu - {project_obj.name}"), new_x="LMARGIN", new_y="NEXT")
 
         # Subtitle
         pdf.set_font(fn, size=9)
-        pdf.cell(0, 6, f"Filtre: {filter_summary}", new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 6, f"Oluşturulma: {generated_at} UTC", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, safe(f"Filtre: {filter_summary}"), new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, safe(f"Oluşturulma: {generated_at} UTC"), new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
 
         # Column widths — total must fit within 267mm usable width
@@ -236,7 +247,7 @@ async def export_pdf(
         pdf.set_text_color(255, 255, 255)
         pdf.set_font(fn, size=9)
         for w, h in zip(col_widths, headers):
-            pdf.cell(w, 8, h, border=1, fill=True)
+            pdf.cell(w, 8, safe(h), border=1, fill=True)
         pdf.ln()
 
         # Data rows
@@ -257,7 +268,7 @@ async def export_pdf(
                 task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
             ]
             for val, w in zip(row_vals, col_widths):
-                pdf.cell(w, 7, str(val), border=1, fill=True)
+                pdf.cell(w, 7, safe(str(val)), border=1, fill=True)
             pdf.ln()
             alt = not alt
 

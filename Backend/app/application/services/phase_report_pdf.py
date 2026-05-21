@@ -5,13 +5,17 @@ minimal chrome.  Suitable for business / corporate use.
 
 Sync rendering in request thread. <2MB, <500ms target per D-60.
 
-Unicode font fallback: if no system Unicode font is found, falls back to
-Helvetica (Latin-1 only) — non-Latin-1 chars replaced with '?'.
+Unicode font: Reports v2 manual QA fixed the Windows-only failure
+(arialuni.ttf was the only Windows candidate and it's not installed by
+default on Win 10+). Cross-platform resolution + transliteration
+fallback now lives in `app.infrastructure.pdf.unicode_font`, shared
+with `/reports/export/pdf`. When no Unicode TTF is present on the host
+Turkish characters transliterate to ASCII so the export still works.
 """
 from datetime import datetime
-from pathlib import Path
 from fpdf import FPDF
 from app.domain.entities.phase_report import PhaseReport
+from app.infrastructure.pdf.unicode_font import find_unicode_font, to_ascii
 
 # ── Layout ─────────────────────────────────────────────────────────────────
 _MARGIN = 20
@@ -28,29 +32,38 @@ _C_RULE    = (209, 213, 219)  # gray-300  — dividers
 _C_SURFACE = (249, 250, 251)  # gray-50   — alternate bg
 _C_WHITE   = (255, 255, 255)
 
-# ── Font candidates ────────────────────────────────────────────────────────
-_FONT_CANDIDATES = [
-    "/Library/Fonts/Arial Unicode.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "C:\\Windows\\Fonts\\arialuni.ttf",
-]
-
 
 # ── Low-level helpers ──────────────────────────────────────────────────────
 
 def _resolve_font(pdf: FPDF) -> str:
-    for path in _FONT_CANDIDATES:
-        if Path(path).exists():
-            pdf.add_font("uni", style="",  fname=path)
-            pdf.add_font("uni", style="B", fname=path)
-            return "uni"
+    """Resolve the document's primary font.
+
+    Delegates the host-OS candidate sweep to the shared
+    `find_unicode_font()` helper. When a TTF is available we register
+    both the regular and bold styles against the same file — fpdf2
+    accepts this; the bold style won't render bolder than regular if
+    the file has no bold variant, but Turkish glyphs still render
+    correctly which is the whole point of this resolution.
+    """
+    path = find_unicode_font()
+    if path:
+        pdf.add_font("uni", style="",  fname=path)
+        pdf.add_font("uni", style="B", fname=path)
+        return "uni"
     return "Helvetica"
 
 
 def _safe(text: str, is_unicode: bool) -> str:
+    """Sanitize text for the chosen font.
+
+    - When the resolved font is the Unicode TTF we pass through verbatim.
+    - When we fell back to Helvetica (Latin-1 only) we Turkish→ASCII
+      transliterate via the shared helper. Reading "Cozum" instead of
+      "Çözüm" is preferable to either '?' replacement or a 500.
+    """
     if is_unicode:
         return text
-    return text.encode("latin-1", errors="replace").decode("latin-1")
+    return to_ascii(text)
 
 
 def _rule(pdf: FPDF, lw: float = 0.25) -> None:
