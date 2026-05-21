@@ -223,11 +223,15 @@ export function AdminProjectRow({
         )}
       </div>
 
-      {/* 3) Methodology badge */}
+      {/* 3) Methodology badge — template name only; if the row pre-dates the
+           template-id backfill the cell stays empty rather than leaking the
+           raw enum into the UI. */}
       <div style={{ ...dimmed }}>
-        <Badge size="xs" tone={methodBadgeTone(project.processTemplateName ?? project.methodology)}>
-          {project.processTemplateName ?? project.methodology}
-        </Badge>
+        {project.processTemplateName && (
+          <Badge size="xs" tone={methodBadgeTone(project.processTemplateName)}>
+            {project.processTemplateName}
+          </Badge>
+        )}
       </div>
 
       {/* 4) Lead — Avatar + first name. Avatar.href is an internal Link to

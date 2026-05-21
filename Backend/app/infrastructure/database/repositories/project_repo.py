@@ -198,7 +198,7 @@ class SqlAlchemyProjectRepository(IProjectRepository):
         # `status` is required for D-25 lifecycle transitions (archive/complete/
         # hold/reactivate). It was missing, so even after the DTO started
         # accepting status the repo would silently drop it.
-        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config", "status"]
+        updatable_fields = ["name", "description", "start_date", "end_date", "methodology", "custom_fields", "process_config", "status", "process_template_id"]
 
         # Plan 14-09 D-D2: snapshot identity fields BEFORE mutation so the
         # audit row carries the current project_key + name even when the name

@@ -113,6 +113,10 @@ async def lifespan(app: FastAPI):
     # Startup: Migration 006 — make files.task_id nullable for artifact file uploads (D-41)
     from app.infrastructure.database.migrations.migration_006 import upgrade as upgrade_006
     await upgrade_006(engine)
+    # Startup: Migration 007 — backfill projects.process_template_id by methodology so
+    # the read-side join surfaces the human-readable template name instead of the bare enum.
+    from app.infrastructure.database.migrations.migration_007 import upgrade as upgrade_007
+    await upgrade_007(engine)
     # Startup: Register and start APScheduler jobs
     from app.scheduler.jobs import scheduler, deadline_alert_job, purge_notifications_job
     from apscheduler.triggers.cron import CronTrigger

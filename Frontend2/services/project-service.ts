@@ -59,6 +59,11 @@ export interface CreateProjectDTO {
   start_date: string;
   end_date?: string;
   methodology: string;
+  // Picked from /process-templates in the wizard. When omitted the backend
+  // falls back to the methodology-name lookup, but the resulting project
+  // row will be linked to the bare built-in (Scrum/Kanban/Waterfall) rather
+  // than the rich one the user actually chose (V-Modeli, PRINCE2, …).
+  process_template_id?: number | null;
   columns?: string[];
   process_config?: Record<string, unknown>;
 }

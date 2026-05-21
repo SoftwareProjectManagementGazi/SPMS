@@ -30,10 +30,20 @@ class CreateProjectUseCase:
         self.artifact_repo = artifact_repo
 
     async def execute(self, dto: ProjectCreateDTO, manager_id: int) -> ProjectResponseDTO:
-        # Look up process template if template_repo is available
+        # Look up process template if template_repo is available.
+        #
+        # Resolution order:
+        #   1. dto.process_template_id (explicit pick from the wizard — covers
+        #      extended templates like V-Modeli, Spiral, PRINCE2 that have no
+        #      1:1 methodology enum mapping).
+        #   2. Fallback: match a built-in template by methodology name. Kept
+        #      for older clients that still post methodology only.
         template = None
         if self.template_repo is not None:
-            template = await self.template_repo.get_by_name(dto.methodology.value)
+            if dto.process_template_id is not None:
+                template = await self.template_repo.get_by_id(dto.process_template_id)
+            if template is None:
+                template = await self.template_repo.get_by_name(dto.methodology.value)
 
         # Wave 2 W2-C10 — Build columns via the engine-aware fallback chain:
         #
@@ -138,6 +148,10 @@ class CreateProjectUseCase:
             columns=columns,
             custom_fields=dto.custom_fields,
             process_config=process_config,
+            # Persist the resolved template so the FE join surfaces the
+            # human-readable name (V-Modeli, PRINCE2, …) instead of falling
+            # back to the bare methodology enum in display badges.
+            process_template_id=template.id if template is not None else None,
         )
         created_project = await self.project_repo.create(new_project)
 

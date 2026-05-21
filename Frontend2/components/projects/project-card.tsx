@@ -221,7 +221,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </span>
             </div>
             <div style={{ display: "flex", gap: 4, flexShrink: 0, alignItems: "center" }}>
-              <Badge size="xs" tone="neutral">{project.processTemplateName ?? project.methodology}</Badge>
+              {project.processTemplateName && (
+                <Badge size="xs" tone="neutral">{project.processTemplateName}</Badge>
+              )}
               <Badge size="xs" tone={STATUS_BADGE_TONE[project.status] ?? "neutral"} dot>
                 {language === 'tr' ? (STATUS_LABEL_TR[project.status] ?? project.status) : project.status}
               </Badge>

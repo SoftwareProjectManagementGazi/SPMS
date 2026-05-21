@@ -51,7 +51,12 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
 
       {/* Data rows */}
       {projects.map((project) => {
+        // Badge tone still keys on methodology (Strategy ruleset), but the
+        // visible label is the human template name picked at create-time
+        // (V-Modeli, PRINCE2, …). Hidden — not enum-fallback'd — when the
+        // project pre-dates the template-id backfill.
         const methodTone = getMethodologyTone(project.methodology)
+        const templateLabel = project.processTemplateName ?? ""
         const progress = Math.round(project.progress ?? 0)
 
         // Build lead avatar from manager fields
@@ -125,9 +130,11 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
 
             {/* Method badge */}
             <div>
-              <Badge tone={methodTone} size="xs">
-                {project.methodology}
-              </Badge>
+              {templateLabel && (
+                <Badge tone={methodTone} size="xs">
+                  {templateLabel}
+                </Badge>
+              )}
             </div>
 
             {/* Lead: avatar + first name. Phase 13 Plan 13-03 (D-D4) — Avatar

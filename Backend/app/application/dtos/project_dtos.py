@@ -21,6 +21,10 @@ class ProjectCreateDTO(BaseModel):
     start_date: datetime
     end_date: Optional[datetime] = None
     methodology: Methodology
+    # The new wizard sends the explicit template the user picked (V-Modeli,
+    # Spiral, PRINCE2, …). When absent, CreateProjectUseCase falls back to
+    # the legacy methodology-name lookup so old clients still work.
+    process_template_id: Optional[int] = None
     columns: List[str] = []
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None
@@ -31,6 +35,7 @@ class ProjectUpdateDTO(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     methodology: Optional[Methodology] = None
+    process_template_id: Optional[int] = None
     custom_fields: Optional[Dict[str, Any]] = None
     process_config: Optional[Dict[str, Any]] = None
     # D-25: lifecycle transitions (ACTIVE ↔ COMPLETED / ON_HOLD / ARCHIVED) go

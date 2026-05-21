@@ -191,15 +191,27 @@ function WizardContent() {
   const selectedTemplate = (templates as any[]).find((t: any) => t.id === selectedTemplateId)
 
   const handleSubmit = () => {
-    // Map template name to methodology enum value required by backend
-    // (backend still uses methodology field — not dropped until migration 006)
+    // Two pieces of identity go to the backend:
+    //
+    //   1. methodology — the enum that downstream code uses to decide rules
+    //      (sprint vs. WIP vs. sequential dependencies). Built-in templates
+    //      map cleanly; for extended templates (V-Modeli, Spiral, PRINCE2,
+    //      RAD, …) we approximate via the closest cycle metaphor so the
+    //      strategy layer still picks a sensible ruleset. Falls back to
+    //      SCRUM only if even that fails.
+    //   2. process_template_id — the actual row the user picked. This is
+    //      what the read-side join exposes as `process_template_name`, and
+    //      it's what the FE displays on cards / tables / headers. Without
+    //      this the project ends up with template_id=NULL and the FE has
+    //      to fall back to the bare enum.
     const templateNameLower = (selectedTemplate?.name ?? selectedMethodology ?? '').toLowerCase()
-    const methodologyMap: Record<string, string> = {
-      scrum: 'SCRUM',
-      kanban: 'KANBAN',
-      waterfall: 'WATERFALL',
-    }
-    const methodology = methodologyMap[templateNameLower] ?? 'SCRUM'
+    const methodologyMap: Array<{ match: (n: string) => boolean; value: string }> = [
+      { match: (n) => n.includes('kanban') || n.includes('lean'), value: 'KANBAN' },
+      { match: (n) => n.includes('waterfall') || n.includes('v-modeli') || n.includes('v model') || n.includes('prince'), value: 'WATERFALL' },
+      { match: (n) => n.includes('iterat') || n.includes('spiral') || n.includes('rup') || n.includes('rad'), value: 'ITERATIVE' },
+      { match: (n) => n.includes('scrum') || n.includes('xp') || n.includes('safe') || n.includes('crystal') || n.includes('dsdm') || n.includes('fdd'), value: 'SCRUM' },
+    ]
+    const methodology = methodologyMap.find((m) => m.match(templateNameLower))?.value ?? 'SCRUM'
 
     createProject({
       key: key.toUpperCase(),
@@ -208,6 +220,7 @@ function WizardContent() {
       start_date: startDate || new Date().toISOString(),
       end_date: endDate || undefined,
       methodology,
+      process_template_id: selectedTemplateId ?? undefined,
       columns,
       process_config: {
         // C10: emit V2 canonical shape on project create. Backend

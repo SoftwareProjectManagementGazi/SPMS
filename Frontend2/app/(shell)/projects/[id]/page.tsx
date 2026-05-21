@@ -59,8 +59,12 @@ export default function ProjectDetailPage() {
             <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 11 }}>
               {project.key}
             </span>
-            {" · "}
-            {project.methodology}
+            {project.processTemplateName && (
+              <>
+                {" · "}
+                {project.processTemplateName}
+              </>
+            )}
           </div>
         </div>
         {/* D-34: Edit button disabled when project is ARCHIVED */}
