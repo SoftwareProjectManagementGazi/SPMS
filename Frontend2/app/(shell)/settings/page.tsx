@@ -5,7 +5,7 @@ import { authService } from "@/services/auth-service"
 import { useAuth } from "@/context/auth-context"
 import { useApp } from "@/context/app-context"
 import { useToast } from "@/components/toast"
-import { Card, Button, Toggle, SegmentedControl } from "@/components/primitives"
+import { Card, Button, Toggle, SegmentedControl, Avatar } from "@/components/primitives"
 import {
   PRESETS,
   applyTokens,
@@ -211,10 +211,13 @@ function ProfileSection() {
     },
   })
 
-  // Avatar display
+  // Avatar display — initials derived from name; the Avatar primitive
+  // resolves user.avatar (already resolved by auth-service) and falls back
+  // to initials when null / placeholder.
   const avatarInitials = (user?.name ?? "?")
     .split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("")
-  const avatarUrl = user?.avatar && user.avatar !== "/placeholder.svg" ? user.avatar : null
+  const userIdSeed = Number(user?.id) || (user?.name?.length ?? 1)
+  const avColor = (userIdSeed % 8) + 1
 
   return (
     <Card padding={20}>
@@ -227,20 +230,15 @@ function ProfileSection() {
 
       {/* Avatar upload row */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-        <div
-          style={{
-            width: 64, height: 64, borderRadius: "50%",
-            background: "var(--accent)", display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 22, fontWeight: 600,
-            color: "var(--accent-fg)", overflow: "hidden", flexShrink: 0,
+        <Avatar
+          user={{
+            initials: avatarInitials,
+            avColor,
+            avatarUrl: user?.avatar,
           }}
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            avatarInitials
-          )}
-        </div>
+          size={64}
+          style={{ fontSize: 22 }}
+        />
         <div>
           {/* Hidden file input — T-10-06-02: accept only images */}
           <input

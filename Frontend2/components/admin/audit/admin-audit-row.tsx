@@ -104,6 +104,9 @@ export function AdminAuditRow({ item, isLast }: AdminAuditRowProps) {
   const actorAvatar = {
     initials,
     avColor: ((item.user_id ?? 0) % 8) + 1,
+    // AdminAuditItem.user_avatar is the raw backend path; the Avatar
+    // primitive resolves it and falls back to initials.
+    avatarUrl: (item as { user_avatar?: string | null }).user_avatar ?? null,
   }
 
   const target = item.entity_label || ""

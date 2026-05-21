@@ -106,6 +106,9 @@ export function AdminProjectRow({
     ? {
         initials: getInitials(leadName) || leadName[0]?.toUpperCase() || "?",
         avColor: ((project.managerId ?? project.id) % 8) + 1,
+        // Project.managerAvatar is the raw backend `uploads/…` path; the
+        // Avatar primitive resolves it and falls back to initials.
+        avatarUrl: project.managerAvatar,
       }
     : null
 

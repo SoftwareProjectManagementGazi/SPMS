@@ -70,6 +70,7 @@ export default function TaskDetailPage() {
         {
           id: project.managerId,
           name: project.managerName ?? `#${project.managerId}`,
+          avatarUrl: project.managerAvatar ?? null,
         },
       ]
     }

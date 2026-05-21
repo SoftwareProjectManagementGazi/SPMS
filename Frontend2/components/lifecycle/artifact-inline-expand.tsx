@@ -42,6 +42,7 @@ interface AssigneeOption {
   name: string
   initials: string
   avColor?: number
+  avatarUrl?: string | null
 }
 
 function initialsOf(name: string): string {
@@ -124,7 +125,13 @@ export function ArtifactInlineExpand({
     if (user) {
       const uid = Number(user.id)
       if (!opts.find((o) => o.id === uid)) {
-        opts.push({ id: uid, name: user.name ?? T("Ben", "Me"), initials: initialsOf(user.name ?? "Me"), avColor: 2 })
+        opts.push({
+          id: uid,
+          name: user.name ?? T("Ben", "Me"),
+          initials: initialsOf(user.name ?? "Me"),
+          avColor: 2,
+          avatarUrl: (user as { avatar?: string }).avatar ?? null,
+        })
       }
     }
     return opts
@@ -316,7 +323,13 @@ export function ArtifactInlineExpand({
               >
                 {currentAssignee ? (
                   <>
-                    <Avatar user={{ initials: currentAssignee.initials, avColor: currentAssignee.avColor }} size={18}
+                    <Avatar
+                      user={{
+                        initials: currentAssignee.initials,
+                        avColor: currentAssignee.avColor,
+                        avatarUrl: currentAssignee.avatarUrl,
+                      }}
+                      size={18}
                       href={currentAssignee.id != null ? `/users/${currentAssignee.id}` : undefined}
                     />
                     <span>{currentAssignee.name}</span>
@@ -367,7 +380,10 @@ export function ArtifactInlineExpand({
                         background: assigneeId === o.id ? "color-mix(in oklch, var(--primary) 8%, transparent)" : "transparent",
                       }}
                     >
-                      <Avatar user={{ initials: o.initials, avColor: o.avColor }} size={20} />
+                      <Avatar
+                        user={{ initials: o.initials, avColor: o.avColor, avatarUrl: o.avatarUrl }}
+                        size={20}
+                      />
                       <span>{o.name}</span>
                     </div>
                   ))}

@@ -111,6 +111,9 @@ export function ActivityRow({
   const actorAvatar = {
     initials,
     avColor: ((event.user_id ?? 0) % 8) + 1,
+    // ActivityItem.user_avatar is the raw backend `uploads/…` path; the
+    // Avatar primitive resolves it and falls back to initials when null.
+    avatarUrl: event.user_avatar,
   }
   const firstName = userName.split(" ")[0] || ""
 

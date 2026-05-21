@@ -62,6 +62,10 @@ function TeamRow({ entry }: { entry: TeamLoadEntry }) {
   const user: AvatarUser = {
     initials: initialsOf(entry.fullName),
     avColor: avColorFor(entry),
+    // entry.avatarPath is the raw backend `uploads/…` path; the Avatar
+    // primitive resolves it against NEXT_PUBLIC_BACKEND_URL and falls back
+    // to initials when null.
+    avatarUrl: entry.avatarPath,
   }
   // Prototype shows the FIRST NAME only — same convention so the row fits
   // on narrow widths without ellipsis.

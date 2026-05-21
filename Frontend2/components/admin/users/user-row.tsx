@@ -91,6 +91,9 @@ export function UserRow({
   const avUser: AvatarUser = {
     initials: getInitials(fullName) || (email[0]?.toUpperCase() ?? "?"),
     avColor: user.avatar_color ?? (user.id % 8) + 1,
+    // AdminUser carries the raw `avatar_url`; the Avatar primitive resolves
+    // it and falls back to initials when null / placeholder.
+    avatarUrl: (user as { avatar_url?: string | null }).avatar_url ?? null,
   }
 
   // Last seen — prefer the timestamp; fall back to a "now" label for missing.

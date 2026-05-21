@@ -77,7 +77,14 @@ export function ProfileHeader({ user, stats }: ProfileHeaderProps) {
     (typeof user.role === "string" ? user.role : user.role?.name) || ""
 
   const initials = initialsFrom(user.full_name)
-  const avatarUser = { initials, avColor: ((user.id || 0) % 8) + 1 }
+  // profile-service.getUser surfaces raw avatar_url from the /auth/users
+  // list. The Avatar primitive runs it through resolveAvatarUrl and falls
+  // back to initials when null / placeholder.
+  const avatarUser = {
+    initials,
+    avColor: ((user.id || 0) % 8) + 1,
+    avatarUrl: user.avatar_url,
+  }
 
   return (
     <Card padding={24} className="profile-header-card">

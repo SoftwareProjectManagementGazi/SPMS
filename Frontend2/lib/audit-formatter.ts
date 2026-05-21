@@ -22,6 +22,9 @@ export interface AuditEntry {
 export interface UserLite {
   id: number
   name: string
+  /** Optional resolved avatar URL — consumers (e.g. HistorySection) plumb it
+   *  through to the Avatar primitive. Backwards-compatible default: null. */
+  avatarUrl?: string | null
 }
 
 export interface FormatContext {

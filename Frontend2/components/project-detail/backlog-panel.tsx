@@ -192,12 +192,25 @@ export function BacklogPanel({
   }, [tasks, search, activePriorities, activeAssignees])
 
   // Unique assignees on the backlog tasks (client-side) for the avatar filter.
-  const uniqueAssignees = React.useMemo<number[]>(() => {
-    const ids = new Set<number>()
+  // Carry name + avatar URL so the filter chips can render the photo (Avatar
+  // primitive resolves the URL; falls back to initials when null).
+  interface AssigneeChip {
+    id: number
+    name: string
+    avatarUrl: string | null
+  }
+  const uniqueAssignees = React.useMemo<AssigneeChip[]>(() => {
+    const seen = new Map<number, AssigneeChip>()
     tasks.forEach((t) => {
-      if (t.assigneeId != null) ids.add(t.assigneeId)
+      if (t.assigneeId != null && !seen.has(t.assigneeId)) {
+        seen.set(t.assigneeId, {
+          id: t.assigneeId,
+          name: t.assigneeName ?? "",
+          avatarUrl: t.assigneeAvatarUrl ?? null,
+        })
+      }
     })
-    return Array.from(ids)
+    return Array.from(seen.values())
   }, [tasks])
 
   // Backlog definition label for the header pill (D-17 override fallback).
@@ -329,11 +342,15 @@ export function BacklogPanel({
         </div>
         {uniqueAssignees.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {uniqueAssignees.map((aid) => {
+            {uniqueAssignees.map((a) => {
+              const aid = a.id
               const active = activeAssignees.includes(aid)
               const avatarUser = {
-                initials: `#${aid}`.slice(0, 2).toUpperCase(),
+                initials: (
+                  (a.name?.trim() || `#${aid}`).slice(0, 2)
+                ).toUpperCase(),
                 avColor: ((aid % 8) + 1) as number,
+                avatarUrl: a.avatarUrl,
               }
               return (
                 <button
@@ -343,8 +360,8 @@ export function BacklogPanel({
                   aria-pressed={active}
                   aria-label={
                     language === "tr"
-                      ? `Atanan ${aid} filtresi`
-                      : `Assignee ${aid} filter`
+                      ? `Atanan ${a.name || aid} filtresi`
+                      : `Assignee ${a.name || aid} filter`
                   }
                   style={{
                     padding: 2,

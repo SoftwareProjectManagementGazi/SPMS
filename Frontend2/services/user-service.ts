@@ -1,9 +1,13 @@
 import { apiClient } from '@/lib/api-client';
+import { resolveAvatarUrl } from '@/services/auth-service';
 
 export interface User {
   id: number;
   email: string;
   full_name: string;
+  /** Resolved avatar URL — either a fully qualified URL or the
+   *  `/placeholder.svg` sentinel when the user has no uploaded photo.
+   *  Consumers can pass this straight to the Avatar primitive. */
   avatar?: string;
   role?: { name: string };
 }
@@ -22,7 +26,7 @@ function mapUser(u: RawUserDTO): User {
     id: u.id,
     email: u.email,
     full_name: u.full_name ?? u.username ?? '',
-    avatar: u.avatar_url,
+    avatar: resolveAvatarUrl(u.avatar_url),
     role:
       u.role == null
         ? undefined

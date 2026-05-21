@@ -41,6 +41,10 @@ function avatarFor(member: ProjectMember) {
   return {
     initials,
     avColor: ((member.id % 8) + 1) as number,
+    // ProjectMember ships the raw path (e.g. uploads/avatars/x.jpg); the
+    // Avatar primitive resolves it against NEXT_PUBLIC_BACKEND_URL and falls
+    // back to initials when null.
+    avatarUrl: member.avatarPath,
   }
 }
 

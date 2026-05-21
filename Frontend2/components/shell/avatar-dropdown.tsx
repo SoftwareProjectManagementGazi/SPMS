@@ -179,8 +179,13 @@ export function AvatarDropdown() {
   const initials = getInitials(userName || user.email || "")
   const numericIdSeed = Number(userId) || (userName.length || 1)
   const avColor = (numericIdSeed % 8) + 1
-  const triggerUser = { initials, avColor }
-  const headerUser = { initials, avColor }
+  // AuthUser.avatar is pre-resolved by auth-service.mapUserResponseToUser
+  // (raw uploads/… → ${BACKEND_BASE}/static/uploads/…). Plumb directly to the
+  // Avatar primitive — the placeholder.svg sentinel triggers the initials
+  // fallback inside the primitive itself.
+  const avatarUrl = (user as { avatar?: string }).avatar ?? null
+  const triggerUser = { initials, avColor, avatarUrl }
+  const headerUser = { initials, avColor, avatarUrl }
 
   const menuItemStyle: React.CSSProperties = {
     display: "flex",

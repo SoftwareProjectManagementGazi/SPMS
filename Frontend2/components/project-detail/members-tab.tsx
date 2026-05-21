@@ -115,6 +115,10 @@ export function MembersTab({ project }: { project: Project }) {
                   user={{
                     initials: deriveInitials(member.fullName),
                     avColor: avatarColor(index),
+                    // ProjectMember.avatarPath is the raw backend path; the
+                    // Avatar primitive resolves it against NEXT_PUBLIC_BACKEND_URL
+                    // and falls back to initials when null / placeholder.
+                    avatarUrl: member.avatarPath,
                   }}
                   size={28}
                   href={`/users/${member.id}`}

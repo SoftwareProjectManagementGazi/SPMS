@@ -5,6 +5,16 @@ import Link from "next/link"
 import { Trash2, Shield, Users as UsersIcon, FolderKanban, Zap } from "lucide-react"
 import type { Team } from "@/services/team-service"
 
+/** True when the supplied avatar URL is a real photo (not null, empty, or the
+ *  auth-service placeholder sentinel). team-service already runs
+ *  resolveAvatarUrl on `m.avatar`, so the value here is either a full URL or
+ *  the `/placeholder.svg` sentinel. */
+function hasPhoto(url?: string | null): boolean {
+  if (!url) return false
+  if (url === "/placeholder.svg") return false
+  return true
+}
+
 interface Props {
   team: Team
   lang: string
@@ -231,28 +241,15 @@ export function TeamCard({ team, lang, isOwner, onDelete }: Props) {
               {team.members.slice(0, 4).map((m, i) => {
                 const memberColor = colorForId(m.id)
                 return (
-                  <div
+                  <MemberAvatar
                     key={m.id}
-                    title={m.full_name}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: "50%",
-                      background: memberColor,
-                      color: "#fff",
-                      fontSize: 9,
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: "2px solid var(--surface)",
-                      marginLeft: i === 0 ? 0 : -7,
-                      zIndex: 4 - i,
-                      position: "relative",
-                    }}
-                  >
-                    {getInitials(m.full_name)}
-                  </div>
+                    initials={getInitials(m.full_name)}
+                    fullName={m.full_name}
+                    avatarUrl={m.avatar}
+                    color={memberColor}
+                    overlap={i > 0}
+                    zIndex={4 - i}
+                  />
                 )
               })}
               {team.members.length > 4 && (
@@ -291,22 +288,14 @@ export function TeamCard({ team, lang, isOwner, onDelete }: Props) {
                   maxWidth: "60%",
                 }}
               >
-                <div
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: colorForId(leader.id),
-                    color: "#fff",
-                    fontSize: 9,
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {getInitials(leader.full_name)}
-                </div>
+                <MemberAvatar
+                  initials={getInitials(leader.full_name)}
+                  fullName={leader.full_name}
+                  avatarUrl={leader.avatar}
+                  color={colorForId(leader.id)}
+                  size={22}
+                  ring={false}
+                />
                 <span
                   style={{
                     fontSize: 11,
@@ -327,6 +316,69 @@ export function TeamCard({ team, lang, isOwner, onDelete }: Props) {
         </div>
       </div>
     </Link>
+  )
+}
+
+function MemberAvatar({
+  initials,
+  fullName,
+  avatarUrl,
+  color,
+  size = 26,
+  overlap = false,
+  zIndex,
+  ring = true,
+}: {
+  initials: string
+  fullName: string
+  avatarUrl?: string
+  color: string
+  size?: number
+  overlap?: boolean
+  zIndex?: number
+  ring?: boolean
+}) {
+  const [imgFailed, setImgFailed] = React.useState(false)
+  React.useEffect(() => setImgFailed(false), [avatarUrl])
+  const showPhoto = hasPhoto(avatarUrl) && !imgFailed
+  return (
+    <div
+      title={fullName}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: color,
+        color: "#fff",
+        fontSize: size <= 22 ? 9 : Math.round(size * 0.36),
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: ring ? "2px solid var(--surface)" : "none",
+        marginLeft: overlap ? -7 : 0,
+        zIndex,
+        position: "relative",
+        overflow: "hidden",
+        flexShrink: 0,
+      }}
+    >
+      {showPhoto ? (
+        <img
+          src={avatarUrl!}
+          alt={initials}
+          onError={() => setImgFailed(true)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        initials
+      )}
+    </div>
   )
 }
 

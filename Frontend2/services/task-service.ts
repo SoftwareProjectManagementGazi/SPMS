@@ -15,6 +15,11 @@ export interface Task {
    *  fills it with "" when the API response has no assignee, so consumers
    *  can rely on `task.assigneeName ?? ""` returning a string. */
   assigneeName?: string
+  /** Backend `assignee.avatar_url` surfaced for Avatar primitive consumers
+   *  (board card, list row, my-tasks row, properties sidebar, …). Null when
+   *  the user has not uploaded a photo; the Avatar primitive falls back to
+   *  initials in that case. */
+  assigneeAvatarUrl?: string | null
   reporterId: number | null
   parentTaskId: number | null
   projectId: number
@@ -150,6 +155,7 @@ function mapTask(d: TaskResponseDTO): Task {
     // full user summary); fall back to "" for unassigned tasks. TaskRow uses
     // this to compute real initials instead of "#1"-style hash mocks.
     assigneeName: d.assignee?.username ?? "",
+    assigneeAvatarUrl: d.assignee?.avatar_url ?? null,
     reporterId: d.reporter_id,
     parentTaskId: d.parent_task_id,
     projectId: d.project_id,

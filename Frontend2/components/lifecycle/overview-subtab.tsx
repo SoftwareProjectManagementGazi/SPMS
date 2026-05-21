@@ -150,6 +150,8 @@ interface UpcomingTaskEntry {
   daysLeft: number
   overdue: boolean
   assigneeId: number | null
+  assigneeName: string
+  assigneeAvatarUrl: string | null
 }
 
 interface UpcomingMilestoneEntry {
@@ -187,6 +189,8 @@ function buildUpcoming(
         daysLeft,
         overdue: daysLeft < 0,
         assigneeId: t.assigneeId,
+        assigneeName: t.assigneeName ?? "",
+        assigneeAvatarUrl: t.assigneeAvatarUrl ?? null,
       }
     })
 
@@ -510,8 +514,11 @@ function UpcomingRowTask({
   const assigneeAvatar =
     entry.assigneeId != null
       ? {
-          initials: `#${entry.assigneeId}`.slice(0, 2).toUpperCase(),
+          initials: (
+            (entry.assigneeName?.trim() || `#${entry.assigneeId}`).slice(0, 2)
+          ).toUpperCase(),
           avColor: ((entry.assigneeId % 8) + 1) as number,
+          avatarUrl: entry.assigneeAvatarUrl,
         }
       : null
   const daySuffix = T("g", "d")

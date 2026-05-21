@@ -55,7 +55,11 @@ function isDoneStatus(status: string | null | undefined): boolean {
   return s === "done" || s === "completed" || s === "closed"
 }
 
-function avatarFor(assigneeId: number | null, name?: string | null) {
+function avatarFor(
+  assigneeId: number | null,
+  name?: string | null,
+  avatarUrl?: string | null,
+) {
   if (assigneeId == null) return null
   // Prefer real username initials; fall back to id-derived 2-char hash so the
   // avatar still renders something rather than blanking out.
@@ -64,6 +68,7 @@ function avatarFor(assigneeId: number | null, name?: string | null) {
   return {
     initials,
     avColor: ((assigneeId % 8) + 1) as number,
+    avatarUrl: avatarUrl ?? null,
   }
 }
 
@@ -97,7 +102,7 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
       <Card padding={0}>
         {subtasks.map((st, i) => {
           const isDone = isDoneStatus(st.status)
-          const av = avatarFor(st.assigneeId, st.assigneeName)
+          const av = avatarFor(st.assigneeId, st.assigneeName, st.assigneeAvatarUrl)
           return (
             <div
               key={st.id}

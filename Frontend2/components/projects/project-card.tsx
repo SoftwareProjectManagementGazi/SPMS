@@ -139,6 +139,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
           .map(w => w[0]?.toUpperCase() ?? '')
           .join(''),
         avColor: 1,
+        // Project.managerAvatar is the raw backend `uploads/…` path; the
+        // Avatar primitive (via AvatarStack) resolves it against the backend
+        // base URL and falls back to initials when null / placeholder.
+        avatarUrl: project.managerAvatar,
         href: project.managerId != null ? `/users/${project.managerId}` : undefined,
       }]
     : []

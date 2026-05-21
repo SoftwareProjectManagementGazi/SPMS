@@ -24,7 +24,11 @@ interface HistorySectionProps {
 
 function avatarFromUser(u: UserLite) {
   const initials = u.name.slice(0, 2).toUpperCase()
-  return { initials, avColor: ((u.id % 8) + 1) as number }
+  return {
+    initials,
+    avColor: ((u.id % 8) + 1) as number,
+    avatarUrl: u.avatarUrl ?? null,
+  }
 }
 
 export function HistorySection({

@@ -94,7 +94,13 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
           {items.map((item, i) => {
             const firstName = item.user_name?.split(" ")[0] ?? item.user_name
             const initials = getInitials(item.user_name ?? "?")
-            const avatarUser = { initials, avColor: (i % 8) + 1 }
+            const avatarUser = {
+              initials,
+              avColor: (i % 8) + 1,
+              // ActivityItem.user_avatar carries the raw backend path; the
+              // Avatar primitive resolves it and falls back to initials.
+              avatarUrl: item.user_avatar,
+            }
             const timeStr = formatTime(item.timestamp, language)
 
             return (

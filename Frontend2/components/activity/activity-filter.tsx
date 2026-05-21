@@ -53,6 +53,7 @@ interface Actor {
   name: string
   initials: string
   avColor: number
+  avatarUrl: string | null
 }
 
 export function ActivityFilter({
@@ -77,6 +78,7 @@ export function ActivityFilter({
         name: ev.user_name,
         initials: getInitials(ev.user_name),
         avColor: (ev.user_id % 8) + 1,
+        avatarUrl: ev.user_avatar ?? null,
       })
     }
     return Array.from(seen.values())
@@ -149,7 +151,11 @@ export function ActivityFilter({
               }}
             >
               <Avatar
-                user={{ initials: a.initials, avColor: a.avColor }}
+                user={{
+                  initials: a.initials,
+                  avColor: a.avColor,
+                  avatarUrl: a.avatarUrl,
+                }}
                 size={24}
                 ring={active}
               />

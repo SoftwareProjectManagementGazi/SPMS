@@ -50,9 +50,17 @@ function stripHtml(s: string | null | undefined): string {
   })
 }
 
-function avatarFromMember(id: number, name?: string) {
+function avatarFromMember(
+  id: number,
+  name?: string,
+  avatarUrl?: string | null,
+) {
   const initials = (name ?? `#${id}`).slice(0, 2).toUpperCase()
-  return { initials, avColor: ((id % 8) + 1) as number }
+  return {
+    initials,
+    avColor: ((id % 8) + 1) as number,
+    avatarUrl: avatarUrl ?? null,
+  }
 }
 
 export function CommentsSection({
@@ -168,7 +176,13 @@ export function CommentsSection({
     : projectMembers.slice(0, 6)
 
   const currentUserAvatar = user
-    ? avatarFromMember(Number(user.id) || 0, user.name)
+    ? avatarFromMember(
+        Number(user.id) || 0,
+        user.name,
+        // AuthUser.avatar is pre-resolved; Avatar primitive treats the
+        // /placeholder.svg sentinel as "no photo".
+        (user as { avatar?: string }).avatar,
+      )
     : null
 
   const placeholderText =

@@ -210,6 +210,7 @@ export function TaskRow({
             (task.assigneeName?.trim() || `#${task.assigneeId}`).slice(0, 2)
           ).toUpperCase(),
           avColor: ((task.assigneeId % 8) + 1) as number,
+          avatarUrl: task.assigneeAvatarUrl,
         }
       : null
 

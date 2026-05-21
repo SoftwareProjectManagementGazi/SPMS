@@ -102,10 +102,12 @@ export function PendingRequestsCard() {
               const pmAv: AvatarUser = {
                 initials: getInitials(pmName) || "?",
                 avColor: ((r.requestedBy?.id ?? 0) % 8) + 1,
+                avatarUrl: r.requestedBy?.avatar_url ?? null,
               }
               const userAv: AvatarUser = {
                 initials: getInitials(userName) || "?",
                 avColor: ((r.targetUser?.id ?? 0) % 8) + 1,
+                avatarUrl: r.targetUser?.avatar_url ?? null,
               }
               const time = r.created_at
                 ? formatRelativeTime(r.created_at, language)

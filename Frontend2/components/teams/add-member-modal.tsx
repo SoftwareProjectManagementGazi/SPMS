@@ -207,24 +207,12 @@ export function AddMemberModal({ open, onClose, onAdded, team, lang }: Props) {
                 >
                   {checked && <Check size={11} color="#fff" />}
                 </div>
-                {/* Avatar */}
-                <div
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: "50%",
-                    background: colorForId(u.id),
-                    color: "#fff",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {getInitials(u.full_name)}
-                </div>
+                {/* Avatar — profile photo if uploaded, otherwise initials. */}
+                <UserAvatarTile
+                  id={u.id}
+                  initials={getInitials(u.full_name)}
+                  avatarUrl={u.avatar}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
                     {u.full_name}
@@ -282,5 +270,49 @@ export function AddMemberModal({ open, onClose, onAdded, team, lang }: Props) {
         </Button>
       </ModalFooter>
     </Modal>
+  )
+}
+
+function UserAvatarTile({
+  id,
+  initials,
+  avatarUrl,
+}: {
+  id: number
+  initials: string
+  avatarUrl?: string | null
+}) {
+  const [imgFailed, setImgFailed] = React.useState(false)
+  React.useEffect(() => setImgFailed(false), [avatarUrl])
+  const showPhoto =
+    !!avatarUrl && avatarUrl !== "/placeholder.svg" && !imgFailed
+  return (
+    <div
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: "50%",
+        background: colorForId(id),
+        color: "#fff",
+        fontSize: 11,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        overflow: "hidden",
+      }}
+    >
+      {showPhoto ? (
+        <img
+          src={avatarUrl!}
+          alt={initials}
+          onError={() => setImgFailed(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        initials
+      )}
+    </div>
   )
 }

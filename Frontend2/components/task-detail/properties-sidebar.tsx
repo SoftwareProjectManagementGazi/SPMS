@@ -147,11 +147,17 @@ export function PropertiesSidebar({
 
   // Avatar initials. Prefer a real name string if the caller has one, else
   // fall back to the legacy "#1"-style hash so something always renders.
-  const userAvatar = (id: number | null, name?: string | null) =>
+  // `avatarUrl` is forwarded raw to the Avatar primitive (which resolves it).
+  const userAvatar = (
+    id: number | null,
+    name?: string | null,
+    avatarUrl?: string | null,
+  ) =>
     id != null
       ? {
           initials: ((name && name.trim()) || `#${id}`).slice(0, 2).toUpperCase(),
           avColor: ((id % 8) + 1) as number,
+          avatarUrl: avatarUrl ?? null,
         }
       : null
 
@@ -294,7 +300,11 @@ export function PropertiesSidebar({
               {task.assigneeId != null ? (
                 <>
                   {(() => {
-                    const av = userAvatar(task.assigneeId, task.assigneeName)
+                    const av = userAvatar(
+                      task.assigneeId,
+                      task.assigneeName,
+                      task.assigneeAvatarUrl,
+                    )
                     // Phase 13 Plan 13-03 (D-D4) — current-assignee Avatar
                     // links to profile. Surrounding button still toggles the
                     // AssigneePicker on clicks NOT on the avatar itself

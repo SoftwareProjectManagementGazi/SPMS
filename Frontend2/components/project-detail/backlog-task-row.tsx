@@ -54,8 +54,11 @@ export function BacklogTaskRow({ task, projectId }: BacklogTaskRowProps) {
   const assigneeAvatar =
     task.assigneeId != null
       ? {
-          initials: `#${task.assigneeId}`.slice(0, 2).toUpperCase(),
+          initials: (
+            (task.assigneeName?.trim() || `#${task.assigneeId}`).slice(0, 2)
+          ).toUpperCase(),
           avColor: ((task.assigneeId % 8) + 1) as number,
+          avatarUrl: task.assigneeAvatarUrl,
         }
       : null
 

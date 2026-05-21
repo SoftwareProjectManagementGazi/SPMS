@@ -64,6 +64,7 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
                 .join("")
                 .toUpperCase(),
               avColor: 1,
+              avatarUrl: project.managerAvatar,
             }
           : null
         const leadFirstName = project.managerName
