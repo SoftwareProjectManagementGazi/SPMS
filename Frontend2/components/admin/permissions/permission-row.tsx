@@ -71,8 +71,25 @@ interface ToggleSwitchProps {
 /**
  * Visual switch wrapper. Renders the same 30×16 px sm-size geometry as
  * Phase 14 14-04 disabled toggle so the matrix grid spacing is unchanged
- * (verbatim per UI-SPEC §Spacing line 73). Only the disabled-styling
- * (opacity 0.6 + cursor:not-allowed) is conditional now.
+ * (verbatim per UI-SPEC §Spacing line 73). Disabled state adds
+ * opacity 0.6 + cursor:not-allowed.
+ *
+ * Click forwarding — defense-in-depth (UAT fix 2026-05-28):
+ *   The original implementation rendered the visual track + thumb as
+ *   later siblings of an opacity-0 <input>, so they painted on top in
+ *   document order. The thumb had pointer-events:none but the TRACK did
+ *   not — every click landed on the track span (no handler) and never
+ *   reached the input below. Mouse-clicks appeared dead while keyboard
+ *   space-toggle worked, matching the UAT report.
+ *
+ *   Fix layers (any one of these would suffice; all three make the
+ *   pattern bulletproof against future regressions):
+ *     1. Wrap in a <label htmlFor=…>. Browsers forward label clicks to
+ *        the associated input regardless of which descendant was hit.
+ *     2. Set pointer-events:none on both visual spans so clicks fall
+ *        through to the input even without label semantics.
+ *     3. Visible :focus-within ring on the track so keyboard users get
+ *        an indicator the opacity-0 input would otherwise hide.
  */
 function PermissionToggleSwitch({
   on,
@@ -85,8 +102,14 @@ function PermissionToggleSwitch({
   const h = 16
   const d = 12
   const offset = (h - d) / 2
+  // Stable per-instance id so the <label htmlFor> explicitly binds to
+  // this input even when many toggles render at once. useId() collides
+  // gracefully with SSR hydration.
+  const inputId = React.useId()
   return (
-    <span
+    <label
+      htmlFor={inputId}
+      className="perm-toggle"
       style={{
         display: "inline-block",
         position: "relative",
@@ -97,6 +120,7 @@ function PermissionToggleSwitch({
       title={title}
     >
       <input
+        id={inputId}
         type="checkbox"
         role="switch"
         checked={on}
@@ -125,6 +149,9 @@ function PermissionToggleSwitch({
             : "inset 0 0 0 1px var(--border-strong)",
           opacity: disabled ? 0.6 : 1,
           transition: "background 0.12s",
+          // Defense-in-depth fix #2: without this, the track painted on
+          // top of the input and swallowed every click.
+          pointerEvents: "none",
         }}
       />
       <span
@@ -138,10 +165,12 @@ function PermissionToggleSwitch({
           top: offset,
           left: on ? w - d - offset : offset,
           boxShadow: "0 1px 2px oklch(0 0 0 / 0.15)",
+          // Already had pointer-events:none — kept for symmetry with the
+          // track now that the track also opts out of hit-testing.
           pointerEvents: "none",
         }}
       />
-    </span>
+    </label>
   )
 }
 

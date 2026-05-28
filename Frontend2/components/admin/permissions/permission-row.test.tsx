@@ -158,4 +158,41 @@ describe("PermissionRow (Plan 15-10 — D-2.7 layer 1)", () => {
     // layer 2. Plan 15-10 removes it for non-Admin/Guest columns.
     expect(pmToggle.getAttribute("aria-disabled")).not.toBe("true")
   })
+
+  it("Case 8 — visual track + thumb opt out of hit-testing (regression guard)", () => {
+    // UAT 2026-05-28: the visual track painted on top of the opacity-0
+    // input but had no pointer-events:none, so every mouse click landed
+    // on the track (no handler) instead of forwarding to the input. The
+    // jsdom click test in Case 3b bypasses hit-testing by firing the
+    // event directly on the input, so it never caught the regression.
+    // Asserting the inline style here is brittle by design — it pins the
+    // contract so a future refactor that accidentally drops pointer-events
+    // on the visuals fails CI before shipping.
+    renderRow(projectPerm)
+    const pmToggle = screen.getByLabelText("task.create for Project Manager")
+    const label = pmToggle.closest("label") as HTMLLabelElement | null
+    expect(label).not.toBeNull()
+    const visualSpans = label!.querySelectorAll('span[aria-hidden="true"]')
+    expect(visualSpans.length).toBe(2)
+    visualSpans.forEach((span) => {
+      const el = span as HTMLElement
+      expect(el.style.pointerEvents).toBe("none")
+    })
+  })
+
+  it("Case 9 — clicking the label forwards to the input (label semantics)", () => {
+    // Defense-in-depth #1: wrapping the toggle in <label htmlFor=…> means
+    // even if the visual spans somehow regain pointer-events, the browser
+    // still routes label clicks to the associated input. This test catches
+    // the case where someone replaces <label> with <div> or strips the
+    // htmlFor binding.
+    renderRow(projectPerm)
+    const memberInput = screen.getByLabelText(
+      "task.create for Member",
+    ) as HTMLInputElement
+    const label = memberInput.closest("label") as HTMLLabelElement | null
+    expect(label).not.toBeNull()
+    expect(label!.htmlFor).toBe(memberInput.id)
+    expect(memberInput.id).toBeTruthy()
+  })
 })
