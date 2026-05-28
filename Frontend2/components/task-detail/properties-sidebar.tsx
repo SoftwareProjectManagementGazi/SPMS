@@ -47,6 +47,11 @@ import { useToast } from "@/components/toast"
 import { AssigneePicker } from "./assignee-picker"
 import { InlineEdit } from "./inline-edit"
 import { PhaseStepper } from "./phase-stepper"
+import { PriorityPicker } from "./priority-picker"
+import { SprintPicker } from "./sprint-picker"
+import { StatusPicker } from "./status-picker"
+import type { PriorityLevel } from "@/components/primitives"
+import type { Sprint } from "@/hooks/use-sprints"
 
 // Shared editor input style — single inset ring, terse padding.
 const editorStyle: React.CSSProperties = {
@@ -120,6 +125,470 @@ function statusTone(raw: string): Tone {
   if (s === "review" || s === "in_review") return "warning"
   if (s === "blocked") return "danger"
   return "neutral"
+}
+
+// Resolve the workflow-editor color token for a status name by reading the
+// project's persisted task_workflow JSON. Falls back to the legacy
+// tone-based palette when no matching node exists (custom column name, or
+// projects that pre-date the color picker).
+function resolveStatusColorToken(
+  project: Project,
+  statusName: string,
+): string | null {
+  const cfg = (project.processConfig ?? {}) as {
+    task_workflow?: { nodes?: Array<{ name?: unknown; color?: unknown }> }
+    status_workflow?: { nodes?: Array<{ name?: unknown; color?: unknown }> }
+  }
+  const nodes =
+    cfg.task_workflow?.nodes ?? cfg.status_workflow?.nodes ?? []
+  const target = String(statusName ?? "").toLowerCase().trim()
+  if (!target) return null
+  for (const n of nodes) {
+    if (typeof n?.name === "string" && typeof n?.color === "string") {
+      if (n.name.toLowerCase().trim() === target) return n.color
+    }
+  }
+  return null
+}
+
+// Map the 5-status tone palette to the underlying CSS variable so the
+// custom badge below can drive its color from a single source whether
+// the project carries a workflow color token or not. Mirrors the tones
+// returned by statusTone() above.
+const TONE_VAR: Record<Tone, string> = {
+  success: "var(--status-done)",
+  info: "var(--status-progress)",
+  warning: "var(--status-review)",
+  danger: "var(--priority-critical)",
+  neutral: "var(--fg-muted)",
+}
+
+// The badge's base color: workflow JSON token wins; otherwise we fall
+// back to the canonical 5-status palette so projects that pre-date the
+// color picker still get a sensible hue (done=green, blocked=red, etc.)
+function statusBaseColor(
+  project: Project,
+  columnName: string,
+): string {
+  const token = resolveStatusColorToken(project, columnName)
+  if (token) return `var(--${token})`
+  return TONE_VAR[statusTone(columnName)]
+}
+
+// PillBadgeButton — pill-shaped trigger that opens a popover picker.
+// Shared between the Status field and the Sprint/Cycle field so both
+// sidebar rows feel identical. Built from scratch (not the Badge
+// primitive) because:
+//   * The dot needs to be a tone DARKER than the label/text (UAT: "noktanın
+//     rengi labelın rengine göre bir tık koyu olsun"). Badge's `dot` prop
+//     paints the dot in the same tone color as the text.
+//   * The element is a <button>, not a <span>, so it owns its own click
+//     semantics + keyboard focus + cursor without needing an overlay
+//     trick to capture clicks.
+// Color recipe matches the prior Badge tint palette so the visual
+// continuity with priority chips / badge tones is preserved: 14% tint
+// background, 30% tint border, 70%-black dot.
+interface PillBadgeButtonProps {
+  label: string
+  baseColor: string
+  /** Render the leading dot. Status uses it (workflow-color indicator);
+   *  Sprint omits it (no per-sprint color taxonomy). */
+  showDot?: boolean
+  onClick: () => void
+  ariaExpanded: boolean
+  ariaLabel: string
+  /** Render as ghost (outline-only) instead of tinted background — used
+   *  for the Sprint "unassigned" affordance so it visually de-emphasises
+   *  while staying clickable. */
+  ghost?: boolean
+}
+
+const PillBadgeButton = React.forwardRef<
+  HTMLButtonElement,
+  PillBadgeButtonProps
+>(function PillBadgeButton(
+  { label, baseColor, showDot = true, onClick, ariaExpanded, ariaLabel, ghost = false },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      // The picker's click-outside listener (document-level mousedown)
+      // would otherwise fire BEFORE this button's click handler when the
+      // picker is open. That sequence — outside-close, then re-open via
+      // toggle — left the picker stuck open after a second badge click.
+      // Stopping propagation at mousedown keeps the trigger click isolated
+      // from the dismissal handler.
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={onClick}
+      aria-haspopup="listbox"
+      aria-expanded={ariaExpanded}
+      aria-label={ariaLabel}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: showDot ? 5 : 0,
+        height: 20,
+        padding: "0 8px",
+        fontSize: 11.5,
+        fontWeight: 500,
+        lineHeight: 1,
+        borderRadius: 999,
+        background: ghost
+          ? "transparent"
+          : `color-mix(in oklch, ${baseColor} 14%, transparent)`,
+        color: baseColor,
+        boxShadow: `inset 0 0 0 1px color-mix(in oklch, ${baseColor} 30%, transparent)`,
+        border: 0,
+        cursor: "pointer",
+        font: "inherit",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {showDot && (
+        <span
+          aria-hidden
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            // "Bir tık koyu" — same hue, ~30% darker in OKLCH so the dot
+            // pops against the 14% tinted background without losing its
+            // identity. Mirrors StatusPicker.darkDotColor.
+            background: `color-mix(in oklch, ${baseColor} 70%, black)`,
+            flexShrink: 0,
+          }}
+        />
+      )}
+      <span style={{ fontSize: 11.5 }}>{label}</span>
+    </button>
+  )
+})
+
+// Status badge + StatusPicker popover. Replaces the previous native
+// <select> overlay which felt jarringly OS-native inside a styled
+// sidebar. Behaviour contract:
+//   * One click on the badge opens the picker directly (no intermediate
+//     edit state).
+//   * Selecting a row commits via TanStack mutation + closes the picker.
+//   * Esc / click-outside dismisses without committing.
+//   * The badge label preserves the column name's original casing
+//     (uses project.boardColumns[i].name, not the lowercased task.status
+//     normalisation key).
+//   * Badge background / text colors track the workflow editor color
+//     token; the dot is rendered one shade darker.
+interface StatusInlineSelectProps {
+  task: Task
+  project: Project
+}
+
+function StatusInlineSelect({ task, project }: StatusInlineSelectProps) {
+  const qc = useQueryClient()
+  const { showToast } = useToast()
+  const { language: lang } = useApp()
+  const [open, setOpen] = React.useState(false)
+
+  // Match by lowercase because task.status is normalised by mapTask, but
+  // the user-visible label uses the column's ORIGINAL casing.
+  const currentColumn = project.boardColumns.find(
+    (c) => c.name.toLowerCase() === task.status.toLowerCase(),
+  )
+  const displayLabel = currentColumn?.name || task.status || "—"
+  const baseColor = statusBaseColor(project, displayLabel)
+
+  const mutation = useMutation({
+    mutationFn: (columnId: number) =>
+      taskService.patchField(task.id, "column_id", columnId),
+    onMutate: async (columnId) => {
+      await qc.cancelQueries({ queryKey: ["tasks", task.id] })
+      const prev = qc.getQueryData<Task>(["tasks", task.id])
+      if (prev) {
+        const nextCol = project.boardColumns.find((c) => c.id === columnId)
+        qc.setQueryData<Task>(["tasks", task.id], {
+          ...prev,
+          // Optimistic flip — write the lowercased status the same way
+          // mapTask normalises it, so the badge re-renders against the
+          // matching column instantly.
+          status: nextCol?.name?.toLowerCase() ?? prev.status,
+        })
+      }
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", task.id], ctx.prev)
+      showToast({
+        variant: "error",
+        message:
+          lang === "tr"
+            ? "Durum güncellenemedi"
+            : "Failed to update status",
+      })
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", task.id] })
+    },
+  })
+
+  // Empty boardColumns → static badge, no picker (rare; happens when a
+  // legacy project has no persisted columns yet).
+  if (project.boardColumns.length === 0) {
+    return (
+      <PillBadgeButton
+        label={displayLabel}
+        baseColor={baseColor}
+        onClick={() => {}}
+        ariaExpanded={false}
+        ariaLabel={lang === "tr" ? "Görev durumu" : "Task status"}
+      />
+    )
+  }
+
+  const ariaLabel = lang === "tr" ? "Görev durumu" : "Task status"
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <PillBadgeButton
+        label={displayLabel}
+        baseColor={baseColor}
+        onClick={() => setOpen((v) => !v)}
+        ariaExpanded={open}
+        ariaLabel={ariaLabel}
+      />
+      {open && (
+        <StatusPicker
+          columns={project.boardColumns}
+          selectedColumnId={currentColumn?.id ?? null}
+          resolveColor={(name) => resolveStatusColorToken(project, name)}
+          onSelect={(columnId) => {
+            setOpen(false)
+            if (columnId !== currentColumn?.id) {
+              mutation.mutate(columnId)
+            }
+          }}
+          onCancel={() => setOpen(false)}
+          align="start"
+        />
+      )}
+    </div>
+  )
+}
+
+// SprintInlineSelect — pill button + SprintPicker popover. Twin of
+// StatusInlineSelect; shares the PillBadgeButton trigger (with showDot
+// off — sprints don't have a per-row colour taxonomy) and mirrors the
+// open/close + optimistic mutation lifecycle.
+//
+// Three render states:
+//   * Disabled (cycle field is non-Scrum + non-Waterfall in Phase 11) →
+//     informational placeholder, no picker.
+//   * Assigned (task has a sprint) → tinted info pill with the sprint
+//     name; clicking opens the picker.
+//   * Unassigned (no sprint, but the field is editable) → ghost pill
+//     with a muted "Ata" call-to-action; same picker on click.
+interface SprintInlineSelectProps {
+  task: Task
+  project: Project
+  sprints: Sprint[]
+  cycleLabel: string
+  /** When false AND not Waterfall, the cycle field is intentionally
+   *  inert (Phase 11 hides cycle ops for non-Scrum methodologies). */
+  cycleEnabled: boolean
+}
+
+function SprintInlineSelect({
+  task,
+  project,
+  sprints,
+  cycleLabel,
+  cycleEnabled,
+}: SprintInlineSelectProps) {
+  const qc = useQueryClient()
+  const { showToast } = useToast()
+  const { language: lang } = useApp()
+  const [open, setOpen] = React.useState(false)
+
+  const isInert = !cycleEnabled && project.methodology !== "WATERFALL"
+
+  const currentSprint = sprints.find((s) => s.id === task.cycleId) ?? null
+  const assigned = task.cycleId != null
+  const displayLabel = assigned
+    ? (currentSprint?.name ?? `${cycleLabel} #${task.cycleId}`)
+    : lang === "tr"
+      ? `${cycleLabel} ata`
+      : `Assign ${cycleLabel.toLowerCase()}`
+
+  const mutation = useMutation({
+    mutationFn: (sprintId: number | null) =>
+      taskService.patchField(task.id, "cycle_id", sprintId),
+    onMutate: async (sprintId) => {
+      await qc.cancelQueries({ queryKey: ["tasks", task.id] })
+      const prev = qc.getQueryData<Task>(["tasks", task.id])
+      if (prev) {
+        qc.setQueryData<Task>(["tasks", task.id], {
+          ...prev,
+          cycleId: sprintId,
+        })
+      }
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", task.id], ctx.prev)
+      showToast({
+        variant: "error",
+        message:
+          lang === "tr"
+            ? `${cycleLabel} güncellenemedi`
+            : `Failed to update ${cycleLabel.toLowerCase()}`,
+      })
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", task.id] })
+    },
+  })
+
+  // Inert state: the cycle field isn't actionable in this methodology.
+  // Render the same helper text the prior InlineEdit-driven layout used
+  // so the row doesn't lose its informational value.
+  if (isInert) {
+    return (
+      <span style={{ color: "var(--fg-subtle)", fontSize: 12 }}>
+        {lang === "tr"
+          ? "Faz 12'de aktive edilecek"
+          : "Activated in Phase 12"}
+      </span>
+    )
+  }
+
+  const ariaLabel = lang === "tr" ? `${cycleLabel} seç` : `Select ${cycleLabel.toLowerCase()}`
+  const baseColor = assigned
+    ? "var(--status-progress)"
+    : "var(--fg-subtle)"
+
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <PillBadgeButton
+        label={displayLabel}
+        baseColor={baseColor}
+        showDot={false}
+        ghost={!assigned}
+        onClick={() => setOpen((v) => !v)}
+        ariaExpanded={open}
+        ariaLabel={ariaLabel}
+      />
+      {open && (
+        <SprintPicker
+          sprints={sprints}
+          selectedSprintId={task.cycleId}
+          onSelect={(sprintId) => {
+            setOpen(false)
+            if (sprintId !== task.cycleId) {
+              mutation.mutate(sprintId)
+            }
+          }}
+          onCancel={() => setOpen(false)}
+          align="start"
+        />
+      )}
+    </div>
+  )
+}
+
+// PriorityInlineSelect — PriorityChip trigger + PriorityPicker popover.
+// Third sibling of StatusInlineSelect / SprintInlineSelect; the chip stays
+// the user's primary signal because the bar count maps to severity (low=1
+// → critical=4) better than a generic dot pill. The chip lives inside a
+// transparent <button> wrapper that adds the hover + focus affordance
+// and stops mousedown propagation so the picker's click-outside listener
+// doesn't race with the trigger toggle.
+interface PriorityInlineSelectProps {
+  task: Task
+}
+
+function PriorityInlineSelect({ task }: PriorityInlineSelectProps) {
+  const qc = useQueryClient()
+  const { showToast } = useToast()
+  const { language: lang } = useApp()
+  const [open, setOpen] = React.useState(false)
+
+  const mutation = useMutation({
+    mutationFn: (level: PriorityLevel) =>
+      taskService.patchField(task.id, "priority", level),
+    onMutate: async (level) => {
+      await qc.cancelQueries({ queryKey: ["tasks", task.id] })
+      const prev = qc.getQueryData<Task>(["tasks", task.id])
+      if (prev) {
+        qc.setQueryData<Task>(["tasks", task.id], {
+          ...prev,
+          priority: level,
+        })
+      }
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tasks", task.id], ctx.prev)
+      showToast({
+        variant: "error",
+        message:
+          lang === "tr"
+            ? "Öncelik güncellenemedi"
+            : "Failed to update priority",
+      })
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["tasks", task.id] })
+    },
+  })
+
+  const ariaLabel = lang === "tr" ? "Öncelik" : "Priority"
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        // Same race-prevention trick used by PillBadgeButton: keep the
+        // trigger click from waking the picker's document-level dismissal
+        // handler when the picker is already open.
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "2px 6px",
+          margin: "-2px -6px",
+          background: "transparent",
+          border: 0,
+          borderRadius: "var(--radius-sm)",
+          cursor: "pointer",
+          font: "inherit",
+        }}
+        onMouseEnter={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.background =
+            "var(--surface-2)"
+        }}
+        onMouseLeave={(e) => {
+          ;(e.currentTarget as HTMLButtonElement).style.background =
+            "transparent"
+        }}
+      >
+        <PriorityChip level={task.priority} lang={lang} />
+      </button>
+      {open && (
+        <PriorityPicker
+          selected={task.priority}
+          onSelect={(level) => {
+            setOpen(false)
+            if (level !== task.priority) {
+              mutation.mutate(level)
+            }
+          }}
+          onCancel={() => setOpen(false)}
+          align="start"
+        />
+      )}
+    </div>
+  )
 }
 
 interface PropertiesSidebarProps {
@@ -219,55 +688,14 @@ export function PropertiesSidebar({
         {lang === "tr" ? "Özellikler" : "Properties"}
       </div>
       <div style={{ padding: "8px 0" }}>
-        {/* Status — Badge tone tracks the 5-status palette per prototype
-            (task-detail.jsx:116). The InlineEdit binds to `column_id` (the
-            actual TaskUpdateDTO field) but uses `task.status` for the read-
-            mode label since the backend computes the status string from the
-            column's name. Picking a column from the editor sends the
-            numeric id, which the backend can persist; sending the raw status
-            string would silently drop because TaskUpdateDTO has no such
-            field. Triage round 11 — properties save fix. */}
-        <MetaRow label={lang === "tr" ? "Durum" : "Status"}>
-          {project.boardColumns.length > 0 ? (
-            <InlineEdit
-              taskId={task.id}
-              field="column_id"
-              value={
-                // Resolve the current column_id from the task's status name.
-                // Falls back to null when no column matches (custom backend
-                // value or an empty board).
-                project.boardColumns.find(
-                  (c) => c.name.toLowerCase() === task.status.toLowerCase(),
-                )?.id ?? null
-              }
-              renderDisplay={() => (
-                <Badge size="xs" dot tone={statusTone(task.status)}>
-                  {task.status || "—"}
-                </Badge>
-              )}
-              renderEditor={(draft, setDraft, commit) => (
-                <select
-                  autoFocus
-                  value={draft ?? ""}
-                  onChange={(e) =>
-                    setDraft(e.target.value ? Number(e.target.value) : null)
-                  }
-                  onBlur={commit}
-                  style={editorStyle}
-                >
-                  {project.boardColumns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-          ) : (
-            <Badge size="xs" dot tone={statusTone(task.status)}>
-              {task.status || "—"}
-            </Badge>
-          )}
+        {/* Görev Durumu (Task Status) — custom inline-select with the
+            workflow editor's color token applied to the badge. The label
+            IS the affordance: clicking it opens the dropdown directly (no
+            intermediate "click-to-edit" state, no second click to expand
+            the picker). Selecting an option commits and immediately
+            re-renders as the badge. See StatusInlineSelect above. */}
+        <MetaRow label={lang === "tr" ? "Görev Durumu" : "Task Status"}>
+          <StatusInlineSelect task={task} project={project} />
         </MetaRow>
 
         {/* Assignee — searchable popover backed by useProjectMembers (Phase
@@ -382,36 +810,11 @@ export function PropertiesSidebar({
           )}
         </MetaRow>
 
-        {/* Priority */}
+        {/* Öncelik (Priority) — PriorityChip trigger + PriorityPicker
+            popover. Same single-click → pick → close UX as the Status
+            and Sprint rows; the bar icon stays the dominant visual. */}
         <MetaRow label={lang === "tr" ? "Öncelik" : "Priority"}>
-          <InlineEdit
-            taskId={task.id}
-            field="priority"
-            value={task.priority}
-            renderDisplay={(v) => <PriorityChip level={v} lang={lang} />}
-            renderEditor={(draft, setDraft, commit) => (
-              <select
-                autoFocus
-                value={draft}
-                onChange={(e) =>
-                  setDraft(e.target.value as typeof draft)
-                }
-                onBlur={commit}
-                style={editorStyle}
-              >
-                <option value="low">{lang === "tr" ? "Düşük" : "Low"}</option>
-                <option value="medium">
-                  {lang === "tr" ? "Orta" : "Medium"}
-                </option>
-                <option value="high">
-                  {lang === "tr" ? "Yüksek" : "High"}
-                </option>
-                <option value="critical">
-                  {lang === "tr" ? "Kritik" : "Critical"}
-                </option>
-              </select>
-            )}
-          />
+          <PriorityInlineSelect task={task} />
         </MetaRow>
 
         {/* Points */}
@@ -481,54 +884,18 @@ export function PropertiesSidebar({
           />
         </MetaRow>
 
-        {/* Cycle — hidden for Kanban (cycleLabel null), disabled with helper for non-Scrum (D-44).
-            Display surfaces the cycle as a tone="info" Badge to mirror the
-            prototype's "Sprint 7" pill (task-detail.jsx:122). */}
+        {/* Cycle — hidden for Kanban (cycleLabel null). For Scrum / Waterfall
+            the SprintInlineSelect renders the picker; for everything else
+            the component surfaces the Phase 12 placeholder copy instead of
+            an unclickable pill. */}
         {cycleLabel && (
           <MetaRow label={cycleLabel}>
-            <InlineEdit
-              taskId={task.id}
-              field="cycle_id"
-              value={task.cycleId}
-              disabled={!cycleEnabled && project.methodology !== "WATERFALL"}
-              renderDisplay={(v) => {
-                if (v != null) {
-                  const sprintName = sprints.find((s) => s.id === v)?.name
-                  return (
-                    <Badge size="xs" tone="info">
-                      {sprintName ?? `${cycleLabel} #${v}`}
-                    </Badge>
-                  )
-                }
-                if (!cycleEnabled && project.methodology !== "WATERFALL") {
-                  return (
-                    <span style={{ color: "var(--fg-subtle)" }}>
-                      {lang === "tr"
-                        ? "Faz 12'de aktive edilecek"
-                        : "Activated in Phase 12"}
-                    </span>
-                  )
-                }
-                return <span style={{ color: "var(--fg-subtle)" }}>—</span>
-              }}
-              renderEditor={(draft, setDraft, commit) => (
-                <select
-                  autoFocus
-                  value={draft ?? ""}
-                  onChange={(e) => {
-                    setDraft(e.target.value ? Number(e.target.value) : null)
-                  }}
-                  onBlur={commit}
-                  style={editorStyle}
-                >
-                  <option value="">{lang === "tr" ? "— Atanmamış —" : "— Unassigned —"}</option>
-                  {sprints.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              )}
+            <SprintInlineSelect
+              task={task}
+              project={project}
+              sprints={sprints}
+              cycleLabel={cycleLabel}
+              cycleEnabled={cycleEnabled}
             />
           </MetaRow>
         )}
