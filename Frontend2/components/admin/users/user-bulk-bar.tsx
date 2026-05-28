@@ -10,8 +10,9 @@
 //   - Bulk Deactivate button → ConfirmDialog tone="danger" → useBulkAction
 //     action="deactivate". Body lists first 5 selected names + "+ {N-5} daha".
 //   - Bulk Role Change dropdown → 3 sub-buttons (Admin / PM / Member) →
-//     useBulkAction action="role_change" payload {role}. NO confirm
-//     (per behavior contract; bulk role change is reversible).
+//     ConfirmDialog (shows count + target role) → useBulkAction
+//     action="role_change" payload {role}. The confirm guards against an
+//     accidental mass-promote (e.g. a stray click on "Admin").
 //   - Vazgeç → clears selection.
 //
 // All bulk operations honor backend's atomic semantics (D-B7) — the
@@ -52,6 +53,9 @@ export function UserBulkBar({
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
   const [confirmDeactivateOpen, setConfirmDeactivateOpen] =
     React.useState(false)
+  // Selecting a role from the menu opens this confirm rather than firing the
+  // mutation immediately (Y13: guards against an accidental mass-Admin click).
+  const [pendingRole, setPendingRole] = React.useState<AdminRole | null>(null)
   const bulkActionM = useBulkAction()
 
   // Hide entirely when nothing selected. Component tree stays mounted at the
@@ -102,19 +106,24 @@ export function UserBulkBar({
   ).map((role) => ({
     id: `bulk_role_${role}`,
     label: role,
-    onClick: () => {
-      bulkActionM.mutate(
-        {
-          user_ids: selectedIds,
-          action: "role_change",
-          payload: { role },
-        },
-        {
-          onSuccess: onClear,
-        },
-      )
-    },
+    onClick: () => setPendingRole(role),
   }))
+
+  const handleBulkRoleChange = () => {
+    if (!pendingRole) return
+    const role = pendingRole
+    setPendingRole(null)
+    bulkActionM.mutate(
+      {
+        user_ids: selectedIds,
+        action: "role_change",
+        payload: { role },
+      },
+      {
+        onSuccess: onClear,
+      },
+    )
+  }
 
   return (
     <>
@@ -174,6 +183,21 @@ export function UserBulkBar({
         tone="danger"
         onConfirm={handleBulkDeactivate}
         onCancel={() => setConfirmDeactivateOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingRole !== null}
+        title={lang === "tr" ? "Toplu rol değişikliği" : "Bulk role change"}
+        body={
+          lang === "tr"
+            ? `${selectedIds.length} kullanıcının rolü "${pendingRole}" olarak değiştirilecek. Devam edilsin mi?`
+            : `${selectedIds.length} user(s) will be changed to "${pendingRole}". Continue?`
+        }
+        confirmLabel={adminUsersT("admin.users.confirm_confirm", lang)}
+        cancelLabel={adminUsersT("admin.users.confirm_cancel", lang)}
+        tone={pendingRole === "Admin" ? "danger" : "warning"}
+        onConfirm={handleBulkRoleChange}
+        onCancel={() => setPendingRole(null)}
       />
     </>
   )
