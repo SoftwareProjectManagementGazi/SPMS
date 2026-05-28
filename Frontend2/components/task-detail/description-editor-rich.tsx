@@ -57,6 +57,12 @@ export default function DescriptionEditorRich({ value, onChange }: Props) {
   // losing focus. Only replace content when it actually differs.
   React.useEffect(() => {
     if (!editor) return
+    // Don't clobber the editor while the user is actively typing. An external
+    // `value` change (another field's optimistic update, or a tab-refocus
+    // refetch) would otherwise call setContent mid-edit, discarding in-progress
+    // rich text and resetting the cursor. onUpdate already keeps the parent
+    // draft in sync, so skipping the sync while focused is safe.
+    if (editor.isFocused) return
     const current = editor.getHTML()
     if (value !== current) {
       editor.commands.setContent(value || "", { emitUpdate: false })
