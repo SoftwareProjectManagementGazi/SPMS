@@ -28,15 +28,23 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   tone?: "primary" | "danger" | "warning"
+  // When true, the confirm/cancel buttons are disabled and backdrop/cancel
+  // close is suppressed for the duration of the in-flight action. Prevents
+  // double-submit (e.g. two DELETEs → the second 404s with a fake error toast)
+  // because the dialog stays open until the mutation settles and closes it.
+  pending?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
 export function ConfirmDialog({
   open, title, body, confirmLabel = "Onayla", cancelLabel = "İptal",
-  tone = "primary", onConfirm, onCancel
+  tone = "primary", pending = false, onConfirm, onCancel
 }: ConfirmDialogProps) {
   if (!open) return null
+  // While an action is in flight, swallow cancel/backdrop dismiss so the dialog
+  // can't be torn down mid-request.
+  const handleCancel = () => { if (!pending) onCancel() }
   // Derive icon component + title color from tone. null = no icon (default behavior).
   const TitleIcon =
     tone === "danger" ? AlertTriangle :
@@ -55,7 +63,7 @@ export function ConfirmDialog({
     <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex",
       alignItems: "center", justifyContent: "center",
       background: "oklch(0 0 0 / 0.4)", backdropFilter: "blur(2px)" }}
-      onClick={onCancel}>
+      onClick={handleCancel}>
       <div style={{ background: "var(--surface)", borderRadius: "var(--radius)",
         padding: 24, maxWidth: 420, width: "90%", boxShadow: "var(--shadow-lg)",
         display: "flex", flexDirection: "column", gap: 16 }}
@@ -67,8 +75,8 @@ export function ConfirmDialog({
         </div>
         <div style={{ fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.5 }}>{body}</div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <Button variant="ghost" size="sm" onClick={onCancel}>{cancelLabel}</Button>
-          <Button variant={tone === "danger" ? "danger" : "primary"} size="sm" onClick={onConfirm}>
+          <Button variant="ghost" size="sm" onClick={handleCancel} disabled={pending}>{cancelLabel}</Button>
+          <Button variant={tone === "danger" ? "danger" : "primary"} size="sm" onClick={onConfirm} disabled={pending}>
             {confirmLabel}
           </Button>
         </div>
