@@ -699,8 +699,12 @@ export function EditorPage({ project }: EditorPageProps) {
         out.push({
           id: n.id,
           type: "phase",
+          // Positions are ABSOLUTE everywhere (hull, group backdrop at minX-32,
+          // drag-stop write-back). Do NOT set RF `parentId` here: React Flow
+          // would treat a child's position as parent-relative and render it
+          // offset far outside the group cloud. Group membership lives in
+          // workflow.groups[].children + the data-model n.parentId.
           position: { x: n.x, y: n.y },
-          parentId: n.parentId,
           selected: isSel,
           data: {
             name: n.name,
