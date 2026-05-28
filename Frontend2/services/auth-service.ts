@@ -79,4 +79,11 @@ export const authService = {
     });
     return mapUserResponseToUser(response.data);
   },
+
+  // Self-service password reset request. Backend always returns 204 regardless
+  // of whether the email exists (no user enumeration); a rejected promise here
+  // therefore means a transport/server error, not "email not found".
+  requestPasswordReset: async (email: string): Promise<void> => {
+    await apiClient.post('/auth/password-reset/request', { email });
+  },
 };

@@ -91,7 +91,9 @@ class InviteUserUseCase:
         await self.password_reset_repo.create(created.id, token_hash, expires_at)
 
         # 3) Invite link logged (dev path); production sends via SMTP.
-        link = f"{self.frontend_url}/auth/set-password?token={raw}"
+        # Must match the served frontend route: the "(auth)" route group adds no
+        # URL segment, so the page lives at /set-password (NOT /auth/set-password).
+        link = f"{self.frontend_url}/set-password?token={raw}"
         logger.info(json.dumps({
             "event": "user_invited",
             "user_id": created.id,

@@ -4,20 +4,29 @@ import Link from "next/link"
 import { LogoMark } from "@/components/logo-mark"
 import { Button } from "@/components/primitives"
 import { Input } from "@/components/primitives"
+import { authService } from "@/services/auth-service"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = React.useState("")
   const [isLoading, setIsLoading] = React.useState(false)
   const [submitted, setSubmitted] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setIsLoading(true)
-    // authService.requestPasswordReset not yet implemented — show success inline
-    // In a full implementation this would call POST /auth/password-reset
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    setSubmitted(true)
-    setIsLoading(false)
+    try {
+      // Backend always returns 204 (no user enumeration) — success here means
+      // "request accepted", not "email exists". The reset link is emailed to
+      // /reset-password. A thrown error is a transport/server failure.
+      await authService.requestPasswordReset(email)
+      setSubmitted(true)
+    } catch {
+      setError("Bağlantı gönderilemedi. Lütfen biraz sonra tekrar deneyin.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -98,6 +107,25 @@ export default function ForgotPasswordPage() {
                     style={{ width: "100%" }}
                   />
                 </div>
+
+                {error && (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--priority-critical)",
+                      marginBottom: 14,
+                      padding: "8px 12px",
+                      background:
+                        "color-mix(in oklch, var(--priority-critical) 10%, var(--surface))",
+                      borderRadius: "var(--radius-sm)",
+                      border:
+                        "1px solid color-mix(in oklch, var(--priority-critical) 30%, transparent)",
+                    }}
+                    role="alert"
+                  >
+                    {error}
+                  </div>
+                )}
 
                 <Button
                   variant="primary"
