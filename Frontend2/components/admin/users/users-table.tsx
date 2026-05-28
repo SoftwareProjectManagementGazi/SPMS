@@ -22,6 +22,8 @@ import { AdminTableShell } from "@/lib/admin/admin-table-shell"
 
 import { UserRow, ROW_GRID_TEMPLATE, type UserRowUser } from "./user-row"
 
+const PAGE_SIZE = 20
+
 export interface UsersTableProps {
   filter: AdminUserListFilter
   selectedIds: number[]
@@ -61,7 +63,21 @@ export function UsersTable({
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
 
-  const q = useAdminUsers(filter)
+  // Real pagination (Y12): the filter type already supports limit/offset and
+  // the service forwards them, but the table never set them — so only the
+  // backend's default first page was shown while the footer claimed "1 / 1".
+  const [page, setPage] = React.useState(0)
+  // Reset to the first page whenever the upstream filter (search / role /
+  // status) changes, otherwise a stale offset can land on an empty page.
+  React.useEffect(() => {
+    setPage(0)
+  }, [filter.q, filter.role, filter.status])
+
+  const pagedFilter = React.useMemo<AdminUserListFilter>(
+    () => ({ ...filter, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
+    [filter, page],
+  )
+  const q = useAdminUsers(pagedFilter)
 
   // Tolerate both response shapes: array (legacy /auth/users) AND
   // {items, total} paged shape (richer /admin/users from this plan).
@@ -76,6 +92,9 @@ export function UsersTable({
 
   const total =
     (q.data as { total?: number } | undefined)?.total ?? items.length
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const currentPage = Math.min(page + 1, pageCount)
 
   const normalized = React.useMemo(() => items.map(normalizeUser), [items])
   const isEmpty =
@@ -176,10 +195,44 @@ export function UsersTable({
               String(total),
             )}
           </div>
-          <div className="mono">
-            {adminUsersT("admin.users.pagination_page", lang)
-              .replace("{P}", "1")
-              .replace("{M}", "1")}
+          <div className="mono" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={currentPage <= 1 || q.isLoading}
+              aria-label={lang === "tr" ? "Önceki sayfa" : "Previous page"}
+              style={{
+                padding: "2px 8px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                color: "var(--fg-muted)",
+                cursor: currentPage <= 1 ? "default" : "pointer",
+                opacity: currentPage <= 1 ? 0.4 : 1,
+              }}
+            >
+              ‹
+            </button>
+            <span>
+              {adminUsersT("admin.users.pagination_page", lang)
+                .replace("{P}", String(currentPage))
+                .replace("{M}", String(pageCount))}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={currentPage >= pageCount || q.isLoading}
+              aria-label={lang === "tr" ? "Sonraki sayfa" : "Next page"}
+              style={{
+                padding: "2px 8px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                color: "var(--fg-muted)",
+                cursor: currentPage >= pageCount ? "default" : "pointer",
+                opacity: currentPage >= pageCount ? 0.4 : 1,
+              }}
+            >
+              ›
+            </button>
           </div>
         </div>
       </Card>
