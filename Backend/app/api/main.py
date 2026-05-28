@@ -101,26 +101,28 @@ def _validate_startup_secrets(s) -> None:
 async def lifespan(app: FastAPI):
     # Startup: validate secrets before anything else
     _validate_startup_secrets(settings)
+    # Startup: verify alembic head matches code expectations.
+    # strict=True in production (DEBUG=False) so the app refuses to boot
+    # on a schema mismatch — better to fail fast at startup than emit
+    # cryptic 500s once traffic hits a missing column. In dev (DEBUG=True)
+    # we only log a warning so test harnesses that use
+    # Base.metadata.create_all (no alembic_version row) aren't blocked.
+    from app.infrastructure.database._alembic_check import assert_schema_at_head
+    await assert_schema_at_head(engine, strict=not settings.DEBUG)
     # Startup: Seed database
     async with AsyncSessionLocal() as session:
         await seed_data(session)
-    # Startup: Run Phase 5 async migration (notification tables + enum extension)
-    from app.infrastructure.database.migrations.migration_004 import upgrade as upgrade_004
-    await upgrade_004(engine)
-    # Startup: Run Phase 7 async migration (ITERATIVE enum, process_config, process_templates, system_config)
-    from app.infrastructure.database.migrations.migration_005 import upgrade as upgrade_005
-    await upgrade_005(engine)
-    # Startup: Migration 006 — make files.task_id nullable for artifact file uploads (D-41)
-    from app.infrastructure.database.migrations.migration_006 import upgrade as upgrade_006
-    await upgrade_006(engine)
-    # Startup: Migration 007 — backfill projects.process_template_id by methodology so
-    # the read-side join surfaces the human-readable template name instead of the bare enum.
+    # Startup: runtime-only data backfills. The old Python migrations 004
+    # (Phase 5 notifications), 005 (Phase 7 process_config / system_config)
+    # and 006 (files.task_id nullable) were redundant with alembic 004,
+    # 005+015 and 010 respectively — they were removed once the alembic
+    # head check (assert_schema_at_head above) made it safe to assume the
+    # schema is current. Only the runtime backfills that have NO alembic
+    # equivalent stay here:
+    #   - migration_007 backfills projects.process_template_id
+    #   - migration_008 backfills board_columns engine fields
     from app.infrastructure.database.migrations.migration_007 import upgrade as upgrade_007
     await upgrade_007(engine)
-    # Startup: Migration 008 — backfill board_columns engine fields (category, is_initial,
-    # is_terminal, entry/exit_policy) from the canonical _default_columns spec so the
-    # rapor endpoints (CFD / lead-time / burndown) bucket tasks into their correct lanes
-    # instead of collapsing everything into the "todo" bucket.
     from app.infrastructure.database.migrations.migration_008 import upgrade as upgrade_008
     await upgrade_008(engine)
     # Startup: Register and start APScheduler jobs

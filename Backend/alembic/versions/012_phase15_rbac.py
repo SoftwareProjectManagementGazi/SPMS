@@ -25,6 +25,18 @@ re-running `alembic upgrade head` succeeds without UNIQUE violations.
 from alembic import op
 import sqlalchemy as sa
 
+# Single source of truth — see docstring in _seed_rbac.py for the trade-off.
+# Importing app code from a migration is normally an anti-pattern; we accept
+# it here because (a) we never roll back migrations in production, and
+# (b) the runtime seed_rbac() re-applies these lists idempotently every boot
+# so any drift between this migration's snapshot and the live lists is
+# self-healing within one restart.
+from app.infrastructure.database._seed_rbac import (
+    PERMISSIONS_SEED,
+    PM_PERMS,
+    MEMBER_PERMS,
+)
+
 
 # revision identifiers, used by Alembic.
 revision = "012_phase15_rbac"
@@ -77,84 +89,9 @@ def _index_exists(index_name: str) -> bool:
     return result.scalar() > 0
 
 
-# ---------------------------------------------------------------------------
-# 38 permissions seed (D-1.8 / D-3.5) — 26 project + 12 admin.* (system scope)
-# Project = 14 base CRUD + 12 LIFE-related (comment/milestone/artifact/phase_report).
-# ---------------------------------------------------------------------------
-
-PERMISSIONS_SEED = [
-    # Project lifecycle (project scope) — 4
-    ("project.create", "Proje oluştur", "Create project", "project"),
-    ("project.edit", "Proje düzenle", "Edit project", "project"),
-    ("project.delete", "Proje sil", "Delete project", "project"),
-    ("project.archive", "Proje arşivle", "Archive project", "project"),
-    # Task lifecycle (project scope) — 4
-    ("task.create", "Görev oluştur", "Create task", "project"),
-    ("task.change_assignee", "Atanan değiştir", "Change assignee", "project"),
-    ("task.change_status", "Durum değiştir", "Change status", "project"),
-    ("task.delete", "Görev sil", "Delete task", "project"),
-    # Membership (project scope) — 2
-    ("member.invite", "Üye davet et", "Invite member", "project"),
-    ("member.remove", "Üye çıkar", "Remove member", "project"),
-    # Workflow / lifecycle (project scope) — 4
-    ("workflow.edit", "Workflow düzenle", "Edit workflow", "project"),
-    ("lifecycle.edit", "Yaşam döngüsü düzenle", "Edit lifecycle", "project"),
-    ("template.publish", "Şablon yayınla", "Publish template", "project"),
-    ("role.assign", "Rol ata", "Assign role", "project"),
-    # Admin endpoints (system scope) — 12
-    ("admin.access", "Admin paneli", "Admin panel access", "system"),
-    ("admin.users.invite", "Kullanıcı davet et", "Invite user", "system"),
-    ("admin.users.deactivate", "Kullanıcı deaktive et", "Deactivate user", "system"),
-    ("admin.users.role_change", "Kullanıcı rolü değiştir", "Change user role", "system"),
-    ("admin.users.bulk", "Toplu kullanıcı işlemi", "Bulk user action", "system"),
-    ("admin.audit.read", "Denetim kaydı oku", "Read audit log", "system"),
-    ("admin.audit.export", "Denetim kaydı dışa aktar", "Export audit log", "system"),
-    ("admin.stats.read", "İstatistikleri oku", "Read admin stats", "system"),
-    ("admin.summary.export", "PDF rapor dışa aktar", "Export PDF summary", "system"),
-    ("admin.join_requests.approve", "Katılım isteğini onayla", "Approve join request", "system"),
-    ("admin.settings.update", "Ayarları güncelle", "Update settings", "system"),
-    ("permission.matrix.update", "İzin matrisi düzenle", "Update permission matrix", "system"),
-    # Phase 15 D-3.5 LIFE-related project-scope perms — 12 NEW
-    # Comment family (3) — Phase 9 comments-related endpoints
-    ("comment.create", "Yorum ekle", "Create comment", "project"),
-    ("comment.edit", "Yorum düzenle", "Edit comment", "project"),
-    ("comment.delete", "Yorum sil", "Delete comment", "project"),
-    # Milestone family (3) — Phase 12 LIFE-05 endpoints
-    ("milestone.create", "Kilometre tasi olustur", "Create milestone", "project"),
-    ("milestone.edit", "Kilometre tasi duzenle", "Edit milestone", "project"),
-    ("milestone.delete", "Kilometre tasi sil", "Delete milestone", "project"),
-    # Artifact family (3) — Phase 12 LIFE-06 endpoints
-    ("artifact.create", "Cikti olustur", "Create artifact", "project"),
-    ("artifact.edit", "Cikti duzenle", "Edit artifact", "project"),
-    ("artifact.delete", "Cikti sil", "Delete artifact", "project"),
-    # Phase report family (3) — Phase 12 LIFE-07 endpoints
-    ("phase_report.create", "Faz raporu olustur", "Create phase report", "project"),
-    ("phase_report.edit", "Faz raporu duzenle", "Edit phase report", "project"),
-    ("phase_report.delete", "Faz raporu sil", "Delete phase report", "project"),
-]
-
-
-# Matrix bootstrap (D-1.8) — PM 23, Member 5, Admin 0, Guest 0
-PM_PERMS = [
-    # 13 base perms (Phase 14 baseline + Phase 15 governance)
-    "project.create", "project.edit", "project.archive",
-    "task.create", "task.change_assignee", "task.change_status", "task.delete",
-    "member.invite", "member.remove", "role.assign",
-    "workflow.edit", "lifecycle.edit", "template.publish",
-    # 10 LIFE-related perms (CONTEXT D-3.1 — PM is project leader, owns lifecycle artifacts; D-3.5)
-    "milestone.create", "milestone.edit", "milestone.delete",
-    "artifact.create", "artifact.edit",
-    "phase_report.create", "phase_report.edit", "phase_report.delete",
-    "comment.edit", "comment.delete",
-    # PM intentionally does NOT have artifact.delete (PM does not delete others' files)
-]
-
-# Member is regular contributor (D-3.1) — write own content, no admin-of-others
-MEMBER_PERMS = [
-    "task.create", "task.change_assignee", "task.change_status",
-    "comment.create",   # Members can post comments
-    "artifact.create",  # Members can attach files
-]
+# Permission seed lists and matrix bootstrap moved to
+# app/infrastructure/database/_seed_rbac.py (single source of truth).
+# This migration imports them at the top of the file.
 
 
 # ---------------------------------------------------------------------------

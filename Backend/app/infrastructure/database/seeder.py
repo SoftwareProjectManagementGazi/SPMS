@@ -1,6 +1,7 @@
 import logging
 import random
 from datetime import date, timedelta, datetime
+from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -37,9 +38,9 @@ logger = logging.getLogger(__name__)
 # --- Sabit Veriler ---
 
 INITIAL_ROLES = [
-    {"name": "Admin", "description": "Sistem yöneticisi, tam yetkili."},
-    {"name": "Project Manager", "description": "Proje yöneticisi, ekip ve süreç yönetimi."},
-    {"name": "Member", "description": "Ekip üyesi, görev üzerinde çalışır."},
+    {"name": "Admin", "description": "Sistem yöneticisi, tam yetkili.", "is_system_role": True},
+    {"name": "Project Manager", "description": "Proje yöneticisi, ekip ve süreç yönetimi.", "is_system_role": True},
+    {"name": "Member", "description": "Ekip üyesi, görev üzerinde çalışır.", "is_system_role": True},
 ]
 
 USERS_DATA = [
@@ -338,7 +339,19 @@ async def seed_data(session: AsyncSession, *, skip_tasks: bool = False):
     # before driving the simulation.
     if not skip_tasks:
         from app.infrastructure.database.snapshot_loader import maybe_load_snapshot
+        from app.infrastructure.database._seed_rbac import seed_rbac
+        from app.infrastructure.database._seed_system import (
+            cleanup_uppercase_templates,
+            seed_system_config,
+        )
         if await maybe_load_snapshot(session):
+            # The simulator snapshot intentionally omits `permissions` and
+            # `role_permissions` rows (those tables are TRUNCATEd during
+            # bootstrap and never re-seeded by the simulator). Top them up
+            # idempotently so /admin/permissions renders the matrix.
+            await seed_rbac(session)
+            await seed_system_config(session)
+            await cleanup_uppercase_templates(session)
             return
     try:
         # No top-level idempotency guard — each entity seeder has its own
@@ -379,9 +392,54 @@ async def seed_data(session: AsyncSession, *, skip_tasks: bool = False):
         # Genişletilmiş seeder: +92 kullanıcı, +15 proje, +12 yaşam döngüsü şablonu
         await seed_extended_data(session, skip_tasks=skip_tasks)
         await session.commit()
+
+        # RBAC top-up — guarantees /admin/permissions matrix always renders
+        # even after a TRUNCATE-and-reseed cycle (e.g. the simulator's
+        # bootstrap path). Idempotent; only inserts missing rows.
+        from app.infrastructure.database._seed_rbac import seed_rbac
+        from app.infrastructure.database._seed_system import (
+            cleanup_uppercase_templates,
+            seed_system_config,
+        )
+        await seed_rbac(session)
+        # system_config: replaces the one-shot seed inside migration_005
+        # that only fired on first table creation; new keys added to
+        # SYSTEM_CONFIG_DEFAULTS now land on every boot.
+        await seed_system_config(session)
+        # process_templates cleanup: drops the UPPERCASE rows migration_005
+        # used to insert in parallel with seeder.py's TitleCase variants.
+        await cleanup_uppercase_templates(session)
         logger.info("SEEDER: İşlem başarıyla tamamlandı.")
+    except IntegrityError as e:
+        # Unique / FK / NOT NULL violation — the seed payload references
+        # a row that doesn't satisfy a constraint. Surface the SQL detail
+        # so the offending row is identifiable in the logs.
+        logger.error(
+            f"SEEDER INTEGRITY HATASI: {e.orig if hasattr(e, 'orig') else e}"
+        )
+        await session.rollback()
+        raise
+    except ProgrammingError as e:
+        # Schema mismatch — most often a missing table/column. Usually
+        # means alembic head is behind the code; the assert_schema_at_head
+        # check at lifespan start should already have flagged this in
+        # production mode.
+        logger.error(
+            f"SEEDER ŞEMA HATASI (alembic geride olabilir): "
+            f"{e.orig if hasattr(e, 'orig') else e}"
+        )
+        await session.rollback()
+        raise
+    except OperationalError as e:
+        # Connectivity / pool issue — distinct from data problems so ops
+        # can route the incident correctly.
+        logger.error(f"SEEDER BAĞLANTI HATASI: {e}")
+        await session.rollback()
+        raise
     except Exception as e:
-        logger.error(f"SEEDER HATASI: {e}")
+        # Anything else stays a hard fail with the full message so it
+        # doesn't get masked by a vague "SEEDER HATASI".
+        logger.exception(f"SEEDER BEKLENMEYEN HATA: {type(e).__name__}: {e}")
         await session.rollback()
         raise
 
@@ -393,7 +451,15 @@ async def seed_roles(session: AsyncSession):
     roles_map = {r.name: r for r in result.scalars().all()}
     for r_data in INITIAL_ROLES:
         if r_data["name"] not in roles_map:
-            role = RoleModel(name=r_data["name"], description=r_data["description"])
+            role = RoleModel(
+                name=r_data["name"],
+                description=r_data["description"],
+                # Set the system-role flag at creation time so we don't
+                # need _seed_rbac.seed_rbac()'s UPDATE pass to flip it
+                # afterwards. The UPDATE is still there as a safety net
+                # for DBs created before this flag was added.
+                is_system_role=r_data.get("is_system_role", False),
+            )
             session.add(role)
             roles_map[r_data["name"]] = role
     await session.flush()
