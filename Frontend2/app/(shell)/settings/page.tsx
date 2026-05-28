@@ -155,7 +155,7 @@ function SegmentedPills<T extends string>({
 // ---------------------------------------------------------------------------
 
 function ProfileSection() {
-  const { user } = useAuth()
+  const { user, setUser } = useAuth()
   const { language } = useApp()
   const { showToast } = useToast()
 
@@ -175,7 +175,10 @@ function ProfileSection() {
   // Avatar upload mutation
   const avatarMutation = useMutation({
     mutationFn: (file: File) => authService.uploadAvatar(file),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      // Push the fresh user into the auth context so the navbar, profile header,
+      // and initials update immediately instead of staying stale until reload.
+      setUser(updated)
       showToast({
         message: language === "tr" ? "Avatar güncellendi." : "Avatar updated.",
         variant: "success",
@@ -197,7 +200,8 @@ function ProfileSection() {
   // Profile save mutation
   const profileMutation = useMutation({
     mutationFn: () => authService.updateProfile({ full_name: fullName, email }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      setUser(updated)
       showToast({
         message: language === "tr" ? "Değişiklikler kaydedildi." : "Changes saved.",
         variant: "success",
