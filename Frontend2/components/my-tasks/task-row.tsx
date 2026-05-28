@@ -28,6 +28,7 @@ import { Star, MoreHorizontal, Bug, AlertCircle, Clock } from "lucide-react"
 
 import { Avatar, PriorityChip, StatusDot } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { parseLocalDate } from "@/lib/date/parse-local-date"
 import type { Task } from "@/services/task-service"
 import type { StatusValue } from "@/components/primitives/status-dot"
 
@@ -76,9 +77,10 @@ interface DueDescriptor {
 
 function describeDue(iso: string | null, lang: "tr" | "en"): DueDescriptor | null {
   if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  d.setHours(0, 0, 0, 0)
+  // Local-frame parse (already at local midnight) so a date-only due string
+  // isn't shifted a day by UTC parsing before the diff against local "today".
+  const d = parseLocalDate(iso)
+  if (!d) return null
   const now = new Date()
   now.setHours(0, 0, 0, 0)
   const diff = Math.round((d.getTime() - now.getTime()) / 86_400_000)

@@ -4,6 +4,8 @@
 // added "none" bucket for null due dates — previously the prototype dropped
 // these into "later" which was a semantic lie (no due ≠ far away).
 
+import { parseLocalDate } from "@/lib/date/parse-local-date"
+
 export type DueBucket = "overdue" | "today" | "this_week" | "later" | "none"
 
 /**
@@ -23,8 +25,13 @@ export function dueBucket(iso: string | null, nowRef?: Date): DueBucket {
     now.getMonth(),
     now.getDate()
   ).getTime()
-  const due = new Date(iso).getTime()
-  if (Number.isNaN(due)) return "none"
+  // Parse the due date in the LOCAL frame so a date-only string ("YYYY-MM-DD",
+  // parsed as UTC by `new Date`) isn't compared against the locally-built
+  // todayStart — that mismatch pushed "today" tasks into "overdue" for users
+  // behind UTC.
+  const dueDate = parseLocalDate(iso)
+  if (!dueDate) return "none"
+  const due = dueDate.getTime()
   if (due < todayStart) return "overdue"
   const oneDay = 86_400_000
   if (due < todayStart + oneDay) return "today"
