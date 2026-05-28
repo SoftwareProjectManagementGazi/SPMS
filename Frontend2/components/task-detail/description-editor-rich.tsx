@@ -9,10 +9,13 @@
 //   server bundle; `immediatelyRender: false` protects the first hydration
 //   pass even after the chunk arrives on the client.
 //
-// Save pattern (D-36):
-//   2s debounced save — `setTimeout` inside onUpdate, cleared on each keystroke,
-//   cleaned up on unmount. onChange receives editor.getHTML(); the caller
-//   (description-editor.tsx) forwards it up to the page which PATCHes /tasks/{id}.
+// Save pattern (revised — UAT bugfix):
+//   Fires onChange SYNCHRONOUSLY on every editor update. The original D-36
+//   2s debounce dropped content silently whenever the user clicked "Bitir"
+//   within the debounce window — the parent's local `draft` state was
+//   still stale and `finishEdit()` saw `draft === value`, so no PATCH ever
+//   left the browser. The "Bitir" button itself is the commit gate now; we
+//   no longer need a timer-based one.
 
 import * as React from "react"
 import { useEditor, EditorContent } from "@tiptap/react"
@@ -27,7 +30,6 @@ interface Props {
 }
 
 export default function DescriptionEditorRich({ value, onChange }: Props) {
-  const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const latestOnChange = React.useRef(onChange)
   React.useEffect(() => {
     latestOnChange.current = onChange
@@ -44,10 +46,10 @@ export default function DescriptionEditorRich({ value, onChange }: Props) {
     // CRITICAL per RESEARCH Pitfall 2 — required even with dynamic(ssr:false).
     immediatelyRender: false,
     onUpdate: ({ editor: ed }) => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => {
-        latestOnChange.current(ed.getHTML())
-      }, 2000) // D-36 debounce
+      // Push the latest HTML up on every keystroke so the parent's draft
+      // state stays in sync. Commit still happens via the explicit "Bitir"
+      // button in description-editor.tsx; this just keeps draft fresh.
+      latestOnChange.current(ed.getHTML())
     },
   })
 
@@ -61,12 +63,6 @@ export default function DescriptionEditorRich({ value, onChange }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editor])
-
-  React.useEffect(() => {
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-    }
-  }, [])
 
   if (!editor) return null
 
