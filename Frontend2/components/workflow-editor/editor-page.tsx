@@ -1002,13 +1002,19 @@ export function EditorPage({ project }: EditorPageProps) {
       }
 
       // Compose the next workflow: positions + (optional) drop-association.
+      // BUGFIX: previously gated on `dropParentId`, but that variable is set
+      // in two cases — (1) parent group has < 2 other children (KEEP) and
+      // (2) node is outside hull (STRIP) — so the stripping branch was
+      // firing in both cases and silently destroying small (2-node) groups
+      // on every drag. The actual "strip" signal is `strippedFromGroupId`,
+      // which is only set when the hull pointInPolygon check fails.
       const nextNodes = workflow.nodes.map((n) => {
         const p = finalPositions.get(n.id)
         let updated = n
         if (p && (p.x !== n.x || p.y !== n.y)) {
           updated = { ...updated, x: p.x, y: p.y }
         }
-        if (dropParentId && updated.id === node.id) {
+        if (strippedFromGroupId && updated.id === node.id) {
           updated = { ...updated, parentId: undefined }
         }
         return updated
@@ -1289,16 +1295,28 @@ export function EditorPage({ project }: EditorPageProps) {
     (nodeIds: string[]) => {
       if (nodeIds.length < 1) return
       const id = newGroupId()
-      const groups = [...(workflow.groups ?? [])]
-      groups.push({
+      // Pull any pre-existing group memberships out of the source groups
+      // first, otherwise the old group keeps a dangling `children` entry and
+      // its hull stays sized as if the moved node were still inside (visual
+      // ghost on the canvas + stale data on save).
+      const idSet = new Set(nodeIds)
+      const cleanedGroups = (workflow.groups ?? []).map((g) =>
+        g.children.some((cid) => idSet.has(cid))
+          ? { ...g, children: g.children.filter((cid) => !idSet.has(cid)) }
+          : g,
+      )
+      cleanedGroups.push({
         id,
         name: T("Yeni Grup", "New Group"),
         color: "primary",
         children: nodeIds,
       })
+      // Drop groups that have become empty after pulling their members out.
+      // An empty group has no hull and is unreachable from the UI.
+      const nextGroups = cleanedGroups.filter((g) => g.children.length > 0)
       commitWorkflow({
         ...workflow,
-        groups,
+        groups: nextGroups,
         nodes: workflow.nodes.map((n) =>
           nodeIds.includes(n.id) ? { ...n, parentId: id } : n,
         ),
