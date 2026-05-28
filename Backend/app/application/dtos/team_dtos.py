@@ -67,6 +67,7 @@ class TeamsStatsDTO(BaseModel):
     """GET /teams/stats — sayfa üst stats stripi için tek seferde toplu sayım."""
     total_teams: int
     total_members: int
+    active_projects: int  # takımlara atanmış benzersiz proje sayısı
     active_tasks: int
     completion_rate: float  # 0..1
 

@@ -224,6 +224,7 @@ class SqlAlchemyTeamRepository(ITeamRepository):
         return {
             "total_teams": len(teams),
             "total_members": total_members,
+            "active_projects": len(project_ids),
             "active_tasks": active_tasks,
             "completion_rate": round(completion_rate, 4),
         }

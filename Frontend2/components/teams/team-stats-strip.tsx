@@ -16,7 +16,7 @@ export function TeamStatsStrip({ stats, teamCount, loading, lang }: Props) {
   const items = [
     { value: teamCount, label: T("TAKIM", "TEAMS") },
     { value: stats?.total_members ?? 0, label: T("TOPLAM ÜYE", "TOTAL MEMBERS") },
-    { value: (stats as any)?.active_projects ?? 0, label: T("AKTİF PROJE", "ACTIVE PROJECTS") },
+    { value: stats?.active_projects ?? 0, label: T("AKTİF PROJE", "ACTIVE PROJECTS") },
     { value: stats?.active_tasks ?? 0, label: T("AKTİF GÖREV", "ACTIVE TASKS") },
   ]
 

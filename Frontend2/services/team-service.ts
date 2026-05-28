@@ -52,6 +52,7 @@ export interface Team {
 export interface TeamsStats {
   total_teams: number;
   total_members: number;
+  active_projects: number;          // distinct projects assigned to teams
   active_tasks: number;
   completion_rate: number;          // 0..1
 }
