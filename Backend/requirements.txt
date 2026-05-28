@@ -1,22 +1,28 @@
-fastapi
-uvicorn
-sqlalchemy
-alembic
-asyncpg
-pydantic-settings
-passlib[bcrypt]
+fastapi==0.115.6
+uvicorn==0.32.1
+sqlalchemy==2.0.36
+alembic==1.14.0
+asyncpg==0.30.0
+pydantic-settings==2.7.0
+passlib[bcrypt]==1.7.4
 bcrypt<4.1  # passlib 1.7.4 incompatible with bcrypt >=4.1 (detect_wrap_bug ValueError)
-python-jose
-python-multipart
-pytest
-pytest-asyncio
-httpx
-aiosqlite
-pydantic[email]
-slowapi
-apscheduler
-fastapi-mail
-openpyxl
-fpdf2
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.20
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+aiosqlite==0.20.0
+pydantic[email]==2.10.4
+slowapi==0.1.9
+apscheduler==3.11.0
+fastapi-mail==1.4.2
+openpyxl==3.1.5
+fpdf2==2.8.2
 google-genai>=0.3.0
-greenlet
+greenlet==3.1.1
+# Dev-only: discrete-event simulator uses time-machine to freeze datetime.now()
+# while it replays 90 days of user activity through real Use Case calls so
+# audit_log/created_at/timestamp rows land at simulated wall-clock times,
+# not server `func.now()`. Backed by a post-event SQL patcher for the
+# server-default columns the Python side can't reach.
+time-machine==2.16.0

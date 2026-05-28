@@ -117,6 +117,12 @@ async def lifespan(app: FastAPI):
     # the read-side join surfaces the human-readable template name instead of the bare enum.
     from app.infrastructure.database.migrations.migration_007 import upgrade as upgrade_007
     await upgrade_007(engine)
+    # Startup: Migration 008 — backfill board_columns engine fields (category, is_initial,
+    # is_terminal, entry/exit_policy) from the canonical _default_columns spec so the
+    # rapor endpoints (CFD / lead-time / burndown) bucket tasks into their correct lanes
+    # instead of collapsing everything into the "todo" bucket.
+    from app.infrastructure.database.migrations.migration_008 import upgrade as upgrade_008
+    await upgrade_008(engine)
     # Startup: Register and start APScheduler jobs
     from app.scheduler.jobs import scheduler, deadline_alert_job, purge_notifications_job
     from apscheduler.triggers.cron import CronTrigger

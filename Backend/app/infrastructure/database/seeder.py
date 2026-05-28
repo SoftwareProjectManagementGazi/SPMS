@@ -314,7 +314,32 @@ def get_random_date(start_days_ago=60, end_days_ago=0):
     days = random.randint(end_days_ago, start_days_ago)
     return datetime.now() - timedelta(days=days)
 
-async def seed_data(session: AsyncSession):
+async def seed_data(session: AsyncSession, *, skip_tasks: bool = False):
+    """Top-level seed entry point.
+
+    ``skip_tasks=True`` is the simulator's bootstrap mode — base entities
+    (roles/users/templates/projects/columns/sprints/teams/milestones/artifacts)
+    are still created, but no synthetic tasks or audit_log rows are written.
+    The simulator then drives the task lifecycle on top of this baseline so
+    every audit row carries a simulated timestamp.
+
+    Default (False) preserves the lifespan behaviour: when a simulator
+    snapshot exists at ``Backend/fixtures/simulated_quarter.sql.gz`` AND
+    audit_log is empty (fresh container), the snapshot is loaded instead
+    of the legacy hand-rolled task fixtures. Otherwise the legacy path
+    runs end-to-end.
+    """
+    # Simulator snapshot fast-path: if a baked dump exists and the DB is
+    # genuinely empty (no audit_log rows), restore it and bail out — that
+    # turns a multi-minute legacy seed into a few-second COPY of rows with
+    # realistic 90-day timestamps. The skip_tasks=True caller (the
+    # simulator's own bootstrap) bypasses this branch because it wants the
+    # legacy bootstrap path to set up roles / users / templates / projects
+    # before driving the simulation.
+    if not skip_tasks:
+        from app.infrastructure.database.snapshot_loader import maybe_load_snapshot
+        if await maybe_load_snapshot(session):
+            return
     try:
         # No top-level idempotency guard — each entity seeder has its own
         # per-row check (seed_roles by name, seed_users by email,
@@ -342,7 +367,7 @@ async def seed_data(session: AsyncSession):
         }
         for key, seeder in detail_dispatch.items():
             if key in created_keys and key in projects_map:
-                await seeder(session, projects_map[key], users_map)
+                await seeder(session, projects_map[key], users_map, skip_tasks=skip_tasks)
 
         if created_projects:
             await seed_teams(session, {p.key: p for p in created_projects}, users_map)
@@ -352,7 +377,7 @@ async def seed_data(session: AsyncSession):
         logger.info("SEEDER: Temel veriler commit edildi.")
 
         # Genişletilmiş seeder: +92 kullanıcı, +15 proje, +12 yaşam döngüsü şablonu
-        await seed_extended_data(session)
+        await seed_extended_data(session, skip_tasks=skip_tasks)
         await session.commit()
         logger.info("SEEDER: İşlem başarıyla tamamlandı.")
     except Exception as e:
@@ -735,13 +760,28 @@ async def generate_hierarchical_tasks(session: AsyncSession, project: ProjectMod
 
 # --- Metodolojiye Özgü Detaylar ---
 
-async def seed_scrum_details(session: AsyncSession, project, users_map):
-    cols = ["Backlog", "To Do", "In Progress", "Code Review", "Done"]
+async def seed_scrum_details(session: AsyncSession, project, users_map, *, skip_tasks: bool = False):
+    # Use the single-source SCRUM_DEFAULT_COLUMNS spec from _default_columns
+    # so category / is_initial / is_terminal / entry_policy / exit_policy
+    # land correctly on every new project's board. Previously this seeded
+    # plain (name, order_index) tuples — column.category defaulted to "todo"
+    # for every row including Done, which broke the CFD's done-bucket count.
     col_map = {}
-    for idx, name in enumerate(cols):
-        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
+    for spec in SCRUM_DEFAULT_COLUMNS:
+        c = BoardColumnModel(
+            project_id=project.id,
+            name=spec["name"],
+            order_index=spec["order_index"],
+            wip_limit=spec.get("wip_limit", 0),
+            category=spec.get("category"),
+            is_initial=spec.get("is_initial", False),
+            is_terminal=spec.get("is_terminal", False),
+            max_duration_days=spec.get("max_duration_days"),
+            entry_policy=spec.get("entry_policy", "any"),
+            exit_policy=spec.get("exit_policy", "any"),
+        )
         session.add(c)
-        col_map[name] = c
+        col_map[spec["name"]] = c
     await session.flush()
 
     s1 = SprintModel(project_id=project.id, name="Sprint 1", goal="Altyapı", start_date=date.today()-timedelta(days=14), end_date=date.today(), is_active=False)
@@ -749,29 +789,56 @@ async def seed_scrum_details(session: AsyncSession, project, users_map):
     session.add_all([s1, s2])
     await session.flush()
 
-    await generate_hierarchical_tasks(session, project, [s1, s2], col_map)
+    # Simulator path: bootstrap calls this with skip_tasks=True so the discrete-
+    # event simulator drives task creation through real Use Case calls. Lifespan
+    # callers leave the default (False) so the legacy fixed-task seed still
+    # runs when no simulator snapshot exists.
+    if not skip_tasks:
+        await generate_hierarchical_tasks(session, project, [s1, s2], col_map)
 
-async def seed_kanban_details(session: AsyncSession, project, users_map):
-    col_defs = [("To Do", 0), ("Analiz", 3), ("Geliştirme", 4), ("Test", 2), ("Done", 0)]
+async def seed_kanban_details(session: AsyncSession, project, users_map, *, skip_tasks: bool = False):
     col_map = {}
-    for idx, (name, wip) in enumerate(col_defs):
-        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx, wip_limit=wip)
+    for spec in KANBAN_DEFAULT_COLUMNS:
+        c = BoardColumnModel(
+            project_id=project.id,
+            name=spec["name"],
+            order_index=spec["order_index"],
+            wip_limit=spec.get("wip_limit", 0),
+            category=spec.get("category"),
+            is_initial=spec.get("is_initial", False),
+            is_terminal=spec.get("is_terminal", False),
+            max_duration_days=spec.get("max_duration_days"),
+            entry_policy=spec.get("entry_policy", "any"),
+            exit_policy=spec.get("exit_policy", "any"),
+        )
         session.add(c)
-        col_map[name] = c
+        col_map[spec["name"]] = c
     await session.flush()
 
-    await generate_hierarchical_tasks(session, project, [], col_map)
+    if not skip_tasks:
+        await generate_hierarchical_tasks(session, project, [], col_map)
 
-async def seed_waterfall_details(session: AsyncSession, project, users_map):
-    cols = ["Gereksinim", "Analiz", "Tasarım", "Uygulama", "Test", "Bakım"]
+async def seed_waterfall_details(session: AsyncSession, project, users_map, *, skip_tasks: bool = False):
     col_map = {}
-    for idx, name in enumerate(cols):
-        c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
+    for spec in WATERFALL_DEFAULT_COLUMNS:
+        c = BoardColumnModel(
+            project_id=project.id,
+            name=spec["name"],
+            order_index=spec["order_index"],
+            wip_limit=spec.get("wip_limit", 0),
+            category=spec.get("category"),
+            is_initial=spec.get("is_initial", False),
+            is_terminal=spec.get("is_terminal", False),
+            max_duration_days=spec.get("max_duration_days"),
+            entry_policy=spec.get("entry_policy", "any"),
+            exit_policy=spec.get("exit_policy", "any"),
+        )
         session.add(c)
-        col_map[name] = c
+        col_map[spec["name"]] = c
     await session.flush()
 
-    await generate_hierarchical_tasks(session, project, [], col_map)
+    if not skip_tasks:
+        await generate_hierarchical_tasks(session, project, [], col_map)
 
 
 async def seed_teams(session: AsyncSession, projects_map: dict, users_map: dict):

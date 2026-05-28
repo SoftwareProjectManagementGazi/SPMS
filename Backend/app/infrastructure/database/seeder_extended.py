@@ -1438,21 +1438,53 @@ async def seed_extra_projects(session: AsyncSession, users_map: dict, templates_
     return created
 
 
-async def _seed_project_board(session: AsyncSession, project: ProjectModel, methodology: Methodology):
-    """Proje için kolon + sprint + görev üretir; metodoloji bazlı taslak."""
-    col_defs: list[tuple]
+async def _seed_project_board(session: AsyncSession, project: ProjectModel, methodology: Methodology, *, skip_tasks: bool = False):
+    """Proje için kolon + sprint + görev üretir; metodoloji bazlı taslak.
+
+    Kolon şekilleri (category / is_initial / is_terminal / entry_policy /
+    exit_policy dahil) _default_columns.py'den okunur — single-source of
+    truth ile alembic 014 + seed_X_details ile aynı spec'i paylaşır. Bu
+    olmadan tüm kolonlar category='todo' olarak DB'ye düşüp CFD'nin done
+    bucket'ını sıfırlatıyordu.
+    """
+    from app.infrastructure.database._default_columns import (
+        SCRUM_DEFAULT_COLUMNS,
+        KANBAN_DEFAULT_COLUMNS,
+        WATERFALL_DEFAULT_COLUMNS,
+        ITERATIVE_DEFAULT_COLUMNS,
+    )
+
     sprints: list = []
 
     if methodology == Methodology.SCRUM:
-        col_defs = [("Backlog", 0), ("To Do", 0), ("In Progress", 0), ("Code Review", 0), ("Done", 0)]
         await session.refresh(project, attribute_names=["members"])
-        col_map = {}
-        for idx, (name, wip) in enumerate(col_defs):
-            c = BoardColumnModel(project_id=project.id, name=name, order_index=idx, wip_limit=wip or None)
-            session.add(c)
-            col_map[name] = c
-        await session.flush()
+        col_specs = SCRUM_DEFAULT_COLUMNS
+    elif methodology == Methodology.KANBAN:
+        col_specs = KANBAN_DEFAULT_COLUMNS
+    elif methodology == Methodology.WATERFALL:
+        col_specs = WATERFALL_DEFAULT_COLUMNS
+    else:  # ITERATIVE
+        col_specs = ITERATIVE_DEFAULT_COLUMNS
 
+    col_map: dict = {}
+    for spec in col_specs:
+        c = BoardColumnModel(
+            project_id=project.id,
+            name=spec["name"],
+            order_index=spec["order_index"],
+            wip_limit=spec.get("wip_limit", 0) or None,
+            category=spec.get("category"),
+            is_initial=spec.get("is_initial", False),
+            is_terminal=spec.get("is_terminal", False),
+            max_duration_days=spec.get("max_duration_days"),
+            entry_policy=spec.get("entry_policy", "any"),
+            exit_policy=spec.get("exit_policy", "any"),
+        )
+        session.add(c)
+        col_map[spec["name"]] = c
+    await session.flush()
+
+    if methodology == Methodology.SCRUM:
         today = date.today()
         s1 = SprintModel(project_id=project.id, name="Sprint 1", goal="Altyapı ve temel akışlar",
                          start_date=today - timedelta(days=28), end_date=today - timedelta(days=14), is_active=False)
@@ -1464,34 +1496,10 @@ async def _seed_project_board(session: AsyncSession, project: ProjectModel, meth
         await session.flush()
         sprints = [s1, s2, s3]
 
-    elif methodology == Methodology.KANBAN:
-        col_defs = [("Backlog", 0), ("Analiz", 3), ("Geliştirme", 4), ("Test", 2), ("Done", 0)]
-        col_map = {}
-        for idx, (name, wip) in enumerate(col_defs):
-            c = BoardColumnModel(project_id=project.id, name=name, order_index=idx, wip_limit=wip or None)
-            session.add(c)
-            col_map[name] = c
-        await session.flush()
-
-    elif methodology == Methodology.WATERFALL:
-        col_defs = [("Gereksinim", 0), ("Analiz", 0), ("Tasarım", 0), ("Uygulama", 0), ("Test", 0), ("Bakım", 0)]
-        col_map = {}
-        for idx, (name, wip) in enumerate(col_defs):
-            c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
-            session.add(c)
-            col_map[name] = c
-        await session.flush()
-
-    else:  # ITERATIVE
-        col_defs = [("Planlama", 0), ("Tasarım", 0), ("Uygulama", 0), ("Test", 0), ("Done", 0)]
-        col_map = {}
-        for idx, (name, wip) in enumerate(col_defs):
-            c = BoardColumnModel(project_id=project.id, name=name, order_index=idx)
-            session.add(c)
-            col_map[name] = c
-        await session.flush()
-
-    await _generate_rich_tasks(session, project, sprints, col_map)
+    # Simulator bootstrap (skip_tasks=True) leaves task generation to the
+    # discrete-event run. Lifespan path keeps the legacy fixture behaviour.
+    if not skip_tasks:
+        await _generate_rich_tasks(session, project, sprints, col_map)
 
 
 async def _generate_rich_tasks(
@@ -1741,8 +1749,13 @@ async def _seed_milestones_artifacts(session: AsyncSession, created_projects: li
 # GİRİŞ NOKTASI — seeder.py'den çağrılır
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def seed_extended_data(session: AsyncSession):
-    """Ana genişletilmiş seeder; seeder.py::seed_data() tarafından çağrılır."""
+async def seed_extended_data(session: AsyncSession, *, skip_tasks: bool = False):
+    """Ana genişletilmiş seeder; seeder.py::seed_data() tarafından çağrılır.
+
+    ``skip_tasks=True`` is the simulator bootstrap mode — base entities are
+    created but no synthetic tasks. The simulator drives task generation on
+    top of this baseline so audit_log rows carry simulated timestamps.
+    """
     try:
         logger.info("EXTENDED SEEDER: Başlatılıyor...")
 
@@ -1758,9 +1771,9 @@ async def seed_extended_data(session: AsyncSession):
         # Yeni projeler
         created_projects = await seed_extra_projects(session, users_map, templates_by_name)
 
-        # Her yeni proje için board + görevler
+        # Her yeni proje için board + görevler (görevler skip_tasks ile bypass'lanabilir)
         for project in created_projects:
-            await _seed_project_board(session, project, project.methodology)
+            await _seed_project_board(session, project, project.methodology, skip_tasks=skip_tasks)
 
         # Ekipler
         if created_projects:
