@@ -41,6 +41,7 @@ export interface MilestoneCreateDTO {
 
 export interface MilestoneUpdateDTO {
   name?: string
+  start_date?: string | null
   target_date?: string
   status?: string
   linked_phase_ids?: string[]

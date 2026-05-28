@@ -67,6 +67,7 @@ export function useUpdateMilestone(projectId: number) {
             ? {
                 ...m,
                 name: dto.name ?? m.name,
+                startDate: dto.start_date ?? m.startDate,
                 targetDate: dto.target_date ?? m.targetDate,
                 status: dto.status ?? m.status,
                 linkedPhaseIds: dto.linked_phase_ids ?? m.linkedPhaseIds,
