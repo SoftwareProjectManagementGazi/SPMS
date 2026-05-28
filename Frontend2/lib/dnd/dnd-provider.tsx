@@ -5,6 +5,7 @@ import {
   DragOverlay,
   PointerSensor,
   KeyboardSensor,
+  closestCorners,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -46,7 +47,18 @@ export function ProjectDnDProvider({
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    // closestCorners (the @dnd-kit kanban recommendation) instead of the
+    // default rectIntersection: rectIntersection requires the dragged card to
+    // physically overlap a droppable, so drops onto empty/sparse columns were
+    // frequently missed and `over` resolved to an underlying card. closestCorners
+    // always picks the nearest droppable to the pointer; both columns and cards
+    // expose `columnId`, so handleDragEnd resolves the target column either way.
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       {children}
       <DragOverlay>{renderGhost(activeId)}</DragOverlay>
     </DndContext>
