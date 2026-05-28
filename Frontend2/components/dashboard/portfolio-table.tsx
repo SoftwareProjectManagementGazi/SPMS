@@ -9,8 +9,10 @@ interface PortfolioTableProps {
   projects: Project[]
 }
 
-function getMethodologyTone(methodology: string): "info" | "primary" | "warning" | "neutral" {
-  const m = methodology.toLowerCase()
+function getMethodologyTone(methodology: string | null | undefined): "info" | "primary" | "warning" | "neutral" {
+  // Older (pre-backfill) projects can have a null methodology; guard so the
+  // whole table doesn't throw on one bad row.
+  const m = (methodology ?? "").toLowerCase()
   if (m.includes("scrum")) return "info"
   if (m.includes("kanban")) return "primary"
   if (m.includes("waterfall")) return "warning"
@@ -63,7 +65,9 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
         // project pre-dates the template-id backfill.
         const methodTone = getMethodologyTone(project.methodology)
         const templateLabel = project.processTemplateName ?? ""
-        const progress = Math.round(project.progress ?? 0)
+        // project.progress is a 0–1 fraction (ProjectCard, teams, velocity-mini
+        // -bar all multiply by 100). Math.round on the raw fraction printed 0%.
+        const progress = Math.round((project.progress ?? 0) * 100)
 
         // Build lead avatar from manager fields
         const leadUser = project.managerName
