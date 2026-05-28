@@ -126,7 +126,7 @@ function normalizePriority(raw: unknown): Task["priority"] {
   return "medium"
 }
 
-function normalizeStatus(raw: unknown): string {
+export function normalizeStatus(raw: unknown): string {
   const s = String(raw ?? "").toLowerCase()
   // Map backend's underscore/hyphen variants for the built-in TaskStatus enum
   // values ("IN_PROGRESS", "in_progress") to the "progress" token that

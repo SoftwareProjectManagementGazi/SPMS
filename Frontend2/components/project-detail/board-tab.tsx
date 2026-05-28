@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api-client"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
-import type { Task } from "@/services/task-service"
+import { normalizeStatus, type Task } from "@/services/task-service"
 
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
@@ -95,18 +95,21 @@ export function BoardTab({ project }: { project: Project }) {
     return m
   }, [columnsMeta])
 
-  // Group tasks by column. Matches by case-insensitive status vs. column name;
-  // unmatched tasks fall into the first column so they remain visible rather
-  // than disappearing when backend statuses drift from the configured columns.
+  // Group tasks by column. Match on the NORMALIZED status token on BOTH sides
+  // (normalizeStatus maps in_progress/in-progress→progress and hyphens→spaces).
+  // task.status is already normalized by the service, but column names come raw
+  // from /columns; normalizing the column side too means a column stored as
+  // "In-Progress" or a legacy slug still matches its tasks instead of dumping
+  // them all into the leftmost column. Unmatched tasks still fall into the first
+  // column so they stay visible.
   const grouped = React.useMemo<Record<string, Task[]>>(() => {
     const g: Record<string, Task[]> = {}
     columnNames.forEach((cn) => {
       g[cn] = []
     })
     filteredTasks.forEach((t) => {
-      const match = columnNames.find(
-        (cn) => cn.toLowerCase() === (t.status ?? "").toLowerCase()
-      )
+      const taskNorm = normalizeStatus(t.status ?? "")
+      const match = columnNames.find((cn) => normalizeStatus(cn) === taskNorm)
       const key = match ?? columnNames[0] ?? t.status
       if (!g[key]) g[key] = []
       g[key].push(t)
