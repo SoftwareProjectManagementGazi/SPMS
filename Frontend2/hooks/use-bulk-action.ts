@@ -18,10 +18,11 @@ import {
 import { useToast } from "@/components/toast"
 
 interface UsersCacheShape {
-  // The exact shape depends on the list endpoint; for Wave 0 we operate on
-  // a list of user records with `id` and optional `is_active` field. Plan
-  // 14-03 may refine this shape.
-  data?: Array<{ id: number; is_active?: boolean }>
+  // useAdminUsers caches the raw backend body { items, total } (users-table
+  // reads `.items`). The optimistic patch previously checked `cur.data`, which
+  // never exists, so it was a silent no-op.
+  items?: Array<{ id: number; is_active?: boolean }>
+  total?: number
 }
 
 export function useBulkAction() {
@@ -41,12 +42,12 @@ export function useBulkAction() {
       for (const q of queries) {
         const cur = q.state.data as UsersCacheShape | undefined
         snapshots.push([q.queryKey, cur])
-        if (cur && Array.isArray(cur.data)) {
+        if (cur && Array.isArray(cur.items)) {
           const newActive = req.action === "activate"
-          const newData = cur.data.map((u) =>
+          const newItems = cur.items.map((u) =>
             req.user_ids.includes(u.id) ? { ...u, is_active: newActive } : u,
           )
-          qc.setQueryData(q.queryKey, { ...cur, data: newData })
+          qc.setQueryData(q.queryKey, { ...cur, items: newItems })
         }
       }
       return { snapshots }
