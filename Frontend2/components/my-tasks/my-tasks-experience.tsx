@@ -170,8 +170,20 @@ export function MyTasksExperience({
   const changeStatus = React.useCallback(
     (id: number, next: StatusValue) => {
       changeStatusMut.mutate({ id, status: next })
+      // The hero "done this week" stat and the right-rail "recently completed"
+      // list read exclusively from store.completedAt, so record the completion
+      // timestamp here (and clear it when a task is moved back out of done).
+      setStore((prev) => {
+        const completedAt = { ...prev.completedAt }
+        if (next === "done") {
+          completedAt[id] = new Date().toISOString()
+        } else {
+          delete completedAt[id]
+        }
+        return { ...prev, completedAt }
+      })
     },
-    [changeStatusMut]
+    [changeStatusMut, setStore]
   )
 
   // -- Filter pipeline ----------------------------------------------------
