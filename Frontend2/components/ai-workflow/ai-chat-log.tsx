@@ -40,17 +40,17 @@ export function AIChatLog({
   isGenerating,
   showContextChip = true,
 }: AIChatLogProps) {
-  // Auto-scroll to bottom when new lines arrive
-  const scrollRef = React.useRef<HTMLDivElement | null>(null)
+  // Auto-scroll to the tail when new content arrives. Scroll a sentinel into
+  // view instead of setting scrollTop on this div: the actual scroll container
+  // is an ancestor (the modal's <aside>), so this div's scrollHeight never
+  // changed and the old scrollTop assignment was a no-op.
+  const endRef = React.useRef<HTMLDivElement | null>(null)
   React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    endRef.current?.scrollIntoView({ block: "end" })
   }, [aiIntro, actionLines.length])
 
   return (
     <div
-      ref={scrollRef}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -182,6 +182,10 @@ export function AIChatLog({
           )}
         </ul>
       </div>
+
+      {/* Scroll anchor — kept at the tail so new content scrolls into view in
+          whichever ancestor actually scrolls (the modal's <aside>). */}
+      <div ref={endRef} aria-hidden />
     </div>
   )
 }
