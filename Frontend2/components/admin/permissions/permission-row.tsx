@@ -177,6 +177,10 @@ function PermissionToggleSwitch({
 export function PermissionRow({ permission, roles, cells }: PermissionRowProps) {
   const { language } = useApp()
   const updateCell = useUpdatePermissionCell()
+  // Disable ONLY the cell whose PATCH is in flight, not every cell in the row.
+  // The shared mutation exposes its latest `variables`, which identify the
+  // in-flight (role, permission) pair.
+  const pendingCell = updateCell.isPending ? updateCell.variables : undefined
 
   const label =
     (language === "tr" ? permission.label_tr : permission.label_en) ||
@@ -240,10 +244,12 @@ export function PermissionRow({ permission, roles, cells }: PermissionRowProps) 
         // if the cells array does not include the cell explicitly (the
         // backend may omit Admin cells under a "wildcard" model).
         const visualOn = isAdminColumn ? true : granted
-        // Disabled when: Admin (D-1.5), Guest (D-2.4), or mid-mutation
-        // (prevent re-clicks while the optimistic update is in-flight).
+        // Disabled when: Admin (D-1.5), Guest (D-2.4), or THIS cell's mutation
+        // is in-flight (prevent re-clicks). Sibling cells stay interactive.
         const disabled =
-          isAdminColumn || isGuestColumn || updateCell.isPending
+          isAdminColumn ||
+          isGuestColumn ||
+          (pendingCell?.roleId === role.id && pendingCell?.permKey === permission.key)
         return (
           <div
             key={role.id}
