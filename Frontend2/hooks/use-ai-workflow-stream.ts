@@ -98,6 +98,10 @@ export function useAIWorkflowStream(): UseAIWorkflowStreamReturn {
       // proportional to event count (not array length).
       const chatLog: string[] = []
       let currentText = ""
+      // Separate from currentText (the streamed intro accumulator) so a
+      // rationale event mid-stream doesn't clobber the intro and later tokens
+      // don't get appended onto the rationale.
+      let rationaleText = ""
       const nodes: SuggestedNodePayload[] = []
       const edges: SuggestedEdgePayload[] = []
       const columns: SuggestedColumnPayload[] = []
@@ -182,8 +186,9 @@ export function useAIWorkflowStream(): UseAIWorkflowStreamReturn {
             case "rationale": {
               const rationale =
                 (event.payload as { text: string }).text ?? ""
-              // Store rationale on the running state for later commit in "done"
-              currentText = rationale // reuse field as transient slot
+              // Accumulate into its own slot so it neither overwrites the
+              // streamed intro nor mixes with later text tokens.
+              rationaleText += rationale
               break
             }
 
@@ -198,7 +203,7 @@ export function useAIWorkflowStream(): UseAIWorkflowStreamReturn {
                 nodes,
                 edges,
                 columns,
-                rationale: currentText, // last rationale captured
+                rationale: rationaleText,
                 summary: donePayload,
               })
               return // exit loop cleanly
