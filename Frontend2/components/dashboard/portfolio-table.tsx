@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import Link from "next/link"
 import { Badge, Avatar } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { Project } from "@/services/project-service"
@@ -104,11 +105,23 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               alignItems: "center",
               fontSize: 13,
               borderBottom: "1px solid var(--border)",
-              cursor: "pointer",
             }}
           >
-            {/* Project: key chip + name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            {/* Project: key chip + name — wrapped in Link so clicking the
+                title navigates to /projects/:id. The lead avatar in the
+                next cell already links to /users/:id, so we deliberately
+                avoid wrapping the entire row (nested <a> would be invalid). */}
+            <Link
+              href={`/projects/${project.id}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                minWidth: 0,
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
               <div
                 className="mono"
                 style={{
@@ -131,7 +144,7 @@ export function PortfolioTable({ projects }: PortfolioTableProps) {
               }}>
                 {project.name}
               </div>
-            </div>
+            </Link>
 
             {/* Method badge — minWidth:0 + overflow:hidden lets the badge
                 truncate on the 30-char outliers ("V-Modeli + Scrum İç
