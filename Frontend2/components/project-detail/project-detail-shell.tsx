@@ -43,8 +43,10 @@ import { useToast } from "@/components/toast"
 import { apiClient } from "@/lib/api-client"
 import { ProjectDnDProvider } from "@/lib/dnd/dnd-provider"
 import { handleBoardDragEnd, type BoardColumnInfo } from "@/lib/dnd/board-dnd"
+import { resolveBacklogFilter } from "@/lib/methodology-matrix"
 import { useMoveTask, useTasks } from "@/hooks/use-tasks"
 import { useMilestones } from "@/hooks/use-milestones"
+import { useSprints } from "@/hooks/use-sprints"
 import type { Project } from "@/services/project-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
@@ -57,6 +59,7 @@ import { MembersTab } from "./members-tab"
 import { ProjectDetailProvider } from "./project-detail-context"
 import { TimelineTab } from "./timeline-tab"
 import { BacklogPanel, useBacklogOpenState } from "./backlog-panel"
+import { BACKLOG_COLUMN_ID } from "./backlog-task-row"
 import { BacklogToggle } from "./backlog-toggle"
 
 // Settings tab is lazy-loaded to keep the shell bundle lean — the 4 sub-tabs
@@ -105,6 +108,16 @@ export function ProjectDetailShell({
   const { effectiveOpen, narrow, setOpen } = useBacklogOpenState(project.id)
 
   const moveTask = useMoveTask(project.id)
+
+  // Backlog→board drops in cycle-based methodologies (Scrum etc.) must also
+  // assign the active sprint, otherwise the backlog filter (`no_sprint:true`)
+  // keeps the card in the backlog regardless of its column. Only fetch sprints
+  // when the methodology actually has a cycle-based backlog.
+  const backlogCycleBased = React.useMemo(
+    () => resolveBacklogFilter(project).no_sprint === true,
+    [project]
+  )
+  const { data: sprints = [] } = useSprints(backlogCycleBased ? project.id : null)
 
   // Columns + project tasks fetched here (same keys BoardTab uses so the
   // queries are de-duplicated by TanStack Query). Needed at shell level so the
@@ -191,6 +204,27 @@ export function ProjectDetailShell({
         return
       }
 
+      // Backlog→board drop in a cycle-based methodology: also assign the active
+      // sprint so the card leaves the `no_sprint:true` backlog set. This handler
+      // sits above ProjectDetailProvider so it can't read the *viewed* sprint;
+      // the active sprint is the correct target anyway (backlog → current work)
+      // and is what the board auto-selects on load.
+      let sprintId: number | undefined
+      if (sourceColumnId === BACKLOG_COLUMN_ID && backlogCycleBased) {
+        const activeSprint = sprints.find((s) => s.status === "ACTIVE")
+        if (!activeSprint) {
+          showToast({
+            variant: "warning",
+            message:
+              lang === "tr"
+                ? "Aktif sprint yok — görev backlog'da kalır. Önce bir sprint başlatın."
+                : "No active sprint — task stays in backlog. Start a sprint first.",
+          })
+          return
+        }
+        sprintId = activeSprint.id
+      }
+
       if (result.wipExceeded) {
         showToast({
           variant: "warning",
@@ -204,7 +238,7 @@ export function ProjectDetailShell({
       // Send column_id (integer FK) — TaskUpdateDTO has no `status` field so
       // sending a status string is silently ignored by the backend. The optimistic
       // `status` string is used for immediate board re-grouping only.
-      moveTask.mutate({ id: taskId, columnId: targetCol.id, status: targetColumnId.toLowerCase() })
+      moveTask.mutate({ id: taskId, columnId: targetCol.id, status: targetColumnId.toLowerCase(), sprintId })
 
       // Cross-container invalidation (Plan 11-06): when the drop source was
       // the backlog, the move changes status which may no longer match the
@@ -214,7 +248,7 @@ export function ProjectDetailShell({
       // invalidate it explicitly here to refetch the backlog list.
       qc.invalidateQueries({ queryKey: ["tasks", "backlog", project.id] })
     },
-    [columns, currentTasks, moveTask, showToast, lang, qc, project.id, project.boardColumns]
+    [columns, currentTasks, moveTask, showToast, lang, qc, project.id, project.boardColumns, sprints, backlogCycleBased]
   )
 
   const renderGhost = React.useCallback(

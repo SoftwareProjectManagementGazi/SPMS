@@ -123,14 +123,24 @@ export function useChangeTaskStatus() {
 export function useMoveTask(projectId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, columnId }: { id: number; columnId: number; status: string }) =>
-      taskService.patchField(id, "column_id", columnId),
-    onMutate: async ({ id, status }) => {
+    // sprintId is set only for backlog→board drops in cycle-based methodologies
+    // (assigns the active sprint so the card leaves the `no_sprint` backlog set).
+    mutationFn: ({ id, columnId, sprintId }: { id: number; columnId: number; status: string; sprintId?: number }) =>
+      taskService.moveToColumn(id, columnId, sprintId),
+    onMutate: async ({ id, status, sprintId }) => {
       const key = ["tasks", "project", projectId] as const
       await qc.cancelQueries({ queryKey: key })
       const prev = qc.getQueriesData<Task[]>({ queryKey: key })
       prev.forEach(([k, data]) => {
-        if (data) qc.setQueryData(k, data.map((t) => (t.id === id ? { ...t, status } : t)))
+        if (data)
+          qc.setQueryData(
+            k,
+            data.map((t) =>
+              t.id === id
+                ? { ...t, status, ...(sprintId !== undefined ? { cycleId: sprintId } : {}) }
+                : t
+            )
+          )
       })
       return { prev }
     },

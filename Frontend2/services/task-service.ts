@@ -258,6 +258,21 @@ export const taskService = {
     })
     return mapTask(resp.data)
   },
+  // Board move. Sends column_id and, when provided, sprint_id in ONE PATCH so a
+  // backlog→board drop can both place the card in a column AND assign it to a
+  // sprint atomically (a backlog filter of `no_sprint:true` would otherwise keep
+  // the task in the backlog regardless of column). `sprint_id` is the backend
+  // field for the Sprint FK (the board calls it "cycle").
+  moveToColumn: async (
+    id: number,
+    columnId: number,
+    sprintId?: number | null
+  ): Promise<Task> => {
+    const payload: Record<string, unknown> = { column_id: columnId }
+    if (sprintId !== undefined) payload.sprint_id = sprintId
+    const resp = await apiClient.patch<TaskResponseDTO>(`/tasks/${id}`, payload)
+    return mapTask(resp.data)
+  },
   update: async (id: number, dto: Partial<CreateTaskDTO>): Promise<Task> => {
     const resp = await apiClient.patch<TaskResponseDTO>(`/tasks/${id}`, dto)
     return mapTask(resp.data)
