@@ -39,6 +39,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
@@ -61,6 +63,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
@@ -80,6 +84,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [{ id: 1, name: "BE Team", project_ids: [1, 2] }],
@@ -99,6 +105,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [{ id: 1, name: "Other", project_ids: [99] }],
@@ -118,6 +126,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],
@@ -137,6 +147,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: undefined,
@@ -156,6 +168,8 @@ describe("useTransitionAuthority", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     mockedLedTeams.useLedTeams.mockReturnValue({
       data: [],

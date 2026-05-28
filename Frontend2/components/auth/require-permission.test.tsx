@@ -30,6 +30,8 @@ describe("<RequirePermission/>", () => {
       hasPermission: (k: string) => k === "task.create",
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     render(<RequirePermission perm="task.create">visible</RequirePermission>)
     expect(screen.getByText("visible")).toBeInTheDocument()
@@ -44,6 +46,8 @@ describe("<RequirePermission/>", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     const { container } = render(
       <RequirePermission perm="admin.access">hidden</RequirePermission>,
@@ -60,6 +64,8 @@ describe("<RequirePermission/>", () => {
       hasPermission: () => false,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     render(
       <RequirePermission perm="x" fallback={<span>FB</span>}>
@@ -78,6 +84,8 @@ describe("<RequirePermission/>", () => {
       hasPermission: () => true,
       login: vi.fn(),
       logout: vi.fn(),
+      setUser: vi.fn(),
+      refreshUser: vi.fn(),
     })
     const { container } = render(
       <RequirePermission perm="task.create">visible</RequirePermission>,

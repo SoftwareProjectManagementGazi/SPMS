@@ -99,6 +99,8 @@ function authAdmin() {
     hasPermission: () => false,
     login: vi.fn(),
     logout: vi.fn(),
+    setUser: vi.fn(),
+    refreshUser: vi.fn(),
   })
   mockedLedTeams.useLedTeams.mockReturnValue({
     data: [],

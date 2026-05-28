@@ -23,6 +23,12 @@ interface AuthContextType {
   hasPermission: (key: string) => boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  // Update the cached user directly (e.g. after a profile/avatar save returns a
+  // fresh AuthUser) so the navbar, profile header, and initials reflect the
+  // change immediately instead of staying stale until a full reload.
+  setUser: (user: AuthUser) => void
+  // Re-fetch the current user from /auth/me and update the cache.
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -142,6 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, permissions],
   )
 
+  // Stable identity so consumers (e.g. settings mutations' onSuccess) can call
+  // these without re-subscribing every render.
+  const updateUser = React.useCallback((next: AuthUser) => setUser(next), [])
+  const refreshUser = React.useCallback(async () => {
+    const me = await authService.getCurrentUser()
+    setUser(me)
+  }, [])
+
   const value = React.useMemo(
     () => ({
       user,
@@ -151,8 +165,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       hasPermission,
       login,
       logout,
+      setUser: updateUser,
+      refreshUser,
     }),
-    [user, token, isLoading, permissions, hasPermission, login, logout],
+    [user, token, isLoading, permissions, hasPermission, login, logout, updateUser, refreshUser],
   )
 
   return (
