@@ -64,6 +64,7 @@ export function RoleDeleteConfirm({
       title={title}
       body={body}
       tone="danger"
+      pending={deleteRole.isPending}
       confirmLabel={lang === "tr" ? "Sil" : "Delete"}
       cancelLabel={lang === "tr" ? "İptal" : "Cancel"}
       onConfirm={() => {
