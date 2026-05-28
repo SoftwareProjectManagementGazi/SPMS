@@ -57,10 +57,11 @@ export async function* streamAIWorkflow<E extends Endpoint>(
     () => timeoutController.abort(),
     COLD_START_TIMEOUT_MS,
   )
-  // Combine signals: abort if either fires
-  signal.addEventListener("abort", () => timeoutController.abort(), {
-    once: true,
-  })
+  // Combine signals: abort the fetch if the caller aborts. Named so it can be
+  // removed when the stream finishes or the request fails, instead of lingering
+  // on the caller's signal.
+  const onCallerAbort = () => timeoutController.abort()
+  signal.addEventListener("abort", onCallerAbort)
 
   let res: Response
   try {
@@ -76,6 +77,7 @@ export async function* streamAIWorkflow<E extends Endpoint>(
     })
   } catch (e) {
     window.clearTimeout(timeoutId)
+    signal.removeEventListener("abort", onCallerAbort)
     // If our internal timeout fired (caller didn't abort), surface as
     // service-unavailable with a clear message; AbortError from the caller
     // signal stays as AbortError so the hook can return cleanly.
@@ -159,5 +161,6 @@ export async function* streamAIWorkflow<E extends Endpoint>(
     } catch {
       /* already released */
     }
+    signal.removeEventListener("abort", onCallerAbort)
   }
 }
