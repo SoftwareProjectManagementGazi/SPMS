@@ -390,3 +390,52 @@ class SearchSimilarTasksUseCase:
             return []
         tasks = await self.task_repo.search_by_title(project_id, words)
         return [map_task_to_response_dto(t) for t in tasks]
+
+
+class GlobalTaskSearchUseCase:
+    """Cross-project task search powering the navbar autocomplete.
+
+    Authz model — distinct from ``SearchSimilarTasksUseCase`` which gates
+    on project membership via the route dep ``get_project_member``:
+
+      * Admins skip the scope filter (project_repo lookup is bypassed by
+        passing ``accessible_project_ids=None``).
+      * Non-admins receive results scoped to projects they manage OR are
+        a member of. ``project_repo.get_all`` already returns exactly that
+        union (see SqlAlchemyProjectRepository.get_all), so we lean on it
+        rather than re-implementing the membership join here.
+
+    The repository handles the "no accessible projects" edge case by
+    returning ``[]`` before composing the SQL, so the use case stays
+    thin: tokenise → fetch accessible scope → delegate.
+    """
+
+    def __init__(
+        self,
+        task_repo: ITaskRepository,
+        project_repo: IProjectRepository,
+    ):
+        self.task_repo = task_repo
+        self.project_repo = project_repo
+
+    async def execute(
+        self,
+        query: str,
+        user_id: int,
+        is_admin: bool,
+        limit: int = 20,
+    ) -> List[TaskResponseDTO]:
+        words = extract_search_words(query)
+        if not words:
+            return []
+        if is_admin:
+            accessible_project_ids: Optional[List[int]] = None
+        else:
+            projects = await self.project_repo.get_all(user_id)
+            accessible_project_ids = [p.id for p in projects]
+        tasks = await self.task_repo.search_by_title_global(
+            words=words,
+            accessible_project_ids=accessible_project_ids,
+            limit=limit,
+        )
+        return [map_task_to_response_dto(t) for t in tasks]

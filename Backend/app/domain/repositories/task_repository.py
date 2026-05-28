@@ -81,3 +81,23 @@ class ITaskRepository(ABC):
         Returns 0 when the column is empty or non-existent.
         """
         pass
+
+    @abstractmethod
+    async def search_by_title_global(
+        self,
+        words: List[str],
+        accessible_project_ids: Optional[List[int]],
+        limit: int = 20,
+    ) -> List[Task]:
+        """Cross-project title search used by the navbar autocomplete.
+
+        ``accessible_project_ids=None`` is the admin bypass — return matches
+        across every project (no scope filter applied). Non-admin callers
+        pass an explicit ID list; an empty list short-circuits to no
+        results so the SQL ``IN ()`` syntax error never surfaces.
+
+        ``words`` is the tokenised query (each token AND'd via ``ilike``
+        against the title). ``limit`` caps the row count so the navbar
+        dropdown stays small.
+        """
+        pass

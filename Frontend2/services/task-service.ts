@@ -192,7 +192,14 @@ export const taskService = {
     return Array.isArray(resp.data) ? resp.data.map(mapTask) : []
   },
   search: async (q: string): Promise<Task[]> => {
-    const resp = await apiClient.get<TaskResponseDTO[]>(`/tasks/search`, { params: { q } })
+    // /tasks/search requires a project_id (used by parent / dependency
+    // pickers). The navbar autocomplete is intentionally cross-project,
+    // so it routes to /tasks/global-search which scopes results to the
+    // user's accessible projects (admin bypass inside the use case).
+    const resp = await apiClient.get<TaskResponseDTO[]>(
+      `/tasks/global-search`,
+      { params: { q } },
+    )
     return resp.data.map(mapTask)
   },
   getById: async (id: number): Promise<Task> => {

@@ -16,7 +16,7 @@ from app.api.dependencies import (
     get_user_repo,
     get_notification_preference_repo,
 )
-from app.api.deps.auth import require_permission  # Phase 15 D-1.4 / D-1.14 — perm DSL tier 1
+from app.api.deps.auth import require_permission, _is_admin  # Phase 15 D-1.4 / D-1.14 — perm DSL tier 1
 from app.domain.repositories.user_repository import IUserRepository
 from app.domain.repositories.notification_preference_repository import INotificationPreferenceRepository
 from app.infrastructure.email.email_service import send_notification_email
@@ -38,6 +38,7 @@ from app.application.use_cases.manage_tasks import (
     UpdateTaskUseCase,
     DeleteTaskUseCase,
     SearchSimilarTasksUseCase,
+    GlobalTaskSearchUseCase,
 )
 from app.application.use_cases.manage_task_dependencies import (
     AddDependencyUseCase,
@@ -138,8 +139,33 @@ async def search_tasks(
     task_repo: ITaskRepository = Depends(get_task_repo),
     current_user: User = Depends(get_project_member),
 ):
+    """Project-scoped similar-task search. Reserved for in-project features
+    (parent task picker, dependency picker). The navbar autocomplete uses
+    /global-search instead — see GlobalTaskSearchUseCase for the contract."""
     use_case = SearchSimilarTasksUseCase(task_repo)
     return await use_case.execute(project_id, q)
+
+
+@router.get("/global-search", response_model=List[TaskResponseDTO])
+async def global_search_tasks(
+    q: str,
+    task_repo: ITaskRepository = Depends(get_task_repo),
+    project_repo: IProjectRepository = Depends(get_project_repo),
+    current_user: User = Depends(get_current_user),
+):
+    """Cross-project task search powering the navbar autocomplete.
+
+    Authz: any authenticated user; access scoping happens inside the use
+    case (admin → all tasks; non-admin → tasks in projects they manage
+    or are member of). Returns up to 20 rows ordered by recency so the
+    dropdown surfaces fresh work first.
+    """
+    use_case = GlobalTaskSearchUseCase(task_repo, project_repo)
+    return await use_case.execute(
+        query=q,
+        user_id=current_user.id,  # type: ignore
+        is_admin=_is_admin(current_user),
+    )
 
 
 @router.get("/activity/me", response_model=List[Any])

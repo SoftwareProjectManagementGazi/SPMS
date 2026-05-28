@@ -187,6 +187,48 @@ class SqlAlchemyTaskRepository(ITaskRepository):
         models = result.unique().scalars().all()
         return [self._to_entity(m) for m in models]
 
+    async def search_by_title_global(
+        self,
+        words: List[str],
+        accessible_project_ids: Optional[List[int]],
+        limit: int = 20,
+    ) -> List[Task]:
+        # Defensive bail: non-admin caller with no project memberships.
+        # The SQL ``IN ()`` form is a syntax error in Postgres, so we
+        # short-circuit instead of letting an empty list reach the
+        # query builder.
+        if accessible_project_ids is not None and len(accessible_project_ids) == 0:
+            return []
+
+        # Each word AND'd via ilike — same per-word semantics as the
+        # per-project variant above; that variant uses OR but for global
+        # search AND is more useful (typing "auth bug" should narrow,
+        # not widen, the result set).
+        conditions = [TaskModel.title.ilike(f"%{w}%") for w in words]
+        stmt = select(TaskModel).where(
+            TaskModel.is_deleted == False,  # noqa: E712
+            *conditions,
+        )
+        # ``None`` is the admin bypass — no scope filter.
+        if accessible_project_ids is not None:
+            stmt = stmt.where(TaskModel.project_id.in_(accessible_project_ids))
+
+        stmt = (
+            stmt
+            # Recency-biased ordering so the navbar surfaces actionable
+            # rows (NULLs last for tasks without an updated_at audit).
+            .order_by(TaskModel.updated_at.desc().nulls_last())
+            .limit(limit)
+            .options(
+                joinedload(TaskModel.project),
+                joinedload(TaskModel.column),
+                joinedload(TaskModel.assignee).joinedload(UserModel.role),
+            )
+        )
+        result = await self.session.execute(stmt)
+        models = result.unique().scalars().all()
+        return [self._to_entity(m) for m in models]
+
     async def update_series(self, series_id: str, fields: Dict[str, Any]) -> None:
         from datetime import datetime as dt
         if not series_id or not fields:
