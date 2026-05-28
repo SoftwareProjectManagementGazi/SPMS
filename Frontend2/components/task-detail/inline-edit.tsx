@@ -31,6 +31,15 @@ import { taskService, type Task } from "@/services/task-service"
 import { useToast } from "@/components/toast"
 import { useApp } from "@/context/app-context"
 
+// InlineEdit's `field` is the backend PATCH name (snake_case). The cached Task
+// entity uses camelCase keys, so the optimistic write must translate any field
+// whose entity key differs — otherwise the value lands on a junk key and the UI
+// only updates after the settle refetch. (Only `phase_id` currently differs;
+// title/points/due already match their entity keys.)
+const FIELD_TO_ENTITY_KEY: Record<string, string> = {
+  phase_id: "phaseId",
+}
+
 interface InlineEditProps<V> {
   taskId: number
   field: string
@@ -71,9 +80,10 @@ export function InlineEdit<V>({
       await qc.cancelQueries({ queryKey: ["tasks", taskId] })
       const prev = qc.getQueryData<Task>(["tasks", taskId])
       if (prev) {
+        const entityKey = FIELD_TO_ENTITY_KEY[field] ?? field
         qc.setQueryData<Task>(["tasks", taskId], {
           ...prev,
-          [field]: newVal,
+          [entityKey]: newVal,
         } as Task)
       }
       return { prev }
