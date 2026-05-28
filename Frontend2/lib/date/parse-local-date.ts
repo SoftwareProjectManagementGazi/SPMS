@@ -29,3 +29,13 @@ export function startOfToday(): Date {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), now.getDate())
 }
+
+// formatLocalISODate — a Date → "YYYY-MM-DD" using LOCAL calendar fields. The
+// inverse of parseLocalDate; use instead of `toISOString().slice(0,10)`, which
+// is UTC and can roll the date forward/back a day near midnight.
+export function formatLocalISODate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}

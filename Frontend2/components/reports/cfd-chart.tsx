@@ -38,6 +38,7 @@ import {
 } from "recharts"
 import { SegmentedControl } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { parseLocalDate } from "@/lib/date/parse-local-date"
 import { useCFD } from "@/hooks/use-cfd"
 import { ChartCard } from "./chart-card"
 import { CFDSkeleton } from "./cfd-skeleton"
@@ -187,6 +188,14 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
           <AreaChart data={query.data?.days ?? []}>
             <XAxis
               dataKey="date"
+              tickFormatter={(d: string) => {
+                const parsed = parseLocalDate(d)
+                return parsed
+                  ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                  : d
+              }}
+              interval="preserveStartEnd"
+              minTickGap={24}
               tick={{
                 fill: "var(--fg-subtle)",
                 fontSize: 10,

@@ -37,6 +37,7 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { useApp } from "@/context/app-context"
+import { parseLocalDate } from "@/lib/date/parse-local-date"
 import { useBurndown } from "@/hooks/use-burndown"
 import type { BurndownData, BurndownPoint } from "@/services/report-service"
 import { ChartCard } from "./chart-card"
@@ -186,6 +187,14 @@ export function BurndownChart({ projectId, applicable }: BurndownChartProps) {
             <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis
               dataKey="date"
+              tickFormatter={(d: string) => {
+                const parsed = parseLocalDate(d)
+                return parsed
+                  ? parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                  : d
+              }}
+              interval="preserveStartEnd"
+              minTickGap={24}
               tick={{
                 fill: "var(--fg-subtle)",
                 fontSize: 10,

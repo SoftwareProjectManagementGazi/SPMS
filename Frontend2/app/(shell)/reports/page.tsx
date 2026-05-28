@@ -26,6 +26,7 @@ import {
   useRouter,
   usePathname,
 } from "next/navigation"
+import { formatLocalISODate } from "@/lib/date/parse-local-date"
 import {
   Folder,
   ListChecks,
@@ -92,8 +93,10 @@ function rangeToFilters(
   from.setDate(from.getDate() - dayCount + 1)
   return {
     projectId,
-    dateFrom: from.toISOString().slice(0, 10),
-    dateTo: today.toISOString().slice(0, 10),
+    // Local-frame formatting: toISOString() is UTC, so for users behind UTC the
+    // window could shift a day at late-evening local time.
+    dateFrom: formatLocalISODate(from),
+    dateTo: formatLocalISODate(today),
   }
 }
 
