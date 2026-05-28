@@ -23,8 +23,18 @@ function timeAgo(dateStr: string, lang: string): string {
 export default function NotificationsPage() {
   const { language: lang } = useApp()
   const router = useRouter()
-  const { notifications, unreadCount, isLoading, markRead, markAllRead, deleteNotif, clearRead } =
-    useNotifications()
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    markRead,
+    markAllRead,
+    deleteNotif,
+    clearRead,
+  } = useNotifications()
   const handleRowClick = (n: NotificationItem) => {
     markRead(n.id)
 
@@ -233,6 +243,32 @@ export default function NotificationsPage() {
         </div>
       )}
 
+      {hasNextPage && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            style={{
+              fontSize: 12,
+              color: "var(--fg-muted)",
+              padding: "6px 14px",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-sm)",
+              background: "transparent",
+              cursor: isFetchingNextPage ? "default" : "pointer",
+              opacity: isFetchingNextPage ? 0.6 : 1,
+            }}
+          >
+            {isFetchingNextPage
+              ? lang === "tr"
+                ? "Yükleniyor…"
+                : "Loading…"
+              : lang === "tr"
+                ? "Daha fazla yükle"
+                : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
