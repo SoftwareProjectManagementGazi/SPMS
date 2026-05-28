@@ -197,7 +197,9 @@ export function TaskRow({
 
   const status = resolveStatus(task.status)
   const isDone = status === "done"
-  const due = describeDue(task.due, language)
+  // Completed tasks should never surface an overdue/due chip — once a task is
+  // done, its due date is historically informational, not actionable.
+  const due = isDone ? null : describeDue(task.due, language)
 
   // Use the real backend username when present (added to Task in this round
   // — task-service.ts mapTask reads d.assignee?.username). Falls back to the

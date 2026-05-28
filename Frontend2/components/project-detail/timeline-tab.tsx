@@ -427,14 +427,23 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
                   m.targetDate,
                   language === "tr" ? "tr" : "en",
                 )}
-                {" · "}
-                {days >= 0
-                  ? language === "tr"
-                    ? `${days} gün kaldı`
-                    : `${days}d left`
-                  : language === "tr"
-                    ? `${-days} gün gecikti`
-                    : `${-days}d overdue`}
+                {(() => {
+                  const mStatus = (m.status ?? "").toUpperCase()
+                  const isDone = mStatus === "COMPLETED" || mStatus === "DONE"
+                  if (isDone) return null
+                  return (
+                    <>
+                      {" · "}
+                      {days >= 0
+                        ? language === "tr"
+                          ? `${days} gün kaldı`
+                          : `${days}d left`
+                        : language === "tr"
+                          ? `${-days} gün gecikti`
+                          : `${-days}d overdue`}
+                    </>
+                  )
+                })()}
               </div>
               {linkedNames.length > 0 && (
                 <div
