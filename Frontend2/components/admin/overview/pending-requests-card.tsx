@@ -41,6 +41,11 @@ export function PendingRequestsCard() {
   const approveM = useApproveJoinRequest()
   const rejectM = useRejectJoinRequest()
   const items: PendingJoinRequest[] = q.data?.items ?? []
+  // M-AD3 (Y14 pattern) — disable only the row whose approve/reject is in
+  // flight, not every row. The mutationFn takes the request id, so the
+  // mutation's `variables` IS that id; compare it to each row.
+  const approvingId = approveM.isPending ? approveM.variables : undefined
+  const rejectingId = rejectM.isPending ? rejectM.variables : undefined
 
   const dashGlue = adminT("admin.overview.pending_requests_dash", language)
   const userGlue = adminT("admin.overview.pending_requests_glue_user", language)
@@ -216,7 +221,7 @@ export function PendingRequestsCard() {
                     <Button
                       variant="primary"
                       size="sm"
-                      disabled={approveM.isPending}
+                      disabled={approvingId === r.id || rejectingId === r.id}
                       onClick={() => approveM.mutate(r.id)}
                     >
                       {adminT(
@@ -227,7 +232,7 @@ export function PendingRequestsCard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={rejectM.isPending}
+                      disabled={approvingId === r.id || rejectingId === r.id}
                       onClick={() => rejectM.mutate(r.id)}
                     >
                       {adminT(
