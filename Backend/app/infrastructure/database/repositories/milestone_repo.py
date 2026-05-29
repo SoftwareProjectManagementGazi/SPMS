@@ -68,6 +68,11 @@ class SqlAlchemyMilestoneRepository(IMilestoneRepository):
         model.name = milestone.name
         model.description = milestone.description
         model.target_date = milestone.target_date
+        # Y19 completion — the create mapper persisted start_date but this
+        # update mapper omitted it, so editing a milestone silently dropped the
+        # start date (every existing row stayed NULL and couldn't be backfilled
+        # via the UI). The use case already sets it on the entity; copy it here.
+        model.start_date = milestone.start_date
         model.status = milestone.status.value
         model.linked_phase_ids = milestone.linked_phase_ids
         model.updated_at = datetime.utcnow()
