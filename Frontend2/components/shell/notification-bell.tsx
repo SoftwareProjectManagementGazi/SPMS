@@ -33,6 +33,11 @@ export function NotificationBell() {
 
   const [open, setOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
+  // M-A5 — focus management: focus the panel on open, restore focus to the bell
+  // trigger on close so keyboard/SR users don't lose their place.
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const panelRef = React.useRef<HTMLDivElement>(null)
+  const wasOpenRef = React.useRef(false)
 
   // Click-outside dismiss
   React.useEffect(() => {
@@ -54,6 +59,17 @@ export function NotificationBell() {
     }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
+  }, [open])
+
+  // M-A5 — focus into the panel on open; restore to the trigger on close.
+  React.useEffect(() => {
+    if (open) {
+      wasOpenRef.current = true
+      panelRef.current?.focus()
+    } else if (wasOpenRef.current) {
+      wasOpenRef.current = false
+      triggerRef.current?.focus()
+    }
   }, [open])
 
   const handleRowClick = (n: NotificationItem) => {
@@ -81,6 +97,7 @@ export function NotificationBell() {
     <div ref={containerRef} style={{ position: "relative", display: "inline-flex" }}>
       {/* Trigger button */}
       <button
+        ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
         aria-label={triggerLabel}
         aria-haspopup="dialog"
@@ -129,12 +146,15 @@ export function NotificationBell() {
       {/* Popover panel */}
       {open && (
         <div
+          ref={panelRef}
           role="dialog"
           aria-label={lang === "tr" ? "Bildirimler" : "Notifications"}
+          tabIndex={-1}
           style={{
             position: "absolute",
             top: "calc(100% + 8px)",
             right: 0,
+            outline: "none",
             width: 320,
             background: "var(--bg)",
             border: "1px solid var(--border)",
@@ -224,7 +244,19 @@ export function NotificationBell() {
                 return (
                   <div
                     key={n.id}
+                    role={isClickable ? "button" : undefined}
+                    tabIndex={isClickable ? 0 : undefined}
                     onClick={() => handleRowClick(n)}
+                    onKeyDown={(e) => {
+                      // M-A5 — activate the row from the keyboard like a button.
+                      if (
+                        isClickable &&
+                        (e.key === "Enter" || e.key === " ")
+                      ) {
+                        e.preventDefault()
+                        handleRowClick(n)
+                      }
+                    }}
                     style={{
                       display: "flex",
                       alignItems: "flex-start",
