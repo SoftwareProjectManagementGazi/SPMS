@@ -99,6 +99,14 @@ export async function* streamAIWorkflow<E extends Endpoint>(
   // Error responses (429, 503, etc.) — parse body for context, throw typed
   // -------------------------------------------------------------------------
 
+  // Y22 — neither the !res.ok nor the !res.body branch reaches the streaming
+  // loop below (whose `finally` removes the listener), so drop the caller-abort
+  // listener here before throwing. Otherwise every failed/empty
+  // generate→cancel→regenerate cycle leaks one listener on the caller's signal.
+  if (!res.ok || !res.body) {
+    signal.removeEventListener("abort", onCallerAbort)
+  }
+
   if (!res.ok) {
     if (res.status === 429) {
       const retryAfter = parseInt(res.headers.get("Retry-After") ?? "0", 10)
