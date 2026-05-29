@@ -296,6 +296,12 @@ export function TaskCreateModal() {
     closeTaskModal,
   ])
 
+  // Y24 — only close on backdrop dismiss when BOTH mousedown and mouseup land
+  // on the backdrop. A plain onClick also fires when the user presses inside an
+  // input and releases on the backdrop (e.g. a text-selection drag), which would
+  // discard the in-progress form. Mirrors the primitive Modal's guard.
+  const backdropDownRef = React.useRef(false)
+
   // Esc closes; Ctrl/Cmd+Enter submits (D-06)
   React.useEffect(() => {
     if (!isOpen) return
@@ -343,8 +349,14 @@ export function TaskCreateModal() {
       style={overlayStyle}
       role="dialog"
       aria-modal="true"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
+      onMouseDown={(e) => {
+        backdropDownRef.current = e.target === e.currentTarget
+      }}
+      onMouseUp={(e) => {
+        if (backdropDownRef.current && e.target === e.currentTarget) {
+          handleClose()
+        }
+        backdropDownRef.current = false
       }}
     >
       <div style={cardStyle}>
