@@ -9,8 +9,13 @@
 //   - "Sonraki Faza Geç" — primary, hidden when use-transition-authority
 //      returns false OR when workflow.mode === 'continuous' (CONTEXT D-40 +
 //      D-59). Calls the onOpenGate callback to expand the Phase Gate panel.
-//   - "Düzenle"          — ghost, navigates to the Workflow Editor
-//      route. Always rendered (read-only mode opens for non-PM users).
+//   - "Düzenle"          — ghost, navigates to the Workflow Editor route.
+//      Gated behind useTransitionAuthority (Admin / project manager / team
+//      lead) per CONTEXT D-03 — non-authorized users don't see it. They still
+//      VIEW the workflow through the read-only canvas rendered below this strip
+//      in LifecycleTab, so no separate read-only editor entry is needed here.
+//      (Was "always rendered" pre-aad6f0d9; gating is intentional + covered by
+//      summary-strip.test.tsx Test 3.)
 //
 // Anatomy: 12-UI-SPEC.md §1 SummaryStrip (lines 771-796).
 // Visual reference: New_Frontend/src/pages/lifecycle-tab.jsx lines 51-75.
