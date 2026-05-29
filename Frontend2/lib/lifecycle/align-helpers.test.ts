@@ -46,12 +46,15 @@ describe("alignTop", () => {
 })
 
 describe("alignBottom", () => {
-  it("snaps every node so bottom edges share the same y", () => {
+  it("snaps every node so bottom edges share the bottommost bottom (max y+h)", () => {
     const out = alignBottom(FIVE_NODES)
-    const bottoms = out.map((n) => n.y + 60) // default height
-    const first = bottoms[0]
-    for (const b of bottoms) {
-      expect(b).toBe(first)
+    // Anchor = the bottommost original bottom edge (max y+height), independently
+    // computed — so a min/max (or any wrong-anchor) regression diverges. Mutual
+    // equality alone passed even if the anchor were the wrong edge.
+    const expected = Math.max(...FIVE_NODES.map((n) => n.y + 60))
+    expect(expected).toBe(210)
+    for (const n of out) {
+      expect(n.y + 60).toBe(expected)
     }
   })
 })
@@ -59,10 +62,13 @@ describe("alignBottom", () => {
 describe("centerVertical", () => {
   it("aligns vertical centers of every node to the average center", () => {
     const out = centerVertical(FIVE_NODES)
-    const centers = out.map((n) => n.y + 30) // default height/2
-    const first = centers[0]
-    for (const c of centers) {
-      expect(Math.abs(c - first)).toBeLessThan(0.001)
+    // Anchor = the AVERAGE of the original centers (independently computed), so a
+    // min/first/wrong-anchor regression is caught — mutual equality alone wasn't.
+    const expected =
+      FIVE_NODES.reduce((a, n) => a + (n.y + 30), 0) / FIVE_NODES.length
+    expect(expected).toBe(130)
+    for (const n of out) {
+      expect(Math.abs(n.y + 30 - expected)).toBeLessThan(0.001)
     }
   })
 })
@@ -70,10 +76,11 @@ describe("centerVertical", () => {
 describe("centerHorizontal", () => {
   it("aligns horizontal centers of every node to the average center", () => {
     const out = centerHorizontal(FIVE_NODES)
-    const centers = out.map((n) => n.x + 70) // default width/2
-    const first = centers[0]
-    for (const c of centers) {
-      expect(Math.abs(c - first)).toBeLessThan(0.001)
+    const expected =
+      FIVE_NODES.reduce((a, n) => a + (n.x + 70), 0) / FIVE_NODES.length
+    expect(expected).toBe(520)
+    for (const n of out) {
+      expect(Math.abs(n.x + 70 - expected)).toBeLessThan(0.001)
     }
   })
 })

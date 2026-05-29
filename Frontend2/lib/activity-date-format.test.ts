@@ -38,9 +38,11 @@ describe("formatActivityDate", () => {
     const tenDaysAgo = new Date(FIXED_NOW.getTime() - 10 * 86_400_000)
     const tr = formatActivityDate(tenDaysAgo, "tr")
     const en = formatActivityDate(tenDaysAgo, "en")
-    // tr: "16 Nis 2026"; en: "Apr 16, 2026"
-    expect(tr).toMatch(/\d{1,2}\s+\w+\s+\d{4}/)
-    expect(en).toMatch(/\w+\s+\d{1,2},?\s+\d{4}/)
+    // Clock is pinned (FIXED_NOW = 2026-04-26) so the output is fully
+    // deterministic — assert the exact date, not just the shape (a regex passed
+    // even if the wrong day/month/year were rendered).
+    expect(tr).toBe("16 Nis 2026")
+    expect(en).toBe("Apr 16, 2026")
   })
 
   it("invalid input returns empty string", () => {
@@ -77,9 +79,9 @@ describe("formatRelativeTime", () => {
     const tenDaysAgo = new Date(FIXED_NOW.getTime() - 10 * 86_400_000)
     const tr = formatRelativeTime(tenDaysAgo, "tr")
     const en = formatRelativeTime(tenDaysAgo, "en")
-    // tr: "16 Nis"; en: "Apr 16"
-    expect(tr).toMatch(/\d{1,2}\s+\w+/)
-    expect(en).toMatch(/\w+\s+\d{1,2}/)
+    // Clock pinned (FIXED_NOW) → assert the exact short-month date, not the shape.
+    expect(tr).toBe("16 Nis")
+    expect(en).toBe("Apr 16")
   })
 
   it("invalid input returns empty string", () => {
