@@ -21,6 +21,7 @@ import { apiClient } from "@/lib/api-client"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
 import { normalizeStatus, type Task } from "@/services/task-service"
+import { DataState } from "@/components/primitives"
 
 import { BoardColumn } from "./board-column"
 import { BoardToolbar } from "./board-toolbar"
@@ -50,7 +51,7 @@ function useColumns(projectId: number) {
 export function BoardTab({ project }: { project: Project }) {
   const pd = useProjectDetail()
 
-  const { data: tasksData } = useTasks(project.id)
+  const { data: tasksData, isLoading, error, refetch } = useTasks(project.id)
   // Defensive: if the task query returns anything non-array (stale cache
   // populated by a malformed query elsewhere, or a backend contract change),
   // treat it as empty instead of crashing the board render.
@@ -137,30 +138,58 @@ export function BoardTab({ project }: { project: Project }) {
       }}
     >
       <BoardToolbar project={project} />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${Math.max(columnNames.length, 1)}, minmax(260px, 1fr))`,
-          gap: 12,
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-        }}
+      {/* M-P1 — distinguish a fetch error from an empty board (the toolbar
+          stays; only the column area swaps to skeleton/error). Columns always
+          render once loaded, so there's no separate "empty" state here. */}
+      <DataState
+        loading={isLoading}
+        error={error}
+        onRetry={refetch}
+        loadingFallback={
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${columnNames.length || 4}, minmax(260px, 1fr))`,
+              gap: 12,
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            {Array.from({ length: columnNames.length || 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="skeleton"
+                style={{ borderRadius: "var(--radius)", minHeight: 240 }}
+              />
+            ))}
+          </div>
+        }
       >
-        {columnNames.map((cn) => (
-          <BoardColumn
-            key={cn}
-            columnId={cn}
-            columnName={cn}
-            wipLimit={wipLimits.get(cn.toLowerCase()) ?? 0}
-            tasks={grouped[cn] ?? []}
-            projectId={project.id}
-            densityMode={pd.densityMode}
-            phaseNodes={phaseNodes}
-            enablePhaseBadge={enablePhaseBadge}
-          />
-        ))}
-      </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.max(columnNames.length, 1)}, minmax(260px, 1fr))`,
+            gap: 12,
+            flex: 1,
+            minHeight: 0,
+            overflow: "auto",
+          }}
+        >
+          {columnNames.map((cn) => (
+            <BoardColumn
+              key={cn}
+              columnId={cn}
+              columnName={cn}
+              wipLimit={wipLimits.get(cn.toLowerCase()) ?? 0}
+              tasks={grouped[cn] ?? []}
+              projectId={project.id}
+              densityMode={pd.densityMode}
+              phaseNodes={phaseNodes}
+              enablePhaseBadge={enablePhaseBadge}
+            />
+          ))}
+        </div>
+      </DataState>
     </div>
   )
 }

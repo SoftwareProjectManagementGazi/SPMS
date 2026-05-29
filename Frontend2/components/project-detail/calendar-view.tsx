@@ -23,7 +23,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
-import { Button, Card } from "@/components/primitives"
+import { Button, Card, DataState } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
@@ -49,7 +49,7 @@ function keyForDate(d: Date): string {
 export function CalendarTab({ project }: { project: Project }) {
   const { language } = useApp()
   const router = useRouter()
-  const { data: tasks = [] } = useTasks(project.id)
+  const { data: tasks = [], error, refetch } = useTasks(project.id)
 
   // `today` is captured ONCE per render cycle so Ctrl+wheel and month-nav
   // re-renders don't thrash the "today highlight" calculation.
@@ -160,6 +160,20 @@ export function CalendarTab({ project }: { project: Project }) {
   )
 
   const todayKey = keyForDate(today)
+
+  // M-P1 — surface a fetch ERROR (was indistinguishable from a month with no
+  // tasks). Loading is intentionally NOT gated: the calendar grid renders from
+  // the date math regardless of task data — tasks only populate day chips — so
+  // the grid + month-nav stay visible while tasks stream in.
+  if (error) {
+    return (
+      <Card padding={16}>
+        <DataState error={error} onRetry={refetch}>
+          {null}
+        </DataState>
+      </Card>
+    )
+  }
 
   return (
     <Card padding={16}>

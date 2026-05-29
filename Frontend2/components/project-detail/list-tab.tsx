@@ -36,6 +36,7 @@ import { Bug, ChevronUp, ChevronDown } from "lucide-react"
 import {
   Avatar,
   Badge,
+  DataState,
   PriorityChip,
   StatusDot,
   type PriorityLevel,
@@ -93,7 +94,7 @@ export function ListTab({ project }: { project: Project }) {
   const { language } = useApp()
   const router = useRouter()
   const pd = useProjectDetail()
-  const { data: tasks = [] } = useTasks(project.id)
+  const { data: tasks = [], isLoading, error, refetch } = useTasks(project.id)
 
   const phaseEnabled = readEnablePhase(project.processConfig)
   const phaseNodes = readWorkflowNodes(project.processConfig)
@@ -298,6 +299,33 @@ export function ListTab({ project }: { project: Project }) {
   const gridCols = phaseEnabled
     ? "80px 2fr 110px 110px 70px 90px 50px 110px"
     : "80px 2fr 110px 110px 70px 90px 50px"
+
+  // M-P1 — surface fetch errors + loading instead of the table's "No tasks
+  // found" row, which made a failed fetch indistinguishable from an empty list.
+  if (isLoading || error) {
+    return (
+      <div style={{ padding: "8px 0" }}>
+        <DataState
+          loading={isLoading}
+          error={error}
+          onRetry={refetch}
+          loadingFallback={
+            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="skeleton"
+                  style={{ height: 44, borderRadius: "var(--radius-sm)" }}
+                />
+              ))}
+            </div>
+          }
+        >
+          {null}
+        </DataState>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: "8px 0" }}>
