@@ -57,10 +57,12 @@ class FakeProjectRepoForStats:
         return {"scrum": 12, "kanban": 8, "waterfall": 4, "iterative": 2}
 
     async def list_recent_projects(self, limit: int = 30) -> list:
-        # Return up to limit projects (synthetic)
-        n = min(self._num, limit)
+        # Deliberately IGNORE `limit` and return ALL num_projects so the use case's
+        # own `recent_projects[:30]` slice is the ONLY thing that can enforce the
+        # cap. (Honoring the limit here made test_..._capped_at_30 tautological — it
+        # would pass even if the use case dropped its defensive cap.)
         return [FakeProjectInfo(id=i + 1, key=f"P{i + 1}", name=f"Project {i + 1}")
-                for i in range(n)]
+                for i in range(self._num)]
 
 
 @pytest.mark.asyncio
