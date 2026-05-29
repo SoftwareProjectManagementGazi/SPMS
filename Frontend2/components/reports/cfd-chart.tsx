@@ -167,6 +167,23 @@ export function CFDChart({ projectId, globalRange, applicable }: CFDChartProps) 
       loadingFallback={<CFDSkeleton />}
       applicableLoading={applicable === null}
       empty={!query.data?.days?.length}
+      emptyFallback={
+        // M-R1 — fixed 200px (matches CFDSkeleton + the SVG container below) so
+        // the card doesn't collapse to a one-line height when empty (layout
+        // jump). Mirrors burndown-chart's sized empty state.
+        <div
+          style={{
+            height: 200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--fg-subtle)",
+            fontSize: 12,
+          }}
+        >
+          {T("Bu aralıkta akış verisi yok.", "No flow data in this range.")}
+        </div>
+      }
     >
       <div
         className="chart-card-cfd-svg"
