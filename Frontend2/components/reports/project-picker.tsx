@@ -79,6 +79,10 @@ function ProjectPickerPopover({
   }, [query])
 
   const ref = React.useRef<HTMLDivElement | null>(null)
+  // M-R4 — keyboard listbox: activeIndex is the arrow-key cursor row (distinct
+  // from the selected/current-value row); rowRefs drives scrollIntoView.
+  const [activeIndex, setActiveIndex] = React.useState(0)
+  const rowRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
   // Click-outside dismissal — same pattern as the task-detail pickers.
   // mousedown (not click) so a row's click handler still fires; the row
@@ -90,24 +94,59 @@ function ProjectPickerPopover({
       }
     }
     document.addEventListener("mousedown", onDown)
-    return () => document.removeEventListener("mousedown", onDown)
-  }, [onCancel])
-
-  function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      onCancel()
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      const first = filtered[0]
-      if (first) onSelect(first.id)
+    // M-T3 — also dismiss on scroll/resize so the popover doesn't float away
+    // from (or clip past) its trigger (capture:true catches ancestor scroll).
+    const onReposition = () => onCancel()
+    window.addEventListener("scroll", onReposition, true)
+    window.addEventListener("resize", onReposition)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      window.removeEventListener("scroll", onReposition, true)
+      window.removeEventListener("resize", onReposition)
     }
-  }
+  }, [onCancel])
 
   const filtered = React.useMemo(
     () => filterProjects(projects, debounced),
     [projects, debounced],
   )
+
+  // M-R4 — keep the active row in range and aligned with the selection as the
+  // filtered set changes (e.g. while typing in the search box).
+  React.useEffect(() => {
+    const sel = filtered.findIndex((p) => p.id === selectedId)
+    setActiveIndex(sel >= 0 ? sel : 0)
+  }, [filtered, selectedId])
+
+  // M-R4 — scroll the active row into view on arrow nav AND on open (activeIndex
+  // initializes to the selected row, so a far-down selection is visible).
+  React.useEffect(() => {
+    rowRefs.current[activeIndex]?.scrollIntoView({ block: "nearest" })
+  }, [activeIndex])
+
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.preventDefault()
+      onCancel()
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setActiveIndex((i) => Math.min(i + 1, filtered.length - 1))
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setActiveIndex((i) => Math.max(i - 1, 0))
+    } else if (e.key === "Home") {
+      e.preventDefault()
+      setActiveIndex(0)
+    } else if (e.key === "End") {
+      e.preventDefault()
+      setActiveIndex(Math.max(filtered.length - 1, 0))
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      // Pick the ARROW-highlighted row, not always filtered[0].
+      const chosen = filtered[activeIndex]
+      if (chosen) onSelect(chosen.id)
+    }
+  }
 
   return (
     <div
@@ -160,6 +199,9 @@ function ProjectPickerPopover({
       {/* Result list */}
       <div
         role="listbox"
+        aria-activedescendant={
+          filtered[activeIndex] ? `proj-opt-${filtered[activeIndex].id}` : undefined
+        }
         style={{
           maxHeight: 280,
           overflowY: "auto",
@@ -196,15 +238,23 @@ function ProjectPickerPopover({
                 : "No projects"}
           </div>
         )}
-        {filtered.map((p) => {
+        {filtered.map((p, i) => {
           const selected = p.id === selectedId
+          const isActive = i === activeIndex
           return (
             <button
               key={p.id}
               type="button"
               role="option"
+              id={`proj-opt-${p.id}`}
+              ref={(el) => {
+                rowRefs.current[i] = el
+              }}
               aria-selected={selected}
               onClick={() => onSelect(p.id)}
+              // M-R4 — hover sets the active row so mouse + keyboard share one
+              // highlight source (no more imperative style mutation).
+              onMouseEnter={() => setActiveIndex(i)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -212,20 +262,17 @@ function ProjectPickerPopover({
                 width: "100%",
                 padding: "6px 8px",
                 fontSize: 12.5,
-                background: selected ? "var(--surface-2)" : "transparent",
+                background:
+                  isActive || selected ? "var(--surface-2)" : "transparent",
                 color: "var(--fg)",
                 border: "none",
                 cursor: "pointer",
                 borderRadius: "var(--radius-sm)",
                 textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--surface-2)"
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  selected ? "var(--surface-2)" : "transparent"
+                // Active (keyboard cursor) gets a ring so it's distinct from the
+                // merely-selected row.
+                outline: isActive ? "1px solid var(--border-strong)" : "none",
+                outlineOffset: -1,
               }}
             >
               {/* Project key chip — mirrors the mono pill the
