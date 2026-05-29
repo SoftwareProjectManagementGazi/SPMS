@@ -1,7 +1,9 @@
 -- 1. ENUM TİPLERİNİN TANIMLANMASI (SDD 5.2.1 ve 5.3.1 referans alınarak)
 CREATE TYPE methodology_type AS ENUM ('SCRUM', 'KANBAN', 'WATERFALL');
 CREATE TYPE task_priority AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
-CREATE TYPE task_status_type AS ENUM ('TODO', 'IN_PROGRESS', 'DONE', 'REVIEW'); -- Varsayılan durumlar
+-- task_status_type intentionally NOT created: task status is derived from the
+-- board-column name at read time, never stored. The enum was unused by any
+-- column; dropped from existing DBs in alembic migration 016.
 CREATE TYPE notification_type AS ENUM ('TASK_ASSIGNED', 'COMMENT_ADDED', 'DEADLINE_APPROACHING', 'PROJECT_UPDATE');
 
 -- 2. ROLES TABLOSU (SDD 5.1.1)

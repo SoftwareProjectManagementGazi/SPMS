@@ -18,11 +18,10 @@ class TaskPriority(str, Enum):
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
 
-class TaskStatus(str, Enum):
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
-    DONE = "DONE"
-    REVIEW = "REVIEW"
+# NOTE: there is intentionally no TaskStatus enum / Task.status field — task
+# status is derived from the board column name (manage_tasks.py), never stored.
+# The former TaskStatus enum and the matching `task_status_type` DB type were
+# unused (0 references / 0 columns) and were removed in migration 016.
 
 class Task(BaseModel):
     id: Optional[int] = None

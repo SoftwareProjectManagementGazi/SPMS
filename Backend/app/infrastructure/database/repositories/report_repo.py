@@ -97,11 +97,16 @@ class SqlAlchemyReportRepository(IReportRepository):
             sprint_stmt = select(SprintModel).where(SprintModel.id == sprint_id)
         else:
             # Active sprint first
+            # Resolve the active sprint by `status == 'ACTIVE'` — the canonical
+            # source used everywhere else (get_active_sprint, the board K4 drop).
+            # Previously this read the legacy `is_active` flag, which had drifted
+            # out of sync with `status` on several rows, so reports could pick a
+            # different "active" sprint than the rest of the app.
             sprint_stmt = (
                 select(SprintModel)
                 .where(
                     SprintModel.project_id == project_id,
-                    SprintModel.is_active == True,
+                    SprintModel.status == "ACTIVE",
                 )
                 .limit(1)
             )

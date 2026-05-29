@@ -1,7 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, String
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -62,6 +62,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        # See do_run_migrations — widen version_num beyond the default 32 chars.
+        version_table_column_type=String(128),
     )
 
     with context.begin_transaction():
@@ -69,7 +71,17 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        # Descriptive revision ids (e.g. "015_iterative_enum_and_system_config"
+        # = 36 chars) exceed alembic's default version_num varchar(32), which
+        # truncates and aborts the stamp UPDATE — this was the real reason the
+        # DB sat at 014 while 015's content was already applied. Widen so fresh
+        # DBs can record every id (existing DBs were ALTERed to match alongside
+        # migration 016).
+        version_table_column_type=String(128),
+    )
 
     with context.begin_transaction():
         context.run_migrations()
