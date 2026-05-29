@@ -48,7 +48,11 @@ class SqlAlchemyCommentRepository(ICommentRepository):
         stmt = (
             self._get_base_query()
             .where(CommentModel.task_id == task_id)
-            .order_by(CommentModel.created_at)
+            # created_at uses Postgres now() = transaction-start time, which is
+            # constant within a transaction; two comments created in the same
+            # transaction share an identical created_at, making a sort on it alone
+            # non-deterministic. Tiebreak on the monotonic PK (insertion order).
+            .order_by(CommentModel.created_at, CommentModel.id)
         )
         result = await self.session.execute(stmt)
         models = result.unique().scalars().all()
