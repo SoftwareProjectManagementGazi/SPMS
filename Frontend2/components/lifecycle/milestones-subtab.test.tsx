@@ -208,13 +208,14 @@ describe("MilestonesSubTab", () => {
     fireEvent.click(screen.getByText("Planlama"))
     fireEvent.click(screen.getByText("Yürütme"))
 
-    // Selected chips render inside the trigger row.
+    // Selected chips render inside the trigger row. Each chip Badge carries a
+    // Remove control with aria-label "Çıkar" (milestone-inline-add-row.tsx) that
+    // the dropdown OPTION labels do NOT have — so exactly two "Çıkar" controls
+    // proves two CHIPS rendered (one per selection). The old
+    // getAllByText("Planlama").length > 0 passed on the still-visible option alone,
+    // even with the chip render branch returning null.
     await waitFor(() => {
-      // Both labels should appear at least once as chips.
-      const planning = screen.getAllByText("Planlama")
-      const execution = screen.getAllByText("Yürütme")
-      expect(planning.length).toBeGreaterThan(0)
-      expect(execution.length).toBeGreaterThan(0)
+      expect(screen.getAllByLabelText("Çıkar")).toHaveLength(2)
     })
   })
 
@@ -288,7 +289,22 @@ describe("MilestonesSubTab", () => {
   })
 
   it("Test 5: optimistic + rollback — POST 422 rolls back optimistic insert", async () => {
-    apiGet.mockResolvedValueOnce({ data: [] })
+    // Initial load returns a PRE-EXISTING milestone so the test can prove the
+    // rollback RESTORES the prior cache (not merely that the optimistic row left).
+    apiGet.mockResolvedValueOnce({
+      data: [
+        {
+          id: 11, project_id: 7, name: "Existing MS", target_date: "2026-05-15",
+          status: "PLANNED", linked_phase_ids: [],
+          created_at: "2026-04-25T00:00:00Z", updated_at: null,
+        },
+      ],
+    })
+    // CRITICAL (audit fix): the onSettled invalidateQueries refetch must NOT be
+    // able to clear the cache — otherwise IT, not the rollback, is what removes
+    // "Bad Milestone" (the old test passed even with onError deleted). Hang every
+    // subsequent GET so the ROLLBACK is the only thing that can remove the row.
+    apiGet.mockReturnValue(new Promise(() => {}))
     apiPost.mockRejectedValueOnce({
       response: { status: 422, data: { detail: "validation error" } },
     })
@@ -300,9 +316,7 @@ describe("MilestonesSubTab", () => {
     )
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Henüz kilometre taşı tanımlanmamış."),
-      ).toBeInTheDocument()
+      expect(screen.getByText("Existing MS")).toBeInTheDocument()
     })
 
     fireEvent.click(screen.getByText("Ekle"))
@@ -326,15 +340,17 @@ describe("MilestonesSubTab", () => {
 
     fireEvent.click(screen.getByText("Kaydet"))
 
-    // Wait for the optimistic insert + rollback cycle to settle.
     await waitFor(() => {
       expect(apiPost).toHaveBeenCalledTimes(1)
     })
 
-    // After rollback, the milestone should not appear in the list.
+    // kills mutation: deleting the onError rollback in useCreateMilestone leaves
+    // "Bad Milestone" in the cache — the hung refetch can no longer mask it.
     await waitFor(() => {
       expect(screen.queryByText("Bad Milestone")).not.toBeInTheDocument()
     })
+    // ...and the rollback RESTORED the prior list (hung refetch didn't wipe it).
+    expect(screen.getByText("Existing MS")).toBeInTheDocument()
   })
 
   it("Test 6: delete confirm — Cancel issues no DELETE; confirm issues DELETE", async () => {

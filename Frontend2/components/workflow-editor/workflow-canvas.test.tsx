@@ -15,6 +15,11 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { WorkflowCanvasInner } from "./workflow-canvas-inner"
 
+// Module-scoped capture of the props React Flow actually receives, so the
+// forwarding test below can assert real prop wiring (vi.hoisted because the
+// vi.mock factory is hoisted above normal module init).
+const { captured } = vi.hoisted(() => ({ captured: {} as Record<string, unknown> }))
+
 vi.mock("@/context/app-context", () => ({
   useApp: () => ({ language: "tr" }),
 }))
@@ -35,30 +40,25 @@ vi.mock("@xyflow/react", () => ({
     zoomOut: vi.fn(),
     fitView: vi.fn(),
   }),
-  ReactFlow: ({
-    nodesDraggable,
-    nodesConnectable,
-    edgesReconnectable,
-    children,
-  }: {
-    nodesDraggable?: boolean
-    nodesConnectable?: boolean
-    edgesReconnectable?: boolean
-    children?: React.ReactNode
-  }) => (
-    <div
-      data-testid="reactflow"
-      data-nodes-draggable={String(nodesDraggable)}
-      data-nodes-connectable={String(nodesConnectable)}
-      // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production prop is
-      // `edgesReconnectable` (workflow-canvas-inner.tsx:149); the older
-      // React Flow API name `edgesUpdatable` was renamed in v12. The
-      // exposed data-attribute keeps its readable test-attribute name.
-      data-edges-updatable={String(edgesReconnectable)}
-    >
-      {children}
-    </div>
-  ),
+  ReactFlow: (props: Record<string, any>) => {
+    // Capture every forwarded prop so the Plan 12-08 test can assert the
+    // editable callbacks (onConnect, onNodeDrag, …) actually reach React Flow.
+    Object.assign(captured, props)
+    return (
+      <div
+        data-testid="reactflow"
+        data-nodes-draggable={String(props.nodesDraggable)}
+        data-nodes-connectable={String(props.nodesConnectable)}
+        // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production prop is
+        // `edgesReconnectable` (workflow-canvas-inner.tsx:149); the older
+        // React Flow API name `edgesUpdatable` was renamed in v12. The
+        // exposed data-attribute keeps its readable test-attribute name.
+        data-edges-updatable={String(props.edgesReconnectable)}
+      >
+        {props.children}
+      </div>
+    )
+  },
   Background: () => <div data-testid="bg" />,
   MiniMap: () => <div data-testid="minimap" />,
   Controls: () => <div data-testid="controls" />,
@@ -120,18 +120,25 @@ describe("WorkflowCanvasInner — Pitfall 1 module-top constants", () => {
 
 describe("WorkflowCanvasInner — Plan 12-08 editable callbacks", () => {
   it("forwards onConnect, onNodeDrag, onNodeDragStop, onPaneContextMenu callback props to ReactFlow", () => {
-    const filePath = path.resolve(
-      __dirname,
-      "workflow-canvas-inner.tsx",
+    // Real render + forwarding assertion (was a source-string grep that passed
+    // even when a prop was only mentioned in a comment / the interface).
+    const handlers = {
+      onConnect: vi.fn(),
+      onNodeDrag: vi.fn(),
+      onNodeDragStop: vi.fn(),
+      onPaneContextMenu: vi.fn(),
+      onNodeContextMenu: vi.fn(),
+      onEdgeContextMenu: vi.fn(),
+      onEdgeDoubleClick: vi.fn(),
+    }
+    render(
+      <WorkflowCanvasInner nodes={[]} edges={[]} readOnly={false} {...handlers} />,
     )
-    const src = fs.readFileSync(filePath, "utf8")
-    expect(src).toContain("onConnect")
-    expect(src).toContain("onNodeDrag")
-    expect(src).toContain("onNodeDragStop")
-    expect(src).toContain("onPaneContextMenu")
-    expect(src).toContain("onNodeContextMenu")
-    expect(src).toContain("onEdgeContextMenu")
-    expect(src).toContain("onEdgeDoubleClick")
+    // kills mutation: deleting e.g. `onConnect={props.onConnect}` from the JSX
+    // means React Flow never receives that exact callback.
+    for (const [name, fn] of Object.entries(handlers)) {
+      expect(captured[name]).toBe(fn)
+    }
   })
 })
 

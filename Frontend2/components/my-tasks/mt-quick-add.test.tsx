@@ -103,18 +103,19 @@ describe("MTQuickAdd", () => {
     expect(submit.disabled).toBe(true)
   })
 
-  it("cycles priority on chip click", () => {
-    const { getByText, getByRole } = renderWithProviders(
+  it("selecting the Düşük option updates the active priority", () => {
+    const { getByRole } = renderWithProviders(
       <MTQuickAdd lang="tr" projects={mockProjects} />
     )
-    // Initial: medium = "Orta"
-    expect(getByText("Orta")).toBeInTheDocument()
-    // Click priority chip — it cycles critical -> high -> medium -> low.
-    // Buttons in the form: priority chip is the one with the "Öncelik:" aria-label prefix.
-    const priorityBtn = getByRole("button", {
-      name: /Öncelik: Orta/i,
-    })
-    fireEvent.click(priorityBtn)
-    expect(getByText("Düşük")).toBeInTheDocument()
+    // Initial active priority is medium → trigger labelled "Öncelik: Orta".
+    const trigger = getByRole("button", { name: /Öncelik: Orta/i })
+    fireEvent.click(trigger) // open the listbox
+    // Click the "Düşük" (low) OPTION row — NOT the trigger. This is what actually
+    // fires onChange → setPriority("low"). The old test merely opened the
+    // dropdown (so "Düşük" was visible as an option) and never selected anything,
+    // so it passed even if onChange was a no-op.
+    fireEvent.click(getByRole("option", { name: /Düşük/i }))
+    // kills mutation: onChange={() => {}} leaves the trigger at "Öncelik: Orta".
+    expect(getByRole("button", { name: /Öncelik: Düşük/i })).toBeInTheDocument()
   })
 })
