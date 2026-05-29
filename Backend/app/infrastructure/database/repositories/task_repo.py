@@ -13,6 +13,28 @@ from app.infrastructure.database.models.project import ProjectModel
 from app.infrastructure.database.models.board_column import BoardColumnModel
 
 
+# Audit values for large free-text fields (notably `description`) are capped at
+# write time. Otherwise a single-character edit to a 1000-word description would
+# write the FULL before+after text (~2x the body) into the append-only
+# audit_log — unbounded growth for a field the history UI only previews.
+# Short fields (status, priority, points, dates, title) are always well under
+# the cap, so they are stored verbatim; only oversized values get truncated.
+# User decision 2026-05-29: cap-at-write (Option C) over full-store / event-only.
+AUDIT_VALUE_MAX_LEN = 255
+
+
+def _cap_audit_value(value: Any) -> Optional[str]:
+    """Stringify an audit old/new value, truncating oversized values with an
+    ellipsis marker so the stored snapshot stays bounded. None stays None so an
+    'unset → set' transition still renders the em-dash placeholder client-side."""
+    if value is None:
+        return None
+    s = str(value)
+    if len(s) <= AUDIT_VALUE_MAX_LEN:
+        return s
+    return s[:AUDIT_VALUE_MAX_LEN] + "…"
+
+
 async def _resolve_column_name(session: AsyncSession, column_id: Optional[int]) -> Optional[str]:
     """D-D2: resolve column_id → column.name for old/new value label.
 
@@ -363,8 +385,8 @@ class SqlAlchemyTaskRepository(ITaskRepository):
                             entity_type="task",
                             entity_id=task_id,
                             field_name=key,
-                            old_value=str(old_val) if old_val is not None else None,
-                            new_value=str(new_val) if new_val is not None else None,
+                            old_value=_cap_audit_value(old_val),
+                            new_value=_cap_audit_value(new_val),
                             user_id=user_id,
                             action="updated",
                             extra_metadata=enriched_metadata,
