@@ -757,5 +757,10 @@ async def test_recurring_legacy_done_column_still_works():
     result = await use_case.execute(task_id=42, dto=dto, user_id=99)
 
     assert result.column_id == 3
-    # Engine fell back to max(order_index) — recurring instance was created.
+    # Engine fell back to max(order_index) — a recurring instance was created.
     task_repo.create.assert_awaited_once()
+    # kills mutation: assert WHAT was created (the next recurring instance), not
+    # merely that create() fired.
+    created = task_repo.create.await_args.args[0]
+    assert created.is_recurring is True
+    assert created.title == existing.title

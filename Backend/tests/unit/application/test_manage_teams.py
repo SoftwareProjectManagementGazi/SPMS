@@ -15,7 +15,9 @@ async def test_create_team_sets_owner():
     from app.domain.entities.user import User
 
     owner = User(id=42, email="owner@example.com", password_hash="x", full_name="Owner")
-    dto = TeamCreateDTO(name="Dev Team", description="Backend devs")
+    # Explicitly color=None so the color="#3b82f6" assertion below proves the USE
+    # CASE's None→default fallback, not merely the DTO's own default value.
+    dto = TeamCreateDTO(name="Dev Team", description="Backend devs", color=None)
 
     created_team = Team(id=1, name="Dev Team", description="Backend devs", owner_id=42)
 

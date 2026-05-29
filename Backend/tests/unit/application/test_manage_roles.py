@@ -122,15 +122,19 @@ async def test_update_role_happy_path_partial_update():
     custom = Role(id=10, name="Designer", is_system_role=False, icon_key="palette")
     role_repo = AsyncMock()
     role_repo.get_by_id = AsyncMock(return_value=custom)
-    role_repo.update = AsyncMock(
-        return_value=Role(id=10, name="Designer", is_system_role=False, icon_key="brush")
-    )
+    # Echo back the entity the use case passes to update(), so the result reflects
+    # the use case's OWN mutation. A hard-coded return made this tautological — it
+    # passed even if the use case never applied the dto.
+    role_repo.update = AsyncMock(side_effect=lambda r: r)
     audit_repo = AsyncMock()
     use_case = UpdateRoleUseCase(role_repo, audit_repo)
     result = await use_case.execute(
         role_id=10, dto=RoleUpdateDTO(icon_key="brush"), admin_id=2,
     )
+    # kills mutation: the use case must apply dto.icon_key (palette → brush) AND
+    # preserve the unchanged name.
     assert result.icon_key == "brush"
+    assert result.name == "Designer"
     audit_repo.create_with_metadata.assert_awaited_once()
 
 

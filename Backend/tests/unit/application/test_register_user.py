@@ -91,11 +91,13 @@ async def test_register_user_success():
 
     # Assert
     assert result.email == "test@example.com"
-    assert result.id is not None
     # Verify persistence in mock
     saved_user = await user_repo.get_by_email("test@example.com")
     assert saved_user is not None
     assert saved_user.password_hash == "hashed_password123"
+    # kills mutation: pin the returned id to the PERSISTED entity, not just
+    # "is not None" (which a hard-coded id would also satisfy).
+    assert result.id == saved_user.id
 
 @pytest.mark.asyncio
 async def test_register_user_already_exists():

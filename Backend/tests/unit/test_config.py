@@ -4,17 +4,15 @@ Unit tests for Settings config behavior — DEBUG flag and CORS origins parsing.
 import pytest
 
 
-def test_debug_false_sets_echo_false():
-    """Settings(DEBUG=False) results in SQLAlchemy engine echo=False when DEBUG is False."""
-    from app.infrastructure.config import Settings
+def test_engine_echo_is_derived_from_debug_flag():
+    """database.py builds the engine with `echo=settings.DEBUG`. Assert the LIVE
+    engine reflects that derivation — the old test only re-asserted the DEBUG value
+    it passed into Settings (tautological), never touching the echo derivation it
+    was named for. A hard-coded echo would break this whenever it diverges from DEBUG."""
+    from app.infrastructure.database.database import engine
+    from app.infrastructure.config import settings
 
-    s = Settings(
-        DEBUG=False,
-        JWT_SECRET="safe_jwt_secret",
-        DB_PASSWORD="safe_db_password",
-        CORS_ORIGINS="http://localhost:3000",
-    )
-    assert s.DEBUG is False
+    assert bool(engine.sync_engine.echo) == bool(settings.DEBUG)
 
 
 def test_cors_origins_parsed_from_env():

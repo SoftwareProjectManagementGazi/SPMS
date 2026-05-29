@@ -307,8 +307,12 @@ def test_v2_includes_task_workflow_placeholder():
     assert "task_workflow" in result
     assert result["task_workflow"]["edges"] == []
     assert result["task_workflow"]["groups"] == []
-    assert result["task_workflow"]["capabilities"]["enforce_wip_limits"] is False
-    assert result["task_workflow"]["capabilities"]["initial_node_id"] is None
+    caps = result["task_workflow"]["capabilities"]
+    assert caps["enforce_wip_limits"] is False
+    assert caps["initial_node_id"] is None
+    # C9: the has_recurring capability must be present (the audit flagged it as the
+    # un-asserted key). A minimal config enables it by default.
+    assert caps["has_recurring"] is True
 
 
 def test_v1_to_v2_preserves_existing_task_workflow():

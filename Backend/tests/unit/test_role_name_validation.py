@@ -58,15 +58,23 @@ class TestRoleNameValidation:
         with pytest.raises(ValidationError):
             RoleCreateDTO(name="Role!")
 
-    def test_reserved_names_set_contains_canonical_lowercase_forms(self):
-        """Reserved-name set is checked at use case layer (case-insensitive).
+    @pytest.mark.asyncio
+    async def test_use_case_rejects_reserved_name_case_insensitively(self):
+        """Exercise the reserved-name ENFORCEMENT at the use-case layer, not just the
+        constant's contents (the old test merely asserted set membership). The DTO
+        regex permits the literals; CreateRoleUseCase must reject them
+        case-insensitively with RoleNameInvalidError and never persist."""
+        from unittest.mock import AsyncMock
+        from app.application.use_cases.create_role import CreateRoleUseCase
+        from app.domain.exceptions import RoleNameInvalidError
 
-        DTO regex permits the literal strings; use case layer enforces rejection.
-        """
-        assert "admin" in RESERVED_ROLE_NAMES
-        assert "project manager" in RESERVED_ROLE_NAMES
-        assert "member" in RESERVED_ROLE_NAMES
-        assert "guest" in RESERVED_ROLE_NAMES
+        role_repo = AsyncMock()
+        role_repo.get_by_name = AsyncMock(return_value=None)
+        uc = CreateRoleUseCase(role_repo)
+        for reserved in ("ADMIN", "Member", "GUEST"):
+            with pytest.raises(RoleNameInvalidError):
+                await uc.execute(RoleCreateDTO(name=reserved), admin_id=1)
+        role_repo.create.assert_not_called()
 
     def test_at_max_length_accepted(self):
         max_name = "A" * ROLE_NAME_MAX

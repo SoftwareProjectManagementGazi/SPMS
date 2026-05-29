@@ -72,16 +72,22 @@ def test_edge_references_nonexistent_node_rejected():
 
 
 def test_edge_references_archived_node_rejected():
-    with pytest.raises(ValidationError):
+    # The archived node MUST use a VALID id (nd_ + exactly 10 chars) so the
+    # ValidationError comes from the archived-edge business rule, not the id regex.
+    # "nd_archived123" had 11 chars after nd_ → it failed the D-22 id regex first,
+    # so the archived-node rule was never reached (the test passed for the wrong reason).
+    with pytest.raises(ValidationError) as ei:
         WorkflowConfig(
             mode="flexible",
             nodes=[
                 _node("nd_a1b2c3d4e5", is_initial=True, is_final=True),
-                _node("nd_archived123", is_archived=True),
+                _node("nd_arch123456", is_archived=True),
             ],
-            edges=[{"id": "ed_1", "source": "nd_a1b2c3d4e5", "target": "nd_archived123"}],
+            edges=[{"id": "ed_1", "source": "nd_a1b2c3d4e5", "target": "nd_arch123456"}],
             groups=[],
         )
+    # Pin the specific rule (edge → archived node), not just "any ValidationError".
+    assert "archived" in str(ei.value).lower()
 
 
 def test_sequential_flexible_cycle_rejected():

@@ -102,3 +102,6 @@ async def test_delete_soft_deletes():
     report_repo.delete = AsyncMock(return_value=True)
     uc = DeletePhaseReportUseCase(report_repo)
     assert await uc.execute(1) is True
+    # kills mutation: the canned True passes even if execute ignored its arg / never
+    # delegated. Pin the forwarded id.
+    report_repo.delete.assert_awaited_once_with(1)
