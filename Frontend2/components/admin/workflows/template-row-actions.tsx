@@ -151,12 +151,19 @@ export function TemplateRowActions({
   ]
 
   const handleDeleteFire = () => {
-    if (!canDelete) return // belt-and-braces — should be unreachable when CTA is disabled
-    setConfirmOpenSimple(false)
-    setConfirmOpenInUse(false)
-    setYineDeSil(false)
+    // Y15 — block a double-fire: belt-and-braces when the CTA is disabled, and
+    // (the real guard) ignore a second click while a DELETE is already in
+    // flight, which would 404 on the now-gone template and surface a phantom
+    // error toast. Mirrors role-delete-confirm's pending guard.
+    if (!canDelete || deleteM.isPending) return
     deleteM.mutate(template.id, {
       onSuccess: () => {
+        // Close + reset only AFTER the round-trip succeeds, so the dialog stays
+        // open with its confirm disabled (via `pending`) for the whole request
+        // and stays open on error for a retry — same pattern as Y15.
+        setConfirmOpenSimple(false)
+        setConfirmOpenInUse(false)
+        setYineDeSil(false)
         showToast({
           variant: "success",
           message: adminWorkflowsT(
@@ -208,6 +215,7 @@ export function TemplateRowActions({
         confirmLabel={adminWorkflowsT("admin.workflows.delete", lang)}
         cancelLabel={adminWorkflowsT("admin.cancel", lang)}
         tone="danger"
+        pending={deleteM.isPending}
         onConfirm={handleDeleteFire}
         onCancel={() => setConfirmOpenSimple(false)}
       />
@@ -221,6 +229,7 @@ export function TemplateRowActions({
       <Modal
         open={confirmOpenInUse}
         onClose={() => {
+          if (deleteM.isPending) return
           setConfirmOpenInUse(false)
           setYineDeSil(false)
         }}
@@ -280,6 +289,7 @@ export function TemplateRowActions({
           <Button
             variant="ghost"
             size="sm"
+            disabled={deleteM.isPending}
             onClick={() => {
               setConfirmOpenInUse(false)
               setYineDeSil(false)
@@ -290,7 +300,7 @@ export function TemplateRowActions({
           <Button
             variant="danger"
             size="sm"
-            disabled={!canDelete}
+            disabled={!canDelete || deleteM.isPending}
             onClick={handleDeleteFire}
           >
             {adminWorkflowsT("admin.workflows.delete", lang)}
