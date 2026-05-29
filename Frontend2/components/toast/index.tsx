@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { useApp } from "@/context/app-context"
 
 interface Toast {
   id: string
@@ -39,31 +40,70 @@ const TOAST_COLOR: Record<Toast['variant'], string> = {
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { language } = useApp()
+  const lang = language === "en" ? "en" : "tr"
   const [toasts, setToasts] = React.useState<Toast[]>([])
+  // M-M2 — own each auto-dismiss timer so it can be cancelled on manual close
+  // and on provider unmount. Without this, the timer fires setToasts after
+  // unmount (React warning + leak), and a manual close leaves a stray timer.
+  const timers = React.useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  const dismiss = React.useCallback((id: string) => {
+    const handle = timers.current.get(id)
+    if (handle) {
+      clearTimeout(handle)
+      timers.current.delete(id)
+    }
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
 
   const showToast = React.useCallback(({ message, variant, duration }: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).slice(2)
-    setToasts(prev => [{ id, message, variant, duration }, ...prev])
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id))
-    }, duration ?? (variant === 'error' ? 6000 : 4000))
+    // M-M2 — dedupe: a double-submit must not stack two identical toasts.
+    setToasts(prev =>
+      prev.some(t => t.message === message && t.variant === variant)
+        ? prev
+        : [{ id, message, variant, duration }, ...prev],
+    )
+    const handle = setTimeout(
+      () => dismiss(id),
+      duration ?? (variant === 'error' ? 6000 : 4000),
+    )
+    timers.current.set(id, handle)
+  }, [dismiss])
+
+  // M-M2 — cancel any pending timers when the provider unmounts.
+  React.useEffect(() => {
+    const map = timers.current
+    return () => {
+      map.forEach(clearTimeout)
+      map.clear()
+    }
   }, [])
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Anchored below the 52px Header (Header uses sticky, zIndex 30). Clears
-          the search bar so toasts never cover interactive Header controls. */}
-      <div style={{ position: "fixed", top: 72, right: 20, zIndex: 9999,
-        display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 }}>
+      {/* M-M1 — a labelled region whose children are each an individual live
+          region (role=status → polite, role=alert → assertive) so screen
+          readers announce each toast on insert. Anchored below the 52px Header
+          (sticky, zIndex 30) so toasts never cover Header controls. */}
+      <div
+        role="region"
+        aria-label={lang === "tr" ? "Bildirimler" : "Notifications"}
+        style={{ position: "fixed", top: 72, right: 20, zIndex: 9999,
+          display: "flex", flexDirection: "column", gap: 8, maxWidth: 320 }}>
         {toasts.map(t => (
           <div key={t.id}
+            role={t.variant === "error" ? "alert" : "status"}
+            aria-atomic="true"
             style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)",
               background: TOAST_BG[t.variant], color: TOAST_COLOR[t.variant],
               boxShadow: "0 2px 8px oklch(0 0 0/0.12), inset 0 0 0 1px color-mix(in oklch, currentColor 25%, transparent)",
               fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, minWidth: 240 }}>
             <span style={{ flex: 1 }}>{t.message}</span>
-            <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+            <button onClick={() => dismiss(t.id)}
+              aria-label={lang === "tr" ? "Kapat" : "Dismiss"}
               style={{ background: "none", border: "none", cursor: "pointer", color: "currentColor",
                 fontSize: 14, lineHeight: 1, padding: "0 2px" }}>&#xd7;</button>
           </div>
