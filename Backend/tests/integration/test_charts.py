@@ -494,7 +494,68 @@ async def test_project_activity_includes_task_events_after_broadening():
     assert len(result.items) == 4
     entity_types = {item.entity_type for item in result.items}
     assert "project" in entity_types
-    assert "task" in entity_types  # broadening contract
+    assert "task" in entity_types  # broadening contract (DTO-shape only — see DB test below)
+
+
+@pytest.mark.requires_db
+@pytest.mark.asyncio
+async def test_project_activity_broadening_db_backed(db_session):
+    """D-13-01 broadening exercised against the REAL SqlAlchemyAuditRepository SQL.
+
+    The test above uses a fake repo that returns whatever it's seeded with, so the
+    OR-scope_filter (project rows UNION the project's task rows) is never executed.
+    Here the real repo runs against the DB: a project's feed must include BOTH its
+    project-scoped event AND its tasks' events, while EXCLUDING a decoy task that
+    belongs to a different project (proves the scope is an OR-join, not 'return all
+    task rows').
+    """
+    from sqlalchemy import text
+    from app.infrastructure.database.repositories.audit_repo import SqlAlchemyAuditRepository
+
+    uid = (await db_session.execute(text("SELECT id FROM users ORDER BY id LIMIT 1"))).scalar()
+
+    async def _project(key):
+        existing = (await db_session.execute(text("SELECT id FROM projects WHERE key=:k"), {"k": key})).scalar()
+        if existing:
+            return existing
+        await db_session.execute(text(
+            "INSERT INTO projects (key, name, start_date, methodology, status) "
+            "VALUES (:k, 'Act', now(), 'KANBAN', 'ACTIVE')"), {"k": key})
+        await db_session.flush()
+        return (await db_session.execute(text("SELECT id FROM projects WHERE key=:k"), {"k": key})).scalar()
+
+    async def _task(pid, title):
+        await db_session.execute(text(
+            "INSERT INTO tasks (title, project_id, priority) VALUES (:t, :p, 'MEDIUM')"),
+            {"t": title, "p": pid})
+        await db_session.flush()
+        return (await db_session.execute(text(
+            "SELECT id FROM tasks WHERE project_id=:p ORDER BY id DESC LIMIT 1"), {"p": pid})).scalar()
+
+    async def _audit(etype, eid, action):
+        await db_session.execute(text(
+            "INSERT INTO audit_log (entity_type, entity_id, field_name, action, user_id) "
+            "VALUES (:et, :ei, 'f', :a, :u)"),
+            {"et": etype, "ei": eid, "a": action, "u": uid})
+        await db_session.flush()
+
+    pid = await _project("ACTBRD1")
+    task_id = await _task(pid, "In-project task")
+    decoy_pid = await _project("ACTBRD2")
+    decoy_task_id = await _task(decoy_pid, "Decoy task in OTHER project")
+
+    await _audit("project", pid, "phase_transition")
+    await _audit("task", task_id, "updated")
+    await _audit("task", decoy_task_id, "updated")  # other project — must NOT appear
+
+    items, _total = await SqlAlchemyAuditRepository(db_session).get_project_activity(pid, limit=100)
+    pairs = {(i["entity_type"], i["entity_id"]) for i in items}
+
+    assert ("project", pid) in pairs
+    # kills mutation: reverting the OR-broadening (project-only scope) drops the task event.
+    assert ("task", task_id) in pairs
+    # kills mutation: a 'return all task rows' bug would leak the decoy.
+    assert ("task", decoy_task_id) not in pairs
 
 
 @pytest.mark.asyncio

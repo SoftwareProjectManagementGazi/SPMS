@@ -34,14 +34,18 @@ pytestmark = pytest.mark.requires_db
 # ---------------------------------------------------------------------------
 
 async def _migration_005_applied(session: AsyncSession) -> bool:
-    """Return True if alembic_version table contains the 005_phase9 row."""
+    """Return True when the DB was built by Alembic (so migration-only objects —
+    raw-SQL GIN / partial-unique indexes — are present).
+
+    Bugfix: this used to query ``alembic_version WHERE version_num = '005_phase9'``,
+    but ``alembic_version`` only ever holds the CURRENT head (e.g. '016_...'), never
+    historical revisions. So it ALWAYS returned False against a migrated DB and these
+    tests ALWAYS skipped (disabled-but-counted) even though migration 005's objects
+    were present. A non-empty ``alembic_version`` means the schema came from
+    ``alembic upgrade head`` (which includes 005); a pure ``create_all`` DB has no
+    such table and correctly skips the migration-only assertions."""
     try:
-        result = await session.execute(
-            text(
-                "SELECT COUNT(*) FROM alembic_version "
-                "WHERE version_num = '005_phase9'"
-            )
-        )
+        result = await session.execute(text("SELECT COUNT(*) FROM alembic_version"))
         return (result.scalar() or 0) > 0
     except Exception:
         # alembic_version table doesn't exist — DB was set up via create_all
@@ -113,9 +117,18 @@ async def test_schema_version_backfill(db_session: AsyncSession):
             )
         )
     ).all()
+    # kills mutation: a vacuous pass if no process_config rows exist.
+    assert len(rows) >= 1, "expected at least one project with a process_config"
     for row in rows:
-        assert row.sv == "1", (
-            f"project id={row.id} has schema_version={row.sv!r}, expected '1'"
+        # Migration 005's backfill guarantees schema_version is SET (never NULL) for
+        # every process_config row — it backfills '1', and later process-template
+        # application legitimately bumps it to '2'. So the invariant is "set and >= 1",
+        # not "== 1" (which falsely fails on a project that has had a template applied).
+        assert row.sv is not None, (
+            f"project id={row.id} has NULL schema_version — backfill missed it"
+        )
+        assert int(row.sv) >= 1, (
+            f"project id={row.id} has schema_version={row.sv!r}, expected >= 1"
         )
 
 

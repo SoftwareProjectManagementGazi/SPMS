@@ -62,5 +62,21 @@ async def test_apply_template_to_projects(authenticated_client, db_session):
         })
         assert r.status_code == 200, r.text
         body = r.json()
-        assert isinstance(body.get("applied", []), list)
-        assert isinstance(body.get("failed", []), list)
+        applied = body.get("applied", [])
+        failed = body.get("failed", [])
+        # kills mutation: applied=[] / failed=[all] (e.g. repo.update raising) satisfied
+        # the old isinstance-only check. Pin the actual outcome + the DB side-effect.
+        assert failed == [], f"unexpected failures: {failed}"
+        assert set(applied) == set(pids), f"expected {pids} applied, got {applied}"
+    # Verify the template was actually stamped onto each project row.
+    for pid in pids:
+        row = (await db_session.execute(
+            text(
+                "SELECT process_template_id, process_config->>'schema_version' AS sv "
+                "FROM projects WHERE id=:i"
+            ),
+            {"i": pid},
+        )).first()
+        assert row is not None
+        assert row[0] == tid, f"project {pid} process_template_id not stamped"
+        assert row.sv == "2", f"project {pid} process_config schema_version not bumped to 2"
