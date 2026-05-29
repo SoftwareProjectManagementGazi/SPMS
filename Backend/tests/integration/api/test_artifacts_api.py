@@ -95,7 +95,9 @@ async def test_assignee_patch_mine_non_assignee_403(authenticated_client, db_ses
             f"/api/v1/artifacts/{artifact_id}/mine",
             json={"status": "in_progress"},
         )
-        assert r2.status_code in (403, 404), f"Expected 403/404, got {r2.status_code}: {r2.text}"
+    # A non-assignee hits the use case's assignee check → PermissionError → 403
+    # (router _to_http maps it). Tightened from the lax "403 or 404".
+    assert r2.status_code == 403, r2.text
 
 
 @pytest.mark.asyncio

@@ -57,6 +57,11 @@ async def test_activity_returns_items_and_total(authenticated_client, db_session
         body = r.json()
         assert "items" in body and "total" in body
         assert body["total"] >= 3
+        # kills mutation: an empty/garbled items list passed the key-presence check.
+        items = body["items"]
+        assert len(items) >= 3
+        actions = {i["action"] for i in items}
+        assert {"task_created", "phase_transition", "status_changed"} <= actions
 
 
 @pytest.mark.asyncio
@@ -84,8 +89,13 @@ async def test_activity_pagination(authenticated_client, db_session):
         r1 = await client.get(f"/api/v1/projects/{pid}/activity?limit=2&offset=0")
         r2 = await client.get(f"/api/v1/projects/{pid}/activity?limit=2&offset=2")
         assert r1.status_code == 200 and r2.status_code == 200
+        total = r1.json()["total"]
         assert r1.json()["total"] == r2.json()["total"]
-        # items on page 1 differ from page 2
         ids1 = {i["id"] for i in r1.json()["items"]}
         ids2 = {i["id"] for i in r2.json()["items"]}
-        assert not (ids1 & ids2)
+        # kills mutation: empty/overshot pages satisfied the disjoint check vacuously.
+        # 3 seeded rows, limit 2 → page 1 full (2), page 2 the remainder (1).
+        assert len(ids1) == 2
+        assert len(ids2) >= 1
+        assert not (ids1 & ids2)                 # pages are disjoint
+        assert len(ids1 | ids2) == total         # and jointly cover every row
