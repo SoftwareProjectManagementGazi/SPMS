@@ -83,26 +83,13 @@ async def test_email_change_requires_password():
     security_service.verify_password.assert_called_once_with("wrong_password", "hashed_secret")
 
 
-@pytest.mark.asyncio
-async def test_update_avatar_path_saved():
-    """Avatar path is stored as a relative path (e.g. 'uploads/avatars/uuid.jpg'), not an absolute path."""
-    from app.application.use_cases.update_user_profile import UpdateUserProfileUseCase
-
-    relative_path = "uploads/avatars/some-uuid.jpg"
-    current_user = _make_user()
-    updated_user = _make_user(avatar=relative_path)
-
-    user_repo = MagicMock()
-    user_repo.update = AsyncMock(return_value=None)
-    user_repo.get_by_id = AsyncMock(return_value=updated_user)
-
-    security_service = MagicMock()
-
-    use_case = UpdateUserProfileUseCase(user_repo, security_service)
-    # Simulate avatar update via full_name update (no email change needed)
-    # We test that relative paths don't become absolute
-    assert not relative_path.startswith("/")
-    assert not relative_path.startswith("C:")
+# NOTE: the previous ``test_update_avatar_path_saved`` here was a fake pass — it
+# asserted on a hand-written ``relative_path`` literal and never invoked the use
+# case. UpdateUserProfileUseCase does not handle avatars at all; the avatar file
+# is saved (and its relative path constructed) by the ``POST /auth/me/avatar``
+# router endpoint. The real relative-path behaviour is therefore verified at the
+# integration layer:
+#   tests/integration/api/test_auth_avatar.py::test_avatar_upload_stores_relative_path
 
 
 @pytest.mark.asyncio

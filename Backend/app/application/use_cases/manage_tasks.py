@@ -183,9 +183,17 @@ class GetTaskUseCase:
         return map_task_to_response_dto(task)
 
 def _check_recurrence_should_continue(task: Task) -> bool:
-    from datetime import date
-    if task.recurrence_end_date and date.today() >= task.recurrence_end_date:
-        return False
+    from datetime import date, datetime
+    if task.recurrence_end_date:
+        # The DB column is DATE, but the entity types recurrence_end_date as
+        # datetime, so a value loaded from the DB is coerced to datetime by
+        # pydantic. Normalise to a date before comparing, otherwise
+        # ``date.today() >= <datetime>`` raises TypeError and the whole task
+        # update 500s for any recurring task that has an end date.
+        end = task.recurrence_end_date
+        end_date = end.date() if isinstance(end, datetime) else end
+        if date.today() >= end_date:
+            return False
     if task.recurrence_count is not None and task.recurrence_count <= 1:
         return False
     return True

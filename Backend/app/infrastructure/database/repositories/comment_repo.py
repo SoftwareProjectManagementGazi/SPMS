@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -83,7 +83,11 @@ class SqlAlchemyCommentRepository(ICommentRepository):
             return None
 
         model.content = content
-        model.updated_at = datetime.utcnow()
+        # updated_at column is DateTime(timezone=True); created_at is tz-aware too.
+        # Using naive datetime.utcnow() here made _map_to_response crash comparing
+        # offset-naive vs offset-aware datetimes (comment edit -> 500). Use a
+        # tz-aware UTC timestamp so both timestamps are comparable.
+        model.updated_at = datetime.now(timezone.utc)
 
         await self.session.flush()
         await self.session.commit()
@@ -107,7 +111,11 @@ class SqlAlchemyCommentRepository(ICommentRepository):
             return False
 
         model.is_deleted = True
-        model.updated_at = datetime.utcnow()
+        # updated_at column is DateTime(timezone=True); created_at is tz-aware too.
+        # Using naive datetime.utcnow() here made _map_to_response crash comparing
+        # offset-naive vs offset-aware datetimes (comment edit -> 500). Use a
+        # tz-aware UTC timestamp so both timestamps are comparable.
+        model.updated_at = datetime.now(timezone.utc)
         await self.session.flush()
         await self.session.commit()
         return True
