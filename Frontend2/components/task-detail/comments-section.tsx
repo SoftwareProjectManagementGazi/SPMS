@@ -139,6 +139,13 @@ export function CommentsSection({
       }),
   })
 
+  // M-T4 — mention dropdown keyboard cursor; resets to the top whenever the
+  // query (and thus the filtered member list) changes.
+  const [activeIdx, setActiveIdx] = React.useState(0)
+  React.useEffect(() => {
+    setActiveIdx(0)
+  }, [mentionQuery])
+
   function onBodyChange(v: string) {
     setBody(v)
     // Detect `@` char at caret — simple matcher: last `@` segment before caret.
@@ -174,6 +181,39 @@ export function CommentsSection({
         m.name.toLowerCase().includes(mentionQuery),
       )
     : projectMembers.slice(0, 6)
+
+  // M-T4 — keyboard for the composer. The @mention dropdown owns arrow/Enter/
+  // Escape while open (so Enter picks a mention, not sends); otherwise
+  // Cmd/Ctrl+Enter sends. Bare Enter stays a newline (multi-line comment box).
+  function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionOpen && filteredMembers.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault()
+        setActiveIdx((i) => Math.min(i + 1, filteredMembers.length - 1))
+        return
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault()
+        setActiveIdx((i) => Math.max(i - 1, 0))
+        return
+      }
+      if (e.key === "Enter") {
+        e.preventDefault()
+        const m = filteredMembers[activeIdx]
+        if (m) insertMention(m)
+        return
+      }
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setMentionOpen(false)
+        return
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault()
+      if (body.trim() && !create.isPending) create.mutate(body)
+    }
+  }
 
   const currentUserAvatar = user
     ? avatarFromMember(
@@ -244,6 +284,7 @@ export function CommentsSection({
                 ref={textareaRef}
                 value={body}
                 onChange={(e) => onBodyChange(e.target.value)}
+                onKeyDown={onComposerKeyDown}
                 placeholder={placeholderText}
                 rows={3}
                 autoFocus
@@ -305,11 +346,12 @@ export function CommentsSection({
                 minWidth: 200,
               }}
             >
-              {filteredMembers.map((m) => (
+              {filteredMembers.map((m, idx) => (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => insertMention(m)}
+                  onMouseEnter={() => setActiveIdx(idx)}
                   className="hover-row"
                   style={{
                     display: "block",
@@ -318,7 +360,10 @@ export function CommentsSection({
                     // UI-sweep: standardized at "6px 10px" per UI-SPEC §158 ContextMenu spec.
                     padding: "6px 10px",
                     fontSize: 12,
-                    background: "transparent",
+                    // M-T4 — active row (keyboard cursor / hover) is highlighted
+                    // so arrow-key selection is visible.
+                    background:
+                      idx === activeIdx ? "var(--surface-2)" : "transparent",
                     border: "none",
                     color: "var(--fg)",
                     cursor: "pointer",
