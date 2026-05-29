@@ -14,8 +14,8 @@ Both would silently break pre-Phase-12 data. Keep this test green forever.
 import pytest
 from app.application.dtos.workflow_dtos import WorkflowEdge, WorkflowConfig
 
-# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
-pytestmark = pytest.mark.requires_db
+# No requires_db marker: these parse/round-trip workflow DTOs (pure Pydantic) with
+# no DB fixture — the marker only wrongly skipped them in no-DB CI.
 
 
 def test_legacy_edge_reads_with_default_bidirectional_false():

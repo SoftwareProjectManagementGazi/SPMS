@@ -213,11 +213,10 @@ async def test_update_task_no_audit_row_for_unchanged_fields():
     assert len(audit_entries) == 0
 
 
-@pytest.mark.asyncio
-@pytest.mark.xfail(reason="Admin-only hard delete enforcement not yet designed")
-async def test_hard_delete_blocked_for_non_admin():
-    """Placeholder: hard delete is only allowed for admin users."""
-    raise NotImplementedError("Admin-only hard delete not yet implemented")
+# Removed test_hard_delete_blocked_for_non_admin: it was an xfail placeholder for a
+# feature ("admin-only hard delete") that was never designed or implemented — a stub
+# that verified nothing and only inflated the suite. Add a real test if the feature
+# is ever built.
 
 
 # ---------------------------------------------------------------------------

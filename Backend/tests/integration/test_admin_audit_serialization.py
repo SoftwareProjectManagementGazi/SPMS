@@ -34,8 +34,9 @@ from app.infrastructure.database.repositories.audit_repo import (
     _resolve_entity_label,
 )
 
-# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
-pytestmark = pytest.mark.requires_db
+# No requires_db marker: every test here exercises the pure _resolve_entity_label
+# helper with no DB fixture, so the marker only wrongly skipped them in no-DB CI
+# (disabled-but-counted). They run everywhere now.
 
 
 # ---------------------------------------------------------------------------

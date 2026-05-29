@@ -27,8 +27,8 @@ from app.infrastructure.database.repositories.project_repo import (
     DONE_COLUMN_NAMES,
 )
 
-# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
-pytestmark = pytest.mark.requires_db
+# No requires_db marker: these assert the pure DONE_COLUMN_NAMES constant/whitelist
+# with no DB fixture — the marker only wrongly skipped them in no-DB CI.
 
 
 # ---------------------------------------------------------------------------

@@ -22,8 +22,8 @@ from app.domain.exceptions import (
     ProjectNotFoundError,
 )
 
-# Plan 15-02 TIDY-05 (CONTEXT D-4.4): auto-skip when DB unreachable.
-pytestmark = pytest.mark.requires_db
+# No requires_db marker: these drive the pure phase-transition gate logic with no
+# DB fixture — the marker only wrongly skipped them in no-DB CI (disabled-but-counted).
 
 
 # ---------------------------------------------------------------------------

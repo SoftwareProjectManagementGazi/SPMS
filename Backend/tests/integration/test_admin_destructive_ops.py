@@ -192,35 +192,35 @@ async def test_admin_can_delete_own_project_use_case():
     assert audit.calls == []
 
 
-@pytest.mark.skip(
-    reason=(
-        "Plan 14-14 Task 1 audit pass found NO sibling use cases with a "
-        "PM-scoped ownership guard that admin needs to bypass: "
-        "(a) UpdateProjectUseCase already accepts is_admin: bool and the "
-        "router passes is_admin=_is_admin(current_user) — admin can already "
-        "PATCH any project (UAT Test 22 / D-D2 already green); "
-        "(b) Archive/un-archive route through UpdateProjectUseCase via "
-        "status=ARCHIVED so they ride on the same bypass; "
-        "(c) AddProjectMemberUseCase / RemoveProjectMemberUseCase / "
-        "AddTeamToProjectUseCase have no internal manager guard — the guard "
-        "lives at the API layer (_is_manager_or_admin) which is already "
-        "admin-aware; "
-        "(d) Bulk-deactivate / bulk-role-change / reset-password are admin-"
-        "scoped via Depends(require_admin). "
-        "Skip preserved as a documented regression sentinel per Plan 14-14 "
-        "must-haves M-1 — if a future change re-introduces a PM-only guard "
-        "on a sibling write-path use case, re-enable this test by replacing "
-        "the skip with the real assertion."
-    )
-)
-def test_admin_can_archive_unowned_project_skip_sentinel():
-    """Test 4 (M-1 mandatory regression sentinel) — sibling-flow test.
+@pytest.mark.asyncio
+async def test_admin_can_archive_unowned_project(authenticated_client, db_session):
+    """Test 4 (Plan 14-14 M-1 sibling-flow sentinel) — now a REAL test instead of a
+    permanently-skipped pass.
 
-    Per Plan 14-14 must-haves truth #5: this test MUST exist in the suite
-    even when no sibling use case currently has the bug. The skip reason
-    above documents the audit findings; re-enable if a regression occurs.
-    """
-    pass  # pragma: no cover
+    The archive path routes through UpdateProjectUseCase, which takes is_admin and is
+    fed _is_admin(current_user) by the router — so an admin must be able to archive a
+    project owned by a *different* PM. Seed a PM-owned project, PATCH status=ARCHIVED
+    as admin, and assert 200 + the row actually flips to ARCHIVED. If a future change
+    re-introduces a PM-only ownership guard on this sibling write-path, this fails
+    loudly (the old skip+pass could never catch that)."""
+    if not await _db_has_roles(db_session):
+        pytest.skip("Roles not seeded — admin tests need role table populated")
+
+    pm_id = await _seed_pm_user(db_session, "archive_target_pm@testexample.com")
+    project_id = await _seed_project_owned_by(db_session, "ARCHOK", pm_id)
+
+    async with authenticated_client(role="admin") as ac:
+        r = await ac.patch(f"/api/v1/projects/{project_id}", json={"status": "ARCHIVED"})
+        assert r.status_code == 200, r.text
+        assert r.json()["status"] == "ARCHIVED"
+
+    # DB side-effect: the unowned project is actually archived (admin bypass worked).
+    status_val = (
+        await db_session.execute(
+            text("SELECT status FROM projects WHERE id=:i"), {"i": project_id}
+        )
+    ).scalar()
+    assert status_val == "ARCHIVED"
 
 
 # ---------------------------------------------------------------------------
