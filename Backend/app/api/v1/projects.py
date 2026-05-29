@@ -160,6 +160,33 @@ def _sanitize_process_config(dto: ProjectResponseDTO) -> ProjectResponseDTO:
     return dto
 
 
+async def _enrich_with_task_counts(
+    project_repo: IProjectRepository, results: list
+) -> list:
+    """Populate task_count + task_done_count on each project via a single batch
+    aggregate query, then strip secrets. Shared by EVERY GET /projects return
+    path so all callers (dashboard PortfolioTable, ProjectCard, /admin/projects)
+    can derive a real progress fraction (task_done_count / task_count) instead of
+    the 0/0 default that previously left every non-admin dashboard row at 0% (Y1).
+    One aggregate query regardless of result count; empty input short-circuits in
+    the repo (task_counts_by_project_ids returns {} for [])."""
+    if not results:
+        return []
+    agg = await project_repo.task_counts_by_project_ids([r.id for r in results])
+    enriched = []
+    for r in results:
+        sanitized = _sanitize_process_config(r)
+        counts = agg.get(r.id, {"total": 0, "done": 0})
+        try:
+            setattr(sanitized, "task_count", int(counts["total"]))
+            setattr(sanitized, "task_done_count", int(counts["done"]))
+        except Exception:
+            # Defensive: never block the list call on aggregation failure.
+            pass
+        enriched.append(sanitized)
+    return enriched
+
+
 async def _fire_integration_event(process_config, event_type: str, payload: dict) -> None:
     """Non-blocking: check admin master switch + project webhook config.
     Fire-and-forget — never raises into caller (EXT-01, D-15, D-16).
@@ -256,33 +283,19 @@ async def list_projects(
     if _is_admin(current_user):
         statuses = status_filter or ["ACTIVE", "COMPLETED", "ON_HOLD", "ARCHIVED"]
         results = await project_repo.list_by_status(statuses)
-        # Plan 14-05 follow-up — populate task_count + task_done_count for the
-        # /admin/projects table progress bar. Single aggregate query against
-        # tasks LEFT JOIN board_columns; admin-only path so non-admin consumers
-        # keep their existing 0/0 defaults on ProjectResponseDTO.
-        agg = await project_repo.task_counts_by_project_ids([r.id for r in results])
-        enriched = []
-        for r in results:
-            sanitized = _sanitize_process_config(r)
-            counts = agg.get(r.id, {"total": 0, "done": 0})
-            try:
-                setattr(sanitized, "task_count", int(counts["total"]))
-                setattr(sanitized, "task_done_count", int(counts["done"]))
-            except Exception:
-                # Defensive: never block the list call on aggregation failure.
-                pass
-            enriched.append(sanitized)
-        return enriched
+        return await _enrich_with_task_counts(project_repo, results)
 
     # API-04: if status param provided, delegate to list_by_status.
     # Reuses the comma-aware parser so non-admin callers also support
     # multi-status filters (Reports v2 ProjectPicker etc.).
+    # Y1 — every path now enriches with task counts so member-facing lists
+    # (dashboard PortfolioTable) can render a real progress bar, not a flat 0%.
     if status_filter is not None:
         results = await project_repo.list_by_status(status_filter)
-        return [_sanitize_process_config(r) for r in results]
+        return await _enrich_with_task_counts(project_repo, results)
     use_case = ListProjectsUseCase(project_repo)
     results = await use_case.execute(current_user.id)  # type: ignore
-    return [_sanitize_process_config(r) for r in results]
+    return await _enrich_with_task_counts(project_repo, results)
 
 
 @router.get("/{project_id}", response_model=ProjectResponseDTO)

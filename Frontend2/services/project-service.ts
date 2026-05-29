@@ -120,7 +120,16 @@ function mapProject(data: ProjectResponseDTO): Project {
     managerId: data.manager_id,
     managerName: data.manager_name,
     managerAvatar: data.manager_avatar,
-    progress: data.progress ?? 0,
+    // Y1 fix — backend GET /projects carries no `progress` field, but it now
+    // populates task_count/task_done_count for ALL callers (admin + member),
+    // so derive the 0–1 fraction here. PortfolioTable / ProjectCard / teams all
+    // multiply this by 100. Falls back to a server-sent `progress` if one ever
+    // appears, then to 0 for projects with no tasks.
+    progress:
+      data.progress ??
+      (data.task_count && data.task_count > 0
+        ? (data.task_done_count ?? 0) / data.task_count
+        : 0),
     columns: (data.columns ?? []).map((c) =>
       typeof c === 'string' ? c : c.name
     ),
