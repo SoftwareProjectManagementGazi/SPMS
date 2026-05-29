@@ -1,8 +1,10 @@
 """Phase 14 Plan 14-01 — InviteUserUseCase (D-B2 / D-A6 / D-D2).
 
 Email-invite flow:
-1) Create User(is_active=False) with random bcrypt-hashed password (placeholder
-   until invitee sets their own via the email link)
+1) Create User(is_active=True) with a random bcrypt-hashed placeholder password.
+   Login stays blocked until the invitee sets their own via the email link, so
+   activating at creation is safe — and avoids self-reactivation through the
+   shared forgot-password→confirm path (see is_active note in execute()).
 2) Create PasswordResetToken with INVITE_TOKEN_TTL_DAYS expiry (7d default)
 3) Log the invite link (Phase 5 / dev SMTP-less path) — production would send
    the email here via the configured SMTP infrastructure
@@ -79,7 +81,18 @@ class InviteUserUseCase:
             email=dto.email,
             full_name=dto.name or dto.email.split("@")[0],
             password_hash=password_hash,
-            is_active=False,  # Activated when invitee sets password
+            # K1 follow-up — create ACTIVE. Login is already blocked because
+            # password_hash is a random, unknown value until the invitee sets a
+            # real one via the token below, so activating now is safe. We do NOT
+            # defer activation to ConfirmPasswordResetUseCase: that use case is
+            # shared with the forgot-password flow, and request_password_reset
+            # issues tokens to already-deactivated users (no is_active gate), so
+            # flipping is_active there would let a deactivated account
+            # self-reactivate via "forgot password". is_active therefore means
+            # strictly "not admin-deactivated"; the invitee shows correctly in the
+            # admin list both before and after accepting, fixing the prior bug
+            # where accepted invitees stayed "Pasif" forever.
+            is_active=True,
             role_id=role_id,
         )
         created = await self.user_repo.create(new_user)
