@@ -48,6 +48,7 @@ import { useMoveTask, useTasks } from "@/hooks/use-tasks"
 import { useMilestones } from "@/hooks/use-milestones"
 import { useSprints } from "@/hooks/use-sprints"
 import type { Project } from "@/services/project-service"
+import { normalizeStatus } from "@/services/task-service"
 
 import { ActivityStubTab } from "./activity-stub-tab"
 import { BoardTab } from "./board-tab"
@@ -181,8 +182,14 @@ export function ProjectDetailShell({
         return { id: bc.id, name: bc.name, order_index: 0, wip_limit: 0, task_count: 0 }
       })()
 
+      // Y3/Y4 — count via the SAME normalized token the board groups by, so the
+      // pre-drop WIP precount matches the column the card actually lands in. A
+      // column named "In-Progress" (or a legacy hyphenated slug) would otherwise
+      // be compared raw and undercount, silently suppressing the WIP warning.
+      // Mirrors board-tab grouping (normalizeStatus applied to both sides).
+      const targetNorm = normalizeStatus(targetColumnId)
       const currentCount = currentTasks.filter(
-        (t) => (t.status ?? "").toLowerCase() === targetColumnId.toLowerCase()
+        (t) => normalizeStatus(t.status ?? "") === targetNorm
       ).length
       const targetInfo: BoardColumnInfo = {
         id: targetColumnId,

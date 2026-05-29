@@ -102,6 +102,15 @@ export function BoardTab({ project }: { project: Project }) {
   // "In-Progress" or a legacy slug still matches its tasks instead of dumping
   // them all into the leftmost column. Unmatched tasks still fall into the first
   // column so they stay visible.
+  //
+  // Known limitation: normalizeStatus collapses hyphens→spaces, so two columns
+  // whose names differ ONLY by a hyphen/space ("To-Do" vs "To Do") normalize to
+  // the same token and the first one wins (the second renders empty). This is
+  // unreachable on the live backend (it sets task.status = column.name.lower()
+  // one-to-one) and can't be disambiguated here regardless — mapTask already
+  // normalized the hyphen away before tasks reach this layer. A true fix needs
+  // column_id on the Task entity to group by id; deferred so the just-hardened
+  // K3/K4 name-based drag-drop path isn't disturbed.
   const grouped = React.useMemo<Record<string, Task[]>>(() => {
     const g: Record<string, Task[]> = {}
     columnNames.forEach((cn) => {
