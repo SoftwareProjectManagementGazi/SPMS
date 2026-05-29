@@ -85,6 +85,17 @@ async def test_post_milestone_admin_allowed(authenticated_client, db_session):
             "project_id": pid, "name": "M1", "linked_phase_ids": ["nd_a1b2c3d4e5"],
         })
         assert r.status_code == 201, r.text
+        body = r.json()
+        # kills mutation: a 201 that drops linked_phase_ids (audit concern) or name
+        # would pass a status-only check.
+        assert body["name"] == "M1"
+        assert body["project_id"] == pid
+        assert body["linked_phase_ids"] == ["nd_a1b2c3d4e5"]
+        mid = body["id"]
+        # Persisted + listable on the project's milestones endpoint.
+        listed = await client.get(f"/api/v1/projects/{pid}/milestones")
+        assert listed.status_code == 200, listed.text
+        assert any(m["id"] == mid for m in listed.json())
 
 
 @pytest.mark.asyncio
@@ -94,7 +105,10 @@ async def test_post_milestone_member_forbidden(authenticated_client, db_session)
     pid = await _seed(db_session, key="MSAPIF1")
     async with authenticated_client(role="member") as client:
         r = await client.post("/api/v1/milestones", json={"project_id": pid, "name": "M1"})
-        assert r.status_code == 403
+        assert r.status_code == 403, r.text
+        # Pin WHICH gate fired (D-09 envelope): the milestone.create permission gate
+        # (perm-first per Pitfall 13), not an incidental 403 from elsewhere.
+        assert r.json()["detail"]["missing_permission"] == "milestone.create"
 
 
 @pytest.mark.asyncio

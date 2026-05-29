@@ -63,6 +63,19 @@ async def test_create_artifact_admin_201(authenticated_client, db_session):
             "project_id": pid, "name": "A1", "assignee_id": uid,
         })
         assert r.status_code == 201, r.text
+        body = r.json()
+        # kills mutation: a 201 with a blank/garbled DTO would pass a status-only check.
+        assert body["name"] == "A1"
+        assert body["project_id"] == pid
+        assert body["assignee_id"] == uid
+        assert body["id"] is not None
+    # DB side-effect: the artifact row was persisted.
+    persisted = (
+        await db_session.execute(
+            text("SELECT name FROM artifacts WHERE id = :i"), {"i": body["id"]}
+        )
+    ).scalar()
+    assert persisted == "A1"
 
 
 @pytest.mark.asyncio

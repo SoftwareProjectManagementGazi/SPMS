@@ -126,6 +126,11 @@ async def test_patch_with_compliant_nd_ids_returns_200(authenticated_client, db_
             json={"process_config": {"phase_workflow": good_workflow}},
         )
         assert r.status_code == 200, f"expected 200, got {r.status_code}: {r.text}"
+        # kills mutation: a 200 that silently drops the workflow would pass status-only.
+        # PATCH returns ProjectResponseDTO; the workflow must round-trip in process_config.
+        persisted = (r.json().get("process_config") or {}).get("phase_workflow", {})
+        persisted_ids = {n["id"] for n in persisted.get("nodes", [])}
+        assert persisted_ids == {_VALID_NODE["id"], _VALID_FINAL_NODE["id"]}
 
 
 @pytest.mark.asyncio

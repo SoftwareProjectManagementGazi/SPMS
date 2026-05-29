@@ -41,5 +41,14 @@ async def test_user_summary_include_archived_param(authenticated_client, db_sess
         pytest.skip("Roles not seeded — skipping user summary API integration tests")
     uid = (await db_session.execute(text("SELECT id FROM users LIMIT 1"))).scalar()
     async with authenticated_client(role="admin") as client:
-        r = await client.get(f"/api/v1/users/{uid}/summary?include_archived=true")
-        assert r.status_code == 200
+        r_with = await client.get(f"/api/v1/users/{uid}/summary?include_archived=true")
+        r_without = await client.get(f"/api/v1/users/{uid}/summary")
+        assert r_with.status_code == 200, r_with.text
+        assert r_without.status_code == 200, r_without.text
+        body_with = r_with.json()
+        body_without = r_without.json()
+    # Not just a bare 200 — assert the contract shape...
+    assert {"stats", "projects", "recent_activity"} <= body_with.keys()
+    # ...and the param's observable effect: include_archived can only ADD archived
+    # projects, never drop any, so the archived view is a superset of the default.
+    assert len(body_with["projects"]) >= len(body_without["projects"])

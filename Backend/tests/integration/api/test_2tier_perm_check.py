@@ -197,7 +197,7 @@ async def test_2tier_task_create_403_when_membership_missing(
 
 @pytest.mark.asyncio
 async def test_2tier_task_create_201_when_both_present(permitted_client, db_session):
-    """task.create + project membership → 201 created."""
+    """task.create + project membership → 201, with the created task echoed AND persisted."""
     async with permitted_client(perms=["task.create"]) as client:
         # Resolve the freshly-minted user id INSIDE the fixture context.
         user_id = await _resolve_permitted_user_id(db_session, ["task.create"])
@@ -206,7 +206,20 @@ async def test_2tier_task_create_201_when_both_present(permitted_client, db_sess
             "/api/v1/tasks/",
             json={"title": "T1", "project_id": pid},
         )
-    assert resp.status_code == 201, resp.text
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        # kills mutation: a 201 with an empty/garbled body would pass a status-only check.
+        assert body["title"] == "T1"
+        assert body["project_id"] == pid
+        assert body["id"] is not None
+    # DB side-effect: the task row really exists with that title under that project.
+    persisted = (
+        await db_session.execute(
+            text("SELECT title FROM tasks WHERE id = :i AND project_id = :p"),
+            {"i": body["id"], "p": pid},
+        )
+    ).scalar()
+    assert persisted == "T1"
 
 
 @pytest.mark.asyncio
@@ -243,8 +256,8 @@ async def test_2tier_project_create_403_when_perm_missing(permitted_client):
 
 
 @pytest.mark.asyncio
-async def test_2tier_project_create_201_when_perm_present(permitted_client):
-    """project.create alone is sufficient (creator becomes manager)."""
+async def test_2tier_project_create_201_when_perm_present(permitted_client, db_session):
+    """project.create alone is sufficient → 201 with the project echoed AND persisted."""
     async with permitted_client(perms=["project.create"]) as client:
         resp = await client.post(
             "/api/v1/projects/",
@@ -255,7 +268,19 @@ async def test_2tier_project_create_201_when_perm_present(permitted_client):
                 "methodology": "SCRUM",
             },
         )
-    assert resp.status_code in (200, 201), resp.text
+        # Exact contract: projects POST is 201 CREATED (was a lax 200-or-201 check).
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["key"] == "P2T02"
+        assert body["name"] == "2tier-create-ok"
+        assert body["id"] is not None
+    # DB side-effect: the project row was persisted under that key.
+    persisted = (
+        await db_session.execute(
+            text("SELECT name FROM projects WHERE key = 'P2T02'")
+        )
+    ).scalar()
+    assert persisted == "2tier-create-ok"
 
 
 @pytest.mark.asyncio

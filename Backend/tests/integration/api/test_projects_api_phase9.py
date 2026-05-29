@@ -118,7 +118,18 @@ async def test_phase_criteria_crud(authenticated_client, db_session):
         assert r.json()["criteria"]["auto"]["all_tasks_done"] is True
 
         r_del = await client.delete(f"/api/v1/projects/{pid}/phase-criteria?phase_id=nd_a1b2c3d4e5")
-        assert r_del.status_code == 200
+        assert r_del.status_code == 200, r_del.text
+        assert r_del.json()["deleted"] is True
+        assert r_del.json()["phase_id"] == "nd_a1b2c3d4e5"
+    # DB side-effect: the criteria entry is actually gone from process_config
+    # (kills mutation: a delete that returns 200 but doesn't pop the key).
+    pc_raw = (
+        await db_session.execute(
+            text("SELECT process_config FROM projects WHERE id = :i"), {"i": pid}
+        )
+    ).scalar()
+    pc = pc_raw if isinstance(pc_raw, dict) else json.loads(pc_raw or "{}")
+    assert "nd_a1b2c3d4e5" not in pc.get("phase_completion_criteria", {})
 
 
 @pytest.mark.asyncio
