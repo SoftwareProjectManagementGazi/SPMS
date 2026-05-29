@@ -1,50 +1,42 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, MEMBER_ME, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 13 Plan 13-10 — User Profile page smoke (PROF-02 / PROF-04).
+ * User Profile page /users/[id] (Plans 13-05 / 13-06) — rebuilt to actually run.
  *
- * Verifies the /users/[id] route shipped in Plans 13-05 + 13-06 mounts
- * cleanly and that the ?tab=… query-param routing activates the right tab:
- *   - /users/1 loads header (h1) + 3 StatCards + Tasks/Projects/Activity tabs
- *   - /users/1?tab=projects activates the Projects tab (grid OR empty state)
- *   - /users/1?tab=activity activates the Activity tab (timeline OR empty)
- *
- * Skip-guard pattern: Phase 11 D-50 — no test-DB seeder, so the spec gates
- * on /api/v1/health and skips when the backend is unreachable. With a
- * future seeder these specs validate the real behavior end-to-end.
+ * getUser() reads /auth/users (username = full_name) and 404s the page if the id
+ * isn't found, so that's mocked. useUserSummary feeds the 3 StatCards. Tab
+ * deep-links activate the Projects / Activity tabs (grid/empty/timeline).
  */
 
-test.describe("Profile page @phase-13", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 13",
-  )
+const USERS = [
+  { id: 1, email: "user1@e2e.local", username: "E2E User One", avatar_url: null },
+]
 
+const SUMMARY = {
+  stats: { active_tasks: 3, completed_last_30d: 2, project_count: 1 },
+  projects: [{ id: 1, key: "PRJ", name: "E2E Project", status: "ACTIVE" }],
+  recent_activity: [],
+}
+
+test.describe("Profile page @phase-13", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/users/1").catch(() => {})
-    const apiOk = await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch("/api/v1/health")
-          return r.ok
-        } catch {
-          return false
-        }
-      })
-      .catch(() => false)
-    test.skip(!apiOk, "no seeded test backend (Phase 11 D-50 skip-guard)")
+    await setupMockBackend(page, {
+      me: MEMBER_ME,
+      routes: {
+        "/auth/users": (r) => jsonResponse(r, USERS),
+        "/users/1/summary": (r) => jsonResponse(r, SUMMARY),
+      },
+    })
+    await page.goto("/users/1")
   })
 
-  test("/users/[id] renders header, StatCards, and 3 tabs", async ({
-    page,
-  }) => {
-    // ProfileHeader renders an <h1> with the user name (Plan 13-05).
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 })
+  test("/users/[id] renders header, StatCards, and 3 tabs", async ({ page }) => {
+    // ProfileHeader <h1> = the user's name.
+    await expect(
+      page.getByRole("heading", { level: 1, name: /E2E User One/ }),
+    ).toBeVisible({ timeout: 15_000 })
 
-    // 3 StatCards row — labels rendered as text inside StatCard primitive
-    // (app/(shell)/users/[id]/page.tsx lines 173/183/192). aria-label
-    // wrappers ALSO surface the same strings; getByText with .first() is
-    // robust against the dual rendering.
     await expect(
       page.getByText(/Atanan Görevler|Assigned Tasks/).first(),
     ).toBeVisible()
@@ -55,39 +47,28 @@ test.describe("Profile page @phase-13", () => {
       page.getByText(/^Projeler$|^Projects$/).first(),
     ).toBeVisible()
 
-    // Tabs primitive — Görevler default + Projeler + Aktivite. getByRole
-    // tab matches the Tabs primitive's accessible role.
+    await expect(page.getByRole("button", { name: /Görevler|Tasks/ })).toBeVisible()
     await expect(
-      page.getByRole("tab", { name: /Görevler|Tasks/ }),
+      page.getByRole("button", { name: /Projeler|Projects/ }),
     ).toBeVisible()
     await expect(
-      page.getByRole("tab", { name: /Projeler|Projects/ }),
-    ).toBeVisible()
-    await expect(
-      page.getByRole("tab", { name: /Aktivite|Activity/ }),
+      page.getByRole("button", { name: /Aktivite|Activity/ }),
     ).toBeVisible()
   })
 
-  test("?tab=projects deep-link activates Projects tab", async ({ page }) => {
+  test("?tab=projects deep-link activates the Projects tab", async ({ page }) => {
     await page.goto("/users/1?tab=projects")
-
-    // ProfileProjectsTab renders either the .profile-projects-grid or the
-    // empty fallback "Henüz proje yok." (profile-projects-tab.tsx line 90).
     const empty = page.getByText(/Henüz proje yok|No projects yet/)
     const grid = page.locator(".profile-projects-grid")
-    await expect(empty.or(grid)).toBeVisible({ timeout: 10_000 })
+    await expect(empty.or(grid)).toBeVisible({ timeout: 15_000 })
   })
 
-  test("?tab=activity deep-link activates Activity tab", async ({ page }) => {
+  test("?tab=activity deep-link activates the Activity tab", async ({ page }) => {
     await page.goto("/users/1?tab=activity")
-
-    // ActivityTab renders .activity-timeline (activity-tab.tsx line 134) or
-    // ActivityEmpty's "Henüz aktivite yok." / "Bu filtreyle eşleşen olay yok."
-    // (activity-empty.tsx lines 52 + 67).
-    const timeline = page.locator(".activity-timeline").first()
-    const empty = page.getByText(
-      /Bu filtreyle eşleşen olay yok|No events match this filter|Henüz aktivite yok|No activity yet/,
-    )
-    await expect(timeline.or(empty)).toBeVisible({ timeout: 10_000 })
+    // The timeline container always mounts (it wraps the empty/loaded state);
+    // a timeline.or(empty) check would match both and trip strict mode.
+    await expect(page.locator(".activity-timeline").first()).toBeVisible({
+      timeout: 15_000,
+    })
   })
 })

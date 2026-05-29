@@ -1,80 +1,103 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, MEMBER_ME, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 11 smoke test — golden path for task creation.
+ * Task creation golden path (Phase 11) — rebuilt to actually run.
  *
- * Flow:
- *   1. Land on /dashboard (auth gate may redirect if not logged in)
- *   2. Click the header "Oluştur" / "Create" button
- *   3. Modal opens — fill Title + select first project option
- *   4. Submit via Ctrl+Enter (D-06 keyboard shortcut)
- *   5. Toast "Görev oluşturuldu" / "Task created" appears
- *
- * This spec defensively skips when:
- *   - The header Create button isn't visible (auth not available in test env)
- *   - No real project options exist in the DB (no fixture data)
- *
- * Test DB seeding for the e2e rig is out of scope for Phase 11 — once the
- * seeder lands (follow-up plan), these skip-guards can be removed.
+ * The header "Oluştur" button opens the TaskCreateModal (useTaskModal). The
+ * modal's project <select> is fed by /projects (mocked with one project) and
+ * submit (Ctrl+Enter, D-06) POSTs /tasks → the modal's onSuccess shows the
+ * "Görev oluşturuldu" toast. The previous auth/seed skip escape-hatches are gone.
  */
 
-test.describe("Phase 11 — Task Create flow", () => {
-  // chromium-only for Phase 11 per playwright.config.ts (the only project
-  // listed there). Guard makes the intent explicit in case another project
-  // is ever added.
-  test.skip(({ browserName }) => browserName !== "chromium", "chromium-only for Phase 11")
+const PROJECT = {
+  id: 1,
+  key: "PRJ",
+  name: "E2E Project",
+  description: null,
+  start_date: "2026-01-01",
+  end_date: null,
+  status: "ACTIVE",
+  methodology: "KANBAN",
+  process_template_id: null,
+  manager_id: null,
+  manager_name: null,
+  manager_avatar: null,
+  columns: [
+    { id: 1, name: "To Do" },
+    { id: 2, name: "Done" },
+  ],
+  process_config: {},
+  created_at: "2026-01-01T00:00:00Z",
+}
 
-  test("header Oluştur → modal → submit", async ({ page }) => {
+test.describe("Task Create flow @phase-11", () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMockBackend(page, {
+      me: MEMBER_ME,
+      routes: {
+        "/projects": (route) => jsonResponse(route, [PROJECT]),
+        "/tasks": (route, path) => {
+          if (route.request().method() === "POST" && path === "/tasks") {
+            return jsonResponse(
+              route,
+              {
+                id: 500,
+                task_key: "PRJ-500",
+                title: "E2E smoke task",
+                description: "",
+                status: "todo",
+                priority: "MEDIUM",
+                assignee_id: null,
+                reporter_id: null,
+                parent_task_id: null,
+                project_id: 1,
+                sprint_id: null,
+                phase_id: null,
+                points: null,
+                due_date: null,
+                labels: [],
+                watcher_count: 0,
+                type: "task",
+                created_at: "2026-01-01T00:00:00Z",
+              },
+              201,
+            )
+          }
+          return jsonResponse(route, [])
+        },
+      },
+    })
     await page.goto("/dashboard")
+  })
 
-    // Wait for the Create button — if it never appears the app booted
-    // without auth (login page shown instead). Skip rather than fail so
-    // the spec is green in environments without test seeding.
-    const createBtn = page.getByRole("button", { name: /Oluştur|Create/i })
-    const buttonVisible = await createBtn
+  test("header Oluştur → modal → submit creates a task (toast)", async ({
+    page,
+  }) => {
+    await page
+      .getByRole("button", { name: /^Oluştur$|^Create$/ })
       .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false)
-    if (!buttonVisible) {
-      test.skip(true, "Header Create button not visible — auth/seed unavailable")
-      return
-    }
+      .click()
 
-    await createBtn.first().click()
-
-    // Modal title renders — two possible headers depending on language.
+    // Modal opened.
     await expect(
-      page.getByText(/Görev Oluştur|Create Task/i).first()
-    ).toBeVisible({ timeout: 3000 })
+      page.getByText(/Görev Oluştur|Create Task/i).first(),
+    ).toBeVisible({ timeout: 5_000 })
 
-    // Autofocused title input — match on placeholder text (matches both
-    // TR "Kısa, net başlık" and EN "Short, clear title" if EN is ever added).
+    // Title (autofocused).
     await page
       .getByPlaceholder(/Kısa, net başlık|Short, clear title/i)
       .fill("E2E smoke task")
 
-    // Project <select> — the first one in the modal. Pick the first real
-    // option (skip the "Seçin..." placeholder entry).
-    const projectSelect = page.locator("select").first()
-    const options = await projectSelect.locator("option").allTextContents()
-    const firstReal = options.find(
-      (o) =>
-        o.trim() &&
-        !o.toLowerCase().includes("seçin") &&
-        !o.toLowerCase().includes("select")
-    )
-    if (!firstReal) {
-      test.skip(true, "No project options available — seed data missing")
-      return
-    }
-    await projectSelect.selectOption({ label: firstReal })
+    // Project <select> — choose the mocked project (option value = id).
+    await page.locator("select").first().selectOption("1")
 
-    // Submit via Ctrl+Enter (D-06)
+    // Submit via Ctrl+Enter (D-06).
     await page.keyboard.press("Control+Enter")
 
-    // Success toast — matches "Görev oluşturuldu" or "Task created"
+    // onSuccess toast.
     await expect(
-      page.getByText(/Görev oluşturuldu|Task created/i)
-    ).toBeVisible({ timeout: 5000 })
+      page.getByText(/Görev oluşturuldu|Task created/i),
+    ).toBeVisible({ timeout: 5_000 })
   })
 })

@@ -1,88 +1,101 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 13 Plan 13-10 — Project Activity tab smoke (PROF-01).
+ * Project Activity tab (Plan 13-04) — rebuilt to actually run.
  *
- * Verifies the project Activity tab shipped in Plan 13-04 mounts and that
- * the filter SegmentedControl persists to localStorage per project key
- * (CONTEXT D-B7 — `spms.activity.filter.{projectId}`).
- *
- *   - /projects/1?tab=activity renders .activity-timeline OR an empty state
- *   - Clicking the Yaşam Döngüsü filter chip writes filter state to
- *     localStorage and survives a page reload
- *
- * Skip-guard pattern: Phase 11 D-50. No test-DB seeder yet — guard fires
- * when /api/v1/health is unreachable.
+ * The project shell defaults to the Board tab and ignores ?tab (it's
+ * useState("board"), not URL-driven), so the test clicks the "Aktivite" tab to
+ * reach the ActivityTab. The board still mounts first, so /projects/1/columns
+ * is mocked as an array (BoardTab does columnsMeta.forEach — a non-array there
+ * crashes the page). The Lifecycle filter chip is always rendered by the
+ * ActivityFilter SegmentedControl, so the previous skip escape-hatch is gone.
  */
 
+const PROJECT = {
+  id: 1,
+  key: "PRJ",
+  name: "E2E Project",
+  description: null,
+  start_date: "2026-01-01",
+  end_date: null,
+  status: "ACTIVE",
+  methodology: "KANBAN",
+  process_template_id: null,
+  manager_id: null,
+  manager_name: null,
+  manager_avatar: null,
+  columns: [
+    { id: 1, name: "To Do" },
+    { id: 2, name: "In Progress" },
+    { id: 3, name: "Done" },
+  ],
+  process_config: {},
+  created_at: "2026-01-01T00:00:00Z",
+}
+
+const COLUMNS = [
+  { id: 1, name: "To Do", wip_limit: 0, order_index: 0 },
+  { id: 2, name: "In Progress", wip_limit: 0, order_index: 1 },
+  { id: 3, name: "Done", wip_limit: 0, order_index: 2 },
+]
+
 test.describe("Activity tab @phase-13", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 13",
-  )
-
   test.beforeEach(async ({ page }) => {
-    await page.goto("/projects/1?tab=activity").catch(() => {})
-    const apiOk = await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch("/api/v1/health")
-          return r.ok
-        } catch {
-          return false
-        }
-      })
-      .catch(() => false)
-    test.skip(!apiOk, "no seeded test backend (Phase 11 D-50 skip-guard)")
+    await setupMockBackend(page, {
+      routes: {
+        // One handler for /projects/1 and all its sub-resources so a sub-path
+        // never falls through to the project object (which broke columnsMeta).
+        "/projects/1": (route, path) => {
+          if (path === "/projects/1") return jsonResponse(route, PROJECT)
+          if (path === "/projects/1/columns") return jsonResponse(route, COLUMNS)
+          if (path.startsWith("/projects/1/activity")) {
+            return jsonResponse(route, { items: [], total: 0 })
+          }
+          return jsonResponse(route, []) // labels / members / sprints / etc.
+        },
+      },
+    })
+    await page.goto("/projects/1")
+    // The shell starts on Board; switch to the Activity tab.
+    await page.getByRole("button", { name: /Aktivite|Activity/ }).click()
   })
 
-  test("project Activity tab loads timeline OR empty state", async ({
+  test("project Activity tab mounts the timeline (or empty state)", async ({
     page,
   }) => {
-    // ActivityTab renders .activity-timeline (activity-tab.tsx line 134) or
-    // ActivityEmpty's filtered/non-filtered empty messages.
-    const timeline = page.locator(".activity-timeline").first()
-    const empty = page.getByText(
-      /Bu filtreyle eşleşen olay yok|No events match this filter|Henüz aktivite yok|No activity yet/,
-    )
-    await expect(timeline.or(empty)).toBeVisible({ timeout: 10_000 })
+    // The timeline container always mounts when the Activity tab is active (it
+    // wraps the empty/loaded DataState), so it's the deterministic signal.
+    await expect(page.locator(".activity-timeline").first()).toBeVisible({
+      timeout: 15_000,
+    })
   })
 
-  test("filter persists across reload via spms.activity.filter.1", async ({
+  test("Lifecycle filter chip persists to localStorage across reload", async ({
     page,
   }) => {
-    // Lifecycle filter chip — ActivityFilter renders it as a button-like
-    // SegmentedControl option (activity-filter.tsx — see "Yaşam Döngüsü"
-    // option label). Use a soft click + soft assertion so the test stays
-    // green when the filter row isn't visible (no events to filter).
+    // "Yaşam Döngüsü" is BOTH a project tab (in the tab bar, above) and the
+    // activity filter chip (in the content, below). Both carry aria-pressed, so
+    // disambiguate by DOM order: the chip is the last one.
     const chip = page
       .getByRole("button", { name: /Yaşam Döngüsü|Lifecycle/ })
-      .first()
-
-    const chipVisible = await chip.isVisible().catch(() => false)
-    if (!chipVisible) {
-      test.skip(true, "filter chip not visible — no events to filter")
-      return
-    }
-
+      .last()
+    await expect(chip).toBeVisible({ timeout: 15_000 })
     await chip.click()
 
-    // localStorage write happens immediately via useLocalStoragePref
-    // (auto-prefixes "spms." per Plan 13-04 docs).
     const stored = await page.evaluate(() =>
       window.localStorage.getItem("spms.activity.filter.1"),
     )
     expect(stored).toBeTruthy()
-    expect(stored).toContain("\"type\":\"lifecycle\"")
+    expect(stored).toContain('"type":"lifecycle"')
 
-    // Reload — filter survives because useLocalStoragePref rehydrates from
-    // localStorage on mount.
+    // localStorage persists across reload (the shell resets to Board on reload,
+    // but the persisted filter is what useLocalStoragePref rehydrates from when
+    // the user returns to Activity).
     await page.reload()
-
     const stored2 = await page.evaluate(() =>
       window.localStorage.getItem("spms.activity.filter.1"),
     )
-    expect(stored2).toBeTruthy()
-    expect(stored2).toContain("\"type\":\"lifecycle\"")
+    expect(stored2).toContain('"type":"lifecycle"')
   })
 })

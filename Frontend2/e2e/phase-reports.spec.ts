@@ -1,86 +1,96 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 13 Plan 13-10 — Faz Raporları section smoke (REPT-04).
+ * Faz Raporları (Phase Reports) section on /reports (Plan 13-08) — rebuilt to run.
  *
- * Verifies the PhaseReportsSection shipped in Plan 13-08 mounts on /reports
- * with both outer tabs and the cascading project + phase picker enforces
- * the "phase select disabled until project picked" contract (D-E1).
- *
- *   - Section heading "Faz Raporları" renders (phase-reports-section.tsx
- *     line 202).
- *   - Outer Tabs: "Aktif + Tamamlanan" (default) + "Arşivlenmiş".
- *   - Phase picker is disabled while no project is selected
- *     (phase-reports-section.tsx line 252 — disabled prop tied to
- *     !pickerProject).
- *   - Switching to "Arşivlenmiş" re-renders the section content with the
- *     same picker shape.
- *
- * Skip-guard pattern: Phase 11 D-50. No test-DB seeder yet — guard fires
- * when /api/v1/health is unreachable.
+ * Mocks /projects (so the page renders + auto-selects) and chart-capabilities.
+ * Verifies the section heading, both outer tabs, the cascading picker contract
+ * (phase select disabled until a project is picked), and the archived-tab swap.
  */
 
-test.describe("Phase reports section @phase-13", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 13",
-  )
+const PROJECT = {
+  id: 1,
+  key: "PRJ",
+  name: "E2E Project",
+  description: null,
+  start_date: "2026-01-01",
+  end_date: null,
+  status: "ACTIVE",
+  methodology: "SCRUM",
+  process_template_id: null,
+  manager_id: null,
+  manager_name: null,
+  manager_avatar: null,
+  columns: [
+    { id: 1, name: "To Do" },
+    { id: 2, name: "In Progress" },
+    { id: 3, name: "Done" },
+  ],
+  process_config: {},
+  created_at: "2026-01-01T00:00:00Z",
+}
 
+const CAPS = {
+  burndown: true,
+  iteration: true,
+  cfd: true,
+  lead_cycle: true,
+  phase_progress: true,
+  team_load: true,
+  summary: true,
+}
+
+test.describe("Phase reports section @phase-13", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/reports").catch(() => {})
-    const apiOk = await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch("/api/v1/health")
-          return r.ok
-        } catch {
-          return false
-        }
-      })
-      .catch(() => false)
-    test.skip(!apiOk, "no seeded test backend (Phase 11 D-50 skip-guard)")
+    await setupMockBackend(page, {
+      routes: {
+        "/projects/1/chart-capabilities": (r) => jsonResponse(r, CAPS),
+        "/projects": (r) => jsonResponse(r, [PROJECT]),
+      },
+    })
+    await page.goto("/reports")
   })
 
   test("Faz Raporları section renders with both outer tabs", async ({
     page,
   }) => {
-    // Section heading is an <h3> (phase-reports-section.tsx line 201).
     await expect(
-      page.getByRole("heading", { level: 3, name: /Faz Raporları|Phase Reports/ }),
-    ).toBeVisible({ timeout: 10_000 })
+      page.getByRole("heading", {
+        level: 3,
+        name: /Faz Raporları|Phase Reports/,
+      }),
+    ).toBeVisible({ timeout: 15_000 })
 
-    // 2 outer tabs (D-E1).
     await expect(
-      page.getByRole("tab", { name: /Aktif \+ Tamamlanan|Active \+ Completed/ }),
+      page.getByRole("button", {
+        name: /Aktif \+ Tamamlanan|Active \+ Completed/,
+      }),
     ).toBeVisible()
     await expect(
-      page.getByRole("tab", { name: /Arşivlenmiş|Archived/ }),
+      page.getByRole("button", { name: /Arşivlenmiş|Archived/ }),
     ).toBeVisible()
   })
 
   test("cascading picker — phase select disabled until project picked", async ({
     page,
   }) => {
-    // Faz seç combobox is disabled by default (phase-reports-section.tsx
-    // line 252 — disabled={!pickerProject || phaseOptions.length === 0}).
     const phaseSel = page.getByRole("combobox", {
       name: /Faz seç|Select phase/,
     })
-    await expect(phaseSel).toBeVisible({ timeout: 10_000 })
+    await expect(phaseSel).toBeVisible({ timeout: 15_000 })
     await expect(phaseSel).toBeDisabled()
   })
 
-  test("clicking Arşivlenmiş tab switches the section", async ({ page }) => {
-    await page
-      .getByRole("tab", { name: /Arşivlenmiş|Archived/ })
-      .click()
-
-    // Section still renders the project picker after the outer tab swap.
-    // Two project pickers exist on /reports — the global ProjectPicker at
-    // the page top + the PhaseReportsSection picker inside the tab body.
-    // Use .last() to target the section-internal one.
+  test("clicking Arşivlenmiş tab keeps the section picker visible", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: /Arşivlenmiş|Archived/ }).click()
+    // Two "Proje seç" comboboxes exist (global + section); the section's is last.
     await expect(
-      page.getByRole("combobox", { name: /Proje seç|Select project/ }).last(),
+      page
+        .getByRole("combobox", { name: /Proje seç|Select project/ })
+        .last(),
     ).toBeVisible()
   })
 })
