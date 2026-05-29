@@ -262,7 +262,15 @@ def test_task_status_special_columns_not_counted_in_main():
                 id="s5", label="Reopened", description="d",
                 color="status-blocked", is_special=True,
             ),
+            # 3 MORE special (8 total special, 11 columns total) so the TOTAL exceeds
+            # _TASK_STATUS_MAX_COLUMNS=10 while the main count (3) stays under it.
+            # Only correct special-exclusion (n_main=3) keeps this valid.
+            SuggestedColumn(id="s6", label="Deferred", description="d", color="status-blocked", is_special=True),
+            SuggestedColumn(id="s7", label="Archived", description="d", color="status-blocked", is_special=True),
+            SuggestedColumn(id="s8", label="Paused", description="d", color="status-blocked", is_special=True),
         ],
-        rationale="3 main + 5 special",
+        rationale="3 main + 8 special (11 total > 10 cap; exclusion must apply)",
     )
+    # kills mutation: counting special columns toward the main count makes n_main=11
+    # > 10 and emits a "too many main columns" error — so this would no longer be [].
     assert validate_task_status_suggestion(suggestion) == []

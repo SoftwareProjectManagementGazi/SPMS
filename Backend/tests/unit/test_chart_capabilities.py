@@ -214,6 +214,13 @@ async def test_iteration_returns_data_for_any_methodology_with_sprints(methodolo
     use_case = GetProjectIterationUseCase(audit_repo=_FakeAuditRepo(iteration_data=sprints))
     result = await use_case.execute(project_id=42, count=4)
     assert len(result.sprints) == 1
+    # kills mutation: a length-only check missed a broken dict->DTO mapping. Pin the
+    # mapped fields (IterationSprintDTO(**s)).
+    sp = result.sprints[0]
+    assert sp.name == "Sprint 1"
+    assert sp.planned == 10
+    assert sp.completed == 8
+    assert sp.carried == 2
 
 
 @pytest.mark.asyncio
