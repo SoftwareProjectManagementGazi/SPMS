@@ -174,3 +174,16 @@ async def test_delete_role_migrates_users_to_member(authenticated_client, db_ses
         assert u2.role_id == member_role.id, (
             f"User {u2_id} should have migrated to Member after role delete"
         )
+
+        # The audit trail the docstring promises (1 role.deleted + N user.role_changed)
+        # was never asserted. Pin it by entity_type+id (robust to the exact action string).
+        from sqlalchemy import text as _text
+        role_audit = (await db_session.execute(_text(
+            "SELECT COUNT(*) FROM audit_log WHERE entity_type='role' AND entity_id=:rid"
+        ), {"rid": custom_role_id})).scalar()
+        assert role_audit >= 1, "expected an audit row for the role deletion"
+        migrated_audit = (await db_session.execute(_text(
+            "SELECT COUNT(DISTINCT entity_id) FROM audit_log "
+            "WHERE entity_type='user' AND entity_id IN (:u1, :u2)"
+        ), {"u1": u1_id, "u2": u2_id})).scalar()
+        assert migrated_audit == 2, "expected a role-changed audit row for each migrated user"
