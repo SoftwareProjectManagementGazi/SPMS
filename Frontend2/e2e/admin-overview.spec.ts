@@ -1,101 +1,74 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 14 Plan 14-12 — Admin Overview tab E2E (Plan 14-02).
+ * Admin Overview tab E2E (Plan 14-02) — rebuilt to actually run.
  *
- * Verifies /admin (Genel) renders the 4 Overview cells shipped in Plan 14-02:
- *   - 5 StatCards (Users / Active Projects / Pending / Templates / Storage)
- *   - Pending Project Join Requests Card (top-5 + Tümünü gör → modal)
- *   - Role distribution bars (3 buckets: Admin / PM / Member)
- *   - Recent admin events list (Jira-style audit_log lines)
- *
- * Skip-guard pattern: Phase 11 D-50 — guard fires when /api/v1/health is
- * unreachable. Without a test-DB seeder + admin-auth fixture the spec skips
- * gracefully; the assertion shape is the contract that runs once seeding
- * lands.
+ * Previously every test self-skipped via a `fetch('/api/v1/health')` probe that
+ * always failed (no such route), so the whole suite was decorative (a fake
+ * pass). This version authenticates against a mocked backend (support/mock-auth)
+ * so the real /admin page renders and the assertions execute.
  */
 
 test.describe("Admin Overview tab @phase-14", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 14",
-  )
-
   test.beforeEach(async ({ page }) => {
-    await page.goto("/admin").catch(() => {})
-    const apiOk = await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch("/api/v1/health")
-          return r.ok
-        } catch {
-          return false
-        }
-      })
-      .catch(() => false)
-    test.skip(!apiOk, "no seeded test backend (Phase 11 D-50 skip-guard)")
+    await setupMockBackend(page, {
+      routes: {
+        // 3 pending join requests → the Pending stat card must render "3"
+        // (this asserts the data pipeline, not just element visibility).
+        "/admin/join-requests": (route) =>
+          jsonResponse(route, { items: [], total: 3 }),
+      },
+    })
+    await page.goto("/admin")
   })
 
   test("/admin renders 5 StatCards + Pending Requests Card", async ({ page }) => {
-    // Page heading — admin.layout.title key.
+    // Admin layout heading — only renders once the admin role guard passes.
     await expect(
       page.locator("h1").filter({ hasText: /Yönetim Konsolu|Admin Console/ }),
-    ).toBeVisible({ timeout: 10_000 })
+    ).toBeVisible({ timeout: 15_000 })
 
-    // 5 StatCards by aria-label prefix (each StatCard wrapper sets
-    // aria-label="<Label>: <Value>" — see stat-cards.tsx). Match the label
-    // portion only via getByLabel(/<label>:/) so we don't depend on the
-    // dynamic count value.
+    // All 5 StatCards are present (each wrapper sets aria-label="<Label>: <Value>").
+    for (const selector of [
+      "[aria-label^='Kullanıcı:'], [aria-label^='Users:']",
+      "[aria-label^='Aktif Proje:'], [aria-label^='Active projects:']",
+      "[aria-label^='Onay Bekleyen:'], [aria-label^='Pending:']",
+      "[aria-label^='Şablon:'], [aria-label^='Templates:']",
+      "[aria-label^='Depolama:'], [aria-label^='Storage:']",
+    ]) {
+      await expect(page.locator(selector).first()).toBeVisible()
+    }
+
+    // The Pending card value reflects the mocked total=3 — proves the count
+    // flows from the API through the hook into the card (not a static element).
     await expect(
-      page.locator("[aria-label^='Kullanıcı:'], [aria-label^='Users:']").first(),
-    ).toBeVisible()
-    await expect(
-      page
-        .locator(
-          "[aria-label^='Aktif Proje:'], [aria-label^='Active projects:']",
-        )
-        .first(),
-    ).toBeVisible()
-    await expect(
-      page
-        .locator(
-          "[aria-label^='Onay Bekleyen:'], [aria-label^='Pending:']",
-        )
-        .first(),
-    ).toBeVisible()
-    await expect(
-      page.locator("[aria-label^='Şablon:'], [aria-label^='Templates:']").first(),
-    ).toBeVisible()
-    await expect(
-      page.locator("[aria-label^='Depolama:'], [aria-label^='Storage:']").first(),
+      page.locator("[aria-label='Onay Bekleyen: 3'], [aria-label='Pending: 3']"),
     ).toBeVisible()
 
-    // Pending Requests Card — locate the "Tümünü gör" / "View all" button
-    // which is unique to this card.
+    // The Storage card renders its (static) value.
+    await expect(
+      page.locator(
+        "[aria-label='Depolama: 12.4 GB'], [aria-label='Storage: 12.4 GB']",
+      ),
+    ).toBeVisible()
+
+    // Pending Requests card → the unique "Tümünü gör" / "View all" trigger.
     await expect(
       page.getByRole("button", { name: /Tümünü gör|View all/ }),
     ).toBeVisible()
   })
 
-  test("Tümünü gör opens the All-Pending modal (D-W2 + UI-SPEC §Surface B)", async ({
-    page,
-  }) => {
-    // Wait for page heading first so the modal trigger is in the DOM.
+  test("Tümünü gör opens the All-Pending modal", async ({ page }) => {
     await expect(
       page.locator("h1").filter({ hasText: /Yönetim Konsolu|Admin Console/ }),
-    ).toBeVisible({ timeout: 10_000 })
+    ).toBeVisible({ timeout: 15_000 })
 
-    // Click the trigger.
     await page
       .getByRole("button", { name: /Tümünü gör|View all/ })
       .first()
       .click()
 
-    // Modal title — admin.overview.pending_requests_modal_title key.
-    // TR: "Tüm bekleyen istekler"  EN: "All pending requests".
-    // The Modal primitive renders the title inside ModalHeader; we match
-    // by visible text rather than role since the Modal renders its own
-    // a11y wrapper.
     await expect(
       page.getByText(/Tüm bekleyen istekler|All pending requests/).first(),
     ).toBeVisible({ timeout: 5_000 })

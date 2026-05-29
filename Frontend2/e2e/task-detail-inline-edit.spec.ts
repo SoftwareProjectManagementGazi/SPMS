@@ -1,83 +1,121 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, MEMBER_ME, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 11 smoke test — Task Detail inline edit (D-38).
+ * Task Detail — inline priority edit (D-38), rebuilt to actually run.
  *
- * Flow:
- *   1. Navigate to /projects/1/tasks/101
- *   2. Locate the Priority row in the right-sidebar
- *   3. Click the value to open the inline <select>
- *   4. Select "high"
- *   5. Blur to commit — optimistic UI shows the new value
- *
- * Defensively skips when:
- *   - The auth gate redirects away from /projects/1/tasks/101
- *   - Task 101 doesn't exist in the test DB (no seeder yet)
- *   - The inline <select> never appears (locator resolution drift)
- *
- * Phase 11 does not ship test-DB seeding for the e2e rig — these guards
- * make the rig runnable even without a fixture setup pipeline.
+ * The previous version was a fake pass: it looked for a native <select>
+ * (`page.locator("select")`) that does not exist — the priority control is a
+ * button-popover (role="listbox" of role="option" buttons) — so the central
+ * assertions sat behind `if (selectVisible) { … }` and never executed, and
+ * three `test.skip()` escape hatches silently green-passed when the page didn't
+ * load. This version mocks the backend (support/mock-auth), drives the REAL
+ * popover, and unconditionally asserts the optimistic commit.
  */
 
-test.describe("Phase 11 — Task Detail inline edit", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 11"
-  )
+const PROJECT_DTO = {
+  id: 1,
+  key: "PRJ",
+  name: "E2E Project",
+  description: null,
+  start_date: "2026-01-01",
+  end_date: null,
+  status: "ACTIVE",
+  methodology: "KANBAN",
+  process_template_id: null,
+  manager_id: null,
+  manager_name: null,
+  manager_avatar: null,
+  columns: [
+    { id: 1, name: "To Do" },
+    { id: 2, name: "Done" },
+  ],
+  process_config: {},
+  created_at: "2026-01-01T00:00:00Z",
+}
 
-  test("priority row opens dropdown and commits optimistically", async ({
+function taskDTO(priority: string) {
+  return {
+    id: 101,
+    task_key: "PRJ-101",
+    title: "E2E Priority Task",
+    description: "",
+    status: "todo",
+    priority,
+    assignee_id: null,
+    reporter_id: null,
+    parent_task_id: null,
+    project_id: 1,
+    sprint_id: null,
+    phase_id: null,
+    points: null,
+    due_date: null,
+    labels: [],
+    watcher_count: 0,
+    type: "task",
+    created_at: "2026-01-01T00:00:00Z",
+  }
+}
+
+test.describe("Task Detail — inline priority edit (D-38)", () => {
+  test.beforeEach(async ({ page }) => {
+    // Stateful: the task starts MEDIUM and flips to HIGH once the PATCH lands,
+    // so the onSettled refetch keeps (rather than reverts) the optimistic value.
+    let priority = "MEDIUM"
+
+    await setupMockBackend(page, {
+      me: MEMBER_ME,
+      routes: {
+        "/projects/1": (route) => jsonResponse(route, PROJECT_DTO),
+        "/tasks": (route, path) => {
+          const method = route.request().method()
+          if (path === "/tasks/101") {
+            if (method === "PATCH") {
+              priority = "HIGH"
+              return jsonResponse(route, taskDTO("HIGH"))
+            }
+            return jsonResponse(route, taskDTO(priority))
+          }
+          // /tasks/project/1 (sibling tasks) + /tasks/101/* sub-resources.
+          return jsonResponse(route, [])
+        },
+      },
+    })
+
+    await page.goto("/projects/1/tasks/101")
+  })
+
+  test("priority popover commits the new value optimistically (no native select)", async ({
     page,
   }) => {
-    await page.goto("/projects/1/tasks/101")
+    // The task loaded (title heading renders task.title).
+    await expect(
+      page.getByRole("heading", { name: "E2E Priority Task" }),
+    ).toBeVisible({ timeout: 15_000 })
 
-    // Task title heading must be visible before we can drive the sidebar.
-    const h1Visible = await page
-      .locator("h1")
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false)
-    if (!h1Visible) {
-      test.skip(true, "Task 101 not found in test env — seed data missing")
-      return
-    }
+    // There is NO native <select> for priority (the old test's false premise).
+    await expect(page.locator("select")).toHaveCount(0)
 
-    // Find the Priority row label. PropertiesSidebar renders a MetaRow with
-    // a 100px label column + value column; we locate by label text.
-    const priorityLabel = page.getByText(/^Öncelik$|^Priority$/).first()
-    await expect(priorityLabel).toBeVisible({ timeout: 3000 })
+    // The Priority trigger button — aria-label is the field name; the visible
+    // text is the current priority chip.
+    const trigger = page.getByRole("button", { name: /^Öncelik$|^Priority$/ })
+    await expect(trigger).toBeVisible()
+    // Starts at Medium → proves the High change below is real, not pre-existing.
+    await expect(trigger).not.toContainText(/Yüksek|High/)
 
-    // Click the value cell (sibling of the label). The row has two grid
-    // columns so the value is the next element within the same parent.
-    // In practice the value is a button-like span; try to click it.
-    const priorityRow = priorityLabel.locator("..")
-    await priorityRow.click().catch(() => {})
+    // Open the real popover (role="listbox", not a <select>).
+    await trigger.click()
+    const listbox = page.getByRole("listbox", {
+      name: /Öncelik seç|Select priority/,
+    })
+    await expect(listbox).toBeVisible()
 
-    // The inline <select> should now be visible. PropertiesSidebar uses the
-    // InlineEdit wrapper which renders a native <select> when type="select".
-    const select = page.locator("select")
-    const selectVisible = await select
-      .first()
-      .isVisible({ timeout: 2000 })
-      .catch(() => false)
-    if (selectVisible) {
-      await select.first().selectOption("high")
-      // Blur to commit — click somewhere neutral
-      await page.locator("body").click({ position: { x: 0, y: 0 } })
-    }
+    // Choose "High" → fires PATCH /tasks/101 + optimistic cache update; closes.
+    await listbox.getByRole("option").filter({ hasText: /Yüksek|High/ }).click()
 
-    // Optimistic UI should reflect the new priority. Look for the
-    // localized "Yüksek" / "High" text somewhere on the page.
-    const eventuallyHigh = await page
-      .getByText(/^Yüksek$|^High$/)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false)
-    // Soft assertion — if the select never appeared (layout drift), skip.
-    if (!eventuallyHigh) {
-      test.skip(
-        true,
-        "InlineEdit <select> did not resolve — selector drift or seed missing"
-      )
-    }
+    // The trigger now reflects the committed priority (kills the fake pass:
+    // a no-op onSelect would leave it on Medium).
+    await expect(trigger).toContainText(/Yüksek|High/)
+    await expect(listbox).toBeHidden()
   })
 })
