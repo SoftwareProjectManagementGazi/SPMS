@@ -30,7 +30,7 @@
 
 import * as React from "react"
 
-import { Card, Kbd } from "@/components/primitives"
+import { Card, Kbd, DataState } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useAuth } from "@/context/auth-context"
 import { useLocalStoragePref } from "@/hooks/use-local-storage-pref"
@@ -83,7 +83,7 @@ export function MyTasksExperience({
 }: MyTasksExperienceProps) {
   const { language: lang } = useApp()
   const { user } = useAuth()
-  const { data: tasks = [] } = useMyTasks()
+  const { data: tasks = [], isLoading, error, refetch } = useMyTasks()
   const { data: projects = [] } = useProjects()
   const [store, setStore] = useMyTasksStore()
 
@@ -421,9 +421,31 @@ export function MyTasksExperience({
         }}
       >
         <Card padding={0} style={{ overflow: "hidden" }}>
-          {isEmpty ? (
-            <MTEmpty lang={lang} view={view} />
-          ) : (
+          <DataState
+            loading={isLoading}
+            error={error}
+            onRetry={refetch}
+            empty={isEmpty}
+            emptyFallback={<MTEmpty lang={lang} view={view} />}
+            loadingFallback={
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1,
+                  padding: 8,
+                }}
+              >
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="skeleton"
+                    style={{ height: 40, borderRadius: "var(--radius-sm)" }}
+                  />
+                ))}
+              </div>
+            }
+          >
             <TaskGroupList
               tasks={sorted}
               allTasks={tasks}
@@ -438,7 +460,10 @@ export function MyTasksExperience({
               collapsed={collapsed}
               onToggleCollapse={toggleCollapse}
             />
-          )}
+          </DataState>
+          {/* M-M3 — footer hidden while loading/error so it doesn't read
+              "0 görev · 0 puan" under the skeleton / error banner. */}
+          {!isLoading && !error && (
           <div
             data-testid="mt-list-footer"
             style={{
@@ -466,6 +491,7 @@ export function MyTasksExperience({
               {lang === "tr" ? "yeni görev" : "new task"}
             </span>
           </div>
+          )}
         </Card>
 
         {showRightRail && (
