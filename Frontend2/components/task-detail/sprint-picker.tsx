@@ -43,7 +43,16 @@ export function SprintPicker({
       }
     }
     document.addEventListener("mousedown", onDown)
-    return () => document.removeEventListener("mousedown", onDown)
+    // M-T3 — also dismiss on scroll/resize so the popover doesn't float away
+    // from (or clip past) its trigger (capture:true catches ancestor scroll).
+    const onReposition = () => onCancel()
+    window.addEventListener("scroll", onReposition, true)
+    window.addEventListener("resize", onReposition)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      window.removeEventListener("scroll", onReposition, true)
+      window.removeEventListener("resize", onReposition)
+    }
   }, [onCancel])
 
   function onKey(e: React.KeyboardEvent) {

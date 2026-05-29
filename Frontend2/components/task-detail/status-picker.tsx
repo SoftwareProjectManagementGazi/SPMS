@@ -69,8 +69,18 @@ export function StatusPicker({
         onCancel()
       }
     }
+    // M-T3 — also dismiss on scroll/resize so this absolutely-positioned
+    // popover never floats away from (or clips past) its trigger. capture:true
+    // catches scrolls in any ancestor scroll container, not only the window.
+    const onReposition = () => onCancel()
     document.addEventListener("mousedown", onDown)
-    return () => document.removeEventListener("mousedown", onDown)
+    window.addEventListener("scroll", onReposition, true)
+    window.addEventListener("resize", onReposition)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      window.removeEventListener("scroll", onReposition, true)
+      window.removeEventListener("resize", onReposition)
+    }
   }, [onCancel])
 
   function onKey(e: React.KeyboardEvent) {
