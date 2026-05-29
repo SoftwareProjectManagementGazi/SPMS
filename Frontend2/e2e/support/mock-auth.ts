@@ -38,6 +38,27 @@ export const MEMBER_ME = {
   role: { name: "Member", description: "Member" },
 }
 
+export const GUEST_ME = {
+  id: 3,
+  email: "guest@e2e.local",
+  full_name: "E2E Guest",
+  is_active: true,
+  role: { name: "Guest", description: "Guest" },
+}
+
+/**
+ * Build a token whose JWT payload carries a `permissions[]` claim. AuthContext
+ * decodes this client-side (decodePermissions) so `hasPermission(key)` works for
+ * non-admin custom roles (e.g. a "SuperUser" granted "admin.access"). Header +
+ * signature are dummies — nothing verifies the signature client-side.
+ */
+export function jwtWithPermissions(perms: string[]): string {
+  const payload = Buffer.from(JSON.stringify({ permissions: perms })).toString(
+    "base64url",
+  )
+  return `e30.${payload}.sig`
+}
+
 export function jsonResponse(route: Route, body: unknown, status = 200) {
   return route.fulfill({
     status,
