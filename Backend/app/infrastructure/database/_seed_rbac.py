@@ -105,12 +105,18 @@ MEMBER_PERMS: list[str] = [
 ]
 
 
-async def seed_rbac(session: AsyncSession) -> None:
+async def seed_rbac(session: AsyncSession, *, commit: bool = True) -> None:
     """Idempotently seed the 38 permissions + PM/Member bootstrap matrix.
 
     Runs after the snapshot loader (or normal seed) so that whichever path
     populated the rest of the DB, the RBAC tables are guaranteed to carry
     their reference data and the Admin → /admin/permissions matrix renders.
+
+    ``commit=True`` (default) preserves the production behaviour: the seed is
+    committed at the end. Pass ``commit=False`` to flush instead — used by the
+    integration tests, which seed the canonical matrix inside the transactional
+    ``db_session`` so it rolls back and the tests don't depend on ambient DB
+    state.
     """
     # Migration may not have created the tables on a fresh container — bail
     # silently if so; the next migration run will set them up.
@@ -184,7 +190,12 @@ async def seed_rbac(session: AsyncSession) -> None:
         )
         inserted_cells += res.rowcount or 0
 
-    await session.commit()
+    if commit:
+        await session.commit()
+    else:
+        # Test path: keep the rows in the caller's open transaction so they roll
+        # back and never touch the shared DB.
+        await session.flush()
 
     if inserted_perms or inserted_cells:
         logger.info(

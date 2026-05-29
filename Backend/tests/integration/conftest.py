@@ -80,6 +80,47 @@ async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
     
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
-    
+
     # Clear overrides
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# RBAC seeding fixtures (P2 test-integrity).
+#
+# Integration tests run against a shared DB that is NOT guaranteed to carry the
+# RBAC reference data in a known state. These fixtures seed the canonical matrix
+# (_seed_rbac.PERMISSIONS_SEED + PM_PERMS + MEMBER_PERMS) into the transactional
+# db_session via seed_rbac(commit=False) — flush only, so it rolls back and never
+# mutates the shared DB. RBAC tests derive their expected counts from those lists
+# (no magic numbers) instead of trusting whatever rows happen to be present.
+# ---------------------------------------------------------------------------
+@pytest_asyncio.fixture
+async def rbac_clean(db_session):
+    """Canonical RBAC matrix as the ONLY RBAC rows (ambient wiped), in-transaction.
+
+    role_permissions is the sole FK to permissions (ON DELETE CASCADE), so the
+    two DELETEs fully clear the matrix before the canonical re-seed. Returns the
+    session for convenience.
+    """
+    from sqlalchemy import text
+    from app.infrastructure.database._seed_rbac import seed_rbac
+
+    await db_session.execute(text("DELETE FROM role_permissions"))
+    await db_session.execute(text("DELETE FROM permissions"))
+    await seed_rbac(db_session, commit=False)
+    return db_session
+
+
+@pytest_asyncio.fixture
+async def rbac_present(db_session):
+    """Canonical RBAC matrix present (additive; ambient rows untouched), in-transaction.
+
+    For behaviour tests (PATCH grant/revoke, Admin-readonly) that need the perms +
+    roles to exist but don't assert exact counts; safe even if the use case
+    commits, since no rows are deleted. Returns the session.
+    """
+    from app.infrastructure.database._seed_rbac import seed_rbac
+
+    await seed_rbac(db_session, commit=False)
+    return db_session
