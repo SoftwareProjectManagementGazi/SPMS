@@ -17,9 +17,15 @@ from app.infrastructure.database.models.user import UserModel # For creation if 
 pytestmark = pytest.mark.requires_db
 
 # Helper to generate token
-def create_test_token(email: str) -> str:
+def create_test_token(email: str, permissions: list[str] | None = None) -> str:
+    """Sign a test JWT. ``permissions`` populates the permissions[] claim that
+    get_current_user reads (Pitfall 9 backwards-compat default empty list) — pass
+    the coarse permission so the request clears the require_permission tier-1 gate
+    and actually reaches the ownership/membership guard under test."""
     expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode = {"sub": email, "exp": expire}
+    if permissions is not None:
+        to_encode["permissions"] = sorted(permissions)
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 @pytest.mark.asyncio
@@ -54,18 +60,20 @@ async def test_delete_other_user_project(client: AsyncClient, db_session: AsyncS
     )
     created_project = await project_repo.create(project)
 
-    # 3. Attacker logs in (Create token)
-    token = create_test_token(created_attacker.email)
+    # 3. Attacker logs in WITH project.delete so tier-1 (require_permission) PASSES
+    #    and execution reaches the ownership guard in DeleteProjectUseCase — only
+    #    then does a 403/404 actually prove the ownership check (not the perm gate).
+    token = create_test_token(created_attacker.email, permissions=["project.delete"])
     headers = {"Authorization": f"Bearer {token}"}
 
     # 4. Attacker tries to delete Owner's project
     response = await client.delete(f"/api/v1/projects/{created_project.id}", headers=headers)
 
-    # 5. Assert Forbidden (403) or Not Found (404)
-    # Ideally should be 403 or 404 depending on implementation security
-    assert response.status_code in [403, 404]
-    
-    # Verify project still exists
+    # 5. The ownership guard (manager_id != actor.id) must reject it.
+    assert response.status_code in (403, 404), response.text
+
+    # kills mutation: dropping the ownership guard lets a project.delete holder
+    # delete ANY project — the row would be gone here.
     saved_project = await project_repo.get_by_id(created_project.id)
     assert saved_project is not None
 
@@ -99,14 +107,21 @@ async def test_delete_other_user_task_in_other_project(client: AsyncClient, db_s
     )
     created_task = await task_repo.create(task)
 
-    # 3. Attacker Login
-    token = create_test_token(created_attacker.email)
+    # 3. Attacker logs in WITH task.delete so tier-1 passes and execution reaches
+    #    the project-membership guard (get_task_project_member) under test.
+    token = create_test_token(created_attacker.email, permissions=["task.delete"])
     headers = {"Authorization": f"Bearer {token}"}
 
     # 4. Attacker tries to delete task
     response = await client.delete(f"/api/v1/tasks/{created_task.id}", headers=headers)
-    
-    assert response.status_code in [403, 404]
+
+    # The membership guard must reject it — pin to that source via its envelope.
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"] == "Access denied to this project"
+    # kills mutation: dropping the membership guard lets a task.delete holder delete
+    # tasks in projects they don't belong to — the row would be gone here.
+    saved_task = await task_repo.get_by_id(created_task.id)
+    assert saved_task is not None
 
 @pytest.mark.asyncio
 async def test_access_my_tasks(client: AsyncClient, db_session: AsyncSession):

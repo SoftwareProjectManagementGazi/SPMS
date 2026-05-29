@@ -65,8 +65,10 @@ async def test_status_filter_active(authenticated_client, db_session):
     async with authenticated_client(role="admin") as client:
         r = await client.get("/api/v1/projects?status=ACTIVE")
         assert r.status_code == 200
-        statuses = [p["status"] for p in r.json()]
-        assert all(s == "ACTIVE" for s in statuses), f"Got non-ACTIVE: {statuses}"
+        rows = r.json()
+        # kills mutation: an empty/under-matching result makes all([]) vacuously True.
+        assert "PS1A" in {p["key"] for p in rows}, "seeded ACTIVE project PS1A missing"
+        assert all(p["status"] == "ACTIVE" for p in rows), f"Got non-ACTIVE: {rows}"
 
 
 @pytest.mark.asyncio
@@ -87,8 +89,10 @@ async def test_status_filter_completed(authenticated_client, db_session):
     async with authenticated_client(role="admin") as client:
         r = await client.get("/api/v1/projects?status=COMPLETED")
         assert r.status_code == 200
-        statuses = [p["status"] for p in r.json()]
-        assert all(s == "COMPLETED" for s in statuses), f"Got non-COMPLETED: {statuses}"
+        rows = r.json()
+        # kills mutation: an empty result (e.g. case-mismatch filter) makes all([]) True.
+        assert "PS2C" in {p["key"] for p in rows}, "seeded COMPLETED project PS2C missing"
+        assert all(p["status"] == "COMPLETED" for p in rows), f"Got non-COMPLETED: {rows}"
 
 
 @pytest.mark.asyncio

@@ -68,7 +68,11 @@ async def test_activity_type_filter(authenticated_client, db_session):
         r = await client.get(f"/api/v1/projects/{pid}/activity?type[]=phase_transition")
         assert r.status_code == 200
         body = r.json()
-        assert all(i["action"] == "phase_transition" for i in body["items"])
+        items = body["items"]
+        # kills mutation: a filter that returns nothing makes all([]) vacuously True.
+        # The seed inserts exactly one phase_transition row for this fresh project.
+        assert len(items) >= 1, "expected the seeded phase_transition row"
+        assert all(i["action"] == "phase_transition" for i in items)
 
 
 @pytest.mark.asyncio
