@@ -167,6 +167,11 @@ async def test_admin_deactivate_admin_gets_204(authenticated_client, db_session)
     async with authenticated_client(role="admin") as ac:
         r = await ac.patch(f"/api/v1/admin/users/{uid}/deactivate")
         assert r.status_code == 204, r.text
+    # kills mutation: a 204 that doesn't actually flip is_active would pass status-only.
+    is_active = (
+        await db_session.execute(text("SELECT is_active FROM users WHERE id=:i"), {"i": uid})
+    ).scalar()
+    assert is_active is False
 
 
 @pytest.mark.asyncio
@@ -219,8 +224,12 @@ async def test_bulk_invite_mixed_csv_returns_split_response(
         r = await ac.post("/api/v1/admin/users/bulk-invite", json={"rows": rows})
         assert r.status_code == 200, r.text
         body = r.json()
-        # successful + failed should sum to total rows
         assert len(body["successful"]) + len(body["failed"]) == len(rows)
+        # kills mutation: the bare sum passed even if the split went the wrong way
+        # (all-failed, or the duplicate wrongly counted as successful). Pin it:
+        # exactly the duplicate fails, the 3 distinct emails succeed.
+        assert {f["email"] for f in body["failed"]} == {"bulk_conflict@testexample.com"}
+        assert len(body["successful"]) == 3
 
 
 @pytest.mark.asyncio

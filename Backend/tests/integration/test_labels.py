@@ -322,14 +322,20 @@ async def test_list_labels_non_member_returns_403(authenticated_client, db_sessi
 
 
 @pytest.mark.asyncio
-async def test_create_label_non_member_returns_403(authenticated_client, db_session):
+async def test_create_label_non_member_returns_403(permitted_client, db_session):
     """POST /labels by a non-member (non-admin) returns 403 (T-11-03-01 IDOR mitigation)."""
     if not await _db_has_roles(db_session):
         pytest.skip("DB has no roles — skipping label API tests")
     pid = await _seed_project(db_session, key="LBLCR5")
-    async with authenticated_client(role="member") as ac:
+    # Carry lifecycle.edit so the require_permission tier-1 gate PASSES and the
+    # request reaches the inline project-membership check (the IDOR guard under
+    # test). With authenticated_client (no perm) tier-1 fired first, so a removed
+    # membership check would NOT have been caught.
+    async with permitted_client(perms=["lifecycle.edit"], role="member") as ac:
         resp = await ac.post(
             "/api/v1/labels",
             json={"project_id": pid, "name": "IntruderLabel", "color": "#ff0000"},
         )
     assert resp.status_code == 403, resp.text
+    # Pin to the membership guard (not the perm gate, which now passes).
+    assert resp.json()["detail"] == f"Not a member of project {pid}"
