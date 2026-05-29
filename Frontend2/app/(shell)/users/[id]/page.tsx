@@ -37,7 +37,7 @@ import * as React from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { CheckSquare, CircleCheck, Folder } from "lucide-react"
-import { Card, Tabs } from "@/components/primitives"
+import { AlertBanner, Button, Card, Tabs } from "@/components/primitives"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { ProfileHeader } from "@/components/profile/profile-header"
 import { ProfileTasksTab } from "@/components/profile/profile-tasks-tab"
@@ -78,9 +78,12 @@ export default function UserProfilePage() {
     router.replace(`/users/${userId}?tab=${id}`)
   }
 
-  const { data: summary, isLoading: summaryLoading } = useUserSummary(
-    Number.isFinite(userId) ? userId : null,
-  )
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    refetch: refetchSummary,
+  } = useUserSummary(Number.isFinite(userId) ? userId : null)
 
   // User-info query — separate from useUserSummary because the backend
   // /summary endpoint doesn't include user identity fields (Phase 9 D-48).
@@ -147,6 +150,22 @@ export default function UserProfilePage() {
         maxWidth: 1100,
       }}
     >
+      {/* M-TM2 — the user loaded but the /summary fetch failed: surface it
+          (was silently rendering a zero-stat profile, indistinguishable from a
+          brand-new user with no activity). Stats below still render at 0. */}
+      {summaryError && (
+        <AlertBanner tone="danger">
+          {T(
+            "Profil istatistikleri yüklenemedi.",
+            "Couldn't load profile stats.",
+          )}
+          <span style={{ marginLeft: 8 }}>
+            <Button size="xs" variant="ghost" onClick={() => refetchSummary()}>
+              {T("Tekrar dene", "Try again")}
+            </Button>
+          </span>
+        </AlertBanner>
+      )}
       <ProfileHeader
         user={enrichedUser}
         stats={{
