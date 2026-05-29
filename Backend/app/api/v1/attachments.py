@@ -26,8 +26,12 @@ from app.application.use_cases.manage_attachments import (
 
 router = APIRouter()
 
-# Backend root directory — attachments are stored relative to this
-_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
+# Backend root directory — attachments are stored relative to this.
+# This file lives at Backend/app/api/v1/attachments.py, so 4 .parent hops reach
+# Backend/ (matching manage_attachments.py's upload dir and main.py's /static
+# mount). A 5th hop landed on the repo root, so every download 404'd
+# "File not found on disk" — uploads wrote under Backend/, downloads looked above it.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 @router.get("/task/{task_id}", response_model=List[AttachmentResponseDTO])

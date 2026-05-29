@@ -12,6 +12,7 @@ BM495_PROJE_SRS_Y.E.BAYRAKCI_A.OZ_20252026_GUZ.pdf
 build/
 
 Backend/static/uploads/avatars
+Backend/static/uploads/tasks
 
 Frontend/tsconfig.tsbuildinfo
 .claude/settings.local.json
