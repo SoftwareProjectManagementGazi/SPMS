@@ -558,12 +558,7 @@ async def test_project_activity_broadening_db_backed(db_session):
     assert ("task", decoy_task_id) not in pairs
 
 
-@pytest.mark.asyncio
-async def test_project_activity_repo_marker_present():
-    """D-13-01 docstring marker must be findable via grep — guards against
-    a future refactor silently reverting the broadening.
-    """
-    from pathlib import Path
-    repo_path = Path(__file__).resolve().parents[2] / "app" / "infrastructure" / "database" / "repositories" / "audit_repo.py"
-    contents = repo_path.read_text(encoding="utf-8")
-    assert "D-13-01: BROADENED" in contents
+# Removed test_project_activity_repo_marker_present: it grepped audit_repo.py for a
+# "D-13-01: BROADENED" comment string — green even if the broadening SQL were
+# reverted (the comment could stay). The real behaviour is now covered by
+# test_project_activity_broadening_db_backed above (DB-backed, asserts the OR-scope).

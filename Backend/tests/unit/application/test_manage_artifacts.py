@@ -24,6 +24,9 @@ async def test_assignee_can_update_status_note_file():
     assert existing.status == ArtifactStatus.IN_PROGRESS
     assert existing.note == "doing it"
     assert existing.file_id == 42
+    # kills mutation: the entity is mutated in place (same object the mock returns),
+    # so the asserts above pass even if the use case never persists. Pin the boundary.
+    artifact_repo.update.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -57,6 +60,9 @@ async def test_manager_can_reassign():
     dto = ArtifactUpdateByManagerDTO(assignee_id=99)
     await uc.execute(artifact_id=1, dto=dto, user_id=1)  # user_id irrelevant here -- router authorizes
     assert existing.assignee_id == 99
+    # kills mutation: in-memory aliasing makes the above pass without persistence —
+    # assert the reassignment was actually written through the repo.
+    artifact_repo.update.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -65,3 +71,6 @@ async def test_delete_soft_deletes():
     artifact_repo.delete = AsyncMock(return_value=True)
     uc = DeleteArtifactUseCase(artifact_repo)
     assert await uc.execute(1) is True
+    # kills mutation: the canned True passes even if execute ignored its arg or never
+    # delegated. Pin that the soft-delete was forwarded with the right id.
+    artifact_repo.delete.assert_awaited_once_with(1)
