@@ -1,176 +1,114 @@
 import { test, expect } from "@playwright/test"
+import { setupMockBackend, jsonResponse } from "./support/mock-auth"
 
 /**
- * Phase 15 Plan 15-12 — Admin RBAC Permission Matrix E2E (Plan 15-10).
+ * Admin RBAC permission matrix E2E (Plan 15-10) — rebuilt to actually run.
  *
- * Verifies the active 14×N permission matrix shipped in Plan 15-10's atomic
- * 7-layer uplift:
- *
- *   - Per-cell auto-save (D-1.12): toggling a PM × non-Admin/non-Guest cell
- *     fires useUpdatePermissionCell.mutate({roleId, permKey, granted}) with
- *     Pattern-3 optimistic update. Toast "Yetki güncellendi" appears within
- *     ~300ms; cell flip persists across page reload.
- *
- *   - Defense-in-depth disabled columns (D-1.5 + D-2.4): Admin column shows
- *     visually-granted toggles with disabled attribute; Guest column shows
- *     visually-denied toggles with disabled attribute. Even if disabled is
- *     stripped via DOM tamper, the onChange short-circuit returns early
- *     before invoking the mutation (Plan 15-10 T-15-05 mitigation).
- *
- *   - Per-row scope badge (D-3.4): "(sistem)" / "(proje)" inline label
- *     renders next to every permission name based on Permission.scope —
- *     project (26 perms) vs system (12 perms) per Plan 15-04 seed.
- *
- *   - Per-column Sistem badge (D-2.4): every is_system_role=true column
- *     header carries a Sistem / System Badge tone="neutral" size="xs".
- *
- *   - Optimistic mutation revert on backend 4xx: when the backend rejects
- *     a write (e.g., SYSTEM_ROLE_PROTECTED 422 on Admin column), the cell
- *     reverts to its snapshot AND a Toast / AlertBanner surfaces the error.
- *
- * Skip-guard pattern: Phase 11 D-50 — manual UAT primary; E2E run via
- * seeded backend only.
+ * Mocks GET/PATCH /admin/permissions/matrix. The PM × project.delete cell is
+ * stateful so the auto-save → reload persistence path is real: the PATCH flips
+ * the server state and the reload's refetch returns it.
  */
 
+const ROLES = [
+  { id: 1, name: "Admin", is_system_role: true },
+  { id: 2, name: "Project Manager", is_system_role: true },
+  { id: 3, name: "Member", is_system_role: true },
+  { id: 4, name: "Guest", is_system_role: true },
+]
+
+const PERMISSIONS = [
+  { id: 10, key: "project.delete", scope: "project", label_tr: "Proje sil", label_en: "Delete project" },
+  { id: 11, key: "task.delete", scope: "project", label_tr: "Görev sil", label_en: "Delete task" },
+  { id: 12, key: "admin.users.invite", scope: "system", label_tr: "Kullanıcı davet et", label_en: "Invite user" },
+]
+
+const PM_DELETE_CELL =
+  "input[type='checkbox'][aria-label*='project.delete'][aria-label*='Project Manager']"
+
 test.describe("Admin RBAC permission matrix @phase-15", () => {
-  test.skip(
-    ({ browserName }) => browserName !== "chromium",
-    "chromium-only for Phase 15 RBAC E2E",
-  )
-
   test.beforeEach(async ({ page }) => {
-    await page.goto("/admin/permissions").catch(() => {})
-    const apiOk = await page
-      .evaluate(async () => {
-        try {
-          const r = await fetch("/api/v1/health")
-          return r.ok
-        } catch {
-          return false
-        }
-      })
-      .catch(() => false)
-    test.skip(!apiOk, "no seeded test backend (Phase 11 D-50 skip-guard)")
+    // PM × project.delete starts OFF; the PATCH flips it so the post-mutation
+    // refetch + page.reload both observe the persisted value.
+    let pmProjectDelete = false
+
+    await setupMockBackend(page, {
+      routes: {
+        "/admin/permissions/matrix": (route) => {
+          if (route.request().method() === "PATCH") {
+            const body = route.request().postDataJSON() as {
+              role_id: number
+              perm_key: string
+              granted: boolean
+            }
+            if (body.role_id === 2 && body.perm_key === "project.delete") {
+              pmProjectDelete = body.granted
+            }
+            return route.fulfill({ status: 204, body: "" })
+          }
+          const cells = pmProjectDelete
+            ? [{ role_id: 2, permission_id: 10, granted: true }]
+            : []
+          return jsonResponse(route, {
+            roles: ROLES,
+            permissions: PERMISSIONS,
+            cells,
+          })
+        },
+      },
+    })
+    await page.goto("/admin/permissions")
   })
 
-  test("PM × non-Admin/non-Guest cell auto-saves; Toast appears; persists across reload (D-1.12)", async ({
+  test("PM × project.delete cell auto-saves, toasts, and persists across reload (D-1.12)", async ({
     page,
   }) => {
-    // Page heading — admin.permissions.title key.
-    await expect(
-      page.locator("h1").filter({ hasText: /İzin Matrisi|Permissions Matrix/ }).first(),
-    ).toBeVisible({ timeout: 10_000 })
+    const cell = page.locator(PM_DELETE_CELL).first()
+    await expect(cell).toBeVisible({ timeout: 15_000 })
+    expect(await cell.isChecked()).toBe(false)
 
-    // Locate the matrix toggle for PM × project.delete. Each cell is rendered
-    // as an input[type="checkbox"] with aria-label matching the permission
-    // and column. The exact aria-label format from PermissionRow:
-    //   "<perm.label> for <role.name>" or
-    //   "<perm.key> · <role.name>"
-    // We use a flexible selector that matches either.
-    const cell = page
-      .locator(
-        "input[type='checkbox'][aria-label*='project.delete'][aria-label*='Project Manager']",
-      )
-      .or(
-        page.locator(
-          "input[type='checkbox'][aria-label*='project.delete'][aria-label*='PM']",
-        ),
-      )
-    await expect(cell.first()).toBeVisible({ timeout: 5_000 })
+    await cell.click()
 
-    // Snapshot initial state so we can flip then revert.
-    const initiallyChecked = await cell.first().isChecked()
-
-    // Toggle the cell — onChange fires useUpdatePermissionCell.mutate.
-    await cell.first().click()
-
-    // Toast "Yetki güncellendi" / "Permission updated" surfaces per Plan
-    // 15-09 Pattern-3 onSuccess.
     await expect(
       page.getByText(/Yetki güncellendi|Permission updated/i).first(),
     ).toBeVisible({ timeout: 5_000 })
 
-    // Reload — the cell should reflect the new state from the server.
+    // Reload → the persisted state comes back from the (stateful) backend.
     await page.reload()
-    await expect(
-      page.locator("h1").filter({ hasText: /İzin Matrisi|Permissions Matrix/ }).first(),
-    ).toBeVisible({ timeout: 10_000 })
-
-    const reloadedCell = page
-      .locator(
-        "input[type='checkbox'][aria-label*='project.delete'][aria-label*='Project Manager']",
-      )
-      .or(
-        page.locator(
-          "input[type='checkbox'][aria-label*='project.delete'][aria-label*='PM']",
-        ),
-      )
-    await expect(reloadedCell.first()).toBeVisible({ timeout: 5_000 })
-    const afterReload = await reloadedCell.first().isChecked()
-    expect(afterReload).toBe(!initiallyChecked)
-
-    // Cleanup — toggle back to original state so re-runs are idempotent.
-    await reloadedCell.first().click()
-    await expect(
-      page.getByText(/Yetki güncellendi|Permission updated/i).first(),
-    ).toBeVisible({ timeout: 5_000 })
+    const reloaded = page.locator(PM_DELETE_CELL).first()
+    await expect(reloaded).toBeVisible({ timeout: 15_000 })
+    // kills mutation: a no-op PATCH / no persistence leaves this unchecked.
+    expect(await reloaded.isChecked()).toBe(true)
   })
 
-  test("Admin column toggles are disabled (D-1.5 super-role read-only)", async ({
+  test("Admin column toggles are disabled and visually granted (D-1.5)", async ({
     page,
   }) => {
-    await expect(
-      page.locator("h1").filter({ hasText: /İzin Matrisi|Permissions Matrix/ }).first(),
-    ).toBeVisible({ timeout: 10_000 })
-
-    // Pick any task.* perm → Admin column. Admin column is disabled
-    // visually (Plan 15-10 D-1.5 PermissionRow always renders Admin granted
-    // + disabled).
     const adminCell = page
       .locator(
         "input[type='checkbox'][aria-label*='task.delete'][aria-label*='Admin']",
       )
       .first()
-    await expect(adminCell).toBeVisible({ timeout: 5_000 })
+    await expect(adminCell).toBeVisible({ timeout: 15_000 })
     await expect(adminCell).toBeDisabled()
-    // Admin always shows granted (visual ON) per D-1.5 wildcard semantics.
     await expect(adminCell).toBeChecked()
   })
 
-  test("per-row scope badge renders '(sistem)' for admin.* and '(proje)' for task.* (D-3.4)", async ({
+  test("per-row scope badges render (sistem) and (proje) (D-3.4)", async ({
     page,
   }) => {
     await expect(
-      page.locator("h1").filter({ hasText: /İzin Matrisi|Permissions Matrix/ }).first(),
-    ).toBeVisible({ timeout: 10_000 })
-
-    // (proje) badge — appears 26x (one per project-scoped perm).
+      page.getByText(/\(proje\)|\(project\)/).first(),
+    ).toBeVisible({ timeout: 15_000 })
     await expect(
-      page
-        .getByText(/\(proje\)|\(project\)/i, { exact: false })
-        .first(),
-    ).toBeVisible({ timeout: 5_000 })
-
-    // (sistem) badge — appears 12x (one per system-scoped perm; admin.*).
-    await expect(
-      page
-        .getByText(/\(sistem\)|\(system\)/i, { exact: false })
-        .first(),
-    ).toBeVisible({ timeout: 5_000 })
+      page.getByText(/\(sistem\)|\(system\)/).first(),
+    ).toBeVisible()
   })
 
-  test("per-column Sistem badge renders for all 4 system-role columns (D-2.4)", async ({
+  test("each system-role column header carries a Sistem badge (D-2.4)", async ({
     page,
   }) => {
-    await expect(
-      page.locator("h1").filter({ hasText: /İzin Matrisi|Permissions Matrix/ }).first(),
-    ).toBeVisible({ timeout: 10_000 })
-
-    // 4 system role columns → ≥4 Sistem / System badge occurrences in
-    // column headers (Plan 15-10 PermissionMatrixCard column header layout).
     const sistemBadges = page.getByText(/^Sistem$|^System$/)
-    await expect(sistemBadges.first()).toBeVisible({ timeout: 5_000 })
-    const count = await sistemBadges.count()
-    expect(count).toBeGreaterThanOrEqual(4)
+    await expect(sistemBadges.first()).toBeVisible({ timeout: 15_000 })
+    expect(await sistemBadges.count()).toBeGreaterThanOrEqual(4)
   })
 })
