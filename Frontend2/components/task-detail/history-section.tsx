@@ -91,7 +91,15 @@ export function HistorySection({
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {(entries as AuditEntry[]).map((e, i) => {
         const msg = formatAuditEntry(e, lang, { users, columnMap, phaseMap })
-        const u = users.get(e.user_id)
+        // Resolve the actor: prefer the per-project member (carries the project
+        // avatar), then fall back to the backend's denormalized user_name /
+        // user_avatar so actors outside the member pool still get an avatar
+        // instead of none. See audit_repo.get_by_entity users JOIN.
+        const u: UserLite | undefined =
+          users.get(e.user_id) ??
+          (e.user_name
+            ? { id: e.user_id, name: e.user_name, avatarUrl: e.user_avatar ?? null }
+            : undefined)
         return (
           <div
             key={`${i}-${e.timestamp}`}

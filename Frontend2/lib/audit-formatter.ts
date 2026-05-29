@@ -15,6 +15,13 @@ export interface AuditEntry {
   old_value?: string | null
   new_value?: string | null
   user_id: number
+  /** Denormalized actor name from the backend's users JOIN (audit_repo
+   *  get_by_entity). Preferred over the per-project `users` map so actors who
+   *  aren't in the (manager-only) member pool still resolve to a real name
+   *  instead of the "Bilinmeyen kullanıcı" placeholder. */
+  user_name?: string | null
+  /** Denormalized actor avatar URL from the same JOIN. */
+  user_avatar?: string | null
   action: "created" | "updated" | "deleted" | string
   timestamp: string
 }
@@ -61,6 +68,28 @@ const FIELD_LABELS_EN: Record<string, string> = {
   description: "description",
 }
 
+// Strip HTML markup and collapse to a short single-line preview. Used for free-
+// text fields (title, description) whose values may be rich-editor HTML and/or
+// very long. This is a DISPLAY concern only — the full value stays in the audit
+// log; the history row just shows a truncated, tag-free excerpt. Not a security
+// boundary: history-section renders the result as an escaped React text child,
+// so a plain regex strip (no DOMPurify dependency, keeps this module pure) is
+// sufficient.
+const MAX_VALUE_LEN = 60
+function stripTagsAndTruncate(s: string, max = MAX_VALUE_LEN): string {
+  const text = s
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre)>/gi, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text
+}
+
 function resolveValue(
   field: string | undefined,
   v: string | null | undefined,
@@ -76,7 +105,9 @@ function resolveValue(
     }
     return String(v)
   }
-  return String(v)
+  // Free-text fields (title, description, …): strip any rich-editor HTML and
+  // truncate so the log row stays compact and never shows raw "<strong>" tags.
+  return stripTagsAndTruncate(String(v))
 }
 
 /**
@@ -89,9 +120,14 @@ export function formatAuditEntry(
   lang: "tr" | "en",
   ctx: FormatContext,
 ): string {
-  const user = ctx.users.get(entry.user_id)
+  // Prefer the backend's denormalized actor name, then the per-project user
+  // map, then the localized placeholder. Trim guards against empty strings
+  // ("" should fall through to the map rather than render a blank actor).
+  const embeddedName = entry.user_name?.trim()
   const actor =
-    user?.name ?? (lang === "tr" ? "Bilinmeyen kullanıcı" : "Unknown user")
+    (embeddedName ? embeddedName : undefined) ??
+    ctx.users.get(entry.user_id)?.name ??
+    (lang === "tr" ? "Bilinmeyen kullanıcı" : "Unknown user")
   const labels = lang === "tr" ? FIELD_LABELS_TR : FIELD_LABELS_EN
 
   if (entry.action === "created") {

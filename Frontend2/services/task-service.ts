@@ -214,6 +214,10 @@ export const taskService = {
       old_value: string | null
       new_value: string | null
       user_id: number
+      // Denormalized actor identity from the backend users JOIN (audit_repo
+      // get_by_entity). Null when the actor row is missing (e.g. deleted user).
+      user_name: string | null
+      user_avatar: string | null
       action: string
       timestamp: string
     }>

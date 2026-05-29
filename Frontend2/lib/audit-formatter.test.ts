@@ -140,4 +140,79 @@ describe("formatAuditEntry (tr)", () => {
     )
     expect(s).toBe("Barış görevi sildi")
   })
+
+  it("prefers the backend-denormalized user_name over the (incomplete) users map", () => {
+    const s = formatAuditEntry(
+      {
+        field_name: "priority",
+        old_value: "low",
+        new_value: "high",
+        user_id: 999, // not in the users map
+        user_name: "Cem Yılmaz",
+        action: "updated",
+        timestamp: "2026-04-22T00:00:00Z",
+      },
+      "tr",
+      ctx,
+    )
+    expect(s).toContain("Cem Yılmaz")
+    expect(s).not.toContain("Bilinmeyen kullanıcı")
+  })
+
+  it("falls back to the users map when user_name is blank", () => {
+    const s = formatAuditEntry(
+      {
+        field_name: "priority",
+        old_value: "low",
+        new_value: "high",
+        user_id: 1,
+        user_name: "   ", // whitespace-only → ignored
+        action: "updated",
+        timestamp: "2026-04-22T00:00:00Z",
+      },
+      "tr",
+      ctx,
+    )
+    expect(s).toContain("Ayşe")
+  })
+
+  it("description changes strip rich-text HTML tags from the value", () => {
+    const s = formatAuditEntry(
+      {
+        field_name: "description",
+        old_value: "<p>eski</p>",
+        new_value: "<p><strong>yeni</strong> açıklama</p>",
+        user_id: 1,
+        action: "updated",
+        timestamp: "2026-04-22T00:00:00Z",
+      },
+      "tr",
+      ctx,
+    )
+    expect(s).not.toContain("<strong>")
+    expect(s).not.toContain("<p>")
+    expect(s).toContain("yeni açıklama")
+    expect(s).toContain("eski")
+  })
+
+  it("truncates a long value to a 60-char preview with an ellipsis", () => {
+    const long = "A".repeat(200)
+    const s = formatAuditEntry(
+      {
+        field_name: "description",
+        old_value: "—",
+        new_value: long,
+        user_id: 1,
+        action: "updated",
+        timestamp: "2026-04-22T00:00:00Z",
+      },
+      "tr",
+      ctx,
+    )
+    expect(s).toContain("…")
+    // The full 200-char value must NOT appear verbatim.
+    expect(s).not.toContain(long)
+    expect(s).toContain("A".repeat(60))
+    expect(s).not.toContain("A".repeat(61))
+  })
 })

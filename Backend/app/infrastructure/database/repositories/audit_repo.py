@@ -87,8 +87,28 @@ class SqlAlchemyAuditRepository(IAuditRepository):
         await self.session.commit()
 
     async def get_by_entity(self, entity_type: str, entity_id: int) -> list[dict]:
+        # LEFT JOIN users so each entry carries the actor's display name +
+        # avatar (D-47 denormalization, mirrors get_project_activity below).
+        # Without this the task-history UI can only resolve names for the
+        # project manager and shows "Bilinmeyen kullanıcı" for every other
+        # actor. isouter=True keeps rows whose user was deleted (user_* = None).
+        from app.infrastructure.database.models.user import UserModel
+
         stmt = (
-            select(AuditLogModel)
+            select(
+                AuditLogModel.entity_type,
+                AuditLogModel.entity_id,
+                AuditLogModel.field_name,
+                AuditLogModel.old_value,
+                AuditLogModel.new_value,
+                AuditLogModel.user_id,
+                UserModel.full_name.label("user_name"),
+                UserModel.avatar.label("user_avatar"),
+                AuditLogModel.action,
+                AuditLogModel.timestamp,
+            )
+            .select_from(AuditLogModel)
+            .join(UserModel, UserModel.id == AuditLogModel.user_id, isouter=True)
             .where(
                 AuditLogModel.entity_type == entity_type,
                 AuditLogModel.entity_id == entity_id,
@@ -96,17 +116,19 @@ class SqlAlchemyAuditRepository(IAuditRepository):
             .order_by(AuditLogModel.timestamp.desc())
         )
         result = await self.session.execute(stmt)
-        rows = result.scalars().all()
+        rows = result.mappings().all()
         return [
             {
-                "entity_type": row.entity_type,
-                "entity_id": row.entity_id,
-                "field_name": row.field_name,
-                "old_value": row.old_value,
-                "new_value": row.new_value,
-                "user_id": row.user_id,
-                "action": row.action,
-                "timestamp": row.timestamp,
+                "entity_type": row["entity_type"],
+                "entity_id": row["entity_id"],
+                "field_name": row["field_name"],
+                "old_value": row["old_value"],
+                "new_value": row["new_value"],
+                "user_id": row["user_id"],
+                "user_name": row["user_name"],
+                "user_avatar": row["user_avatar"],
+                "action": row["action"],
+                "timestamp": row["timestamp"],
             }
             for row in rows
         ]
