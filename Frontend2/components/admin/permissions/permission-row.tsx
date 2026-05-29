@@ -177,10 +177,15 @@ function PermissionToggleSwitch({
 export function PermissionRow({ permission, roles, cells }: PermissionRowProps) {
   const { language } = useApp()
   const updateCell = useUpdatePermissionCell()
-  // Disable ONLY the cell whose PATCH is in flight, not every cell in the row.
-  // The shared mutation exposes its latest `variables`, which identify the
-  // in-flight (role, permission) pair.
-  const pendingCell = updateCell.isPending ? updateCell.variables : undefined
+  // Disable ONLY the cell(s) whose PATCH is in flight, not every cell in the
+  // row. The mutation is shared across the row, so its single `variables`/
+  // `isPending` reflect only the LATEST click — reading them directly re-enables
+  // an earlier cell while its PATCH is still resolving when two cells in the row
+  // are toggled in quick succession (Y14). Track in-flight role ids in a Set so
+  // each cell stays disabled for the life of its own request, independently.
+  const [pendingRoleIds, setPendingRoleIds] = React.useState<ReadonlySet<number>>(
+    () => new Set<number>(),
+  )
 
   const label =
     (language === "tr" ? permission.label_tr : permission.label_en) ||
@@ -247,9 +252,7 @@ export function PermissionRow({ permission, roles, cells }: PermissionRowProps) 
         // Disabled when: Admin (D-1.5), Guest (D-2.4), or THIS cell's mutation
         // is in-flight (prevent re-clicks). Sibling cells stay interactive.
         const disabled =
-          isAdminColumn ||
-          isGuestColumn ||
-          (pendingCell?.roleId === role.id && pendingCell?.permKey === permission.key)
+          isAdminColumn || isGuestColumn || pendingRoleIds.has(role.id)
         return (
           <div
             key={role.id}
@@ -263,11 +266,23 @@ export function PermissionRow({ permission, roles, cells }: PermissionRowProps) 
                 // Defense in depth — even if `disabled` is stripped, we
                 // bail before firing the mutation for system-role columns.
                 if (isAdminColumn || isGuestColumn) return
-                updateCell.mutate({
-                  roleId: role.id,
-                  permKey: permission.key,
-                  granted: next,
-                })
+                const rid = role.id
+                setPendingRoleIds((prev) => new Set(prev).add(rid))
+                updateCell.mutate(
+                  { roleId: rid, permKey: permission.key, granted: next },
+                  {
+                    // Clear this cell's pending flag once its own PATCH settles
+                    // (success or error). onSettled always runs, so a cell can't
+                    // get stuck disabled. Per-call so concurrent siblings each
+                    // clear independently.
+                    onSettled: () =>
+                      setPendingRoleIds((prev) => {
+                        const updated = new Set(prev)
+                        updated.delete(rid)
+                        return updated
+                      }),
+                  },
+                )
               }}
             />
           </div>

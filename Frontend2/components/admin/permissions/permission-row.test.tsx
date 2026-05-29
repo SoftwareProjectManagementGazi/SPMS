@@ -114,11 +114,13 @@ describe("PermissionRow (Plan 15-10 — D-2.7 layer 1)", () => {
     renderRow(projectPerm)
     const memberToggle = screen.getByLabelText("task.create for Member")
     fireEvent.click(memberToggle)
-    expect(mockMutate).toHaveBeenCalledWith({
-      roleId: 3,
-      permKey: "task.create",
-      granted: true,
-    })
+    // Y14 — mutate now carries a per-call onSettled that clears this cell's
+    // in-flight flag, so it's invoked with (vars, options). The vars contract
+    // is unchanged; the options bag just needs an onSettled callback.
+    expect(mockMutate).toHaveBeenCalledWith(
+      { roleId: 3, permKey: "task.create", granted: true },
+      expect.objectContaining({ onSettled: expect.any(Function) }),
+    )
   })
 
   it("Case 4 — Admin column toggle is DISABLED (D-1.5 super-role)", () => {
