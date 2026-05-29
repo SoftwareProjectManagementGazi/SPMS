@@ -2,41 +2,49 @@ import { describe, it, expect } from "vitest"
 import { resolveBacklogFilter, resolveCycleLabel, isCycleFieldEnabled } from "./methodology-matrix"
 
 describe("resolveBacklogFilter", () => {
-  it("Scrum default -> cycle_id=null", () => {
+  // Backlog filters map to backend list params: cycle_null -> no_sprint, and
+  // every methodology also excludes done tasks (exclude_done). The K4 board-drop
+  // fix relies on the Scrum `no_sprint: true` shape. Contract was updated in
+  // commit aad6f0d9 from the legacy cycle_id/phase_id params these assertions
+  // previously expected.
+  it("Scrum default -> no_sprint + exclude_done", () => {
     expect(resolveBacklogFilter({ methodology: "SCRUM", processConfig: {} })).toEqual({
-      cycle_id: null,
+      no_sprint: true,
+      exclude_done: true,
     })
   })
-  it("Kanban default -> status=leftmost column", () => {
+  it("Kanban default -> leftmost column + exclude_done", () => {
     expect(
       resolveBacklogFilter({
         methodology: "KANBAN",
         columns: ["backlog", "todo", "done"],
         processConfig: {},
       })
-    ).toEqual({ status: "backlog" })
+    ).toEqual({ status: "backlog", exclude_done: true })
   })
-  it("Kanban without columns -> status=backlog fallback", () => {
+  it("Kanban without columns -> status=backlog fallback + exclude_done", () => {
     expect(resolveBacklogFilter({ methodology: "KANBAN", processConfig: {} })).toEqual({
       status: "backlog",
+      exclude_done: true,
     })
   })
-  it("Waterfall default -> phase_id=null", () => {
+  it("Waterfall default -> exclude_done (phase_id=null omitted by axios)", () => {
     expect(resolveBacklogFilter({ methodology: "WATERFALL", processConfig: {} })).toEqual({
-      phase_id: null,
+      exclude_done: true,
     })
   })
-  it("custom override -> in_backlog=true", () => {
+  it("custom override -> in_backlog + exclude_done", () => {
     expect(
       resolveBacklogFilter({
         methodology: "SCRUM",
         processConfig: { backlog_definition: "custom" },
       })
-    ).toEqual({ in_backlog: true })
+    ).toEqual({ in_backlog: true, exclude_done: true })
   })
   it("process_config null is tolerated", () => {
     expect(resolveBacklogFilter({ methodology: "SCRUM", processConfig: null })).toEqual({
-      cycle_id: null,
+      no_sprint: true,
+      exclude_done: true,
     })
   })
 })

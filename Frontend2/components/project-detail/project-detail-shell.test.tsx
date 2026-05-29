@@ -112,9 +112,14 @@ describe("ProjectDetailShell", () => {
       <ProjectDetailShell project={mockProjects[0]} isArchived={false} />
     )
     fireEvent.click(getByText("Yaşam Döngüsü"))
-    // SummaryStrip "Düzenle" button is reliable — mode-chip + active-phase
-    // badge depend on the BFS BUT "Düzenle" is unconditional.
-    expect(getAllByText(/Düzenle/).length).toBeGreaterThan(0)
+    // SummaryStrip rendered → assert the workflow-mode chip ("Esnek" for the
+    // fixture's flexible mode), which is unconditional. NOTE: "Düzenle" is no
+    // longer a valid proxy — commit aad6f0d9 gated it behind
+    // useTransitionAuthority, and this shell test's AuthProvider injects no user
+    // (transitionAllowed=false), so the edit button is intentionally absent
+    // here. The gating itself is covered directly by summary-strip.test.tsx
+    // Test 3; this test only needs to prove the LifecycleTab mounted.
+    expect(getByText("Esnek")).toBeInTheDocument()
     // Plan 12-04: 4-sub-tab Tabs primitive renders the four labels.
     expect(getByText("Genel Bakış")).toBeInTheDocument()
     expect(getByText("Kilometre Taşları")).toBeInTheDocument()
