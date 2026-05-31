@@ -14,6 +14,7 @@ import { useParams } from "next/navigation"
 import { Bug, GitBranch, Link as LinkIcon, MoreHorizontal } from "lucide-react"
 
 import { Button, Card, Section } from "@/components/primitives"
+import { useToast } from "@/components/toast"
 import { useApp } from "@/context/app-context"
 import { useProject } from "@/hooks/use-projects"
 import { useTaskDetail } from "@/hooks/use-task-detail"
@@ -32,6 +33,7 @@ import type { UserLite } from "@/lib/audit-formatter"
 export default function TaskDetailPage() {
   const params = useParams()
   const { language: lang } = useApp()
+  const { showToast } = useToast()
   const projectId = Number(params.id)
   const taskId = Number(params.taskId)
 
@@ -114,7 +116,21 @@ export default function TaskDetailPage() {
   function handleDescriptionChange(next: string) {
     setDescDraft(next)
     if (task && next !== (task.description ?? "")) {
-      updateTask.mutate({ field: "description", value: next })
+      // M-T2 — per-call error toast so a failed description PATCH isn't a silent
+      // rollback (the other fields surface errors via InlineEdit's own toast).
+      updateTask.mutate(
+        { field: "description", value: next },
+        {
+          onError: () =>
+            showToast({
+              variant: "error",
+              message:
+                lang === "tr"
+                  ? "Açıklama kaydedilemedi"
+                  : "Could not save description",
+            }),
+        },
+      )
     }
   }
 
