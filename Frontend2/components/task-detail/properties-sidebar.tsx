@@ -733,18 +733,12 @@ export function PropertiesSidebar({
                       task.assigneeName,
                       task.assigneeAvatarUrl,
                     )
-                    // Phase 13 Plan 13-03 (D-D4) — current-assignee Avatar
-                    // links to profile. Surrounding button still toggles the
-                    // AssigneePicker on clicks NOT on the avatar itself
-                    // (Avatar Link's stopPropagation ensures the picker stays
-                    // closed when the avatar is the click target).
-                    return av ? (
-                      <Avatar
-                        user={av}
-                        size={20}
-                        href={`/users/${task.assigneeId}`}
-                      />
-                    ) : null
+                    // M-T1 — no `href` here: this Avatar sits INSIDE the
+                    // picker-toggle <button>, and an <a> nested in a <button> is
+                    // invalid HTML (React 19 hydration warning + inconsistent
+                    // click target). The avatar is now a plain visual; the row
+                    // itself opens the AssigneePicker.
+                    return av ? <Avatar user={av} size={20} /> : null
                   })()}
                   <span style={{ fontSize: 12.5 }}>
                     {task.assigneeName?.trim() ||
