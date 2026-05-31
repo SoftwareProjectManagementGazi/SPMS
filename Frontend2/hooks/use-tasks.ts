@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { taskService, type CreateTaskDTO, type Task } from "@/services/task-service"
 
-export function useTasks(projectId: number | null, filters: Record<string, unknown> = {}) {
+// M-P3 — stable default so the queryKey reference doesn't change every render.
+// React Query hashes keys structurally, so today's behavior is already safe, but
+// a shared module constant removes the latent refetch trap for any future caller
+// that relies on the default.
+const EMPTY_FILTERS: Record<string, unknown> = {}
+
+export function useTasks(projectId: number | null, filters: Record<string, unknown> = EMPTY_FILTERS) {
   return useQuery({
     queryKey: ["tasks", "project", projectId, filters],
     queryFn: () => taskService.getByProject(projectId!, filters),
