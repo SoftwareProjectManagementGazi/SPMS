@@ -3,11 +3,14 @@
 // Phase 13 Plan 13-04 Task 1 — ActivityFilter (UI-SPEC §C.1 filter-bar row).
 //
 // Composition (verbatim from prototype activity-tab.jsx lines 102–120):
-//   [ SegmentedControl 6 chips ] [ vertical separator ] [ user-avatar row ]
+//   [ SegmentedControl 7 chips ] [ vertical separator ] [ user-avatar row ]
 //   [ flex-1 spacer ] [ "{N} olay" mono caption ]
 //
 // SegmentedControl options match D-B1's six chips (Tümü / Oluşturma / Durum /
-// Atama / Yorum / Yaşam Döngüsü). The lifecycle chip aggregates the 5 lifecycle
+// Atama / Yorum / Yaşam Döngüsü) plus a 7th "Yönetim/Admin" chip (Tier 3 — the
+// mapper already folds admin-side events into the "admin" ActivityFilterChip
+// but the UI chip was missing, so they were unreachable from any filter). The
+// lifecycle chip aggregates the 5 lifecycle
 // SemanticEventType values (phase_transition + 4 lifecycle entities) per
 // `semanticToFilterChip` from `audit-event-mapper.ts`.
 //
@@ -27,8 +30,8 @@ import { getInitials } from "@/lib/initials"
 import type { ActivityItem } from "@/services/activity-service"
 
 export interface ActivityFilterValue {
-  /** SegmentedControl selection — matches the 6 chip ids. */
-  type: "all" | "create" | "status" | "assign" | "comment" | "lifecycle"
+  /** SegmentedControl selection — matches the 7 chip ids. */
+  type: "all" | "create" | "status" | "assign" | "comment" | "lifecycle" | "admin"
   /** Per-actor filter (null = no actor filter applied). */
   userIdFilter: number | null
   /** Pagination accumulator for the "Daha fazla yükle" UX (D-B2). */
@@ -92,6 +95,10 @@ export function ActivityFilter({
       { id: "assign", label: T("Atama", "Assign") },
       { id: "comment", label: T("Yorum", "Comment") },
       { id: "lifecycle", label: T("Yaşam Döngüsü", "Lifecycle") },
+      // Tier 3 — admin-side events (user_*, rbac.*, join-request *, comment
+      // edit/delete) fold into the "admin" chip via semanticToFilterChip; the
+      // UI chip was never added, so these were unreachable from any filter.
+      { id: "admin", label: T("Yönetim", "Admin") },
     ],
     [language], // eslint-disable-line react-hooks/exhaustive-deps
   )

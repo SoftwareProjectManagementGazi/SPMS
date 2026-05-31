@@ -203,6 +203,41 @@ describe("ActivityTab", () => {
     ).toBeInTheDocument()
   })
 
+  it("Test 9: 'Yönetim' (admin) chip filters to admin-side events only", async () => {
+    // user_invited folds into the "admin" chip via semanticToFilterChip; the
+    // task_created event must be excluded once the admin chip is active. Before
+    // the Tier 3 fix there was no admin chip at all, so this was unreachable.
+    projectActivitySpy.mockReturnValue(
+      makeQueryResult([
+        makeTaskEvent(1, { entity_label: "MOBIL-1" }), // task_created → "create"
+        {
+          id: 2,
+          action: "invited",
+          entity_type: "user",
+          user_id: 7,
+          user_name: "Yusuf Bayrakcı",
+          timestamp: isoNow(),
+          entity_label: "USR-INV",
+          metadata: {},
+        },
+      ]),
+    )
+    render(<ActivityTab projectId={42} variant="full" />)
+    // Default "all" shows the task event.
+    expect(screen.getByText("MOBIL-1")).toBeInTheDocument()
+    // Activate the admin chip → task_created excluded, exactly 1 event remains.
+    fireEvent.click(screen.getByRole("button", { name: "Yönetim" }))
+    await waitFor(() => {
+      expect(screen.queryByText("MOBIL-1")).toBeNull()
+    })
+    expect(screen.getByText(/1 olay/)).toBeInTheDocument()
+    // Persisted as "admin".
+    const stored = JSON.parse(
+      window.localStorage.getItem("spms.activity.filter.42") || "{}",
+    )
+    expect(stored.type).toBe("admin")
+  })
+
   it("Test 8: DataState wraps loading — ActivityTimelineSkeleton (aria-busy)", () => {
     projectActivitySpy.mockReturnValue(
       makeQueryResult([], { isLoading: true }),
