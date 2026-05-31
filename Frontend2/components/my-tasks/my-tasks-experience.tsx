@@ -112,15 +112,18 @@ export function MyTasksExperience({
 
   // All preference states use the useLocalStoragePref hook — defaults render
   // on SSR + first paint, stored values swap in via mount-only useEffect, and
-  // the persist write is hydration-gated. Compact mode pins view to "all"
-  // (the dashboard already filters tasks by project, so saved-views are
-  // hidden); we still let the hook track storage so the standalone /my-tasks
-  // page reads back the user's last choice.
+  // the persist write is hydration-gated. Compact mode shows the caller's
+  // `defaultView` and hides the view switcher (the dashboard passes "today" to
+  // greet the user with their day's work); we still let the hook track storage
+  // so the standalone /my-tasks page reads back the user's last choice.
   const [storedView, setView] = useLocalStoragePref<ViewId>(
     "mt.view",
     defaultView
   )
-  const view: ViewId = compact ? "all" : storedView
+  // Tier 3 — honor the caller's defaultView in compact instead of hardcoding
+  // "all": the dashboard's documented intent (defaultView="today") was silently
+  // ignored before, so the Member-view dashboard always showed every task.
+  const view: ViewId = compact ? defaultView : storedView
   const [groupBy, setGroupBy] = useLocalStoragePref<GroupBy>(
     `mt.groupBy.${lsSuffix}`,
     defaultGroupBy
