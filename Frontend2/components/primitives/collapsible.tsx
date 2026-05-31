@@ -27,6 +27,7 @@ export function Collapsible({
   style,
 }: CollapsibleProps) {
   const [open, setOpen] = React.useState(defaultOpen)
+  const contentId = React.useId()
   return (
     <div
       className={className}
@@ -39,6 +40,8 @@ export function Collapsible({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls={contentId}
         style={{
           width: "100%",
           padding: "10px 14px",
@@ -67,6 +70,7 @@ export function Collapsible({
       </button>
       {open && (
         <div
+          id={contentId}
           style={{
             padding: "0 14px 14px",
             borderTop: "1px solid var(--border)",

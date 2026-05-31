@@ -25,10 +25,17 @@ export function ProgressBar({
   className,
   style,
 }: ProgressBarProps) {
-  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  // Clamp to [0,100] and guard NaN/Infinity so a bad `value` can't produce a
+  // negative or "NaN%" fill width.
+  const raw = max > 0 ? (value / max) * 100 : 0
+  const percent = Number.isFinite(raw) ? Math.max(0, Math.min(raw, 100)) : 0
   return (
     <div
       className={className}
+      role="progressbar"
+      aria-valuenow={Math.round(percent)}
+      aria-valuemin={0}
+      aria-valuemax={100}
       style={{
         height,
         background: bg,
