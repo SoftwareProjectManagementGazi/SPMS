@@ -22,6 +22,7 @@ import { AlertBanner, Badge, StatusDot } from "@/components/primitives"
 import type { StatusValue } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { Task } from "@/services/task-service"
+import type { SubtaskIndex } from "@/lib/tasks/subtasks"
 import type { DensityMode } from "./project-detail-context"
 import { BoardCard } from "./board-card"
 
@@ -34,6 +35,7 @@ interface BoardColumnProps {
   densityMode: DensityMode
   phaseNodes: Array<{ id: string; name: string }>
   enablePhaseBadge: boolean
+  subtaskIndex?: SubtaskIndex
 }
 
 const KNOWN_STATUSES: StatusValue[] = [
@@ -60,6 +62,7 @@ export function BoardColumn({
   densityMode,
   phaseNodes,
   enablePhaseBadge,
+  subtaskIndex,
 }: BoardColumnProps) {
   const { language } = useApp()
   const { setNodeRef, isOver } = useDroppable({
@@ -177,6 +180,7 @@ export function BoardColumn({
                 densityMode={densityMode}
                 phaseNodes={phaseNodes}
                 enablePhaseBadge={enablePhaseBadge}
+                subtaskIndex={subtaskIndex}
               />
             ))
           )}

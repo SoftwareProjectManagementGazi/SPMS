@@ -287,6 +287,23 @@ export function TaskRow({
             style={{ flexShrink: 0 }}
           />
         )}
+        {task.type === "subtask" && (
+          // A subtask's parent isn't guaranteed to be in *your* task list, so a
+          // resolvable parent-key chip isn't always possible here — mark the row
+          // as a subtask instead (the project List/Board views show full nesting).
+          <span
+            title={language === "tr" ? "Alt görev" : "Subtask"}
+            aria-label={language === "tr" ? "Alt görev" : "Subtask"}
+            style={{
+              color: "var(--fg-subtle)",
+              fontSize: 13,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            ↳
+          </span>
+        )}
         <span
           style={{
             textDecoration: isDone ? "line-through" : "none",

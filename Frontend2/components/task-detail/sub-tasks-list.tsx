@@ -25,11 +25,13 @@ import {
   Badge,
   Button,
   Card,
+  ProgressBar,
   Section,
 } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useTaskModal } from "@/context/task-modal-context"
 import type { Task } from "@/services/task-service"
+import { subtaskProgress } from "@/lib/tasks/subtasks"
 
 interface SubTasksListProps {
   parent: Task
@@ -76,6 +78,7 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
   const { language: lang } = useApp()
   const router = useRouter()
   const { openTaskModal } = useTaskModal()
+  const { done, total } = subtaskProgress(subtasks)
 
   const onAdd = () =>
     openTaskModal({
@@ -99,6 +102,27 @@ export function SubTasksList({ parent, subtasks }: SubTasksListProps) {
       }
       style={{ marginTop: 20 }}
     >
+      {total > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <ProgressBar value={done} max={total} style={{ flex: 1, maxWidth: 180 }} />
+          <span
+            style={{
+              fontSize: 11,
+              color: "var(--fg-muted)",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {done}/{total}
+          </span>
+        </div>
+      )}
       <Card padding={0}>
         {subtasks.map((st, i) => {
           const isDone = isDoneStatus(st.status)

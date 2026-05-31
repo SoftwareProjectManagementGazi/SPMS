@@ -19,6 +19,7 @@ import { Bug } from "lucide-react"
 import { Avatar, Badge, PriorityChip } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import type { Task } from "@/services/task-service"
+import { subtaskProgress, type SubtaskIndex } from "@/lib/tasks/subtasks"
 import type { DensityMode } from "./project-detail-context"
 
 interface BoardCardProps {
@@ -28,6 +29,7 @@ interface BoardCardProps {
   densityMode: DensityMode
   phaseNodes: Array<{ id: string; name: string }>
   enablePhaseBadge: boolean
+  subtaskIndex?: SubtaskIndex
 }
 
 function shortDate(iso: string | null, lang: "tr" | "en"): string {
@@ -68,6 +70,7 @@ export function BoardCard({
   densityMode,
   phaseNodes,
   enablePhaseBadge,
+  subtaskIndex,
 }: BoardCardProps) {
   const router = useRouter()
   const { language } = useApp()
@@ -92,6 +95,14 @@ export function BoardCard({
       ? Math.max(0, phaseNodes.findIndex((n) => n.id === task.phaseId))
       : 0
   const phaseTone = PHASE_TONES[phaseIndex % PHASE_TONES.length]
+
+  // Surface the parent↔subtask relationship on the card: a subtask shows its
+  // parent's key ("↳ KEY"); a parent shows its subtask progress ("done/total").
+  const parentKey =
+    task.parentTaskId != null
+      ? subtaskIndex?.byId.get(task.parentTaskId)?.key ?? null
+      : null
+  const childProgress = subtaskProgress(subtaskIndex?.childrenByParent.get(task.id))
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -158,7 +169,27 @@ export function BoardCard({
         >
           {task.key}
         </span>
+        {parentKey && (
+          <span
+            title={parentKey}
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              color: "var(--fg-subtle)",
+              background: "var(--surface-2)",
+              padding: "0 4px",
+              borderRadius: "var(--radius-sm)",
+            }}
+          >
+            ↳ {parentKey}
+          </span>
+        )}
         <div style={{ flex: 1 }} />
+        {childProgress.total > 0 && (
+          <Badge size="xs" tone="neutral">
+            {childProgress.done}/{childProgress.total}
+          </Badge>
+        )}
         {densityMode === "rich" && (
           <PriorityChip level={task.priority} lang={language} />
         )}

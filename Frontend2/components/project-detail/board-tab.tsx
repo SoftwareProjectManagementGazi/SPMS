@@ -21,6 +21,7 @@ import { apiClient } from "@/lib/api-client"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
 import { normalizeStatus, type Task } from "@/services/task-service"
+import { indexSubtasks } from "@/lib/tasks/subtasks"
 import { DataState } from "@/components/primitives"
 
 import { BoardColumn } from "./board-column"
@@ -56,6 +57,9 @@ export function BoardTab({ project }: { project: Project }) {
   // populated by a malformed query elsewhere, or a backend contract change),
   // treat it as empty instead of crashing the board render.
   const tasks: Task[] = Array.isArray(tasksData) ? tasksData : []
+  // Index parent↔subtask from the FULL task list so a subtask's parent key
+  // resolves even when its parent is filtered out of the current view.
+  const subtaskIndex = React.useMemo(() => indexSubtasks(tasks), [tasks])
   const { data: columnsMeta = [] } = useColumns(project.id)
 
   const cfg = (project.processConfig ?? {}) as {
@@ -186,6 +190,7 @@ export function BoardTab({ project }: { project: Project }) {
               densityMode={pd.densityMode}
               phaseNodes={phaseNodes}
               enablePhaseBadge={enablePhaseBadge}
+              subtaskIndex={subtaskIndex}
             />
           ))}
         </div>
