@@ -265,7 +265,10 @@ export function MilestonesSubTab({
                   name: ms.name,
                   start_date: ms.startDate ?? undefined,
                   target_date: ms.targetDate,
-                  status: effectiveStatus(ms.status, ms.startDate, ms.targetDate).toLowerCase().replace("done", "completed").replace("active", "in_progress"),
+                  // M-L4 — seed from the RAW stored status, NOT effectiveStatus:
+                  // the latter derives DELAYED from dates, so an untouched Save
+                  // would persist DELAYED over a real PENDING/IN_PROGRESS.
+                  status: ms.status.toLowerCase().replace("done", "completed").replace("active", "in_progress"),
                   linked_phase_ids: ms.linkedPhaseIds ?? [],
                 }}
                 onSave={(draft) => handleUpdate(ms.id, draft)}
