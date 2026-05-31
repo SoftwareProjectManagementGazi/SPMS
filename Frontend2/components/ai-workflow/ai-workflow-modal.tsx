@@ -152,12 +152,13 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
   }
 
   /**
-   * Backdrop click + ESC — these are modal-dismiss affordances. Mid-generation
-   * we soft-cancel the stream first (so the request doesn't keep running)
-   * but still close because the user clearly wants out.
+   * Backdrop click — a modal-dismiss affordance. Mid-generation we do NOT close
+   * (matching Escape at line ~103): an accidental click-outside shouldn't
+   * discard a running stream. The user must press the explicit "İptal" button
+   * to cancel + close.
    */
   const handleBackdropDismiss = () => {
-    if (state.status === "generating") cancel()
+    if (state.status === "generating") return
     onClose()
   }
 
