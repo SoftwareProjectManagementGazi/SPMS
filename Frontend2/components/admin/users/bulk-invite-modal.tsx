@@ -196,6 +196,10 @@ export function BulkInviteModal({ open, onClose }: BulkInviteModalProps) {
                 onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) handleFileSelect(file)
+                  // M-AD5 — reset so re-selecting the SAME file (e.g. a corrected
+                  // CSV with the same name) still fires onChange; browsers
+                  // suppress the event when the input value is unchanged.
+                  e.target.value = ""
                 }}
                 style={{
                   position: "absolute",
