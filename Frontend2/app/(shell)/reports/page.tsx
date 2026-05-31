@@ -9,7 +9,7 @@
 //
 // Filter pipeline:
 //   URL ?projectId=X&range=Y
-//      → globalRange (7|30|90|q2)
+//      → globalRange (7|30|90)
 //      → chartRange (7|30|90 for chart endpoints that need a window)
 //      → filters: ReportFilters { projectId, dateFrom, dateTo }
 //        built from globalRange via today() - N days ... today()
@@ -64,7 +64,7 @@ import type { ReportFilters } from "@/services/report-service"
 // ---------------------------------------------------------------------------
 
 const DEFAULT_RANGE: DateRange = 30
-const VALID_RANGES: DateRange[] = [7, 30, 90, "q2"]
+const VALID_RANGES: DateRange[] = [7, 30, 90]
 
 function parseProjectId(raw: string | null): number | null {
   if (!raw) return null
@@ -74,7 +74,6 @@ function parseProjectId(raw: string | null): number | null {
 
 function parseRange(raw: string | null): DateRange {
   if (!raw) return DEFAULT_RANGE
-  if (raw === "q2") return "q2"
   const n = parseInt(raw, 10)
   return (VALID_RANGES as Array<DateRange | number>).includes(n)
     ? (n as DateRange)
@@ -82,12 +81,12 @@ function parseRange(raw: string | null): DateRange {
 }
 
 /** Convert the global DateRange chip to a {dateFrom, dateTo} pair for
- *  the v1 report endpoints. "q2" decorative chip falls back to 90 days. */
+ *  the v1 report endpoints. */
 function rangeToFilters(
   projectId: number | null,
   range: DateRange,
 ): ReportFilters {
-  const dayCount = range === "q2" ? 90 : (range as 7 | 30 | 90)
+  const dayCount = range
   const today = new Date()
   const from = new Date(today)
   from.setDate(from.getDate() - dayCount + 1)
@@ -195,8 +194,7 @@ function ReportsPageInner() {
     [selectedProjectId, globalRange],
   )
 
-  const chartRange: 7 | 30 | 90 =
-    globalRange === "q2" ? 90 : (globalRange as 7 | 30 | 90)
+  const chartRange: 7 | 30 | 90 = globalRange
 
   // --- Data hooks ------------------------------------------------------
   const summaryQuery = useSummary(filters, caps?.summary === true)
