@@ -280,7 +280,10 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
               newCount={
                 variant === "lifecycle"
                   ? state.nodes.length
-                  : state.columns.length
+                  // M-L5 — special columns (backlog/done buckets) aren't shown as
+                  // board columns, so exclude them so the apply count matches what
+                  // the user sees on screen.
+                  : state.columns.filter((c) => !c.is_special).length
               }
               defaultMode="replace"
               onCancel={() => {
