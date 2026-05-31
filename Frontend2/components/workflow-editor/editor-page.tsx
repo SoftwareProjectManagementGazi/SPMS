@@ -509,15 +509,26 @@ export function EditorPage({ project }: EditorPageProps) {
     [router, searchParams],
   )
 
+  // M-W5 — mirror the live workflow in a ref so commitWorkflow always pushes the
+  // CURRENT snapshot to history, even when invoked from a deferred/stale closure
+  // (a context-menu action fired via setTimeout could otherwise capture a
+  // pre-drag `workflow` → undo would jump to the wrong position). useLayoutEffect
+  // (not useEffect) keeps the ref fresh before any event handler fires; the ref
+  // is StrictMode-safe — no functional state updater, so no double history push.
+  const workflowRef = React.useRef(workflow)
+  React.useLayoutEffect(() => {
+    workflowRef.current = workflow
+  }, [workflow])
+
   // Single mutation entry point — pushes the OLD workflow to the history
   // stack first, then commits the new one + sets dirty=true.
   const commitWorkflow = React.useCallback(
     (next: WorkflowConfig) => {
-      history.push(workflow)
+      history.push(workflowRef.current)
       setWorkflow(next)
       setDirty(true)
     },
-    [history, workflow],
+    [history, setWorkflow],
   )
 
   const handleWorkflowChange = React.useCallback(

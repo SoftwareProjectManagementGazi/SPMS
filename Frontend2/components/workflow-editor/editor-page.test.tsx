@@ -110,6 +110,7 @@ vi.mock("@/services/project-service", () => ({
 // depth equals 1, not 30.
 const capturedHandlers: {
   onNodesChange?: (changes: Array<Record<string, unknown>>) => void
+  onNodeClick?: (e: unknown, node: unknown) => void
   onNodeDragStart?: (e: unknown, node: unknown) => void
   onNodeDrag?: (e: unknown, node: unknown) => void
   onNodeDragStop?: (e: unknown, node: unknown) => void
@@ -130,17 +131,20 @@ vi.mock("@xyflow/react", () => ({
   ReactFlow: ({
     children,
     onNodesChange,
+    onNodeClick,
     onNodeDragStart,
     onNodeDrag,
     onNodeDragStop,
   }: {
     children?: React.ReactNode
     onNodesChange?: typeof capturedHandlers.onNodesChange
+    onNodeClick?: typeof capturedHandlers.onNodeClick
     onNodeDragStart?: typeof capturedHandlers.onNodeDragStart
     onNodeDrag?: typeof capturedHandlers.onNodeDrag
     onNodeDragStop?: typeof capturedHandlers.onNodeDragStop
   }) => {
     capturedHandlers.onNodesChange = onNodesChange
+    capturedHandlers.onNodeClick = onNodeClick
     capturedHandlers.onNodeDragStart = onNodeDragStart
     capturedHandlers.onNodeDrag = onNodeDrag
     capturedHandlers.onNodeDragStop = onNodeDragStop
@@ -236,6 +240,7 @@ describe("EditorPage", () => {
     // Reset captured handlers between tests so cross-test contamination
     // is impossible (Pitfall 5: jsdom hangs onto closures).
     capturedHandlers.onNodesChange = undefined
+    capturedHandlers.onNodeClick = undefined
     capturedHandlers.onNodeDragStart = undefined
     capturedHandlers.onNodeDrag = undefined
     capturedHandlers.onNodeDragStop = undefined
@@ -884,5 +889,61 @@ describe("EditorPage", () => {
     // The lifecycle slice must remain untouched — toggling in status mode
     // never leaks into phase_workflow.capabilities.
     expect(body.phase_workflow?.capabilities?.has_recurring).toBeUndefined()
+  })
+
+  // ---------------------- Wave E — M-W4 single delete path ----------------------
+
+  // M-W4: React Flow's built-in delete is disabled (deleteKeyCode={null}), so a
+  // node delete flows through the single deleteSelection() path — removing the
+  // node AND its connected edges in ONE commit. Pre-fix, RF ALSO emitted
+  // onNodesChange/onEdgesChange removes from a stale `workflow` closure, causing
+  // a double history push + lost update. This locks the consolidated path.
+  it("Test 25 (M-W4): selecting a node + Delete removes it + its edge in one clean commit", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            { id: "nd_aaaaaaaaaa", name: "A", x: 0, y: 0, is_initial: true },
+            { id: "nd_bbbbbbbbbb", name: "B", x: 100, y: 0, is_final: true },
+          ],
+          edges: [
+            { id: "ed_1", source: "nd_aaaaaaaaaa", target: "nd_bbbbbbbbbb" },
+          ],
+          groups: [],
+        },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(capturedHandlers.onNodeClick).toBeTypeOf("function")
+    })
+    // Select node A, then press Delete (window keydown → deleteSelection).
+    await act(async () => {
+      capturedHandlers.onNodeClick!({} as never, { id: "nd_aaaaaaaaaa" })
+    })
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }))
+    })
+    // Save → inspect the PATCH body.
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow: {
+        nodes: Array<{ id: string }>
+        edges: Array<{ id: string }>
+      }
+    }
+    const nodeIds = body.phase_workflow.nodes.map((n) => n.id)
+    expect(nodeIds).not.toContain("nd_aaaaaaaaaa") // deleted node gone
+    expect(nodeIds).toContain("nd_bbbbbbbbbb") // sibling remains
+    expect(body.phase_workflow.edges.length).toBe(0) // edge to deleted node removed
   })
 })

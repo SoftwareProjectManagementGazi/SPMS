@@ -155,6 +155,14 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}
+        // M-W4 — disable React Flow's built-in delete. The editor owns deletion
+        // via deleteSelection() (Delete key + context menu), which removes a
+        // node + its edges + group membership in ONE commit. Leaving RF's
+        // deleteKeyCode on made it ALSO emit onNodesChange+onEdgesChange removes
+        // in the same tick → two commitWorkflow calls reading the same stale
+        // `workflow` closure → double history push + lost update + rf/workflow
+        // desync. One delete path = one correct commit.
+        deleteKeyCode={null}
         // v3.0 — When AI canvas is in use, kill ALL auto-fit behavior and pin
         // the viewport at a known origin so streaming-added nodes don't shift
         // the camera. fitView=false alone isn't enough — RF's React-state
