@@ -98,6 +98,10 @@ export async function applyTaskStatusSuggestion(
   for (const c of args.columns) {
     colIdMap.set(c.id, normalizeNodeId(c.id))
   }
+  // M-L2 — apply the same collision tie-break the lifecycle path uses: two
+  // column labels that normalize to the same nd_ id would otherwise produce
+  // duplicate node ids and 422 on write.
+  dedupeNormalizedIds(colIdMap)
 
   // Map columns → status-mode nodes laid out horizontally
   const nodes: WorkflowNode[] = args.columns.map((c, idx) => ({
@@ -230,6 +234,29 @@ function normalizeNodeId(raw: string): string {
 }
 
 /**
+ * M-L2 — de-duplicate the normalized ids in a raw→normalized id map IN PLACE.
+ * Two raw ids whose labels normalize to the same nd_ value would otherwise
+ * collide and trip the backend's unique-node-id check (422). On a collision we
+ * swap in a numeric-tailed variant so every value stays distinct. Shared by the
+ * lifecycle (aiToWorkflowConfig) and task-status (applyTaskStatusSuggestion)
+ * paths so both are protected by the same tie-break.
+ */
+function dedupeNormalizedIds(idMap: Map<string, string>): void {
+  const seen = new Set<string>()
+  for (const [raw, normalized] of idMap.entries()) {
+    let candidate = normalized
+    let counter = 1
+    while (seen.has(candidate)) {
+      const tail = String(counter).padStart(2, "0")
+      candidate = `nd_${candidate.slice(3, 11).slice(0, 8)}${tail}`
+      counter++
+    }
+    seen.add(candidate)
+    idMap.set(raw, candidate)
+  }
+}
+
+/**
  * Convert a streamed lifecycle suggestion (nodes + edges) into a domain
  * WorkflowConfig. Initial nodes are computed from "has no incoming flow edge".
  * Node ids are normalized to backend's required format (see normalizeNodeId).
@@ -247,18 +274,7 @@ export function aiToWorkflowConfig(
   }
   // Ensure mapping is unique (two raw ids could normalize to the same value
   // for degenerate inputs — append a numeric tail to break ties).
-  const seen = new Set<string>()
-  for (const [raw, normalized] of idMap.entries()) {
-    let candidate = normalized
-    let counter = 1
-    while (seen.has(candidate)) {
-      const tail = String(counter).padStart(2, "0")
-      candidate = `nd_${candidate.slice(3, 11).slice(0, 8)}${tail}`
-      counter++
-    }
-    seen.add(candidate)
-    idMap.set(raw, candidate)
-  }
+  dedupeNormalizedIds(idMap)
 
   // Compute initial/final flags from flow-edge topology (backend D-19 rules):
   //   - isInitial = no incoming flow edge
