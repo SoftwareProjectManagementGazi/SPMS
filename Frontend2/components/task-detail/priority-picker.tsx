@@ -74,10 +74,18 @@ export function PriorityPicker({
       onCancel,
     })
 
+  // Focus the listbox on open so arrow-key nav + Escape land here. These
+  // search-less pickers have no input to hold focus and the trigger is a
+  // sibling, so without this the onKeyDown handler would never fire.
+  React.useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
   return (
     <div
       ref={ref}
       onKeyDown={onKeyDown}
+      tabIndex={-1}
       role="listbox"
       aria-label={lang === "tr" ? "Öncelik seç" : "Select priority"}
       aria-activedescendant={
@@ -97,6 +105,7 @@ export function PriorityPicker({
         zIndex: 50,
         overflow: "hidden",
         padding: 4,
+        outline: "none",
       }}
     >
       {PRIORITY_ORDER.map((level, i) => {

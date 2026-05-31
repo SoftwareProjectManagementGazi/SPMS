@@ -97,10 +97,18 @@ export function StatusPicker({
       onCancel,
     })
 
+  // Focus the listbox on open so arrow-key nav + Escape land here. These
+  // search-less pickers have no input to hold focus and the trigger is a
+  // sibling, so without this the onKeyDown handler would never fire.
+  React.useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
   return (
     <div
       ref={ref}
       onKeyDown={onKeyDown}
+      tabIndex={-1}
       role="listbox"
       aria-label={lang === "tr" ? "Görev durumu seç" : "Select task status"}
       aria-activedescendant={
@@ -120,6 +128,7 @@ export function StatusPicker({
         zIndex: 50,
         overflow: "hidden",
         padding: 4,
+        outline: "none",
       }}
     >
       {columns.length === 0 && (

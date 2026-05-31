@@ -88,10 +88,18 @@ export function SprintPicker({
       onCancel,
     })
 
+  // Focus the listbox on open so arrow-key nav + Escape land here. This
+  // search-less picker has no input to hold focus and the trigger is a
+  // sibling, so without this the onKeyDown handler would never fire.
+  React.useEffect(() => {
+    ref.current?.focus()
+  }, [])
+
   return (
     <div
       ref={ref}
       onKeyDown={onKeyDown}
+      tabIndex={-1}
       role="listbox"
       aria-label={lang === "tr" ? "Döngü seç" : "Select cycle"}
       aria-activedescendant={
@@ -110,6 +118,7 @@ export function SprintPicker({
         borderRadius: "var(--radius-sm)",
         zIndex: 50,
         overflow: "hidden",
+        outline: "none",
       }}
     >
       {/* Unassign row — surfaced only when a sprint is currently picked,
