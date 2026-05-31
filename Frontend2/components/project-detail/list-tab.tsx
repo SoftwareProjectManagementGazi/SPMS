@@ -27,11 +27,13 @@ import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   flexRender,
   type ColumnDef,
   type SortingState,
+  type ExpandedState,
 } from "@tanstack/react-table"
-import { Bug, ChevronUp, ChevronDown } from "lucide-react"
+import { Bug, ChevronUp, ChevronDown, ChevronRight } from "lucide-react"
 
 import {
   Avatar,
@@ -46,8 +48,13 @@ import { useApp } from "@/context/app-context"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
 import type { Task } from "@/services/task-service"
+import { indexSubtasks } from "@/lib/tasks/subtasks"
 
 import { useProjectDetail } from "./project-detail-context"
+
+// A task plus its nested subtasks, for TanStack Table's getSubRows. The model is
+// 1-level (subtasks can't have subtasks), so children never carry their own.
+type TaskRow = Task & { subRows?: TaskRow[] }
 
 const PRIORITY_ORDER: Record<string, number> = {
   critical: 4,
@@ -116,11 +123,25 @@ export function ListTab({ project }: { project: Project }) {
     })
   }, [tasks, pd.searchQuery, pd.phaseFilter])
 
+  // Nest subtasks under their parent for the tree view. A subtask whose parent
+  // is filtered out (or doesn't exist) becomes a top-level row so it's never
+  // hidden. Subtasks are 1-level, so children never carry their own subRows.
+  const treeData = React.useMemo<TaskRow[]>(() => {
+    const { childrenByParent } = indexSubtasks(filtered)
+    const presentIds = new Set(filtered.map((t) => t.id))
+    return filtered
+      .filter((t) => t.parentTaskId == null || !presentIds.has(t.parentTaskId))
+      .map((t) => {
+        const subRows = childrenByParent.get(t.id)
+        return subRows ? { ...t, subRows } : t
+      })
+  }, [filtered])
+
   // Build columns. The effect of flipping enablePhaseAssignment mid-session is
   // handled by a new columns array — TanStack Table picks up the change via
   // re-render since columns is a memoized value.
-  const columns = React.useMemo<ColumnDef<Task>[]>(() => {
-    const cols: ColumnDef<Task>[] = [
+  const columns = React.useMemo<ColumnDef<TaskRow>[]>(() => {
+    const cols: ColumnDef<TaskRow>[] = [
       {
         accessorKey: "key",
         header: language === "tr" ? "ANAHTAR" : "KEY",
@@ -141,18 +162,78 @@ export function ListTab({ project }: { project: Project }) {
         header: language === "tr" ? "BAŞLIK" : "TITLE",
         cell: (info) => {
           const t = info.row.original
+          const depth = info.row.depth
+          const canExpand = info.row.getCanExpand()
+          const expanded = info.row.getIsExpanded()
+          const childCount = info.row.subRows.length
           return (
             <span
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
+                paddingLeft: depth * 18,
+                minWidth: 0,
               }}
             >
+              {canExpand ? (
+                <button
+                  type="button"
+                  aria-label={expanded ? "Daralt" : "Genişlet"}
+                  aria-expanded={expanded}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    info.row.toggleExpanded()
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 16,
+                    height: 16,
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    color: "var(--fg-muted)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+              ) : (
+                // Spacer so childless roots + subtask rows align under the
+                // expandable rows' titles; subtasks get a small ↳ marker.
+                <span
+                  aria-hidden
+                  style={{
+                    width: 16,
+                    flexShrink: 0,
+                    color: "var(--fg-subtle)",
+                    textAlign: "center",
+                  }}
+                >
+                  {depth > 0 ? "↳" : ""}
+                </span>
+              )}
               {t.type === "bug" && (
                 <Bug size={12} color="var(--priority-critical)" />
               )}
-              <span style={{ fontSize: 12.5 }}>{t.title}</span>
+              <span
+                style={{
+                  fontSize: 12.5,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                }}
+              >
+                {t.title}
+              </span>
+              {canExpand && childCount > 0 && (
+                <Badge size="xs" tone="neutral">
+                  {childCount}
+                </Badge>
+              )}
             </span>
           )
         },
@@ -287,13 +368,20 @@ export function ListTab({ project }: { project: Project }) {
     { id: "key", desc: false },
   ])
 
+  // Default to all-expanded so the nested structure is visible at a glance;
+  // each parent row's chevron collapses its subtasks.
+  const [expanded, setExpanded] = React.useState<ExpandedState>(true)
+
   const table = useReactTable({
-    data: filtered,
+    data: treeData,
     columns,
-    state: { sorting },
+    state: { sorting, expanded },
     onSortingChange: setSorting,
+    onExpandedChange: setExpanded,
+    getSubRows: (row) => row.subRows,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
   })
 
   const gridCols = phaseEnabled
