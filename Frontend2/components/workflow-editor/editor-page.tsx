@@ -74,6 +74,7 @@ import {
 } from "@/lib/lifecycle/align-helpers"
 import { matchesShortcut, KEYBOARD_SHORTCUTS } from "@/lib/lifecycle/shortcuts"
 import {
+  buildGroupCloudData,
   computeHull,
   type Point,
 } from "@/lib/lifecycle/cloud-hull"
@@ -689,15 +690,19 @@ export function EditorPage({ project }: EditorPageProps) {
           .map((id) => nodePositions.get(id))
           .filter((p): p is Point => p != null)
         if (childPositions.length === 0) continue
-        const minX = Math.min(...childPositions.map((p) => p.x))
-        const minY = Math.min(...childPositions.map((p) => p.y))
+        // childPositions are ABSOLUTE; buildGroupCloudData returns a node-local
+        // frame (position + local childPositions/hullPath + concrete w/h) so the
+        // cloud renders 1:1 with no offset or viewBox distortion (Tema 1 fix).
+        const cloud = buildGroupCloudData(childPositions, 16)
         out.push({
           id: g.id,
           type: "group",
-          position: { x: minX - 32, y: minY - 32 },
+          position: cloud.position,
           data: {
-            childPositions,
-            hullPath: computeHull(childPositions, 16),
+            childPositions: cloud.childPositions,
+            hullPath: cloud.hullPath,
+            width: cloud.width,
+            height: cloud.height,
             name: g.name,
             color: g.color,
             selected: sel?.type === "group" && sel.id === g.id,
@@ -834,12 +839,21 @@ export function EditorPage({ project }: EditorPageProps) {
               .map((cid) => positions.get(cid))
               .filter((p): p is Point => p != null)
             if (childPositions.length === 0) return n
+            // Same node-local transform as projectRfNodes. Refresh position too:
+            // if the dragged child becomes the new min-corner, the origin shifts,
+            // so the cloud must follow (the group node is non-interactive —
+            // pointerEvents:none — so this per-frame position write can't fight
+            // RF's drag transform, which is driving the phase node, not this one).
+            const cloud = buildGroupCloudData(childPositions, 16)
             return {
               ...n,
+              position: cloud.position,
               data: {
                 ...(n.data ?? {}),
-                childPositions,
-                hullPath: computeHull(childPositions, 16),
+                childPositions: cloud.childPositions,
+                hullPath: cloud.hullPath,
+                width: cloud.width,
+                height: cloud.height,
               },
             } as RFNode
           })

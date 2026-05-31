@@ -50,6 +50,83 @@ export function computeHull(points: Point[], padding: number = 16): string {
 }
 
 /**
+ * Geometry for a React-Flow group-cloud node, derived from the ABSOLUTE
+ * positions of its child phase nodes. `childPositions` and `hullPath` are in
+ * the NODE-LOCAL frame (origin = the node's top-left), so the consumer renders
+ * them inside `viewBox="0 0 width height"` with NO offset and NO distortion.
+ */
+export interface GroupCloudGeometry {
+  /** Absolute canvas position of the group node's top-left (its origin). */
+  position: { x: number; y: number }
+  /** Node-local width — exactly spans the local hull's x-extent [0, width]. */
+  width: number
+  /** Node-local height — exactly spans the local hull's y-extent [0, height]. */
+  height: number
+  /** Child positions translated into the node-local frame (origin-relative). */
+  childPositions: Point[]
+  /** Smoothed hull d-string in the node-local frame (within [0,w]×[0,h]). */
+  hullPath: string
+}
+
+/**
+ * buildGroupCloudData — derive a group-cloud node's geometry from the ABSOLUTE
+ * positions of its child phase nodes.
+ *
+ * Why local-frame output: React Flow translates a node's entire content by its
+ * `position`, and GroupCloudNode renders the hull inside `viewBox="0 0 w h"`.
+ * If childPositions/hullPath were absolute, the hull would be drawn at
+ * `position + abs` (≈ 2·min) and squashed by a mismatched viewBox. By emitting
+ * a local frame that starts at (0,0), the rendered hull lands exactly where the
+ * nodes are, at 1:1 scale.
+ *
+ * Geometry: origin = (minX - padding, minY - padding); local = abs - origin.
+ * computeHull inflates each local point by `padding` + the NODE_WIDTH/HEIGHT
+ * box, so the local hull spans exactly [0, width] × [0, height] where
+ *   width  = (maxX - minX) + NODE_WIDTH  + 2*padding
+ *   height = (maxY - minY) + NODE_HEIGHT + 2*padding
+ *
+ * Lives here (not in the editor) because NODE_WIDTH/NODE_HEIGHT are
+ * module-private to this file. Empty input → zero geometry.
+ */
+export function buildGroupCloudData(
+  absChildPositions: Point[],
+  padding: number = 16,
+): GroupCloudGeometry {
+  if (!absChildPositions || absChildPositions.length === 0) {
+    return {
+      position: { x: 0, y: 0 },
+      width: 0,
+      height: 0,
+      childPositions: [],
+      hullPath: "",
+    }
+  }
+
+  const xs = absChildPositions.map((p) => p.x)
+  const ys = absChildPositions.map((p) => p.y)
+  const minX = Math.min(...xs)
+  const minY = Math.min(...ys)
+  const maxX = Math.max(...xs)
+  const maxY = Math.max(...ys)
+
+  const originX = minX - padding
+  const originY = minY - padding
+
+  const childPositions: Point[] = absChildPositions.map((p) => ({
+    x: p.x - originX,
+    y: p.y - originY,
+  }))
+
+  return {
+    position: { x: originX, y: originY },
+    width: maxX - minX + NODE_WIDTH + 2 * padding,
+    height: maxY - minY + NODE_HEIGHT + 2 * padding,
+    childPositions,
+    hullPath: computeHull(childPositions, padding),
+  }
+}
+
+/**
  * Expand each node position into the four corners of its bounding box
  * (inflated by `padding`). Sampling corners — not just centers — produces a
  * tighter hull around the actual visible PhaseNode rectangles.
