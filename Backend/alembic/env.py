@@ -1,7 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool, String
+from sqlalchemy import pool, String, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -71,15 +71,24 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    # Pre-flight self-heal for databases created before this env.py was
+    # configured for VARCHAR(128). On those DBs, alembic_version.version_num
+    # is the historical VARCHAR(32) and the stamp UPDATE for a long revision
+    # id (e.g. "015_iterative_enum_and_system_config", 36 chars) truncates
+    # and aborts the migration. Widening here is idempotent — a no-op on
+    # fresh DBs (table doesn't exist yet, IF EXISTS skips it) and on DBs
+    # already widened to >= 128.
+    with connection.begin():
+        connection.execute(text(
+            "ALTER TABLE IF EXISTS alembic_version "
+            "ALTER COLUMN version_num TYPE VARCHAR(128)"
+        ))
+
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        # Descriptive revision ids (e.g. "015_iterative_enum_and_system_config"
-        # = 36 chars) exceed alembic's default version_num varchar(32), which
-        # truncates and aborts the stamp UPDATE — this was the real reason the
-        # DB sat at 014 while 015's content was already applied. Widen so fresh
-        # DBs can record every id (existing DBs were ALTERed to match alongside
-        # migration 016).
+        # Fresh DBs: Alembic will create alembic_version with this width.
+        # Existing DBs are handled by the ALTER above.
         version_table_column_type=String(128),
     )
 
