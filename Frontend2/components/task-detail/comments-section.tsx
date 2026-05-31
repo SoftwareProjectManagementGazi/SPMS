@@ -418,7 +418,7 @@ export function CommentsSection({
                 </div>
               )
             }
-            const av = avatarFromMember(c.authorId, c.authorName)
+            const av = avatarFromMember(c.authorId, c.authorName, c.authorAvatarUrl)
             return (
               <div key={c.id} style={{ display: "flex", gap: 10 }}>
                 {/* Phase 13 Plan 13-03 (D-D4) — comment-author Avatar links
