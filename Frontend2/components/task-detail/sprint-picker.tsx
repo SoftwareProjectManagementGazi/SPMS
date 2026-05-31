@@ -15,6 +15,7 @@ import * as React from "react"
 import { Check, CircleSlash } from "lucide-react"
 
 import { useApp } from "@/context/app-context"
+import { useListboxKeyboard } from "@/hooks/use-listbox-keyboard"
 import type { Sprint } from "@/hooks/use-sprints"
 
 interface SprintPickerProps {
@@ -55,13 +56,6 @@ export function SprintPicker({
     }
   }, [onCancel])
 
-  function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      onCancel()
-    }
-  }
-
   // Sort: active sprint first, then planned (chronological by id), then
   // closed at the bottom. The picker is the place where the user
   // typically wants to reach the active cycle quickly.
@@ -78,12 +72,33 @@ export function SprintPicker({
     })
   }, [sprints])
 
+  // Shared keyboard listbox nav over the sprint rows (the Unassign row above is
+  // mouse/Tab-only). activeIndex cursor + arrow/Home/End/Enter.
+  const selectedIndex = orderedSprints.findIndex(
+    (s) => s.id === selectedSprintId,
+  )
+  const { activeIndex, setActiveIndex, rowRefs, onKeyDown } =
+    useListboxKeyboard({
+      itemCount: orderedSprints.length,
+      selectedIndex,
+      onEnter: (i) => {
+        const s = orderedSprints[i]
+        if (s) onSelect(s.id)
+      },
+      onCancel,
+    })
+
   return (
     <div
       ref={ref}
-      onKeyDown={onKey}
+      onKeyDown={onKeyDown}
       role="listbox"
       aria-label={lang === "tr" ? "Döngü seç" : "Select cycle"}
+      aria-activedescendant={
+        orderedSprints[activeIndex]
+          ? `sprint-opt-${orderedSprints[activeIndex].id}`
+          : undefined
+      }
       style={{
         position: "absolute",
         top: "calc(100% + 4px)",
@@ -151,16 +166,23 @@ export function SprintPicker({
             {lang === "tr" ? "Döngü bulunamadı" : "No cycles"}
           </div>
         )}
-        {orderedSprints.map((s) => {
+        {orderedSprints.map((s, i) => {
           const selected = s.id === selectedSprintId
+          const isActive = i === activeIndex
           const isClosed = s.status === "CLOSED"
           return (
             <button
               key={s.id}
               type="button"
               role="option"
+              id={`sprint-opt-${s.id}`}
+              ref={(el) => {
+                rowRefs.current[i] = el
+              }}
               aria-selected={selected}
               onClick={() => onSelect(s.id)}
+              // Hover sets the active row so mouse + keyboard share one highlight.
+              onMouseEnter={() => setActiveIndex(i)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -168,20 +190,15 @@ export function SprintPicker({
                 width: "100%",
                 padding: "6px 8px",
                 fontSize: 12.5,
-                background: selected ? "var(--surface-2)" : "transparent",
+                background:
+                  isActive || selected ? "var(--surface-2)" : "transparent",
                 color: isClosed ? "var(--fg-subtle)" : "var(--fg)",
                 border: "none",
                 cursor: "pointer",
                 borderRadius: "var(--radius-sm)",
                 textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--surface-2)"
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  selected ? "var(--surface-2)" : "transparent"
+                outline: isActive ? "1px solid var(--border-strong)" : "none",
+                outlineOffset: -1,
               }}
             >
               <span

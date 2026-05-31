@@ -26,6 +26,7 @@ import * as React from "react"
 import { Check } from "lucide-react"
 
 import { useApp } from "@/context/app-context"
+import { useListboxKeyboard } from "@/hooks/use-listbox-keyboard"
 import type { BoardColumnLite } from "@/services/project-service"
 
 interface StatusPickerProps {
@@ -83,19 +84,30 @@ export function StatusPicker({
     }
   }, [onCancel])
 
-  function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      onCancel()
-    }
-  }
+  // Shared keyboard listbox nav (activeIndex cursor + arrow/Home/End/Enter).
+  const selectedIndex = columns.findIndex((c) => c.id === selectedColumnId)
+  const { activeIndex, setActiveIndex, rowRefs, onKeyDown } =
+    useListboxKeyboard({
+      itemCount: columns.length,
+      selectedIndex,
+      onEnter: (i) => {
+        const col = columns[i]
+        if (col) onSelect(col.id)
+      },
+      onCancel,
+    })
 
   return (
     <div
       ref={ref}
-      onKeyDown={onKey}
+      onKeyDown={onKeyDown}
       role="listbox"
       aria-label={lang === "tr" ? "Görev durumu seç" : "Select task status"}
+      aria-activedescendant={
+        columns[activeIndex]
+          ? `status-opt-${columns[activeIndex].id}`
+          : undefined
+      }
       style={{
         position: "absolute",
         top: "calc(100% + 4px)",
@@ -122,8 +134,9 @@ export function StatusPicker({
           {lang === "tr" ? "Durum bulunamadı" : "No statuses"}
         </div>
       )}
-      {columns.map((col) => {
+      {columns.map((col, i) => {
         const selected = col.id === selectedColumnId
+        const isActive = i === activeIndex
         const token = resolveColor(col.name)
         const dotColor = darkDotColor(token)
         return (
@@ -131,8 +144,14 @@ export function StatusPicker({
             key={col.id}
             type="button"
             role="option"
+            id={`status-opt-${col.id}`}
+            ref={(el) => {
+              rowRefs.current[i] = el
+            }}
             aria-selected={selected}
             onClick={() => onSelect(col.id)}
+            // Hover sets the active row so mouse + keyboard share one highlight.
+            onMouseEnter={() => setActiveIndex(i)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -140,20 +159,15 @@ export function StatusPicker({
               width: "100%",
               padding: "6px 8px",
               fontSize: 12.5,
-              background: selected ? "var(--surface-2)" : "transparent",
+              background:
+                isActive || selected ? "var(--surface-2)" : "transparent",
               color: "var(--fg)",
               border: "none",
               cursor: "pointer",
               borderRadius: "var(--radius-sm)",
               textAlign: "left",
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.background =
-                "var(--surface-2)"
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.background =
-                selected ? "var(--surface-2)" : "transparent"
+              outline: isActive ? "1px solid var(--border-strong)" : "none",
+              outlineOffset: -1,
             }}
           >
             <span

@@ -13,6 +13,7 @@ import { Check } from "lucide-react"
 
 import { PriorityChip, type PriorityLevel } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useListboxKeyboard } from "@/hooks/use-listbox-keyboard"
 
 interface PriorityPickerProps {
   selected: PriorityLevel
@@ -60,19 +61,30 @@ export function PriorityPicker({
     }
   }, [onCancel])
 
-  function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      onCancel()
-    }
-  }
+  // Shared keyboard listbox nav (activeIndex cursor + arrow/Home/End/Enter).
+  const selectedIndex = PRIORITY_ORDER.indexOf(selected)
+  const { activeIndex, setActiveIndex, rowRefs, onKeyDown } =
+    useListboxKeyboard({
+      itemCount: PRIORITY_ORDER.length,
+      selectedIndex,
+      onEnter: (i) => {
+        const level = PRIORITY_ORDER[i]
+        if (level) onSelect(level)
+      },
+      onCancel,
+    })
 
   return (
     <div
       ref={ref}
-      onKeyDown={onKey}
+      onKeyDown={onKeyDown}
       role="listbox"
       aria-label={lang === "tr" ? "Öncelik seç" : "Select priority"}
+      aria-activedescendant={
+        PRIORITY_ORDER[activeIndex]
+          ? `prio-opt-${PRIORITY_ORDER[activeIndex]}`
+          : undefined
+      }
       style={{
         position: "absolute",
         top: "calc(100% + 4px)",
@@ -87,15 +99,22 @@ export function PriorityPicker({
         padding: 4,
       }}
     >
-      {PRIORITY_ORDER.map((level) => {
+      {PRIORITY_ORDER.map((level, i) => {
         const isSelected = level === selected
+        const isActive = i === activeIndex
         return (
           <button
             key={level}
             type="button"
             role="option"
+            id={`prio-opt-${level}`}
+            ref={(el) => {
+              rowRefs.current[i] = el
+            }}
             aria-selected={isSelected}
             onClick={() => onSelect(level)}
+            // Hover sets the active row so mouse + keyboard share one highlight.
+            onMouseEnter={() => setActiveIndex(i)}
             style={{
               display: "flex",
               alignItems: "center",
@@ -103,20 +122,15 @@ export function PriorityPicker({
               width: "100%",
               padding: "6px 8px",
               fontSize: 12.5,
-              background: isSelected ? "var(--surface-2)" : "transparent",
+              background:
+                isActive || isSelected ? "var(--surface-2)" : "transparent",
               color: "var(--fg)",
               border: "none",
               cursor: "pointer",
               borderRadius: "var(--radius-sm)",
               textAlign: "left",
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.background =
-                "var(--surface-2)"
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.background =
-                isSelected ? "var(--surface-2)" : "transparent"
+              outline: isActive ? "1px solid var(--border-strong)" : "none",
+              outlineOffset: -1,
             }}
           >
             {/* PriorityChip already carries the bar icon + localized label.

@@ -22,6 +22,7 @@ import { Check, Search, UserMinus } from "lucide-react"
 
 import { Avatar } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
+import { useListboxKeyboard } from "@/hooks/use-listbox-keyboard"
 import { useProjectMembers } from "@/hooks/use-projects"
 import type { ProjectMember } from "@/services/project-service"
 
@@ -91,21 +92,25 @@ export function AssigneePicker({
     }
   }, [onCancel])
 
-  function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault()
-      onCancel()
-    } else if (e.key === "Enter") {
-      e.preventDefault()
-      const first = members[0]
-      if (first) onSelect(first.id)
-    }
-  }
+  // Shared keyboard listbox nav (activeIndex cursor + arrow/Home/End/Enter).
+  // Replaces the old "Enter always picks members[0]" bug; the Unassign row
+  // above stays mouse/Tab-only.
+  const selectedIndex = members.findIndex((m) => m.id === value)
+  const { activeIndex, setActiveIndex, rowRefs, onKeyDown } =
+    useListboxKeyboard({
+      itemCount: members.length,
+      selectedIndex,
+      onEnter: (i) => {
+        const m = members[i]
+        if (m) onSelect(m.id)
+      },
+      onCancel,
+    })
 
   return (
     <div
       ref={ref}
-      onKeyDown={onKey}
+      onKeyDown={onKeyDown}
       role="dialog"
       aria-label={lang === "tr" ? "Atanan seç" : "Select assignee"}
       style={{
@@ -188,6 +193,11 @@ export function AssigneePicker({
       <div
         role="listbox"
         aria-busy={isFetching}
+        aria-activedescendant={
+          members[activeIndex]
+            ? `assignee-opt-${members[activeIndex].id}`
+            : undefined
+        }
         style={{
           maxHeight: 240,
           overflowY: "auto",
@@ -237,16 +247,23 @@ export function AssigneePicker({
             {lang === "tr" ? "Üye bulunamadı" : "No members"}
           </div>
         )}
-        {members.map((m) => {
+        {members.map((m, i) => {
           const selected = m.id === value
+          const isActive = i === activeIndex
           const av = avatarFor(m)
           return (
             <button
               key={m.id}
               type="button"
               role="option"
+              id={`assignee-opt-${m.id}`}
+              ref={(el) => {
+                rowRefs.current[i] = el
+              }}
               aria-selected={selected}
               onClick={() => onSelect(m.id)}
+              // Hover sets the active row so mouse + keyboard share one highlight.
+              onMouseEnter={() => setActiveIndex(i)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -254,20 +271,15 @@ export function AssigneePicker({
                 width: "100%",
                 padding: "6px 8px",
                 fontSize: 12.5,
-                background: selected ? "var(--surface-2)" : "transparent",
+                background:
+                  isActive || selected ? "var(--surface-2)" : "transparent",
                 color: "var(--fg)",
                 border: "none",
                 cursor: "pointer",
                 borderRadius: "var(--radius-sm)",
                 textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--surface-2)"
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.background =
-                  selected ? "var(--surface-2)" : "transparent"
+                outline: isActive ? "1px solid var(--border-strong)" : "none",
+                outlineOffset: -1,
               }}
             >
               <Avatar user={av} size={20} />
