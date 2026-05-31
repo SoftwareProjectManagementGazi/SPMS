@@ -114,6 +114,12 @@ const capturedHandlers: {
   onNodeDragStart?: (e: unknown, node: unknown) => void
   onNodeDrag?: (e: unknown, node: unknown) => void
   onNodeDragStop?: (e: unknown, node: unknown) => void
+  // T3a/T3b — pane-click clear + selection-change pass-through.
+  onPaneClick?: (e: unknown) => void
+  onSelectionChange?: (params: {
+    nodes: Array<{ id: string; type?: string }>
+    edges?: unknown[]
+  }) => void
 } = {}
 vi.mock("@xyflow/react", () => ({
   // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production wraps the inner
@@ -136,6 +142,8 @@ vi.mock("@xyflow/react", () => ({
     onNodeDragStart,
     onNodeDrag,
     onNodeDragStop,
+    onPaneClick,
+    onSelectionChange,
   }: {
     children?: React.ReactNode
     onNodesChange?: typeof capturedHandlers.onNodesChange
@@ -143,12 +151,16 @@ vi.mock("@xyflow/react", () => ({
     onNodeDragStart?: typeof capturedHandlers.onNodeDragStart
     onNodeDrag?: typeof capturedHandlers.onNodeDrag
     onNodeDragStop?: typeof capturedHandlers.onNodeDragStop
+    onPaneClick?: typeof capturedHandlers.onPaneClick
+    onSelectionChange?: typeof capturedHandlers.onSelectionChange
   }) => {
     capturedHandlers.onNodesChange = onNodesChange
     capturedHandlers.onNodeClick = onNodeClick
     capturedHandlers.onNodeDragStart = onNodeDragStart
     capturedHandlers.onNodeDrag = onNodeDrag
     capturedHandlers.onNodeDragStop = onNodeDragStop
+    capturedHandlers.onPaneClick = onPaneClick
+    capturedHandlers.onSelectionChange = onSelectionChange
     return <div data-testid="reactflow">{children}</div>
   },
   Background: () => <div data-testid="bg" />,
@@ -245,6 +257,8 @@ describe("EditorPage", () => {
     capturedHandlers.onNodeDragStart = undefined
     capturedHandlers.onNodeDrag = undefined
     capturedHandlers.onNodeDragStop = undefined
+    capturedHandlers.onPaneClick = undefined
+    capturedHandlers.onSelectionChange = undefined
   })
 
   // Helper: locate the primary header Save button (the Tooltip-wrapped one
@@ -1008,5 +1022,102 @@ describe("EditorPage", () => {
     expect(cNode?.parent_id).toBe("g1") // node now claims the group
     const g1 = body.phase_workflow.groups.find((g) => g.id === "g1")
     expect(g1?.children).toContain("nd_cccccccccc") // group lists the new child
+  })
+
+  it("Test 27 (T3a): clicking empty canvas clears selection — a subsequent Delete is a no-op", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            { id: "nd_aaaaaaaaaa", name: "A", x: 0, y: 0, is_initial: true },
+            { id: "nd_bbbbbbbbbb", name: "B", x: 100, y: 0, is_final: true },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(capturedHandlers.onNodeClick).toBeTypeOf("function")
+    })
+    expect(capturedHandlers.onPaneClick).toBeTypeOf("function")
+    // Select A, then click the empty pane → selection must clear. (Test 25
+    // proves select+Delete removes the node; this is the complement: after a
+    // pane-click, Delete finds nothing selected and removes nothing.)
+    await act(async () => {
+      capturedHandlers.onNodeClick!({} as never, { id: "nd_aaaaaaaaaa" })
+    })
+    await act(async () => {
+      capturedHandlers.onPaneClick!({} as never)
+    })
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }))
+    })
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow: { nodes: Array<{ id: string }> }
+    }
+    const nodeIds = body.phase_workflow.nodes.map((n) => n.id)
+    expect(nodeIds).toContain("nd_aaaaaaaaaa") // NOT deleted — selection was cleared
+    expect(nodeIds).toContain("nd_bbbbbbbbbb")
+  })
+
+  it("Test 28 (T3b): box-selecting multiple nodes then Group bundles ALL of them", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            { id: "nd_aaaaaaaaaa", name: "A", x: 0, y: 0, is_initial: true },
+            { id: "nd_bbbbbbbbbb", name: "B", x: 200, y: 0, is_final: true },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(capturedHandlers.onSelectionChange).toBeTypeOf("function")
+    })
+    // RF reports a multi-selection of both phase nodes.
+    await act(async () => {
+      capturedHandlers.onSelectionChange!({
+        nodes: [
+          { id: "nd_aaaaaaaaaa", type: "phase" },
+          { id: "nd_bbbbbbbbbb", type: "phase" },
+        ],
+      })
+    })
+    // Click the bottom-toolbar "Grup" button → group the multi-selection.
+    await act(async () => {
+      fireEvent.click(screen.getByText("Grup"))
+    })
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow: { groups: Array<{ id: string; children: string[] }> }
+    }
+    expect(body.phase_workflow.groups.length).toBe(1)
+    expect(body.phase_workflow.groups[0].children).toEqual(
+      expect.arrayContaining(["nd_aaaaaaaaaa", "nd_bbbbbbbbbb"]),
+    )
   })
 })

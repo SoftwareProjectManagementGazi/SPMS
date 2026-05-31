@@ -380,6 +380,11 @@ export function EditorPage({ project }: EditorPageProps) {
     type: "node" | "edge" | "group"
     id: string
   } | null>(null)
+  // T3b — RF multi-selection (box-select / shift-click) as a flat list of
+  // PHASE node ids. `onSelectionChange` is the SINGLE writer; group/align
+  // consume it for multi-node ops. `selected` (single) stays the RightPanel +
+  // selection-ring model, so this is additive and can't desync the panel.
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [contextMenu, setContextMenu] = React.useState<ContextMenuState | null>(
     null,
   )
@@ -1376,6 +1381,21 @@ export function EditorPage({ project }: EditorPageProps) {
     setSelected({ type: "node", id: copy.id })
   }, [selected, workflow, commitWorkflow])
 
+  // T3b — single writer for selectedIds. RF reports the full selection (nodes +
+  // edges) on every change; we keep only PHASE node ids (group cloud nodes are
+  // non-interactive and must not be grouped/aligned). Does NOT touch `selected`
+  // — that stays driven by click/context-menu so the RightPanel is unaffected.
+  const handleSelectionChange = React.useCallback(
+    (params: { nodes: Array<{ id: string; type?: string }> }) => {
+      setSelectedIds(
+        (params.nodes ?? [])
+          .filter((n) => n.type === "phase")
+          .map((n) => n.id),
+      )
+    },
+    [],
+  )
+
   const groupSelection = React.useCallback(
     (nodeIds: string[]) => {
       if (nodeIds.length < 1) return
@@ -1434,13 +1454,14 @@ export function EditorPage({ project }: EditorPageProps) {
         | "center-v"
         | "center-h",
     ) => {
-      // Apply to all nodes if no multi-selection. Single-selected node alone
-      // is a no-op for align actions.
-      const targets: AlignNode[] = workflow.nodes.map((n) => ({
-        id: n.id,
-        x: n.x,
-        y: n.y,
-      }))
+      // T3b — when 2+ nodes are multi-selected, align just those; otherwise
+      // fall back to aligning ALL nodes. This is the intent the original
+      // comment described ("Apply to all nodes if no multi-selection") but
+      // which was unreachable while multi-selection was structurally impossible.
+      const selSet = selectedIds.length >= 2 ? new Set(selectedIds) : null
+      const targets: AlignNode[] = workflow.nodes
+        .filter((n) => !selSet || selSet.has(n.id))
+        .map((n) => ({ id: n.id, x: n.x, y: n.y }))
       if (targets.length < 2) return
       let next: AlignNode[] = targets
       if (action === "distribute-h") next = distributeHorizontal(targets)
@@ -1457,7 +1478,7 @@ export function EditorPage({ project }: EditorPageProps) {
         }),
       })
     },
-    [workflow, commitWorkflow],
+    [workflow, commitWorkflow, selectedIds],
   )
 
   // Context menu action router.
@@ -2148,6 +2169,15 @@ export function EditorPage({ project }: EditorPageProps) {
             onPaneContextMenu={handlePaneContextMenu as never}
             onNodeContextMenu={handleNodeContextMenu as never}
             onEdgeContextMenu={handleEdgeContextMenu as never}
+            onPaneClick={() => {
+              // T3a — empty-canvas click clears all transient selection state
+              // so the RightPanel + selection ring don't linger on a phantom
+              // target (and an in-progress edge-create is cancelled).
+              setSelected(null)
+              setContextMenu(null)
+              setEdgeCreateState(null)
+            }}
+            onSelectionChange={handleSelectionChange}
           />
           <BottomToolbar
             onAddNode={() =>
@@ -2155,10 +2185,15 @@ export function EditorPage({ project }: EditorPageProps) {
             }
             onAddEdge={startAddEdge}
             onGroup={() => {
-              if (selected?.type === "node") {
-                groupSelection([selected.id])
-              } else if (selected?.type === "group") {
+              // T3b — a selected GROUP ungroups; otherwise group the multi-
+              // selection (selectedIds) when present, falling back to the single
+              // selected node. Lets box-select → Group bundle every picked node.
+              if (selected?.type === "group") {
                 ungroup(selected.id)
+              } else if (selectedIds.length >= 1) {
+                groupSelection(selectedIds)
+              } else if (selected?.type === "node") {
+                groupSelection([selected.id])
               }
             }}
             onAlign={handleAlign}

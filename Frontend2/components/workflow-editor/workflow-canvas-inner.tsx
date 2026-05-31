@@ -87,6 +87,10 @@ export interface WorkflowCanvasInnerProps {
   onNodeClick?: (event: React.MouseEvent, node: RFNode) => void
   /** Called when an edge is clicked. */
   onEdgeClick?: (event: React.MouseEvent, edge: RFEdge) => void
+  /** T3a — click on empty canvas (pane). Used to clear selection +
+   *  context-menu + in-progress edge-create, so the RightPanel and the
+   *  selection ring don't desync from an empty canvas. */
+  onPaneClick?: (event: React.MouseEvent) => void
   // ---------------- Plan 12-08 editable callbacks ------------------------
   onNodesChange?: (changes: NodeChange[]) => void
   onEdgesChange?: (changes: EdgeChange[]) => void
@@ -188,6 +192,7 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
         nodeOrigin={[0, 0]}
         onNodeClick={props.onNodeClick}
         onEdgeClick={props.onEdgeClick}
+        onPaneClick={props.onPaneClick as never}
         onNodesChange={props.onNodesChange as never}
         onEdgesChange={props.onEdgesChange as never}
         onConnect={props.onConnect as never}
