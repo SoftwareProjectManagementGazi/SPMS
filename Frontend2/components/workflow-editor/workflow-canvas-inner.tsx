@@ -27,6 +27,7 @@ import {
   Controls,
   ReactFlowProvider,
   useReactFlow,
+  useStore,
   type NodeTypes,
   type EdgeTypes,
   type Node as RFNode,
@@ -118,6 +119,10 @@ export interface WorkflowCanvasInnerProps {
     nodes: RFNode[]
     edges: RFEdge[]
   }) => void
+  /** T4b — live zoom factor (transform[2]) pushed up so the toolbar can show
+   *  the real zoom %. Fires on zoom changes only (not on pan). Pass a STABLE
+   *  callback (e.g. a setState fn) so it doesn't re-subscribe each render. */
+  onZoomChange?: (zoom: number) => void
 }
 
 function CanvasControlsBridge({
@@ -141,10 +146,26 @@ function CanvasControlsBridge({
   return null
 }
 
+/** T4b — bridges the live zoom factor up to editor-page, which sits OUTSIDE the
+ *  ReactFlowProvider and so can't read the transform itself. Subscribes to only
+ *  transform[2] (the zoom), so it re-runs on zoom but not on pan. */
+function ZoomReporter({
+  onZoomChange,
+}: {
+  onZoomChange?: (zoom: number) => void
+}) {
+  const zoom = useStore((s) => s.transform[2])
+  React.useEffect(() => {
+    onZoomChange?.(zoom)
+  }, [zoom, onZoomChange])
+  return null
+}
+
 export function WorkflowCanvasInner(props: WorkflowCanvasInnerProps) {
   return (
     <ReactFlowProvider>
       <CanvasControlsBridge controlsRef={props.controlsRef} />
+      <ZoomReporter onZoomChange={props.onZoomChange} />
       <CanvasBody {...props} />
     </ReactFlowProvider>
   )
@@ -244,6 +265,16 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
             pannable
             zoomable
             position="bottom-right"
+            // T4c — theme the minimap. It was invisible in dark mode: RF's
+            // default node fill + mask are light. RF v12 renders minimap nodes
+            // as SVG <rect> and the mask as an SVG <path>, so CSS custom
+            // properties resolve here. nodeColor maps each node's color token;
+            // maskColor dims the off-viewport area with a surface-tinted overlay.
+            nodeColor={(n) => {
+              const c = (n.data as { color?: string } | undefined)?.color
+              return `var(--${c ?? "border-strong"})`
+            }}
+            maskColor="color-mix(in oklch, var(--surface-2) 72%, transparent)"
             style={{
               width: 180,
               height: 100,

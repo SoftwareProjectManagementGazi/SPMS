@@ -44,6 +44,9 @@ vi.mock("@xyflow/react", () => ({
     zoomOut: vi.fn(),
     fitView: vi.fn(),
   }),
+  // T4b — ZoomReporter subscribes to transform[2]; default zoom 1.
+  useStore: (selector: (s: { transform: number[] }) => unknown) =>
+    selector({ transform: [0, 0, 1] }),
   ReactFlow: (props: Record<string, any>) => {
     // Capture every forwarded prop so the Plan 12-08 test can assert the
     // editable callbacks (onConnect, onNodeDrag, …) actually reach React Flow.
@@ -146,6 +149,22 @@ describe("WorkflowCanvasInner — Plan 12-08 editable callbacks", () => {
     for (const [name, fn] of Object.entries(handlers)) {
       expect(captured[name]).toBe(fn)
     }
+  })
+})
+
+describe("WorkflowCanvasInner — T4b live zoom bridge", () => {
+  it("reports the live zoom factor via onZoomChange (ZoomReporter)", () => {
+    const onZoomChange = vi.fn()
+    render(
+      <WorkflowCanvasInner
+        nodes={[]}
+        edges={[]}
+        readOnly={false}
+        onZoomChange={onZoomChange}
+      />,
+    )
+    // useStore mock returns transform [0,0,1] => zoom 1 (=> toolbar "100%").
+    expect(onZoomChange).toHaveBeenCalledWith(1)
   })
 })
 

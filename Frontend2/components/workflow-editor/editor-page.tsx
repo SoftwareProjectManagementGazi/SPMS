@@ -383,6 +383,9 @@ export function EditorPage({ project }: EditorPageProps) {
   // consume it for multi-node ops. `selected` (single) stays the RightPanel +
   // selection-ring model, so this is additive and can't desync the panel.
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
+  // T4b — live canvas zoom factor (1 = 100%), fed by the canvas's ZoomReporter
+  // bridge so the toolbar shows the real zoom instead of a hardcoded "100%".
+  const [zoom, setZoom] = React.useState(1)
   const [contextMenu, setContextMenu] = React.useState<ContextMenuState | null>(
     null,
   )
@@ -936,6 +939,18 @@ export function EditorPage({ project }: EditorPageProps) {
       const source = String(params.source ?? "")
       const target = String(params.target ?? "")
       if (!source || !target || source === target) return
+      // T4a — directional dedup: block an identical source->target edge (A->B
+      // and B->A both stay valid). Without it, re-dragging the same connection
+      // stacks duplicate edges that render on top of each other and 422 on save.
+      if (
+        workflow.edges.some((e) => e.source === source && e.target === target)
+      ) {
+        showToast({
+          variant: "warning",
+          message: T("Bu bağlantı zaten var", "This connection already exists"),
+        })
+        return
+      }
       const sourceHandle =
         params.sourceHandle != null ? String(params.sourceHandle) : undefined
       const targetHandle =
@@ -952,7 +967,7 @@ export function EditorPage({ project }: EditorPageProps) {
       }
       commitWorkflow({ ...workflow, edges: [...workflow.edges, newEdge] })
     },
-    [workflow, commitWorkflow],
+    [workflow, commitWorkflow, showToast, T],
   )
 
   // Phase 12 Plan 12-10 (Bug 2 UAT fix) — capture the BEFORE-drag snapshot
@@ -1200,6 +1215,18 @@ export function EditorPage({ project }: EditorPageProps) {
             "Source and target must differ",
           ),
         })
+        return
+      }
+      // T4a — directional dedup (same guard as handleConnect). End the
+      // edge-create flow so the user isn't left stuck in pick-target.
+      if (
+        workflow.edges.some((e) => e.source === sourceId && e.target === nodeId)
+      ) {
+        showToast({
+          variant: "warning",
+          message: T("Bu bağlantı zaten var", "This connection already exists"),
+        })
+        setEdgeCreateState(null)
         return
       }
       const newEdge: WorkflowEdge = {
@@ -1528,14 +1555,21 @@ export function EditorPage({ project }: EditorPageProps) {
       const {
         workflow: _legacyWorkflow,
         status_workflow: _legacyStatusWorkflow,
+        // T4d — also drop the older camelCase legacy key. It's a recognized
+        // read-fallback (readStatusWorkflow: task_workflow ?? statusWorkflow ??
+        // status_workflow), but was NOT stripped on write, so a project saved
+        // with it kept the stale camelCase slice alongside the new task_workflow.
+        statusWorkflow: _legacyStatusWorkflowCamel,
         ...restPC
       } = currentPC as {
         workflow?: unknown
         status_workflow?: unknown
+        statusWorkflow?: unknown
         [k: string]: unknown
       }
       void _legacyWorkflow
       void _legacyStatusWorkflow
+      void _legacyStatusWorkflowCamel
 
       // Wave 2 W2-C5 — merge the working-copy capability slices INTO the
       // serialized workflow DTOs so toggle changes (W2-C4 CapabilitiesPanel)
@@ -2056,7 +2090,7 @@ export function EditorPage({ project }: EditorPageProps) {
             textAlign: "center",
           }}
         >
-          100%
+          {Math.round(zoom * 100)}%
         </span>
         <Button
           variant="ghost"
@@ -2132,6 +2166,7 @@ export function EditorPage({ project }: EditorPageProps) {
               setEdgeCreateState(null)
             }}
             onSelectionChange={handleSelectionChange}
+            onZoomChange={setZoom}
           />
           <BottomToolbar
             onAddNode={() =>

@@ -120,6 +120,8 @@ const capturedHandlers: {
     nodes: Array<{ id: string; type?: string }>
     edges?: unknown[]
   }) => void
+  // T4a — edge create (drag-from-handle) for the dedup test.
+  onConnect?: (params: Record<string, unknown>) => void
 } = {}
 vi.mock("@xyflow/react", () => ({
   // Phase 15 Plan 15-01 (TIDY-04 harness fix) — production wraps the inner
@@ -135,6 +137,9 @@ vi.mock("@xyflow/react", () => ({
     fitView: vi.fn(),
     screenToFlowPosition: (p: { x: number; y: number }) => p,
   }),
+  // T4b — ZoomReporter subscribes to transform[2]; default zoom 1 => "100%".
+  useStore: (selector: (s: { transform: number[] }) => unknown) =>
+    selector({ transform: [0, 0, 1] }),
   ReactFlow: ({
     children,
     onNodesChange,
@@ -144,6 +149,7 @@ vi.mock("@xyflow/react", () => ({
     onNodeDragStop,
     onPaneClick,
     onSelectionChange,
+    onConnect,
   }: {
     children?: React.ReactNode
     onNodesChange?: typeof capturedHandlers.onNodesChange
@@ -153,6 +159,7 @@ vi.mock("@xyflow/react", () => ({
     onNodeDragStop?: typeof capturedHandlers.onNodeDragStop
     onPaneClick?: typeof capturedHandlers.onPaneClick
     onSelectionChange?: typeof capturedHandlers.onSelectionChange
+    onConnect?: typeof capturedHandlers.onConnect
   }) => {
     capturedHandlers.onNodesChange = onNodesChange
     capturedHandlers.onNodeClick = onNodeClick
@@ -161,6 +168,7 @@ vi.mock("@xyflow/react", () => ({
     capturedHandlers.onNodeDragStop = onNodeDragStop
     capturedHandlers.onPaneClick = onPaneClick
     capturedHandlers.onSelectionChange = onSelectionChange
+    capturedHandlers.onConnect = onConnect
     return <div data-testid="reactflow">{children}</div>
   },
   Background: () => <div data-testid="bg" />,
@@ -259,6 +267,7 @@ describe("EditorPage", () => {
     capturedHandlers.onNodeDragStop = undefined
     capturedHandlers.onPaneClick = undefined
     capturedHandlers.onSelectionChange = undefined
+    capturedHandlers.onConnect = undefined
   })
 
   // Helper: locate the primary header Save button (the Tooltip-wrapped one
@@ -1119,5 +1128,83 @@ describe("EditorPage", () => {
     expect(body.phase_workflow.groups[0].children).toEqual(
       expect.arrayContaining(["nd_aaaaaaaaaa", "nd_bbbbbbbbbb"]),
     )
+  })
+
+  it("Test 29 (T4a): re-connecting the same source->target is blocked; the reverse is allowed", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            { id: "nd_aaaaaaaaaa", name: "A", x: 0, y: 0, is_initial: true },
+            { id: "nd_bbbbbbbbbb", name: "B", x: 100, y: 0, is_final: true },
+          ],
+          edges: [],
+          groups: [],
+        },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(capturedHandlers.onConnect).toBeTypeOf("function")
+    })
+    // A->B, then A->B again (dup — blocked), then B->A (reverse — allowed).
+    // Each act() flushes commitWorkflow so the next onConnect sees fresh edges.
+    await act(async () => {
+      capturedHandlers.onConnect!({ source: "nd_aaaaaaaaaa", target: "nd_bbbbbbbbbb" })
+    })
+    await act(async () => {
+      capturedHandlers.onConnect!({ source: "nd_aaaaaaaaaa", target: "nd_bbbbbbbbbb" })
+    })
+    await act(async () => {
+      capturedHandlers.onConnect!({ source: "nd_bbbbbbbbbb", target: "nd_aaaaaaaaaa" })
+    })
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow: { edges: Array<{ source: string; target: string }> }
+    }
+    const edges = body.phase_workflow.edges
+    expect(edges.length).toBe(2) // duplicate dropped, reverse kept
+    expect(
+      edges.filter((e) => e.source === "nd_aaaaaaaaaa" && e.target === "nd_bbbbbbbbbb").length,
+    ).toBe(1)
+    expect(
+      edges.filter((e) => e.source === "nd_bbbbbbbbbb" && e.target === "nd_aaaaaaaaaa").length,
+    ).toBe(1)
+  })
+
+  it("Test 30 (T4d): save drops the legacy camelCase statusWorkflow key from the payload", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+        // Read-tolerated legacy key the writer must NOT carry forward.
+        statusWorkflow: { mode: "flexible", nodes: [], edges: [], groups: [] },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(screen.getAllByText("Kaydet").length).toBeGreaterThan(0)
+    })
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as Record<string, unknown>
+    expect("statusWorkflow" in body).toBe(false) // legacy camelCase key dropped
+    expect(body.task_workflow).toBeDefined() // V2 canonical present
+    expect(body.phase_workflow).toBeDefined()
   })
 })
