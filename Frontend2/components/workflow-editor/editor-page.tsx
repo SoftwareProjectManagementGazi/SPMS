@@ -1030,6 +1030,40 @@ export function EditorPage({ project }: EditorPageProps) {
         }
       }
 
+      // T2a — drag-IN association. A node that is loose after the OUT-check
+      // (never had a parent, or was just stripped from one) JOINS a group when
+      // its center lands inside that group's hull. Symmetric counterpart to the
+      // OUT-check above — without it, dragging a loose node into a cloud did
+      // nothing. Center uses the 140x60 node box. The hull is rebuilt here from
+      // ABSOLUTE member positions (excluding the dragged node, ≥2 members), the
+      // same frame the OUT-check uses — so the Tema-1 node-local projection
+      // change does not affect this. Skip the group just stripped from so one
+      // drag can't strip-then-rejoin the same cloud.
+      let joinedGroupId: string | undefined
+      const looseAfterOut = Boolean(strippedFromGroupId) || !dragged?.parentId
+      if (looseAfterOut) {
+        const center = { x: node.position.x + 70, y: node.position.y + 30 }
+        for (const g of workflow.groups ?? []) {
+          if (g.id === strippedFromGroupId) continue
+          if (g.children.includes(node.id)) continue
+          const memberPositions = g.children
+            .filter((cid) => cid !== node.id)
+            .map((cid) => {
+              const p = finalPositions.get(cid)
+              if (p) return p
+              const m = workflow.nodes.find((mm) => mm.id === cid)
+              return m ? { x: m.x, y: m.y } : null
+            })
+            .filter((p): p is Point => p != null)
+          if (memberPositions.length < 2) continue
+          const polygon = pathToPolygon(computeHull(memberPositions, 16))
+          if (pointInPolygon(center, polygon)) {
+            joinedGroupId = g.id
+            break
+          }
+        }
+      }
+
       // Compose the next workflow: positions + (optional) drop-association.
       // BUGFIX: previously gated on `dropParentId`, but that variable is set
       // in two cases — (1) parent group has < 2 other children (KEEP) and
@@ -1043,21 +1077,31 @@ export function EditorPage({ project }: EditorPageProps) {
         if (p && (p.x !== n.x || p.y !== n.y)) {
           updated = { ...updated, x: p.x, y: p.y }
         }
-        if (strippedFromGroupId && updated.id === node.id) {
-          updated = { ...updated, parentId: undefined }
+        if (updated.id === node.id) {
+          // join wins over strip: strip-from-A + drop-into-B => parentId = B.
+          if (joinedGroupId) {
+            updated = { ...updated, parentId: joinedGroupId }
+          } else if (strippedFromGroupId) {
+            updated = { ...updated, parentId: undefined }
+          }
         }
         return updated
       })
-      const nextGroups = strippedFromGroupId
-        ? (workflow.groups ?? []).map((g) =>
-            g.id === strippedFromGroupId
-              ? {
-                  ...g,
-                  children: g.children.filter((cid) => cid !== node.id),
-                }
-              : g,
-          )
-        : workflow.groups
+      let nextGroups = workflow.groups ?? []
+      if (strippedFromGroupId) {
+        nextGroups = nextGroups.map((g) =>
+          g.id === strippedFromGroupId
+            ? { ...g, children: g.children.filter((cid) => cid !== node.id) }
+            : g,
+        )
+      }
+      if (joinedGroupId) {
+        nextGroups = nextGroups.map((g) =>
+          g.id === joinedGroupId && !g.children.includes(node.id)
+            ? { ...g, children: [...g.children, node.id] }
+            : g,
+        )
+      }
 
       // Push the BEFORE snapshot to history first so undo restores it.
       if (snapshot) history.push(snapshot)
@@ -1322,6 +1366,11 @@ export function EditorPage({ project }: EditorPageProps) {
       name: `${orig.name} (kopya)`,
       x: orig.x + 32,
       y: orig.y + 32,
+      // T2b — drop the inherited parentId: the copy is NOT in the source
+      // group's `children`, so a carried-over parentId would dangle (node
+      // claims a group that doesn't list it → stale on save, ghost membership).
+      // It spawns as a fresh loose node; drag it into a cloud to re-associate.
+      parentId: undefined,
     }
     commitWorkflow({ ...workflow, nodes: [...workflow.nodes, copy] })
     setSelected({ type: "node", id: copy.id })

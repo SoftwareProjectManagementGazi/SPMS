@@ -947,4 +947,66 @@ describe("EditorPage", () => {
     expect(nodeIds).toContain("nd_bbbbbbbbbb") // sibling remains
     expect(body.phase_workflow.edges.length).toBe(0) // edge to deleted node removed
   })
+
+  it("Test 26 (T2a): dragging a loose node into a group's hull associates it (parent_id + group children)", async () => {
+    mockUpdateProcessConfig.mockResolvedValueOnce({ id: 42 })
+    const proj: Project = {
+      ...mockProject,
+      processConfig: {
+        phase_workflow: {
+          mode: "flexible",
+          nodes: [
+            { id: "nd_aaaaaaaaaa", name: "A", x: 0, y: 0, is_initial: true, parent_id: "g1" },
+            { id: "nd_bbbbbbbbbb", name: "B", x: 200, y: 0, is_final: true, parent_id: "g1" },
+            // Loose node parked far from the cloud (center 1070,1030).
+            { id: "nd_cccccccccc", name: "C", x: 1000, y: 1000 },
+          ],
+          edges: [],
+          groups: [
+            { id: "g1", name: "Grup", color: "primary", children: ["nd_aaaaaaaaaa", "nd_bbbbbbbbbb"] },
+          ],
+        },
+      } as never,
+    }
+    render(<EditorPage project={proj} />)
+    await waitFor(() => {
+      expect(capturedHandlers.onNodeDragStart).toBeTypeOf("function")
+    })
+    // Drag C so its CENTER (pos + 70,30) lands inside g1's hull spanning
+    // A(0,0)..B(200,0). Drop at (100,0) => center (170,30) = hull dead-center.
+    // (applyNodeChanges is a no-op in the stub, so A/B stay at their workflow
+    // positions in rfNodes — the drag-IN reads C's drop point from node.position.)
+    await act(async () => {
+      capturedHandlers.onNodeDragStart!({} as never, { id: "nd_cccccccccc" })
+    })
+    await act(async () => {
+      capturedHandlers.onNodesChange!([
+        { type: "position", id: "nd_cccccccccc", position: { x: 100, y: 0 }, dragging: true },
+      ])
+    })
+    await act(async () => {
+      capturedHandlers.onNodeDragStop!(
+        {} as never,
+        { id: "nd_cccccccccc", position: { x: 100, y: 0 } },
+      )
+    })
+    // Save → inspect the PATCH body for the new association.
+    const saveBtn = findHeaderSaveButton()
+    await act(async () => {
+      saveBtn.click()
+    })
+    await waitFor(() => {
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1)
+    })
+    const body = mockUpdateProcessConfig.mock.calls[0][1] as {
+      phase_workflow: {
+        nodes: Array<{ id: string; parent_id?: string }>
+        groups: Array<{ id: string; children: string[] }>
+      }
+    }
+    const cNode = body.phase_workflow.nodes.find((n) => n.id === "nd_cccccccccc")
+    expect(cNode?.parent_id).toBe("g1") // node now claims the group
+    const g1 = body.phase_workflow.groups.find((g) => g.id === "g1")
+    expect(g1?.children).toContain("nd_cccccccccc") // group lists the new child
+  })
 })
