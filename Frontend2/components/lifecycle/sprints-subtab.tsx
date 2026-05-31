@@ -514,7 +514,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
           )}
           sprints={sprints}
           currentSprintId={closeDialog.id}
-          confirmLabel={T("Spriniti Kapat", "Close Sprint")}
+          confirmLabel={T("Sprinti Kapat", "Close Sprint")}
           pending={closeSprint.isPending}
           lang={lang}
           onConfirm={handleClose}
@@ -526,7 +526,7 @@ export function SprintsSubTab({ project }: SprintsSubTabProps) {
       {deleteDialog && (
         <MoveConfirmDialog
           open
-          title={T(`Spriniti Sil: ${deleteDialog.name}`, `Delete Sprint: ${deleteDialog.name}`)}
+          title={T(`Sprinti Sil: ${deleteDialog.name}`, `Delete Sprint: ${deleteDialog.name}`)}
           description={T(
             "Bu işlem geri alınamaz. Bu sprintteki görevler nereye taşınsın?",
             "This cannot be undone. Where should the tasks in this sprint go?",
