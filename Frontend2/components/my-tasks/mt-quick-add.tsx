@@ -77,6 +77,9 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
   const [priority, setPriority] = React.useState<Priority>("medium")
   const [due, setDue] = React.useState<string>("")
   const [focused, setFocused] = React.useState(false)
+  // Tier 3 — ref so we can return focus to the title input after a successful
+  // add (rapid-fire entry). See the rAF in handleSubmit.
+  const titleRef = React.useRef<HTMLInputElement>(null)
 
   const canSubmit =
     title.trim().length > 0 && projectId != null && !createTask.isPending
@@ -97,6 +100,10 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
         setDue("")
         setPriority("medium")
         if (onAdded) onAdded(created)
+        // Return focus to the title input so the user can keep adding tasks
+        // rapid-fire. rAF defers past the isPending->false re-render that
+        // re-enables the input (focus() on a still-disabled input is a no-op).
+        requestAnimationFrame(() => titleRef.current?.focus())
         showToast({
           message: lang === "tr" ? "Görev eklendi" : "Task added",
           variant: "success",
@@ -178,6 +185,7 @@ export function MTQuickAdd({ lang, projects, onAdded }: MTQuickAddProps) {
       />
 
       <input
+        ref={titleRef}
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}

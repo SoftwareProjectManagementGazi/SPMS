@@ -246,6 +246,10 @@ export function TaskRow({
         cursor: "pointer",
         position: "relative",
         fontSize,
+        // Tier 3 — smooth the vertical layout shift when density toggles
+        // (padY jumps 6/9/13) and fade the hover background; both snapped
+        // instantly before.
+        transition: "padding 0.15s ease, background 0.12s ease",
       }}
     >
       {/* Leftmost: clickable status circle */}
