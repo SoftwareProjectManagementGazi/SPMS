@@ -105,9 +105,13 @@ export function SummaryStrip({
   const router = useRouter()
   const transitionAllowed = useTransitionAuthority(project)
 
-  const totalPhases = workflow.nodes.filter((n) => !n.isArchived).length || workflow.nodes.length
+  // M-L3 — compute BOTH the total and the active index from the same
+  // archived-filtered list so the badge can't read "5/4" (the active index used
+  // to come from the full node array while the total excluded archived phases).
+  const visiblePhases = workflow.nodes.filter((n) => !n.isArchived)
+  const totalPhases = visiblePhases.length || workflow.nodes.length
   const activeIndex = activePhase
-    ? Math.max(0, workflow.nodes.findIndex((n) => n.id === activePhase.id))
+    ? Math.max(0, visiblePhases.findIndex((n) => n.id === activePhase.id))
     : 0
   const activeIndex1Based = activeIndex + 1
 
