@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import { authService } from "@/services/auth-service"
 import { useAuth } from "@/context/auth-context"
@@ -20,6 +21,9 @@ import {
 // ---------------------------------------------------------------------------
 
 type TabId = "profile" | "preferences" | "appearance" | "notifications" | "security"
+
+// M-TM4 — validate the ?tab= query param before adopting it as the initial tab.
+const VALID_TABS: TabId[] = ["profile", "preferences", "appearance", "notifications", "security"]
 
 interface TabDef {
   id: TabId
@@ -793,7 +797,23 @@ function NotificationsSection() {
 
 export default function SettingsPage() {
   const { language } = useApp()
-  const [activeTab, setActiveTab] = React.useState<TabId>("profile")
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // M-TM4 — tab state synced to ?tab= so reload / back / deep-link preserve the
+  // active tab (mirrors the users/[id] profile pattern). An unknown ?tab= value
+  // falls back to "profile".
+  const tabParam = searchParams.get("tab") as TabId | null
+  const initialTab: TabId =
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : "profile"
+  const [activeTab, setActiveTab] = React.useState<TabId>(initialTab)
+
+  // router.replace (not push) keeps the back button tied to page-arrival rather
+  // than walking back through each tab click.
+  const handleTabChange = (id: TabId) => {
+    setActiveTab(id)
+    router.replace(`/settings?tab=${id}`)
+  }
 
   return (
     <div
@@ -820,7 +840,7 @@ export default function SettingsPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "6px 10px", borderRadius: "var(--radius-sm)",
