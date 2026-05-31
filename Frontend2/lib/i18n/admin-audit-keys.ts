@@ -15,8 +15,10 @@ export const ADMIN_AUDIT_I18N_KEYS = {
   // Toolbar
   // -------------------------------------------------------------------------
   "admin.audit.search_placeholder": {
-    tr: "actor, action, target…",
-    en: "actor, action, target…",
+    // M-AD2 — the backend audit endpoint only supports action_prefix filtering
+    // (no free-text search). The placeholder now reflects what the box does.
+    tr: "İşlem ön eki…",
+    en: "Action prefix…",
   },
   "admin.audit.last_24h": {
     tr: "Son 24 saat",

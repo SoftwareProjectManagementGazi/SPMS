@@ -49,6 +49,27 @@ export function AdminAuditToolbar({
   const { language } = useApp()
   const { showToast } = useToast()
 
+  // M-AD2 — the search box drives the backend's only free-text-ish facet,
+  // action_prefix (no full-text search exists). `searchText` is the controlled
+  // input value; a 300ms debounce pushes changes up, and an empty box clears the
+  // facet. The guard makes the self-induced filter update a no-op on the
+  // re-render it triggers.
+  const [searchText, setSearchText] = React.useState(filter.action_prefix ?? "")
+  React.useEffect(() => {
+    const handle = setTimeout(() => {
+      const trimmed = searchText.trim()
+      if (trimmed !== (filter.action_prefix ?? "")) {
+        onUpdate({ action_prefix: trimmed || undefined })
+      }
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [searchText, filter.action_prefix, onUpdate])
+  // Follow external changes (e.g. the "action" filter chip's clear button) so a
+  // cleared facet empties the box instead of the debounce immediately re-adding it.
+  React.useEffect(() => {
+    setSearchText(filter.action_prefix ?? "")
+  }, [filter.action_prefix])
+
   const onLast24h = () => {
     const now = new Date()
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
@@ -92,6 +113,8 @@ export function AdminAuditToolbar({
         )}
         size="sm"
         style={{ width: 260 }}
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
       />
       <Button
         size="sm"
