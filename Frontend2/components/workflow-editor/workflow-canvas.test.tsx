@@ -13,7 +13,11 @@ import { describe, it, expect, vi } from "vitest"
 import { render } from "@testing-library/react"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { WorkflowCanvasInner } from "./workflow-canvas-inner"
+import {
+  WorkflowCanvasInner,
+  computeDragMembershipChanges,
+} from "./workflow-canvas-inner"
+import type { Point } from "@/lib/lifecycle/cloud-hull"
 
 // Module-scoped capture of the props React Flow actually receives, so the
 // forwarding test below can assert real prop wiring (vi.hoisted because the
@@ -130,6 +134,9 @@ describe("WorkflowCanvasInner — Plan 12-08 editable callbacks", () => {
       onNodeContextMenu: vi.fn(),
       onEdgeContextMenu: vi.fn(),
       onEdgeDoubleClick: vi.fn(),
+      // T3a/T3b — pane-click clear + selection-change pass-through.
+      onPaneClick: vi.fn(),
+      onSelectionChange: vi.fn(),
     }
     render(
       <WorkflowCanvasInner nodes={[]} edges={[]} readOnly={false} {...handlers} />,
@@ -139,6 +146,82 @@ describe("WorkflowCanvasInner — Plan 12-08 editable callbacks", () => {
     for (const [name, fn] of Object.entries(handlers)) {
       expect(captured[name]).toBe(fn)
     }
+  })
+})
+
+describe("computeDragMembershipChanges — drop-association (Tema 2)", () => {
+  // g1 = A(0,0) + B(200,0); its member hull center sits near (170,30).
+  const pos = (entries: Array<[string, [number, number]]>): Map<string, Point> =>
+    new Map(entries.map(([id, [x, y]]) => [id, { x, y }]))
+
+  it("a loose node whose CENTER lands inside a hull JOINS that group (drag-IN)", () => {
+    const { strip, join } = computeDragMembershipChanges({
+      movedIds: ["C"],
+      positions: pos([["A", [0, 0]], ["B", [200, 0]], ["C", [100, 0]]]),
+      groups: [{ id: "g1", children: ["A", "B"] }],
+      parentOf: new Map([["A", "g1"], ["B", "g1"], ["C", undefined]]),
+    })
+    expect(join.get("C")).toBe("g1")
+    expect(strip.size).toBe(0)
+  })
+
+  it("a member dragged OUTSIDE its parent hull (>=2 others) is STRIPPED", () => {
+    const { strip, join } = computeDragMembershipChanges({
+      movedIds: ["X"],
+      positions: pos([["A", [0, 0]], ["B", [200, 0]], ["X", [1000, 1000]]]),
+      groups: [{ id: "g1", children: ["A", "B", "X"] }],
+      parentOf: new Map([["A", "g1"], ["B", "g1"], ["X", "g1"]]),
+    })
+    expect(strip.get("X")).toBe("g1")
+    expect(join.size).toBe(0)
+  })
+
+  it("T2c: a MULTI-node drag associates EVERY moved node, not just the reported one", () => {
+    const { strip, join } = computeDragMembershipChanges({
+      movedIds: ["C", "D"],
+      positions: pos([
+        ["A", [0, 0]], ["B", [200, 0]],
+        ["C", [100, 0]], ["D", [120, 10]],
+      ]),
+      groups: [{ id: "g1", children: ["A", "B"] }],
+      parentOf: new Map([
+        ["A", "g1"], ["B", "g1"], ["C", undefined], ["D", undefined],
+      ]),
+    })
+    expect(join.get("C")).toBe("g1")
+    expect(join.get("D")).toBe("g1")
+    expect(strip.size).toBe(0)
+  })
+
+  it("a node dragged out of one cloud INTO another reassigns parent (join wins over strip)", () => {
+    const { strip, join } = computeDragMembershipChanges({
+      movedIds: ["X"],
+      positions: pos([
+        ["A", [0, 0]], ["B", [200, 0]], // g1, center ~ (170,30)
+        ["E", [600, 0]], ["F", [800, 0]], // g2, center ~ (770,30)
+        ["X", [700, 0]], // drop outside g1 (x=700 > 356), center (770,30) inside g2
+      ]),
+      groups: [
+        { id: "g1", children: ["A", "B", "X"] },
+        { id: "g2", children: ["E", "F"] },
+      ],
+      parentOf: new Map([
+        ["A", "g1"], ["B", "g1"], ["X", "g1"], ["E", "g2"], ["F", "g2"],
+      ]),
+    })
+    expect(strip.get("X")).toBe("g1")
+    expect(join.get("X")).toBe("g2")
+  })
+
+  it("never destroys a group with <2 OTHER members on a drag (keeps membership)", () => {
+    const { strip, join } = computeDragMembershipChanges({
+      movedIds: ["X"],
+      positions: pos([["A", [0, 0]], ["X", [1000, 1000]]]),
+      groups: [{ id: "g1", children: ["A", "X"] }],
+      parentOf: new Map([["A", "g1"], ["X", "g1"]]),
+    })
+    expect(strip.size).toBe(0) // A alone (<2) — group preserved
+    expect(join.size).toBe(0)
   })
 })
 

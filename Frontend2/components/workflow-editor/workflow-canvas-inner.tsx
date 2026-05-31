@@ -368,3 +368,92 @@ export function pathToPolygon(d: string): Point[] {
   }
   return out
 }
+
+export interface DragMembershipInput {
+  /** Every node id that moved this drag — 1 for a single drag, N for a
+   *  multi-select drag (RF moves all selected nodes but reports drag-stop for
+   *  only one of them). */
+  movedIds: string[]
+  /** Absolute FINAL position of every node by id (movers + stationary members). */
+  positions: Map<string, Point>
+  /** Current group memberships. */
+  groups: Array<{ id: string; children: string[] }>
+  /** Current parentId per node id (undefined when loose). */
+  parentOf: Map<string, string | undefined>
+  /** Hull padding — must match the render padding (16). */
+  padding?: number
+}
+
+export interface DragMembershipChanges {
+  /** nodeId -> id of the group it left (parentId clears unless it also joins). */
+  strip: Map<string, string>
+  /** nodeId -> id of the group it entered (takes precedence over strip). */
+  join: Map<string, string>
+}
+
+/**
+ * computeDragMembershipChanges — pure drop-association for one drag, resolving
+ * every moved node (the original OUT + drag-IN + multi-node). Decisions are
+ * computed against the ORIGINAL `groups` + the final `positions`, so the result
+ * is independent of processing order: two nodes entering the same cloud don't
+ * see each other mid-loop, and a node leaving a cloud doesn't shrink a hull that
+ * another node is being tested against.
+ *
+ *  - OUT: a node leaves its parent group when its drop point falls OUTSIDE the
+ *    hull of the parent's OTHER members (>=2 of them — a <2-member group is
+ *    never auto-destroyed on a drag).
+ *  - IN: a node that is loose after the OUT-check joins a group when its CENTER
+ *    (node box 140x60 => +70,+30) lands INSIDE that group's member hull. The
+ *    just-stripped group is skipped so one drag can't strip-then-rejoin it.
+ *    join wins over strip, so leave-A + enter-B reassigns parentId A -> B.
+ */
+export function computeDragMembershipChanges(
+  input: DragMembershipInput,
+): DragMembershipChanges {
+  const { movedIds, positions, groups, parentOf, padding = 16 } = input
+  const strip = new Map<string, string>()
+  const join = new Map<string, string>()
+
+  const memberHullPolygon = (
+    group: { children: string[] },
+    excludeId: string,
+  ): Point[] | null => {
+    const pts = group.children
+      .filter((cid) => cid !== excludeId)
+      .map((cid) => positions.get(cid))
+      .filter((p): p is Point => p != null)
+    if (pts.length < 2) return null
+    return pathToPolygon(computeHull(pts, padding))
+  }
+
+  for (const mid of movedIds) {
+    const mpos = positions.get(mid)
+    if (!mpos) continue
+    const parentId = parentOf.get(mid)
+
+    let strippedFrom: string | undefined
+    if (parentId) {
+      const parent = groups.find((g) => g.id === parentId)
+      if (parent) {
+        const poly = memberHullPolygon(parent, mid)
+        if (poly && !pointInPolygon(mpos, poly)) strippedFrom = parent.id
+      }
+    }
+    if (strippedFrom) strip.set(mid, strippedFrom)
+
+    if (strippedFrom || !parentId) {
+      const center = { x: mpos.x + 70, y: mpos.y + 30 }
+      for (const g of groups) {
+        if (g.id === strippedFrom) continue
+        if (g.children.includes(mid)) continue
+        const poly = memberHullPolygon(g, mid)
+        if (poly && pointInPolygon(center, poly)) {
+          join.set(mid, g.id)
+          break
+        }
+      }
+    }
+  }
+
+  return { strip, join }
+}

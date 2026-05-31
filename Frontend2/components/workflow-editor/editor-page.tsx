@@ -75,12 +75,10 @@ import {
 import { matchesShortcut, KEYBOARD_SHORTCUTS } from "@/lib/lifecycle/shortcuts"
 import {
   buildGroupCloudData,
-  computeHull,
   type Point,
 } from "@/lib/lifecycle/cloud-hull"
 import {
-  pathToPolygon,
-  pointInPolygon,
+  computeDragMembershipChanges,
 } from "./workflow-canvas-inner"
 import { projectService, type Project } from "@/services/project-service"
 import { apiClient } from "@/lib/api-client"
@@ -1002,110 +1000,66 @@ export function EditorPage({ project }: EditorPageProps) {
         }
       }
 
-      // Drop-association — does the dragged node still sit inside its
-      // parent group's hull polygon?
-      let dropParentId: string | undefined
-      let strippedFromGroupId: string | undefined
-      const dragged = workflow.nodes.find((n) => n.id === node.id)
-      if (dragged?.parentId) {
-        const parentGroup = (workflow.groups ?? []).find(
-          (g) => g.id === dragged.parentId,
-        )
-        if (parentGroup) {
-          const otherChildPositions = parentGroup.children
-            .filter((cid) => cid !== node.id)
-            .map((cid) => {
-              const p = finalPositions.get(cid)
-              if (p) return p
-              const m = workflow.nodes.find((mm) => mm.id === cid)
-              return m ? { x: m.x, y: m.y } : null
-            })
-            .filter((p): p is Point => p != null)
-          if (otherChildPositions.length < 2) {
-            dropParentId = parentGroup.id
-          } else {
-            const hullPath = computeHull(otherChildPositions, 16)
-            const polygon = pathToPolygon(hullPath)
-            const inside = pointInPolygon(node.position, polygon)
-            if (!inside) {
-              dropParentId = parentGroup.id
-              strippedFromGroupId = parentGroup.id
-            }
-          }
-        }
+      // Drop-association for the whole drag — OUT (leave a cloud) + IN (enter a
+      // cloud) for EVERY moved node. In a multi-select drag, RF moves all
+      // selected nodes but reports drag-stop for only one, so membership is
+      // resolved for the full selectedIds set (T2c), not just the reported node.
+      // The decision is delegated to a pure, order-independent helper (unit-
+      // tested in workflow-canvas.test.tsx). It rebuilds each group's hull from
+      // ABSOLUTE member positions, so the Tema-1 node-local projection change
+      // does not affect it.
+      const positions = new Map<string, Point>()
+      for (const n of workflow.nodes) {
+        positions.set(n.id, finalPositions.get(n.id) ?? { x: n.x, y: n.y })
       }
+      // The reported node's authoritative drop point (rfNodes can lag a frame).
+      positions.set(node.id, node.position)
+      const movedIds =
+        selectedIds.includes(node.id) && selectedIds.length > 1
+          ? selectedIds
+          : [node.id]
+      const { strip, join } = computeDragMembershipChanges({
+        movedIds,
+        positions,
+        groups: workflow.groups ?? [],
+        parentOf: new Map(workflow.nodes.map((n) => [n.id, n.parentId])),
+      })
 
-      // T2a — drag-IN association. A node that is loose after the OUT-check
-      // (never had a parent, or was just stripped from one) JOINS a group when
-      // its center lands inside that group's hull. Symmetric counterpart to the
-      // OUT-check above — without it, dragging a loose node into a cloud did
-      // nothing. Center uses the 140x60 node box. The hull is rebuilt here from
-      // ABSOLUTE member positions (excluding the dragged node, ≥2 members), the
-      // same frame the OUT-check uses — so the Tema-1 node-local projection
-      // change does not affect this. Skip the group just stripped from so one
-      // drag can't strip-then-rejoin the same cloud.
-      let joinedGroupId: string | undefined
-      const looseAfterOut = Boolean(strippedFromGroupId) || !dragged?.parentId
-      if (looseAfterOut) {
-        const center = { x: node.position.x + 70, y: node.position.y + 30 }
-        for (const g of workflow.groups ?? []) {
-          if (g.id === strippedFromGroupId) continue
-          if (g.children.includes(node.id)) continue
-          const memberPositions = g.children
-            .filter((cid) => cid !== node.id)
-            .map((cid) => {
-              const p = finalPositions.get(cid)
-              if (p) return p
-              const m = workflow.nodes.find((mm) => mm.id === cid)
-              return m ? { x: m.x, y: m.y } : null
-            })
-            .filter((p): p is Point => p != null)
-          if (memberPositions.length < 2) continue
-          const polygon = pathToPolygon(computeHull(memberPositions, 16))
-          if (pointInPolygon(center, polygon)) {
-            joinedGroupId = g.id
-            break
-          }
-        }
-      }
-
-      // Compose the next workflow: positions + (optional) drop-association.
-      // BUGFIX: previously gated on `dropParentId`, but that variable is set
-      // in two cases — (1) parent group has < 2 other children (KEEP) and
-      // (2) node is outside hull (STRIP) — so the stripping branch was
-      // firing in both cases and silently destroying small (2-node) groups
-      // on every drag. The actual "strip" signal is `strippedFromGroupId`,
-      // which is only set when the hull pointInPolygon check fails.
       const nextNodes = workflow.nodes.map((n) => {
-        const p = finalPositions.get(n.id)
         let updated = n
+        const p = finalPositions.get(n.id)
         if (p && (p.x !== n.x || p.y !== n.y)) {
           updated = { ...updated, x: p.x, y: p.y }
         }
-        if (updated.id === node.id) {
-          // join wins over strip: strip-from-A + drop-into-B => parentId = B.
-          if (joinedGroupId) {
-            updated = { ...updated, parentId: joinedGroupId }
-          } else if (strippedFromGroupId) {
-            updated = { ...updated, parentId: undefined }
-          }
+        // join wins over strip: leave-A + enter-B reassigns parentId A -> B.
+        if (join.has(n.id)) {
+          updated = { ...updated, parentId: join.get(n.id) }
+        } else if (strip.has(n.id)) {
+          updated = { ...updated, parentId: undefined }
         }
         return updated
       })
       let nextGroups = workflow.groups ?? []
-      if (strippedFromGroupId) {
-        nextGroups = nextGroups.map((g) =>
-          g.id === strippedFromGroupId
-            ? { ...g, children: g.children.filter((cid) => cid !== node.id) }
-            : g,
-        )
+      if (strip.size > 0) {
+        nextGroups = nextGroups.map((g) => {
+          const leaving = [...strip]
+            .filter(([, gid]) => gid === g.id)
+            .map(([nid]) => nid)
+          return leaving.length
+            ? { ...g, children: g.children.filter((cid) => !leaving.includes(cid)) }
+            : g
+        })
       }
-      if (joinedGroupId) {
-        nextGroups = nextGroups.map((g) =>
-          g.id === joinedGroupId && !g.children.includes(node.id)
-            ? { ...g, children: [...g.children, node.id] }
-            : g,
-        )
+      if (join.size > 0) {
+        nextGroups = nextGroups.map((g) => {
+          const joining = [...join]
+            .filter(([, gid]) => gid === g.id)
+            .map(([nid]) => nid)
+            .filter((nid) => !g.children.includes(nid))
+          return joining.length
+            ? { ...g, children: [...g.children, ...joining] }
+            : g
+        })
       }
 
       // Push the BEFORE snapshot to history first so undo restores it.
@@ -1116,7 +1070,7 @@ export function EditorPage({ project }: EditorPageProps) {
       setWorkflow({ ...workflow, nodes: nextNodes, groups: nextGroups })
       setDirty(true)
     },
-    [workflow, history, rfNodes],
+    [workflow, history, rfNodes, selectedIds],
   )
 
   // -------------------- Context menu open helpers ----------------------
