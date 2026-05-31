@@ -37,6 +37,11 @@ import {
   useUpdateMilestone,
 } from "@/hooks/use-milestones"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
+import {
+  effectiveStatus,
+  statusLabel,
+  statusTone,
+} from "@/lib/milestones/status"
 import type { Milestone } from "@/services/milestone-service"
 import type { Task } from "@/services/task-service"
 import type {
@@ -69,43 +74,10 @@ export interface MilestonesSubTabProps {
 // Helpers
 // ----------------------------------------------------------------------------
 
-// Derive the effective display status from stored status + start_date.
-// If stored status is PENDING but start_date is today or in the past →
-// treat as IN_PROGRESS for display purposes only (not persisted).
-function effectiveStatus(status: string, startDate?: string | null, targetDate?: string): string {
-  const s = (status ?? "").toUpperCase()
-  // Manuel tamamlandı/gecikmeli → değiştirme
-  if (s === "COMPLETED" || s === "DONE") return s
-  const today = new Date().setHours(0, 0, 0, 0)
-  // Bitiş tarihi geçtiyse ve tamamlanmadıysa → Gecikmeli
-  if (targetDate) {
-    const end = new Date(targetDate).setHours(0, 0, 0, 0)
-    if (today > end) return "DELAYED"
-  }
-  // PENDING ise başlangıç tarihine bak
-  if (s === "PENDING") {
-    if (!startDate) return "IN_PROGRESS"
-    const start = new Date(startDate).setHours(0, 0, 0, 0)
-    return start <= today ? "IN_PROGRESS" : "PENDING"
-  }
-  return s
-}
-
-function statusTone(status: string, startDate?: string | null, targetDate?: string): "neutral" | "info" | "success" | "warning" {
-  const s = effectiveStatus(status, startDate, targetDate)
-  if (s === "COMPLETED" || s === "DONE") return "success"
-  if (s === "IN_PROGRESS" || s === "ACTIVE") return "info"
-  if (s === "DELAYED") return "warning"
-  return "neutral"
-}
-
-function statusLabel(status: string, startDate: string | null | undefined, targetDate: string | undefined, tr: boolean): string {
-  const s = effectiveStatus(status, startDate, targetDate)
-  if (s === "COMPLETED" || s === "DONE") return tr ? "Tamamlandı" : "Done"
-  if (s === "IN_PROGRESS" || s === "ACTIVE") return tr ? "Devam Ediyor" : "In Progress"
-  if (s === "DELAYED") return tr ? "Gecikmeli" : "Delayed"
-  return tr ? "Bekliyor" : "Pending"
-}
+// effectiveStatus / statusTone / statusLabel now live in
+// @/lib/milestones/status (imported above) so the project-detail TimelineTab
+// Gantt popover shares the identical date-derivation logic instead of showing
+// the raw stored enum.
 
 function daysFromToday(targetDate: string): number {
   const target = new Date(targetDate).getTime()

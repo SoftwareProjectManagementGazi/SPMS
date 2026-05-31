@@ -34,6 +34,7 @@ import { useApp } from "@/context/app-context"
 import { useTasks } from "@/hooks/use-tasks"
 import type { Project } from "@/services/project-service"
 import type { Milestone } from "@/services/milestone-service"
+import { statusLabel, statusTone } from "@/lib/milestones/status"
 
 type GanttView = "day" | "week" | "month"
 
@@ -330,6 +331,10 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
             <g aria-label="milestones-layer">
               {milestones.map((m) => {
                 const target = new Date(m.targetDate).getTime()
+                // Tier 3 — an empty/invalid target date yields NaN, which the
+                // x<0 / x>width range check below silently passes (NaN always
+                // compares false), drawing the flag at a broken coordinate.
+                if (isNaN(target)) return null
                 const x = ((target - min.getTime()) / MS_PER_DAY) * DAY_WIDTH[view]
                 if (x < 0 || x > width) return null
                 const labelText = `${m.name} · ${formatDateShort(
@@ -411,8 +416,16 @@ export function TimelineTab({ project, milestones = [] }: TimelineTabProps) {
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{m.name}</span>
-                <Badge size="xs" tone="info">
-                  {m.status ?? "PLANNED"}
+                <Badge
+                  size="xs"
+                  tone={statusTone(m.status, m.startDate, m.targetDate)}
+                >
+                  {statusLabel(
+                    m.status,
+                    m.startDate,
+                    m.targetDate,
+                    language === "tr",
+                  )}
                 </Badge>
               </div>
               <div
