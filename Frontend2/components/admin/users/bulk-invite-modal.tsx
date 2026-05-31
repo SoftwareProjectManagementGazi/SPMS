@@ -46,18 +46,21 @@ export interface BulkInviteModalProps {
 
 type Step = "upload" | "preview" | "submitting" | "summary"
 
-// Cells with leading =, +, -, @ are CSV-injection candidates; reject at
-// preview time so they never reach the server (T-14-04 defense in depth).
+// A cell whose value leads with =, +, -, @ is a CSV-injection candidate. The
+// name is the only free-text field whose legitimate value might lead with one
+// of these (e.g. "-Reyhan"), so rather than REJECTING the whole row (which
+// blocked such names) we prefix the name with a single quote — the OWASP
+// neutralisation that spreadsheet apps render as plain text. Email is
+// format-validated by the parser and role is a fixed enum, so neither can carry
+// an injection payload.
 const CSV_INJECTION_LEADING_CHARS = ["=", "+", "-", "@"]
 
-function isCsvInjectionRow(row: BulkInviteRow): boolean {
-  const checkCells = [row.email, row.name, row.role]
-  for (const cell of checkCells) {
-    const trimmed = (cell ?? "").trim()
-    if (trimmed.length === 0) continue
-    if (CSV_INJECTION_LEADING_CHARS.includes(trimmed[0])) return true
+function sanitizeCsvName(name: string): string {
+  const trimmed = name.trim()
+  if (trimmed.length > 0 && CSV_INJECTION_LEADING_CHARS.includes(trimmed[0])) {
+    return "'" + name
   }
-  return false
+  return name
 }
 
 const PREVIEW_MAX_VISIBLE_ROWS = 100
@@ -89,26 +92,14 @@ export function BulkInviteModal({ open, onClose }: BulkInviteModalProps) {
     setStep("preview")
     const result = await parseBulkInviteCsv(file)
 
-    // Apply CSV-injection guard — rebuild rows excluding injection candidates,
-    // moving them into errors with the "csv injection" message.
-    const safeRows: BulkInviteRow[] = []
-    const injectionErrors = result.errors.slice()
-    for (let i = 0; i < result.rows.length; i++) {
-      const r = result.rows[i]
-      if (isCsvInjectionRow(r)) {
-        injectionErrors.push({
-          // Match existing row-numbering convention (i+2 because of header).
-          row_number: i + 2,
-          message: adminUsersT(
-            "admin.users.modal_bulk_csv_injection_error",
-            lang,
-          ),
-        })
-      } else {
-        safeRows.push(r)
-      }
-    }
-    setParseResult({ rows: safeRows, errors: injectionErrors })
+    // Apply CSV-injection guard — sanitise each row's name (prefix ' on a
+    // leading formula char) instead of rejecting the row, so legitimate names
+    // like "-Reyhan" still import while a spreadsheet renders the cell as text.
+    const safeRows: BulkInviteRow[] = result.rows.map((r) => ({
+      ...r,
+      name: sanitizeCsvName(r.name),
+    }))
+    setParseResult({ rows: safeRows, errors: result.errors })
     setRawRowCount(result.rows.length + result.errors.length)
 
     // 500-row toast warning (UX) — the parser already pushes a row-cap error

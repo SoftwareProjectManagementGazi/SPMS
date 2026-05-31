@@ -113,6 +113,27 @@ describe("BulkInviteModal (Plan 14-03 Task 2)", () => {
     expect(screen.getByText(/geçersiz email/i)).toBeInTheDocument()
   })
 
+  it("Case 4 — a name leading with a formula char is sanitised + kept (not rejected)", async () => {
+    // Pre-fix this row was moved to errors (CSV-injection reject). Now the name
+    // is prefixed with ' and the row stays valid so legit names like "-Reyhan"
+    // still import.
+    parseMock.mockResolvedValue({
+      rows: [{ email: "[email protected]", name: "=danger", role: "Member" }],
+      errors: [],
+    })
+
+    render(<BulkInviteModal open={true} onClose={vi.fn()} />)
+    const fileInput = screen.getByLabelText(/csv file/i) as HTMLInputElement
+    fireEvent.change(fileInput, { target: { files: [makeFile("mock")] } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/1 geçerli/i)).toBeInTheDocument()
+    })
+    // Not rejected → zero errors.
+    expect(screen.getByText(/0 hatalı/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/^Geçerli$/i).length).toBe(1)
+  })
+
   it("Case 3 — 600 rows → 500 warning AlertBanner + 'İlk 500'ü İşle' CTA", async () => {
     const rows = Array.from({ length: 600 }, (_, i) => ({
       email: `user${i}@x.io`,
