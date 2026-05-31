@@ -278,19 +278,9 @@ function LoginPageInner() {
             alignItems: "center",
           }}
         >
+          {/* Tier 3 — removed dead "Gizlilik"/"Şartlar" href="#" links (no
+              such pages exist); only the copyright line remains. */}
           <span>© 2025 Acme Holding</span>
-          <a
-            href="#"
-            style={{ color: "var(--fg-subtle)", textDecoration: "none" }}
-          >
-            Gizlilik
-          </a>
-          <a
-            href="#"
-            style={{ color: "var(--fg-subtle)", textDecoration: "none" }}
-          >
-            Şartlar
-          </a>
         </div>
       </div>
 
