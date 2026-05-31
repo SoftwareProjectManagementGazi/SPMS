@@ -60,7 +60,9 @@ export function ChartTooltip({
     >
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
       {payload.map((p, idx) => {
-        const swatch = p.fill || p.stroke || p.color || "var(--fg-muted)"
+        // Prefer the solid stroke/series color over `fill`: area charts use a
+        // semi-transparent fill, which made the legend swatch look washed out.
+        const swatch = p.stroke || p.color || p.fill || "var(--fg-muted)"
         const key = String(p.dataKey ?? p.name ?? idx)
         return (
           <div

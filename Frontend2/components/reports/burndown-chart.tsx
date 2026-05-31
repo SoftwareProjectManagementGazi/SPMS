@@ -151,7 +151,10 @@ export function BurndownChart({ projectId, applicable }: BurndownChartProps) {
       query={query}
       loadingFallback={<BurndownSkeleton />}
       applicableLoading={applicable === null}
-      empty={!chartData.length}
+      // M-Reports NIT — also treat a zero-total sprint as empty; otherwise a
+      // sprint with no points renders a flat line at 0 instead of the empty
+      // state. totalAtStart is 0/null only when start total AND remaining are 0.
+      empty={!chartData.length || !totalAtStart}
       emptyFallback={
         <div
           style={{

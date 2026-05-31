@@ -18,6 +18,7 @@
 import * as React from "react"
 import { Download, ExternalLink, Loader2 } from "lucide-react"
 import { Button } from "@/components/primitives"
+import { formatLocalISODate } from "@/lib/date/parse-local-date"
 import { useApp } from "@/context/app-context"
 import { reportService, type ReportFilters } from "@/services/report-service"
 
@@ -54,7 +55,10 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10)
+  // M-Reports NIT — local date, not UTC. toISOString() can roll to the next/prev
+  // day for non-UTC users late at night, putting the wrong date in the export
+  // filename. formatLocalISODate uses local calendar fields (date kök-deseni).
+  return formatLocalISODate(new Date())
 }
 
 function pdfFilename(projectId: number | null): string {
