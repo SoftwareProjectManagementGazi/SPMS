@@ -15,6 +15,10 @@ export default function TaskRedirectPage() {
   const router = useRouter()
   const { language: lang } = useApp()
   const taskId = Number(params.id)
+  // Tier 3 — a non-numeric id (e.g. /tasks/abc) leaves useTaskDetail's query
+  // disabled, so neither effect below fires and the page hangs on "Yükleniyor…"
+  // forever. Treat an invalid id like a fetch error → bounce to /my-tasks.
+  const validId = Number.isFinite(taskId)
   const { data: task, isError } = useTaskDetail(taskId)
 
   React.useEffect(() => {
@@ -24,10 +28,10 @@ export default function TaskRedirectPage() {
   }, [task, router])
 
   React.useEffect(() => {
-    if (isError) {
+    if (isError || !validId) {
       router.replace("/my-tasks")
     }
-  }, [isError, router])
+  }, [isError, validId, router])
 
   return (
     <div

@@ -34,8 +34,11 @@ export function AvatarStack({
   className,
   style,
 }: AvatarStackProps) {
-  const shown = users.slice(0, max)
-  const extra = users.length - max
+  // Tier 3 — clamp max>=1 so a 0/negative max can't render an all-"+N" stack
+  // (slice(0,0) shows nothing while extra === users.length).
+  const safeMax = Math.max(1, max)
+  const shown = users.slice(0, safeMax)
+  const extra = users.length - safeMax
   return (
     <div
       className={className}
