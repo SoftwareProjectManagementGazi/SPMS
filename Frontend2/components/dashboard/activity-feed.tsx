@@ -96,7 +96,10 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
             const initials = getInitials(item.user_name ?? "?")
             const avatarUser = {
               initials,
-              avColor: (i % 8) + 1,
+              // Tier 3 — seed the avatar color from the stable user_id so a
+              // person keeps the same color regardless of feed position (was
+              // keyed on the render index `i`, which shifted the color on reorder).
+              avColor: ((item.user_id ?? 0) % 8) + 1,
               // ActivityItem.user_avatar carries the raw backend path; the
               // Avatar primitive resolves it and falls back to initials.
               avatarUrl: item.user_avatar,

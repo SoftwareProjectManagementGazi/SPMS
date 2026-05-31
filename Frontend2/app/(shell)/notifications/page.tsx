@@ -8,6 +8,9 @@ import type { NotificationItem } from "@/services/notification-service"
 
 function timeAgo(dateStr: string, lang: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  // Future timestamps (clock skew / server ahead) would render "-2sn önce";
+  // clamp to "just now".
+  if (diff < 0) return lang === "tr" ? "az önce" : "just now"
   if (lang === "tr") {
     if (diff < 60) return `${diff}sn önce`
     if (diff < 3600) return `${Math.floor(diff / 60)}dk önce`
