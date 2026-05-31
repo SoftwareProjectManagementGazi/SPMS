@@ -154,8 +154,12 @@ export function SettingsGeneralSubtab({
 
   const [name, setName] = React.useState(project.name)
   const [description, setDescription] = React.useState(project.description ?? "")
-  const [startDate, setStartDate] = React.useState(project.startDate ?? "")
-  const [endDate, setEndDate] = React.useState(project.endDate ?? "")
+  // project.startDate/endDate are ISO datetimes ("YYYY-MM-DDT00:00:00") but
+  // <input type="date"> only accepts "YYYY-MM-DD" — feeding it the full datetime
+  // renders an EMPTY field, and an empty field that later blurs could PATCH the
+  // real date away. Slice to the date portion so the input shows + round-trips.
+  const [startDate, setStartDate] = React.useState((project.startDate ?? "").slice(0, 10))
+  const [endDate, setEndDate] = React.useState((project.endDate ?? "").slice(0, 10))
 
   const cfg = (project.processConfig ?? {}) as {
     backlog_definition?: BacklogDefinition
@@ -216,9 +220,12 @@ export function SettingsGeneralSubtab({
   function onBlurDates() {
     const newStart = startDate || null
     const newEnd = endDate || null
+    // Compare on the date portion: project.start/endDate are datetimes while the
+    // inputs hold date-only strings, so a raw compare would always look "changed"
+    // and re-PATCH (or clear) an untouched field.
     const cur = {
-      start: project.startDate ?? null,
-      end: project.endDate ?? null,
+      start: (project.startDate ?? "").slice(0, 10) || null,
+      end: (project.endDate ?? "").slice(0, 10) || null,
     }
     if (newStart !== cur.start || newEnd !== cur.end) {
       patchProject({ start_date: newStart, end_date: newEnd })
