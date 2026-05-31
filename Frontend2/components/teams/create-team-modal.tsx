@@ -266,7 +266,17 @@ export function CreateTeamModal({ open, onClose, onCreated, lang }: Props) {
                   {T("Henüz kimse seçilmedi.", "No one selected yet.")}
                 </p>
               ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    // Tier 3 — cap the selected-members chip area so a large
+                    // selection scrolls instead of pushing the picker offscreen.
+                    maxHeight: 140,
+                    overflowY: "auto",
+                  }}
+                >
                   {selectedMembers.map((m) => {
                     const isLeader = leaderId === m.id
                     return (

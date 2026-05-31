@@ -209,7 +209,7 @@ export default function UserProfilePage() {
           <StatCard
             label={T("Projeler", "Projects")}
             value={stats.projectCount}
-            delta={`${projects.length} ${T("üye", "member")}`}
+            delta={`${projects.length} ${T("proje", "project")}`}
             tone="info"
             icon={<Folder size={14} />}
           />
