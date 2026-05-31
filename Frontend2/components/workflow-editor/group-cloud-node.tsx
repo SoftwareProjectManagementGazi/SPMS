@@ -38,9 +38,15 @@ export interface GroupCloudNodeData {
 function GroupCloudNodeImpl({ data }: NodeProps) {
   const d = (data ?? {}) as unknown as GroupCloudNodeData
   const childPositions = d.childPositions ?? []
-  const tokenColor = d.color ?? "primary"
-  const fill = `color-mix(in oklch, var(--${tokenColor}) 8%, transparent)`
-  const baseStroke = `color-mix(in oklch, var(--${tokenColor}) 35%, transparent)`
+  // `color` may be a design-token suffix (e.g. "primary", "status-progress")
+  // OR a raw hex value ("#0EA5E9", as persisted by seed/older group data).
+  // Building `var(--#0EA5E9)` is INVALID CSS — the SVG then falls back to its
+  // default black fill, which is why hex-colored group clouds rendered as solid
+  // black blobs. Resolve to a usable <color> for either form.
+  const rawColor = d.color ?? "primary"
+  const colorValue = rawColor.startsWith("#") ? rawColor : `var(--${rawColor})`
+  const fill = `color-mix(in oklch, ${colorValue} 8%, transparent)`
+  const baseStroke = `color-mix(in oklch, ${colorValue} 35%, transparent)`
   const dragOverStroke = "var(--primary)"
 
   // Plan 12-08: hullPath prop wins; otherwise fall back to the pure helper.

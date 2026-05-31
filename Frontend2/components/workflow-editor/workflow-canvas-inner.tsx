@@ -272,7 +272,9 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
             // maskColor dims the off-viewport area with a surface-tinted overlay.
             nodeColor={(n) => {
               const c = (n.data as { color?: string } | undefined)?.color
-              return `var(--${c ?? "border-strong"})`
+              if (!c) return "var(--border-strong)"
+              // color may be a token suffix or a raw hex (seed group data).
+              return c.startsWith("#") ? c : `var(--${c})`
             }}
             maskColor="color-mix(in oklch, var(--surface-2) 72%, transparent)"
             style={{

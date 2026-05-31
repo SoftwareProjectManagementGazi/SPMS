@@ -85,6 +85,24 @@ describe("GroupCloudNode — read-only baseline preserved", () => {
     const w = Number(path.getAttribute("stroke-width") ?? "0")
     expect(w).toBeGreaterThanOrEqual(2)
   })
+
+  it("accepts a RAW HEX color (seed group data) without building invalid var(--#hex)", () => {
+    // Regression: seed groups persist hex (e.g. #0EA5E9). `var(--#0EA5E9)` is
+    // invalid CSS, so the SVG fell back to a solid BLACK fill — the cloud
+    // rendered as a black blob. The hex must be used directly in color-mix.
+    const { container } = renderGroup({ color: "#0EA5E9" })
+    const path = container.querySelector("path") as SVGPathElement
+    const fill = path.getAttribute("fill") ?? ""
+    expect(fill).toContain("#0EA5E9")
+    expect(fill).not.toContain("var(--#") // invalid form that caused the black blob
+  })
+
+  it("still wraps a design-token color suffix in var(--token)", () => {
+    const { container } = renderGroup({ color: "status-progress" })
+    const path = container.querySelector("path") as SVGPathElement
+    const fill = path.getAttribute("fill") ?? ""
+    expect(fill).toContain("var(--status-progress)")
+  })
 })
 
 describe("GroupCloudNode — Plan 12-08 dragOver feedback", () => {
