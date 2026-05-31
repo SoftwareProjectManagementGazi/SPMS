@@ -44,8 +44,11 @@ export default function AdminOverviewPage() {
       {/* Row 1 — 5 StatCards */}
       <OverviewStatCards />
 
-      {/* Row 2 — Pending Requests (1.5fr) + side column (1fr) */}
+      {/* Row 2 — Pending Requests (1.5fr) + side column (1fr).
+          Tier 3 — `.admin-overview-row` collapses to a single column under
+          1024px (globals.css) so the two cards stack instead of squishing. */}
       <div
+        className="admin-overview-row"
         style={{
           display: "grid",
           gridTemplateColumns: "1.5fr 1fr",

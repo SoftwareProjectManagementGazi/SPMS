@@ -70,6 +70,9 @@ function formatCreatedAt(iso: string, lang: "tr" | "en"): string {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ""
   return d.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US", {
+    // Tier 3 — include the year so the admin project list isn't ambiguous
+    // across years ("16 Nis" -> "16 Nis 2026"). Fits the 90px cell at 11px.
+    year: "numeric",
     month: "short",
     day: "numeric",
   })

@@ -333,6 +333,8 @@ svg { display: block; }
   .reports-leadcycle-grid  { grid-template-columns: 1fr !important; }
   .profile-statcards-grid  { grid-template-columns: repeat(2, 1fr) !important; }
   .profile-projects-grid   { grid-template-columns: repeat(2, 1fr) !important; }
+  .admin-overview-stat-grid { grid-template-columns: repeat(3, 1fr) !important; }
+  .admin-overview-row       { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 640px) {
@@ -340,6 +342,7 @@ svg { display: block; }
   .reports-stat-grid       { grid-template-columns: 1fr !important; }
   .profile-statcards-grid  { grid-template-columns: 1fr !important; }
   .profile-projects-grid   { grid-template-columns: 1fr !important; }
+  .admin-overview-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
   /* Profile header stacks (avatar above name+stats) */
   .profile-header-card > div {

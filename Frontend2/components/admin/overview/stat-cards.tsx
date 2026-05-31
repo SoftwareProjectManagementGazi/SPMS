@@ -84,6 +84,7 @@ export function OverviewStatCards() {
 
   return (
     <div
+      className="admin-overview-stat-grid"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
