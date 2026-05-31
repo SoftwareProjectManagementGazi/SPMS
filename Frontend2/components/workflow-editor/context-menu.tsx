@@ -112,6 +112,29 @@ export function ContextMenu({
     return () => document.removeEventListener("mousedown", onMouseDown)
   }, [open, onClose])
 
+  // Viewport clamp — after the menu measures, nudge it back on-screen if the
+  // click landed near the right/bottom edge (otherwise it overflows + clips).
+  const [clampedPos, setClampedPos] = React.useState(position)
+  React.useLayoutEffect(() => {
+    if (!open) return
+    const el = menuRef.current
+    if (!el) {
+      setClampedPos(position)
+      return
+    }
+    const rect = el.getBoundingClientRect()
+    const margin = 8
+    let x = position.x
+    let y = position.y
+    if (x + rect.width > window.innerWidth - margin) {
+      x = Math.max(margin, window.innerWidth - rect.width - margin)
+    }
+    if (y + rect.height > window.innerHeight - margin) {
+      y = Math.max(margin, window.innerHeight - rect.height - margin)
+    }
+    setClampedPos({ x, y })
+  }, [open, position])
+
   if (!open) return null
 
   return (
@@ -121,8 +144,8 @@ export function ContextMenu({
       data-focus-index={focusIndex}
       style={{
         position: "absolute",
-        left: position.x,
-        top: position.y,
+        left: clampedPos.x,
+        top: clampedPos.y,
         zIndex: 1200,
         minWidth: 200,
         background: "var(--surface)",

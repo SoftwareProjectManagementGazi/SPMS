@@ -62,6 +62,13 @@ export interface CanvasControlsHandle {
   zoomIn: () => void
   zoomOut: () => void
   fitView: () => void
+  /** M-W1 — convert a screen/viewport point to flow (canvas) coordinates.
+   *  editor-page is outside the ReactFlowProvider so it reaches this via the
+   *  controls bridge instead of calling useReactFlow() directly. */
+  screenToFlowPosition: (screenPos: { x: number; y: number }) => {
+    x: number
+    y: number
+  }
 }
 
 export interface WorkflowCanvasInnerProps {
@@ -121,6 +128,7 @@ function CanvasControlsBridge({
       zoomIn: () => rf.zoomIn({ duration: 180 }),
       zoomOut: () => rf.zoomOut({ duration: 180 }),
       fitView: () => rf.fitView({ duration: 180, padding: 0.15 }),
+      screenToFlowPosition: (screenPos) => rf.screenToFlowPosition(screenPos),
     }
     return () => {
       if (controlsRef.current) controlsRef.current = null

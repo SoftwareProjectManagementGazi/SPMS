@@ -1129,10 +1129,17 @@ export function EditorPage({ project }: EditorPageProps) {
   const handlePaneContextMenu = React.useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault()
+      const screen = { x: e.clientX, y: e.clientY }
+      // M-W1 — the menu anchors at the SCREEN point, but "Add node here" must
+      // place the node at the matching FLOW (canvas) point, otherwise pan/zoom
+      // offsets it. editor-page is outside the ReactFlowProvider, so convert via
+      // the canvas controls bridge (falls back to screen coords if unavailable).
+      const flowPos =
+        canvasControlsRef.current?.screenToFlowPosition(screen) ?? screen
       setContextMenu({
-        position: { x: e.clientX, y: e.clientY },
+        position: screen,
         items: buildCanvasItems(),
-        target: { type: "canvas", flowPos: { x: e.clientX, y: e.clientY } },
+        target: { type: "canvas", flowPos },
       })
     },
     [buildCanvasItems],
@@ -1674,6 +1681,20 @@ export function EditorPage({ project }: EditorPageProps) {
           return
         }
       }
+      // M-W3 — overlays own the keyboard. The AI modal + dirty-save dialog have
+      // their own Escape handling, so suppress ALL editor shortcuts while either
+      // is open (otherwise Delete/N/etc. would mutate the canvas behind the
+      // overlay). The context menu is lighter: only Escape passes, to dismiss it
+      // via the Esc handler below.
+      if (aiModalOpen || pendingNavigation !== null) {
+        return
+      }
+      if (
+        contextMenu !== null &&
+        !matchesShortcut(e, KEYBOARD_SHORTCUTS.esc)
+      ) {
+        return
+      }
       // Cmd/Ctrl+S — save (Plan 12-09 wires the actual handler)
       if (matchesShortcut(e, KEYBOARD_SHORTCUTS.save)) {
         e.preventDefault()
@@ -1764,6 +1785,9 @@ export function EditorPage({ project }: EditorPageProps) {
     save,
     cancelAddEdge,
     setWorkflow,
+    aiModalOpen,
+    pendingNavigation,
+    contextMenu,
   ])
 
   // Mode SegmentedControl options (TR + EN per UI-SPEC §549-550) — icons

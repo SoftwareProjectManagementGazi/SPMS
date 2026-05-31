@@ -479,14 +479,14 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
 
                 {variant === "lifecycle" && (
                   <AILiveCanvas
-                    nodes={state.status === "generating" ? state.nodes : state.nodes}
-                    edges={state.status === "generating" ? state.edges : state.edges}
+                    nodes={state.nodes}
+                    edges={state.edges}
                     isGenerating={state.status === "generating"}
                   />
                 )}
                 {variant === "task_status" && (
                   <AITaskStatusKanban
-                    columns={state.status === "generating" ? state.columns : state.columns}
+                    columns={state.columns}
                     isGenerating={state.status === "generating"}
                   />
                 )}

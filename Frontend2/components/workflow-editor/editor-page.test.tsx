@@ -127,6 +127,7 @@ vi.mock("@xyflow/react", () => ({
     zoomIn: vi.fn(),
     zoomOut: vi.fn(),
     fitView: vi.fn(),
+    screenToFlowPosition: (p: { x: number; y: number }) => p,
   }),
   ReactFlow: ({
     children,
