@@ -616,7 +616,7 @@ export function PhaseGateExpand({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
-        maxLength={550}
+        maxLength={500}
         placeholder={T(
           "Geçiş notu (opsiyonel, en fazla 500 karakter)…",
           "Transition note (optional, max 500 chars)…",
