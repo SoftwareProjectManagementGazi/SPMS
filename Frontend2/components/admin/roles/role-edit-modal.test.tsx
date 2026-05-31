@@ -31,6 +31,14 @@ vi.mock("@/hooks/use-update-role", () => ({
   }),
 }))
 
+// M-RB3 — RoleEditModal now calls useRoles() for the inline duplicate-name
+// check. Mock it at the boundary (mirrors the useUpdateRole mock); rolesStateRef
+// lets individual cases control the existing-role list.
+const rolesStateRef: { items: { id: number; name: string }[] } = { items: [] }
+vi.mock("@/hooks/use-roles", () => ({
+  useRoles: () => ({ data: { items: rolesStateRef.items } }),
+}))
+
 import { RoleEditModal } from "./role-edit-modal"
 import type { Role } from "@/services/admin-rbac-service"
 
@@ -56,6 +64,7 @@ describe("RoleEditModal (Plan 15-11 — D-2.3 / D-2.8)", () => {
   beforeEach(() => {
     updateMutateMock.mockReset()
     updateStateRef.isPending = false
+    rolesStateRef.items = []
   })
 
   it("Case 1 — pre-fills form from role prop", () => {
@@ -121,5 +130,21 @@ describe("RoleEditModal (Plan 15-11 — D-2.3 / D-2.8)", () => {
   it("Case 6 — role=null renders nothing", () => {
     const { container } = render(<RoleEditModal open={true} role={null} onClose={vi.fn()} />)
     expect(container.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it("Case 7 — duplicate (other role) blocks submit; own name is allowed (M-RB3)", () => {
+    rolesStateRef.items = [
+      { id: 42, name: "Designer" }, // the role being edited (customRole.id = 42)
+      { id: 7, name: "Reviewer" },
+    ]
+    render(<RoleEditModal open={true} role={customRole} onClose={vi.fn()} />)
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    // Keeping the role's OWN name is not a duplicate (excluded by id).
+    expect(screen.queryByText(/Bu isimde bir rol zaten var/)).toBeNull()
+    // Renaming to another existing role's name → duplicate error + blocked submit.
+    fireEvent.change(nameInput, { target: { value: "Reviewer" } })
+    expect(screen.getByText(/Bu isimde bir rol zaten var/)).toBeInTheDocument()
+    fireEvent.submit(nameInput.closest("form")!)
+    expect(updateMutateMock).not.toHaveBeenCalled()
   })
 })

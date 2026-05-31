@@ -42,3 +42,20 @@ export function validateRoleName(name: string): RoleNameValidation {
   }
   return { ok: true }
 }
+
+// M-RB3 — case-insensitive duplicate-name check against the existing role list.
+// Kept SEPARATE from validateRoleName (which stays list-independent per ISP) so
+// each modal can run it with the role list it already has cached. `excludeId`
+// lets the edit modal ignore the role being edited — keeping a role's own name
+// is not a duplicate.
+export function isRoleNameTaken(
+  name: string,
+  roles: ReadonlyArray<{ id: number; name: string }>,
+  excludeId?: number,
+): boolean {
+  const trimmed = name.trim().toLowerCase()
+  if (!trimmed) return false
+  return roles.some(
+    (r) => r.id !== excludeId && r.name.trim().toLowerCase() === trimmed,
+  )
+}

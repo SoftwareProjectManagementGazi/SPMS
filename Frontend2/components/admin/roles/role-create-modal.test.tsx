@@ -32,12 +32,21 @@ vi.mock("@/hooks/use-create-role", () => ({
   }),
 }))
 
+// M-RB3 — RoleCreateModal now calls useRoles() for the inline duplicate-name
+// check. Mock it at the boundary (mirrors the useCreateRole mock); rolesStateRef
+// lets individual cases control the existing-role list.
+const rolesStateRef: { items: { id: number; name: string }[] } = { items: [] }
+vi.mock("@/hooks/use-roles", () => ({
+  useRoles: () => ({ data: { items: rolesStateRef.items } }),
+}))
+
 import { RoleCreateModal } from "./role-create-modal"
 
 describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
   beforeEach(() => {
     createMutateMock.mockReset()
     createStateRef.isPending = false
+    rolesStateRef.items = []
   })
 
   it("Case 1 — open=true renders name + description + icon picker + color swatch", () => {
@@ -146,5 +155,18 @@ describe("RoleCreateModal (Plan 15-11 — D-2.6 / D-2.8)", () => {
     expect(info.getAttribute("aria-checked")).toBe("false")
     fireEvent.click(info)
     expect(info.getAttribute("aria-checked")).toBe("true")
+  })
+
+  it("Case 10 — duplicate name shows inline error and blocks submit (M-RB3)", () => {
+    rolesStateRef.items = [{ id: 7, name: "Designer" }]
+    render(<RoleCreateModal open={true} onClose={vi.fn()} />)
+    const nameInput = screen.getByLabelText(/İsim/) as HTMLInputElement
+    // Duplicate detection is immediate (not gated on submit) so the user sees it
+    // before hitting Save — the whole point of the pre-check.
+    fireEvent.change(nameInput, { target: { value: "Designer" } })
+    expect(screen.getByText(/Bu isimde bir rol zaten var/)).toBeInTheDocument()
+    // Save is disabled, and submitting the form must still not fire the mutation.
+    fireEvent.submit(nameInput.closest("form")!)
+    expect(createMutateMock).not.toHaveBeenCalled()
   })
 })

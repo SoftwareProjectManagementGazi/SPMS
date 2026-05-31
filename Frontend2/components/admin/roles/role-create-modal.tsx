@@ -28,7 +28,8 @@ import {
 } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useCreateRole } from "@/hooks/use-create-role"
-import { validateRoleName } from "@/lib/admin/role-validation"
+import { useRoles } from "@/hooks/use-roles"
+import { isRoleNameTaken, validateRoleName } from "@/lib/admin/role-validation"
 import { RoleIconPicker } from "./role-icon-picker"
 import { RoleColorSwatch } from "./role-color-swatch"
 
@@ -41,6 +42,7 @@ export function RoleCreateModal({ open, onClose }: RoleCreateModalProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
   const createRole = useCreateRole()
+  const rolesQuery = useRoles()
 
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -60,7 +62,11 @@ export function RoleCreateModal({ open, onClose }: RoleCreateModalProps) {
   }, [open])
 
   const validation = validateRoleName(name)
-  const formValid = validation.ok
+  // M-RB3 — inline duplicate check so a clashing name is caught before the
+  // backend 409 round-trip. Only meaningful once base validation passes.
+  const duplicate =
+    validation.ok && isRoleNameTaken(name, rolesQuery.data?.items ?? [])
+  const formValid = validation.ok && !duplicate
 
   // Localized validation copy. The discriminated union over `reason` is the
   // ONLY place this switch lives — adding a new reason in role-validation.ts
@@ -83,7 +89,11 @@ export function RoleCreateModal({ open, onClose }: RoleCreateModalProps) {
                 : "Reserved name"
           }
         })()
-      : null
+      : duplicate
+        ? lang === "tr"
+          ? "Bu isimde bir rol zaten var"
+          : "A role with this name already exists"
+        : null
 
   const handleSubmit = () => {
     setSubmitted(true)

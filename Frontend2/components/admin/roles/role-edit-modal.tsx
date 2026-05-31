@@ -25,7 +25,8 @@ import {
 } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { useUpdateRole } from "@/hooks/use-update-role"
-import { validateRoleName } from "@/lib/admin/role-validation"
+import { useRoles } from "@/hooks/use-roles"
+import { isRoleNameTaken, validateRoleName } from "@/lib/admin/role-validation"
 import { RoleIconPicker } from "./role-icon-picker"
 import { RoleColorSwatch } from "./role-color-swatch"
 import type { Role } from "@/services/admin-rbac-service"
@@ -40,6 +41,7 @@ export function RoleEditModal({ open, role, onClose }: RoleEditModalProps) {
   const { language } = useApp()
   const lang: "tr" | "en" = language === "en" ? "en" : "tr"
   const updateRole = useUpdateRole()
+  const rolesQuery = useRoles()
 
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
@@ -64,10 +66,19 @@ export function RoleEditModal({ open, role, onClose }: RoleEditModalProps) {
 
   const isSystem = role.is_system_role
   const validation = validateRoleName(name)
-  const formValid = validation.ok && !isSystem
+  // M-RB3 — inline duplicate check, excluding this role's own id so keeping the
+  // current name isn't flagged; skipped for system roles (name is fixed/disabled).
+  const duplicate =
+    !isSystem &&
+    validation.ok &&
+    isRoleNameTaken(name, rolesQuery.data?.items ?? [], role.id)
+  const formValid = validation.ok && !isSystem && !duplicate
 
+  // M-RB1 — suppress the validation error for system roles: the field is
+  // disabled and a system role's name (e.g. "Admin") trips the "reserved" rule,
+  // producing a phantom error on an uneditable field if submit ever fires.
   const errorMessage =
-    !validation.ok && submitted
+    !isSystem && !validation.ok && submitted
       ? (() => {
           switch (validation.reason) {
             case "empty":
@@ -84,7 +95,11 @@ export function RoleEditModal({ open, role, onClose }: RoleEditModalProps) {
                 : "Reserved name"
           }
         })()
-      : null
+      : duplicate
+        ? lang === "tr"
+          ? "Bu isimde bir rol zaten var"
+          : "A role with this name already exists"
+        : null
 
   const handleSubmit = () => {
     setSubmitted(true)
