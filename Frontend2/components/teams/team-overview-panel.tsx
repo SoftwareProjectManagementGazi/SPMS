@@ -44,7 +44,9 @@ function getInitials(name: string): string {
 
 const AVATAR_PALETTE = ["#6366f1", "#0891b2", "#15803d", "#b45309", "#be185d", "#7c3aed"]
 function colorForId(id: number): string {
-  return AVATAR_PALETTE[id % AVATAR_PALETTE.length]
+  // M-TM3 — Math.abs so a negative id can't index below 0 into `undefined`
+  // (sibling color helpers already guard this way).
+  return AVATAR_PALETTE[Math.abs(id) % AVATAR_PALETTE.length]
 }
 
 function projectKey(name: string): string {
