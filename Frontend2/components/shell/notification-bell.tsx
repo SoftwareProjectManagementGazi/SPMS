@@ -111,7 +111,7 @@ export function NotificationBell() {
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
-          background: open ? "var(--bg-subtle, rgba(0,0,0,.06))" : "transparent",
+          background: open ? "var(--surface-2)" : "transparent",
           border: "none",
           cursor: "pointer",
         }}
@@ -128,7 +128,7 @@ export function NotificationBell() {
               height: 16,
               padding: "0 3px",
               borderRadius: 999,
-              background: "var(--danger, #e53e3e)",
+              background: "var(--priority-critical)",
               color: "#fff",
               fontSize: 10,
               fontWeight: 700,
@@ -158,7 +158,7 @@ export function NotificationBell() {
             width: 320,
             background: "var(--bg)",
             border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md, 8px)",
+            borderRadius: "var(--radius)",
             boxShadow: "0 8px 24px rgba(0,0,0,.12)",
             zIndex: 999,
             overflow: "hidden",
@@ -263,21 +263,21 @@ export function NotificationBell() {
                       gap: 10,
                       padding: "10px 14px",
                       borderBottom: "1px solid var(--border)",
-                      background: n.is_read ? "transparent" : "var(--bg-subtle, rgba(99,102,241,.04))",
+                      background: n.is_read ? "transparent" : "color-mix(in oklch, var(--primary) 4%, transparent)",
                       cursor: isClickable ? "pointer" : "default",
                     }}
                     onMouseEnter={(e) => {
-                      if (isClickable) e.currentTarget.style.background = "var(--bg-subtle, rgba(0,0,0,.05))"
+                      if (isClickable) e.currentTarget.style.background = "var(--surface-2)"
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = n.is_read ? "transparent" : "var(--bg-subtle, rgba(99,102,241,.04))"
+                      e.currentTarget.style.background = n.is_read ? "transparent" : "color-mix(in oklch, var(--primary) 4%, transparent)"
                     }}
                   >
                     {/* Unread dot */}
                     <div style={{ flexShrink: 0, marginTop: 5 }}>
                       <div style={{
                         width: 7, height: 7, borderRadius: "50%",
-                        background: n.is_read ? "transparent" : "var(--accent, #6366f1)",
+                        background: n.is_read ? "transparent" : "var(--primary)",
                       }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
