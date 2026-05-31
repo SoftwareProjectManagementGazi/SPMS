@@ -66,7 +66,9 @@ export default function ForgotPasswordPage() {
               <form onSubmit={handleSubmit}>
                 <div
                   style={{
-                    fontSize: 28,
+                    // Tier 3 — snapped 28 -> 20 to match the login heading
+                    // (UI-SPEC Display bucket); siblings all use 20.
+                    fontSize: 20,
                     fontWeight: 600,
                     letterSpacing: -0.8,
                     marginBottom: 8,
@@ -154,7 +156,8 @@ export default function ForgotPasswordPage() {
               <div style={{ textAlign: "center" }}>
                 <div
                   style={{
-                    fontSize: 28,
+                    // Tier 3 — snapped 28 -> 20 to match the login heading.
+                    fontSize: 20,
                     fontWeight: 600,
                     letterSpacing: -0.8,
                     marginBottom: 8,
