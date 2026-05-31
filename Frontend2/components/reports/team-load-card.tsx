@@ -163,8 +163,13 @@ export function TeamLoadCard({
           }
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
-            {rows.map((entry) => (
-              <TeamRow key={entry.userId} entry={entry} />
+            {rows.map((entry, i) => (
+              // M-R3 — composite key: userId can be null/0 (see avColorFor), which
+              // would collide under a bare key={entry.userId} and drop rows.
+              <TeamRow
+                key={`${entry.userId ?? "x"}-${entry.fullName}-${i}`}
+                entry={entry}
+              />
             ))}
           </div>
         </DataState>
