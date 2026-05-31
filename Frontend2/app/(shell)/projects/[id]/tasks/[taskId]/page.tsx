@@ -13,7 +13,7 @@ import * as React from "react"
 import { useParams } from "next/navigation"
 import { Bug, GitBranch, Link as LinkIcon, MoreHorizontal } from "lucide-react"
 
-import { Button, Card, Section } from "@/components/primitives"
+import { Badge, Button, Card, Section } from "@/components/primitives"
 import { useToast } from "@/components/toast"
 import { useApp } from "@/context/app-context"
 import { useProject } from "@/hooks/use-projects"
@@ -29,6 +29,16 @@ import { PropertiesSidebar } from "@/components/task-detail/properties-sidebar"
 import { SubTasksList } from "@/components/task-detail/sub-tasks-list"
 import { WatcherToggle } from "@/components/task-detail/watcher-toggle"
 import type { UserLite } from "@/lib/audit-formatter"
+
+// Header type indicator — distinguishes a main task from a subtask (and a bug).
+const TASK_TYPE_META: Record<
+  string,
+  { tr: string; en: string; tone: "neutral" | "info" | "danger" }
+> = {
+  task: { tr: "Ana Görev", en: "Main Task", tone: "neutral" },
+  subtask: { tr: "Alt Görev", en: "Subtask", tone: "info" },
+  bug: { tr: "Hata", en: "Bug", tone: "danger" },
+}
 
 export default function TaskDetailPage() {
   const params = useParams()
@@ -134,6 +144,8 @@ export default function TaskDetailPage() {
     }
   }
 
+  const typeMeta = TASK_TYPE_META[task.type] ?? TASK_TYPE_META.task
+
   return (
     <div className="task-detail-grid">
       {/* Main column */}
@@ -183,6 +195,10 @@ export default function TaskDetailPage() {
           >
             {task.title}
           </h1>
+          {/* Main task / subtask / bug indicator (D-35 sibling). */}
+          <Badge size="sm" tone={typeMeta.tone}>
+            {lang === "tr" ? typeMeta.tr : typeMeta.en}
+          </Badge>
         </div>
 
         {/* Action bar — Watch / Link / Branch + spacer + MoreH (prototype

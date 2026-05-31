@@ -54,19 +54,27 @@ export function ParentTaskLink({ task, project }: ParentTaskLinkProps) {
       <ChevronRight size={11} aria-hidden />
       {parentId != null ? (
         parent ? (
-          <Link
-            href={`/projects/${project.id}/tasks/${parent.id}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              color: "var(--fg-muted)",
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ fontFamily: "var(--font-mono)" }}>{parent.key}</span>
-            <span>{parent.title}</span>
-          </Link>
+          // Subtask breadcrumb: Project > PARENT-KEY > CURRENT-KEY (parent's
+          // full title is on hover). The current task's key is the "you are
+          // here" segment (emphasized fg), matching the requested
+          // "SPMS Geliştirme > SPMS-40 > SPMS-50" shape.
+          <>
+            <Link
+              href={`/projects/${project.id}/tasks/${parent.id}`}
+              title={parent.title}
+              style={{
+                color: "var(--fg-muted)",
+                textDecoration: "none",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {parent.key}
+            </Link>
+            <ChevronRight size={11} aria-hidden />
+            <span style={{ fontFamily: "var(--font-mono)", color: "var(--fg)" }}>
+              {task.key}
+            </span>
+          </>
         ) : (
           <span style={{ color: "var(--fg-subtle)" }}>
             {lang === "tr" ? "Ana görev yükleniyor…" : "Loading parent…"}
