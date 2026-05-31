@@ -51,12 +51,16 @@ export function CalendarTab({ project }: { project: Project }) {
   const router = useRouter()
   const { data: tasks = [], error, refetch } = useTasks(project.id)
 
-  // `today` is captured ONCE per render cycle so Ctrl+wheel and month-nav
-  // re-renders don't thrash the "today highlight" calculation.
-  const today = React.useMemo(() => new Date(Date.now()), [])
-  const [cursor, setCursor] = React.useState<Date>(
-    () => new Date(today.getFullYear(), today.getMonth(), 1)
-  )
+  // cursor = the displayed month, initialized to the first of the current month.
+  const [cursor, setCursor] = React.useState<Date>(() => {
+    const t = new Date(Date.now())
+    return new Date(t.getFullYear(), t.getMonth(), 1)
+  })
+  // `today` recomputes when the user navigates months (`cursor`) so a session
+  // left open across midnight refreshes the "today" highlight, while ordinary
+  // Ctrl+wheel zoom re-renders still don't thrash it (M-P2).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- cursor is a refresh trigger, not read in the body
+  const today = React.useMemo(() => new Date(Date.now()), [cursor])
   const [cellHeight, setCellHeight] = React.useState<number>(DEFAULT_CELL)
   const [popoverDay, setPopoverDay] = React.useState<string | null>(null)
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
