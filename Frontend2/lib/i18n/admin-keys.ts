@@ -181,6 +181,12 @@ export const ADMIN_I18N_KEYS = {
     tr: "Member",
     en: "Member",
   },
+  // M-AD4 — bucket for custom/unknown roles so the distribution sums to the
+  // real user total instead of silently dropping them.
+  "admin.overview.role_other": {
+    tr: "Diğer",
+    en: "Other",
+  },
 
   // Recent admin events
   "admin.overview.recent_admin_events_title": {

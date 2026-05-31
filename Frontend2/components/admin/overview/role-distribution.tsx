@@ -61,20 +61,26 @@ export function RoleDistribution() {
     : ((q.data as { items?: UserLite[] } | undefined)?.items ?? [])
 
   const counts = React.useMemo(() => {
-    const acc = { admin: 0, pm: 0, member: 0 }
+    const acc = { admin: 0, pm: 0, member: 0, other: 0 }
     for (const u of usersRaw) {
       const bucket = bucketRole(readRoleName(u))
       if (bucket === "admin") acc.admin += 1
       else if (bucket === "pm") acc.pm += 1
       else if (bucket === "member") acc.member += 1
+      else acc.other += 1
     }
     return acc
   }, [usersRaw])
 
-  const total = Math.max(1, counts.admin + counts.pm + counts.member)
+  // M-AD4 — include "other" (custom/unknown roles) in the total so the bar
+  // percentages reflect the real user count instead of silently dropping them.
+  const total = Math.max(
+    1,
+    counts.admin + counts.pm + counts.member + counts.other,
+  )
 
   const rows: Array<{
-    key: "admin" | "pm" | "member"
+    key: "admin" | "pm" | "member" | "other"
     label: string
     count: number
     color: string
@@ -98,6 +104,16 @@ export function RoleDistribution() {
       color: "var(--fg-muted)",
     },
   ]
+  // M-AD4 — surface custom/unknown roles in a "Diğer/Other" bucket, but only
+  // when present so the common (no custom roles) case keeps three clean rows.
+  if (counts.other > 0) {
+    rows.push({
+      key: "other",
+      label: adminT("admin.overview.role_other", language),
+      count: counts.other,
+      color: "var(--fg-subtle)",
+    })
+  }
 
   return (
     <Card padding={16}>
