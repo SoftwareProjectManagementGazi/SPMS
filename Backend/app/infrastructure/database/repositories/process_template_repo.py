@@ -1,11 +1,12 @@
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.domain.entities.process_template import ProcessTemplate
 from app.domain.repositories.process_template_repository import IProcessTemplateRepository
 from app.infrastructure.database.models.process_template import ProcessTemplateModel
+from app.infrastructure.database.models.project import ProjectModel
 
 
 class SqlAlchemyProcessTemplateRepository(IProcessTemplateRepository):
@@ -88,5 +89,13 @@ class SqlAlchemyProcessTemplateRepository(IProcessTemplateRepository):
         model = result.scalar_one_or_none()
         if model is None:
             raise ValueError("Template not found")
+        # The FK has no ON DELETE; clear references so in-use deletes don't
+        # violate it. Projects keep their copied workflow — only the display
+        # link goes away.
+        await self._session.execute(
+            update(ProjectModel)
+            .where(ProjectModel.process_template_id == template_id)
+            .values(process_template_id=None)
+        )
         await self._session.delete(model)
         await self._session.flush()

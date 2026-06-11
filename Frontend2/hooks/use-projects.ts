@@ -158,9 +158,9 @@ export function useCloneTemplate() {
 
 // Phase 14 Plan 14-06 — admin Workflows tab Sil mutation.
 //
-// Backend DELETE /process-templates/{id} returns 204; built-in templates
-// raise 403 PermissionError. The admin UI gates this action via an
-// impact-aware Modal (warns when the template is in use by N active
+// Backend DELETE /process-templates/{id} returns 204 (built-ins included;
+// project links are cleared server-side). The admin UI gates this action via
+// an impact-aware Modal (warns when the template is in use by N active
 // projects + requires a "Yine de sil" secondary checkbox before the
 // danger CTA enables) so an accidental Sil click can't trigger the call.
 export function useDeleteTemplate() {

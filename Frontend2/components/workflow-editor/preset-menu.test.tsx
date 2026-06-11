@@ -131,4 +131,60 @@ describe("PresetMenu", () => {
     // Trigger label still present
     expect(screen.getByText("Şablon Yükle")).toBeTruthy()
   })
+
+  it("Test 7: DB templates render under a 'Süreç Şablonları' section and apply directly when clean", () => {
+    const onApply = vi.fn()
+    const onApplyTemplate = vi.fn()
+    render(
+      <PresetMenu
+        currentPresetId={null}
+        dirty={false}
+        onApply={onApply}
+        templates={[
+          { id: 5, name: "Şirket Scrum'u" },
+          { id: 9, name: "ISO Süreci" },
+        ]}
+        onApplyTemplate={onApplyTemplate}
+      />,
+    )
+    fireEvent.click(screen.getByText("Şablon Yükle"))
+
+    expect(screen.getByText("Süreç Şablonları")).toBeTruthy()
+    expect(screen.getByText("ISO Süreci")).toBeTruthy()
+
+    fireEvent.click(screen.getByText("Şirket Scrum'u"))
+    expect(onApplyTemplate).toHaveBeenCalledWith(5)
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it("Test 8: dirty=true routes a DB template through the ConfirmDialog", () => {
+    const onApplyTemplate = vi.fn()
+    render(
+      <PresetMenu
+        currentPresetId={null}
+        dirty={true}
+        onApply={vi.fn()}
+        templates={[{ id: 7, name: "Özel Akış" }]}
+        onApplyTemplate={onApplyTemplate}
+      />,
+    )
+    fireEvent.click(screen.getByText("Şablon Yükle"))
+    fireEvent.click(screen.getByText("Özel Akış"))
+
+    expect(
+      screen.getByText(/Mevcut değişiklikler kaybolacak/),
+    ).toBeTruthy()
+    expect(onApplyTemplate).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText("Devam Et"))
+    expect(onApplyTemplate).toHaveBeenCalledWith(7)
+  })
+
+  it("Test 9: no templates prop keeps the menu preset-only (no section header)", () => {
+    render(
+      <PresetMenu currentPresetId={null} dirty={false} onApply={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByText("Şablon Yükle"))
+    expect(screen.queryByText("Süreç Şablonları")).toBeNull()
+  })
 })

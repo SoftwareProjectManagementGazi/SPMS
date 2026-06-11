@@ -17,6 +17,7 @@ from app.application.dtos.process_template_dtos import (
 from app.application.dtos.project_dtos import ProjectCreateDTO
 from app.application.use_cases.manage_process_templates import (
     CreateProcessTemplateUseCase,
+    DeleteProcessTemplateUseCase,
     UpdateProcessTemplateUseCase,
 )
 from app.application.use_cases.manage_projects import CreateProjectUseCase
@@ -62,6 +63,7 @@ class _InMemoryTemplateRepo:
         self._template = template
         self.created: Optional[ProcessTemplate] = None
         self.updated: Optional[ProcessTemplate] = None
+        self.deleted_id: Optional[int] = None
 
     async def get_by_id(self, template_id: int) -> Optional[ProcessTemplate]:
         return self._template
@@ -78,6 +80,9 @@ class _InMemoryTemplateRepo:
     async def update(self, template: ProcessTemplate) -> ProcessTemplate:
         self.updated = template
         return template
+
+    async def delete(self, template_id: int) -> None:
+        self.deleted_id = template_id
 
 
 class _InMemoryProjectRepo:
@@ -204,6 +209,17 @@ async def test_update_builtin_template_is_allowed():
     assert repo.updated is not None
     assert repo.updated.default_workflow == new_wf
     assert result.is_builtin is True
+
+
+@pytest.mark.asyncio
+async def test_delete_builtin_template_is_allowed():
+    """Built-ins are deletable from the admin panel."""
+    repo = _InMemoryTemplateRepo(_custom_template(is_builtin=True))
+    uc = DeleteProcessTemplateUseCase(repo)
+
+    await uc.execute(7)
+
+    assert repo.deleted_id == 7
 
 
 @pytest.mark.asyncio

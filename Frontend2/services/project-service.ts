@@ -357,7 +357,7 @@ export const projectService = {
   },
 
   // default_workflow is the canvas-serialized lifecycle graph; the backend
-  // shape-validates it and 422s on violation. Built-ins 403.
+  // shape-validates it and 422s on violation.
   updateProcessTemplate: async (
     id: number,
     payload: {

@@ -80,3 +80,61 @@ async def test_apply_template_to_projects(authenticated_client, db_session):
         assert row is not None
         assert row[0] == tid, f"project {pid} process_template_id not stamped"
         assert row.sv == "2", f"project {pid} process_config schema_version not bumped to 2"
+
+
+@pytest.mark.asyncio
+async def test_delete_in_use_builtin_template_clears_project_links(
+    authenticated_client, db_session
+):
+    """DELETE works on an in-use BUILT-IN template: 204, the row is gone, and
+    referencing projects get process_template_id=NULL (their copied workflow
+    stays untouched)."""
+    if not await _db_has_roles(db_session):
+        pytest.skip("DB has no roles — skipping process template delete test")
+
+    await db_session.execute(
+        text("DELETE FROM process_templates WHERE name='DelTpl'")
+    )
+    await db_session.execute(
+        text(
+            "INSERT INTO process_templates (name, is_builtin) "
+            "VALUES ('DelTpl', true)"
+        )
+    )
+    await db_session.flush()
+    tid = (await db_session.execute(
+        text("SELECT id FROM process_templates WHERE name='DelTpl'")
+    )).scalar()
+
+    existing = (await db_session.execute(
+        text("SELECT id FROM projects WHERE key='DELP1'")
+    )).scalar()
+    if not existing:
+        await db_session.execute(
+            text(
+                "INSERT INTO projects (key, name, start_date, methodology, status) "
+                "VALUES ('DELP1', 'P', now(), 'SCRUM', 'ACTIVE')"
+            )
+        )
+    await db_session.execute(
+        text("UPDATE projects SET process_template_id=:t WHERE key='DELP1'"),
+        {"t": tid},
+    )
+    await db_session.flush()
+    pid = (await db_session.execute(
+        text("SELECT id FROM projects WHERE key='DELP1'")
+    )).scalar()
+
+    async with authenticated_client(role="admin") as client:
+        r = await client.delete(f"/api/v1/process-templates/{tid}")
+        assert r.status_code == 204, r.text
+
+    gone = (await db_session.execute(
+        text("SELECT id FROM process_templates WHERE id=:i"), {"i": tid}
+    )).scalar()
+    assert gone is None, "template row should be deleted"
+
+    link = (await db_session.execute(
+        text("SELECT process_template_id FROM projects WHERE id=:i"), {"i": pid}
+    )).scalar()
+    assert link is None, "project link should be cleared, not block the delete"

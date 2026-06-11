@@ -63,6 +63,7 @@ import { useToast } from "@/components/toast"
 import { useTransitionAuthority } from "@/hooks/use-transition-authority"
 import { useEditorHistory } from "@/hooks/use-editor-history"
 import { useCycleCounters } from "@/hooks/use-cycle-counters"
+import { useProcessTemplates } from "@/hooks/use-projects"
 import { computeNodeStates } from "@/lib/lifecycle/graph-traversal"
 import {
   alignBottom,
@@ -589,6 +590,50 @@ export function EditorPage({ project }: EditorPageProps) {
       setSelected(null)
     },
     [commitWorkflow],
+  )
+
+  // Admin-curated DB templates, offered in the PresetMenu next to the
+  // hardcoded presets (lifecycle mode only). Applying one is COPY-ON-USE:
+  // the graph is copied into the working canvas and persists to this
+  // project's process_config on save — later template edits never reach it.
+  const templatesQ = useProcessTemplates()
+  const dbTemplateList = React.useMemo(() => {
+    const raw = templatesQ.data as unknown
+    if (!Array.isArray(raw)) return []
+    return (
+      raw as Array<{
+        id: number
+        name: string
+        default_workflow?: { nodes?: unknown[] } | null
+      }>
+    ).filter(
+      (t) =>
+        t.default_workflow &&
+        Array.isArray(t.default_workflow.nodes) &&
+        t.default_workflow.nodes.length > 0,
+    )
+  }, [templatesQ.data])
+  const dbTemplateEntries = React.useMemo(
+    () => dbTemplateList.map((t) => ({ id: t.id, name: t.name })),
+    [dbTemplateList],
+  )
+
+  const applyDbTemplate = React.useCallback(
+    (templateId: number) => {
+      const t = dbTemplateList.find((x) => x.id === templateId)
+      if (!t?.default_workflow) return
+      const next = regenerateInvalidNodeIds(
+        mapWorkflowConfig(t.default_workflow as unknown as WorkflowConfigDTO),
+      )
+      commitWorkflow(next)
+      // Template capabilities ride the graph; sync the slice so save
+      // persists them together.
+      if (next.capabilities) {
+        setLifecycleCapabilities(next.capabilities as WorkflowCapabilities)
+      }
+      setSelected(null)
+    },
+    [dbTemplateList, commitWorkflow],
   )
 
   // ---------------------- Inline edit propagation -----------------------
@@ -2039,6 +2084,8 @@ export function EditorPage({ project }: EditorPageProps) {
               currentPresetId={detectCurrentPresetId(workflow)}
               dirty={dirty}
               onApply={applyPreset}
+              templates={dbTemplateEntries}
+              onApplyTemplate={applyDbTemplate}
             />
           </>
         )}

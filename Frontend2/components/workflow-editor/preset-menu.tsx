@@ -30,6 +30,11 @@ import {
   type PresetId,
 } from "@/lib/lifecycle/presets"
 
+export interface PresetMenuTemplateEntry {
+  id: number
+  name: string
+}
+
 export interface PresetMenuProps {
   /** When the current workflow shape matches a preset, render its label as a Badge. */
   currentPresetId: PresetId | null
@@ -37,9 +42,23 @@ export interface PresetMenuProps {
   dirty: boolean
   /** Apply handler — receives the chosen preset id. */
   onApply: (id: PresetId) => void
+  /** Admin-curated DB process templates, listed under the built-in presets.
+   *  Applying one is copy-on-use: the graph is copied into the canvas. */
+  templates?: PresetMenuTemplateEntry[]
+  onApplyTemplate?: (id: number) => void
 }
 
-export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps) {
+type PendingSelection =
+  | { kind: "preset"; id: PresetId }
+  | { kind: "template"; id: number }
+
+export function PresetMenu({
+  currentPresetId,
+  dirty,
+  onApply,
+  templates,
+  onApplyTemplate,
+}: PresetMenuProps) {
   const { language } = useApp()
   const T = React.useCallback(
     (tr: string, en: string) => (language === "tr" ? tr : en),
@@ -52,9 +71,7 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
   )
 
   const [open, setOpen] = React.useState(false)
-  const [pendingPreset, setPendingPreset] = React.useState<PresetId | null>(
-    null,
-  )
+  const [pending, setPending] = React.useState<PendingSelection | null>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
 
   // Click-outside dismiss for the dropdown.
@@ -71,11 +88,11 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
     return () => window.removeEventListener("mousedown", onDocMouseDown)
   }, [open])
 
-  // Selection handler — gates on dirty.
+  // Selection handlers — gate on dirty.
   const handleSelect = React.useCallback(
     (id: PresetId) => {
       if (dirty) {
-        setPendingPreset(id)
+        setPending({ kind: "preset", id })
       } else {
         onApply(id)
         setOpen(false)
@@ -84,16 +101,30 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
     [dirty, onApply],
   )
 
+  const handleSelectTemplate = React.useCallback(
+    (id: number) => {
+      if (dirty) {
+        setPending({ kind: "template", id })
+      } else {
+        onApplyTemplate?.(id)
+        setOpen(false)
+      }
+    },
+    [dirty, onApplyTemplate],
+  )
+
   const handleConfirm = React.useCallback(() => {
-    if (pendingPreset) {
-      onApply(pendingPreset)
+    if (pending?.kind === "preset") {
+      onApply(pending.id)
+    } else if (pending?.kind === "template") {
+      onApplyTemplate?.(pending.id)
     }
-    setPendingPreset(null)
+    setPending(null)
     setOpen(false)
-  }, [pendingPreset, onApply])
+  }, [pending, onApply, onApplyTemplate])
 
   const handleCancel = React.useCallback(() => {
-    setPendingPreset(null)
+    setPending(null)
   }, [])
 
   // Build the preset id list once. Iterates Object.keys but the literal-typed
@@ -170,11 +201,58 @@ export function PresetMenu({ currentPresetId, dirty, onApply }: PresetMenuProps)
               {labelFor(id)}
             </button>
           ))}
+
+          {/* Admin-curated DB templates — applied as a copy (copy-on-use). */}
+          {templates && templates.length > 0 ? (
+            <>
+              <div
+                aria-hidden
+                style={{
+                  height: 1,
+                  background: "var(--border)",
+                  margin: "4px 6px",
+                }}
+              />
+              <div
+                style={{
+                  padding: "4px 10px 2px",
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  letterSpacing: 0.4,
+                  textTransform: "uppercase",
+                  color: "var(--fg-subtle)",
+                }}
+              >
+                {T("Süreç Şablonları", "Process Templates")}
+              </div>
+              {templates.map((t) => (
+                <button
+                  key={`tpl-${t.id}`}
+                  role="menuitem"
+                  onClick={() => handleSelectTemplate(t.id)}
+                  className="hover-row"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "6px 10px",
+                    background: "transparent",
+                    border: 0,
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: 13,
+                    color: "var(--fg)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </>
+          ) : null}
         </div>
       ) : null}
 
       <ConfirmDialog
-        open={pendingPreset !== null}
+        open={pending !== null}
         title={T("Şablon Yüklenecek", "Load Template")}
         body={T(
           "Mevcut değişiklikler kaybolacak. Devam etmek istiyor musunuz?",

@@ -89,6 +89,9 @@ const { STABLE_EMPTY_QUERY } = vi.hoisted(() => ({
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
   useQuery: () => STABLE_EMPTY_QUERY,
+  // editor-page imports useProcessTemplates (hooks/use-projects), whose module
+  // destructures useMutation at import time — it must exist on the mock.
+  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 const mockUpdateProcessConfig = vi.fn()

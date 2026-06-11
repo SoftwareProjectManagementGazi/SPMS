@@ -15,8 +15,8 @@
 //      (single click + danger CTA). When N > 0 we escalate to a Modal with
 //      a warning body ("{name} {N} projede kullanılıyor…") and a SECONDARY
 //      checkbox "Yine de sil"; the danger CTA stays disabled until the
-//      checkbox is checked. Defense-in-depth alongside the backend's 204
-//      delete (built-in templates raise 403 server-side).
+//      checkbox is checked. Built-ins are deletable too (admin-only route);
+//      the backend clears project links before deleting.
 //
 // Consumes Plan 14-01's shared MoreMenu primitive — does NOT rebuild.
 // active_project_count is passed in by the parent <AdminTemplateCard/>

@@ -78,6 +78,6 @@ class DeleteProcessTemplateUseCase:
         existing = await self._repo.get_by_id(template_id)
         if existing is None:
             raise ValueError(f"Process template {template_id} not found")
-        if existing.is_builtin:
-            raise PermissionError("Built-in templates cannot be deleted")
+        # Built-ins are deletable too (admin-only route). Note: the seeder
+        # re-creates missing built-ins by name on next boot.
         await self._repo.delete(template_id)
