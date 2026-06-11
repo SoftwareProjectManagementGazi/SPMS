@@ -1,40 +1,12 @@
 "use client"
 
-// /workflow-editor route (Phase 12 Plan 12-07 + Phase 14 Plan 14-18 B-5).
-//
-// Plan 14-18 dispatch — the route now serves TWO surfaces:
-//   - ?projectId=X → original Phase 12 EditorPage (project lifecycle/status
-//     React Flow canvas — unchanged behavior).
-//   - ?templateId=X → NEW TemplateEditorPage (ProcessTemplate field editor —
-//     name + description + read-only previews of columns/recurring_tasks/
-//     behavioral_flags). Saves via PATCH /process-templates/{id}.
-//   - neither → redirect /projects (legacy fallback).
-//
-// SCOPE NOTE — see TemplateEditorPage's file-level comment (Frontend2/
-// components/workflow-editor/template-editor-page.tsx) for why we ship a
-// separate editor for templates rather than reusing the React Flow canvas.
-// TL;DR: ProcessTemplate has no nodes/edges shape; forcing it into the
-// Phase 12 canvas would require an alembic migration + 4-6 backend endpoints
-// + 33-component refactor. Per <user_decision_locked> the executor signaled
-// back via 14-18-SUMMARY.md and shipped a working editor for the actual
-// ProcessTemplate fields instead. Defer is OFF the table; this is NOT a
-// stub — admin can change name/description and PATCH lands.
-//
-// Reads ?projectId=X / ?templateId=Y from useSearchParams. Missing or invalid
-// (NaN) projectId AND missing templateId triggers router.replace('/projects').
-// Viewport gate: <1024 px renders the ViewportFallback page; >=1024 px mounts
-// the appropriate editor. The viewport gate is intentionally applied to BOTH
-// editor variants — the template editor body is not as canvas-heavy but the
-// admin Workflows tab itself is desktop-only (UI-SPEC §736 ports forward).
-//
-// The route is a Client Component because:
-//   1. useSearchParams + useRouter are client-only hooks
-//   2. window.innerWidth viewport check requires the browser
-//   3. EditorPage dynamic-imports a Client Component with ssr:false and
-//      that option is forbidden inside Server Components per Next.js 16
-//      lazy-loading docs (read at node_modules/next/dist/docs/01-app/02-
-//      guides/lazy-loading.md before this commit per Frontend2/AGENTS.md
-//      mandate).
+// /workflow-editor route — serves two surfaces:
+//   - ?projectId=X  → EditorPage (project lifecycle/status canvas)
+//   - ?templateId=X → TemplateEditorPage (ProcessTemplate lifecycle canvas)
+//   - neither       → redirect /projects
+// Both sit behind the <1024px ViewportFallback gate. Client Component:
+// useSearchParams/useRouter/window are browser-only, and the canvas is
+// dynamic-imported with ssr:false.
 
 import * as React from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -115,7 +87,8 @@ function WorkflowEditorRouteInner() {
       // page just instructs the user to visit on a wider viewport).
       return <ViewportFallback projectId={templateId} />
     }
-    return <TemplateEditorPage templateId={templateId} />
+    // key: a templateId switch remounts so editor state can't bleed across.
+    return <TemplateEditorPage key={templateId} templateId={templateId} />
   }
 
   // Legacy project branch — Redirect in flight: render nothing.

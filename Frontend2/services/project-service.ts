@@ -183,6 +183,25 @@ function mapMember(d: ProjectMemberResponseDTO): ProjectMember {
   }
 }
 
+// ProcessTemplateResponseDTO wire shape (snake_case, admin-only consumers).
+// default_workflow uses the same WorkflowConfigDTO shape as project
+// phase_workflow, so the lifecycle-service mappers apply 1:1.
+export interface ProcessTemplateDetail {
+  id: number
+  name: string
+  is_builtin: boolean
+  columns: unknown[]
+  recurring_tasks: unknown[]
+  behavioral_flags: Record<string, unknown>
+  description: string | null
+  default_workflow?: Record<string, unknown> | null
+  default_columns?: unknown[] | null
+  default_phase_criteria?: Record<string, unknown> | null
+  default_artifacts?: unknown[] | null
+  cycle_label_tr?: string | null
+  cycle_label_en?: string | null
+}
+
 export const projectService = {
   getAll: async (status?: string): Promise<Project[]> => {
     const params: Record<string, string> = {};
@@ -288,42 +307,21 @@ export const projectService = {
     return response.data;
   },
 
-  // Phase 14 Plan 14-06 — admin Workflows tab. Reads a single template so we
-  // can compose a client-side clone (no backend /clone route per CONTEXT D-B1
-  // "use existing endpoints"). Uses GET /process-templates/{id} via the list
-  // endpoint and a client-side filter — the existing router exposes only a
-  // list endpoint at /process-templates/, so we filter here.
+  // The router exposes only a list endpoint, so we fetch the list and filter
+  // client-side.
   getProcessTemplateById: async (
     id: number,
-  ): Promise<{
-    id: number
-    name: string
-    is_builtin: boolean
-    columns: unknown[]
-    recurring_tasks: unknown[]
-    behavioral_flags: Record<string, unknown>
-    description: string | null
-  } | null> => {
-    const response = await apiClient.get<
-      Array<{
-        id: number
-        name: string
-        is_builtin: boolean
-        columns: unknown[]
-        recurring_tasks: unknown[]
-        behavioral_flags: Record<string, unknown>
-        description: string | null
-      }>
-    >('/process-templates')
+  ): Promise<ProcessTemplateDetail | null> => {
+    const response = await apiClient.get<ProcessTemplateDetail[]>(
+      '/process-templates',
+    )
     const found = response.data.find((t) => t.id === id)
     return found ?? null
   },
 
-  // Phase 14 Plan 14-06 — admin Workflows tab Klonla flow.
-  // No backend /clone endpoint exists; per Plan 14-06 critical_constraints we
-  // must NOT add one. Implementation: read the source template, then POST a
-  // new one with the same payload + a "(Kopya)" / "(Copy)" suffix on name.
-  // Returns the new template object so the call site can refetch / toast.
+  // Client-side clone (no backend /clone route): GET the source, POST a copy
+  // with a name suffix. All default_* fields ride along so the clone is a
+  // full copy. is_builtin is server-forced to false.
   cloneProcessTemplate: async (
     id: number,
     nameSuffix: string,
@@ -333,15 +331,18 @@ export const projectService = {
       throw new Error(`Process template ${id} not found`)
     }
     const newName = `${source.name}${nameSuffix}`
-    // POST /process-templates expects ProcessTemplateCreateDTO — name +
-    // columns + recurring_tasks + behavioral_flags + description. is_builtin
-    // is server-forced to false (manage_process_templates.CreateProcessTemplate).
     const response = await apiClient.post('/process-templates', {
       name: newName,
       columns: source.columns,
       recurring_tasks: source.recurring_tasks,
       behavioral_flags: source.behavioral_flags,
       description: source.description,
+      default_workflow: source.default_workflow ?? null,
+      default_columns: source.default_columns ?? null,
+      default_phase_criteria: source.default_phase_criteria ?? null,
+      default_artifacts: source.default_artifacts ?? null,
+      cycle_label_tr: source.cycle_label_tr ?? null,
+      cycle_label_en: source.cycle_label_en ?? null,
     })
     return response.data
   },
@@ -355,11 +356,8 @@ export const projectService = {
     await apiClient.delete(`/process-templates/${id}`)
   },
 
-  // Phase 14 Plan 14-18 (Cluster F, B-5) — admin Workflows Düzenle flow.
-  // Backend PATCH /process-templates/{id} exists already (Backend/app/api/v1/
-  // process_templates.py:61 — UpdateProcessTemplateUseCase). Built-in
-  // templates raise PermissionError → 403; the UI gates the Düzenle action
-  // by hiding the form's edit affordances when is_builtin=true.
+  // default_workflow is the canvas-serialized lifecycle graph; the backend
+  // shape-validates it and 422s on violation. Built-ins 403.
   updateProcessTemplate: async (
     id: number,
     payload: {
@@ -368,6 +366,7 @@ export const projectService = {
       columns?: unknown[]
       recurring_tasks?: unknown[]
       behavioral_flags?: Record<string, unknown>
+      default_workflow?: Record<string, unknown>
     },
   ): Promise<unknown> => {
     const response = await apiClient.patch(

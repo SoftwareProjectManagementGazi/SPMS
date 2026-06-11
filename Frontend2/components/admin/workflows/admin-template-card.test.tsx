@@ -126,6 +126,37 @@ describe("AdminTemplateCard (Plan 14-06 Task 1)", () => {
     expect(screen.getByText(/1\s+proje/)).toBeInTheDocument()
   })
 
+  it("Case 2b — default_workflow.mode beats behavioral_flags AND the name heuristic", () => {
+    // Name + flags both say locked, but the saved graph is continuous.
+    render(
+      <AdminTemplateCard
+        template={{
+          ...CUSTOM_TEMPLATE,
+          name: "Waterfall Custom",
+          default_workflow: { mode: "continuous" },
+        }}
+        activeProjectCount={0}
+      />,
+    )
+    expect(screen.getByText("Continuous")).toBeInTheDocument()
+    expect(screen.queryByText("Locked")).toBeNull()
+  })
+
+  it("Case 2c — sequential-flexible workflow mode maps to the neutral Flexible badge", () => {
+    render(
+      <AdminTemplateCard
+        template={{
+          ...CUSTOM_TEMPLATE,
+          behavioral_flags: {},
+          name: "Hibrit",
+          default_workflow: { mode: "sequential-flexible" },
+        }}
+        activeProjectCount={0}
+      />,
+    )
+    expect(screen.getByText("Flexible")).toBeInTheDocument()
+  })
+
   it("Case 3 — MoreH on the card opens menu with EXACTLY 3 items: Düzenle, Klonla, Sil", () => {
     render(
       <AdminTemplateCard template={CUSTOM_TEMPLATE} activeProjectCount={0} />,

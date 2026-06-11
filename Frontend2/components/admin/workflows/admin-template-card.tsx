@@ -57,6 +57,8 @@ export interface AdminTemplateCardData {
   description: string | null
   // behavioral_flags is a JSONB Dict — process_mode lives here when set.
   behavioral_flags?: Record<string, unknown> | null
+  // Canonical mode lives on the editable lifecycle graph.
+  default_workflow?: { mode?: string } | null
 }
 
 export interface AdminTemplateCardProps {
@@ -70,8 +72,18 @@ export interface AdminTemplateCardProps {
 type TemplateMode = "sequential-locked" | "continuous" | "flexible"
 
 function deriveMode(template: AdminTemplateCardData): TemplateMode {
-  // Mode lives on behavioral_flags.process_mode. When absent we default to
-  // "flexible" so the card still renders a tone-coloured badge.
+  // Prefer default_workflow.mode (what the editor saves); fall back to the
+  // behavioral_flags hint, then the name heuristic. "sequential-flexible"
+  // renders with the neutral badge.
+  const wfMode = template.default_workflow?.mode
+  if (
+    wfMode === "sequential-locked" ||
+    wfMode === "continuous" ||
+    wfMode === "flexible"
+  ) {
+    return wfMode
+  }
+  if (wfMode === "sequential-flexible") return "flexible"
   const raw =
     template.behavioral_flags &&
     typeof template.behavioral_flags["process_mode"] === "string"
