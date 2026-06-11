@@ -28,7 +28,12 @@ import {
   applyLifecycleSuggestion,
   applyTaskStatusSuggestion,
   type ApplyMode,
+  type ColumnMapTarget,
 } from "@/lib/ai/apply-ai-workflow"
+import {
+  ColumnMappingDialog,
+  BACKLOG_TARGET,
+} from "@/components/workflow-editor/column-mapping-dialog"
 
 import { AIApplyConfirmation } from "./ai-apply-confirmation"
 import { AIChatLog, formatUserPrompt } from "./ai-chat-log"
@@ -92,6 +97,11 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
   // applyAIWorkflow service and bubbles result up via onApplied callback.
   const [applyOpen, setApplyOpen] = React.useState(false)
   const [applyError, setApplyError] = React.useState<string | null>(null)
+  // Jira "Associate statuses" adımı — replace + kaldırılan kolon varsa
+  // Onaylıyorum'dan SONRA paylaşılan eşleme diyaloğu açılır (manuel editör
+  // kaydıyla aynı bileşen).
+  const [mappingOpen, setMappingOpen] = React.useState(false)
+  const [mappingBusy, setMappingBusy] = React.useState(false)
 
   // Mevcut board kolonları — task_status replace eşleme adımı için. Üretim
   // bittiğinde önceden çekilir ki onay ekranı açıldığında hazır olsun.
@@ -175,6 +185,51 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
     setLastTaskStatusForm(form)
     setLastLifecycleForm(null)
     await generateTaskStatus(form)
+  }
+
+  // Tek apply noktası — Onaylıyorum (eşleme gerekmiyorsa) ya da eşleme
+  // diyaloğunun onayı buraya düşer.
+  const doApply = async (
+    mode: ApplyMode,
+    columnMapping?: Record<number, ColumnMapTarget>,
+  ) => {
+    if (state.status !== "done") return
+    setApplyError(null)
+    try {
+      let result
+      if (variant === "lifecycle") {
+        result = await applyLifecycleSuggestion({
+          mode,
+          projectId,
+          projectName: contextLabel,
+          existingProcessConfig,
+          nodes: state.nodes,
+          edges: state.edges,
+          methodology: state.methodology,
+        })
+      } else {
+        result = await applyTaskStatusSuggestion({
+          mode,
+          projectId,
+          projectName: contextLabel,
+          existingProcessConfig,
+          columns: state.columns,
+          methodology: state.methodology,
+          columnMapping,
+        })
+      }
+      setMappingOpen(false)
+      setApplyOpen(false)
+      onApplied?.({
+        mode,
+        appliedProjectId: result.projectId,
+        isNewProject: result.isNewProject,
+      })
+    } catch (e) {
+      setApplyError(
+        e instanceof Error ? e.message : "Bilinmeyen bir hata oluştu",
+      )
+    }
   }
 
   /**
@@ -332,52 +387,54 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
                   : state.columns.filter((c) => !c.is_special).length
               }
               defaultMode="replace"
-              removedColumns={removedColumns}
-              newColumns={newColumnOptions}
               onCancel={() => {
                 setApplyOpen(false)
                 setApplyError(null)
               }}
-              onConfirm={async (mode, columnMapping) => {
-                setApplyError(null)
-                try {
-                  let result
-                  if (variant === "lifecycle") {
-                    result = await applyLifecycleSuggestion({
-                      mode,
-                      projectId,
-                      projectName: contextLabel,
-                      existingProcessConfig,
-                      nodes: state.nodes,
-                      edges: state.edges,
-                      methodology: state.methodology,
-                    })
-                  } else {
-                    result = await applyTaskStatusSuggestion({
-                      mode,
-                      projectId,
-                      projectName: contextLabel,
-                      existingProcessConfig,
-                      columns: state.columns,
-                      methodology: state.methodology,
-                      columnMapping,
-                    })
-                  }
-                  // Bubble up to parent — parent closes modal + invalidates query
-                  setApplyOpen(false)
-                  onApplied?.({
-                    mode,
-                    appliedProjectId: result.projectId,
-                    isNewProject: result.isNewProject,
-                  })
-                } catch (e) {
-                  setApplyError(
-                    e instanceof Error ? e.message : "Bilinmeyen bir hata oluştu",
-                  )
+              onConfirm={async (mode) => {
+                // Replace + kaldırılacak kolon varsa görev hedeflerini ayrı
+                // adımda sor; yoksa doğrudan uygula.
+                if (
+                  mode === "replace" &&
+                  variant === "task_status" &&
+                  removedColumns.length > 0
+                ) {
+                  setMappingOpen(true)
+                  return
                 }
+                await doApply(mode)
               }}
             />
           )}
+
+          {/* Eşleme adımı — manuel editör kaydıyla paylaşılan diyalog. */}
+          <ColumnMappingDialog
+            open={mappingOpen}
+            removedColumns={removedColumns}
+            targets={newColumnOptions.map((c) => ({
+              value: c.id,
+              label: c.label,
+              isInitial: c.isInitial,
+              isFinal: c.isFinal,
+            }))}
+            busy={mappingBusy}
+            onCancel={() => setMappingOpen(false)}
+            onConfirm={async (m) => {
+              setMappingBusy(true)
+              try {
+                const columnMapping: Record<number, ColumnMapTarget> = {}
+                for (const [oldId, target] of Object.entries(m)) {
+                  columnMapping[Number(oldId)] =
+                    target === BACKLOG_TARGET
+                      ? { kind: "backlog" }
+                      : { kind: "column", aiColumnId: target }
+                }
+                await doApply("replace", columnMapping)
+              } finally {
+                setMappingBusy(false)
+              }
+            }}
+          />
 
           {/* Apply error banner — sits above main body if last apply failed */}
           {applyError && (

@@ -103,6 +103,10 @@ import { AIWorkflowModal } from "@/components/ai-workflow/ai-workflow-modal"
 import { ModeBanner } from "./mode-banner"
 import { ContextMenu, type ContextMenuItem } from "./context-menu"
 import { DirtySaveDialog } from "./dirty-save-dialog"
+import {
+  ColumnMappingDialog,
+  BACKLOG_TARGET,
+} from "./column-mapping-dialog"
 import { PresetMenu, detectCurrentPresetId } from "./preset-menu"
 import { resolvePreset, type PresetId } from "@/lib/lifecycle/presets"
 import {
@@ -1343,20 +1347,17 @@ export function EditorPage({ project }: EditorPageProps) {
             })
             return
           }
-          // Move tasks to the nearest other column.
-          const moveToColId = otherNodes
-            .map((n) => colIdFromNodeId(n.id))
-            .find((id): id is number => id !== null)
-          if (moveToColId == null) return
-          try {
-            await apiClient.delete(
-              `/projects/${project.id}/columns/${colId}?move_tasks_to_column_id=${moveToColId}`,
-            )
-            qc.invalidateQueries({ queryKey: ["columns", project.id] })
-          } catch {
-            showToast({ variant: "error", message: T("Kolon silinemedi", "Could not delete column") })
-            return
-          }
+          // Column deletion is DEFERRED to save: the canvas node goes away
+          // now, the real column (and its tasks' destination) is resolved by
+          // the mapping dialog when the user hits Kaydet. Undo before saving
+          // restores the column with zero side effects.
+          showToast({
+            variant: "info",
+            message: T(
+              "Sütun kaydederken silinecek; görevlerin hedefi o sırada sorulacak",
+              "Column will be deleted on save; you'll pick where its tasks go then",
+            ),
+          })
         }
       }
       commitWorkflow({
@@ -1385,7 +1386,7 @@ export function EditorPage({ project }: EditorPageProps) {
       })
     }
     setSelected(null)
-  }, [selected, mode, project.id, workflow, commitWorkflow, qc, showToast, T])
+  }, [selected, mode, workflow, commitWorkflow, showToast, T])
 
   const duplicateSelection = React.useCallback(() => {
     if (!selected || selected.type !== "node") return
@@ -1583,7 +1584,7 @@ export function EditorPage({ project }: EditorPageProps) {
 
   // Reusable save function — covers the full 5-error matrix (200/422/409/429/
   // network) per CONTEXT D-32 + UI-SPEC §725-734.
-  const save = React.useCallback(async (): Promise<boolean> => {
+  const performSave = React.useCallback(async (): Promise<boolean> => {
     setSaving(true)
     setSaveError(null)
     try {
@@ -1732,6 +1733,57 @@ export function EditorPage({ project }: EditorPageProps) {
     showToast,
     T,
   ])
+
+  // Jira "Associate statuses" adımı — status modunda canvas'tan kaldırılan
+  // kolonlar KAYITTA silinir; önce görevlerinin hedefi sorulur (AI akışıyla
+  // paylaşılan ColumnMappingDialog). Kayıt diyalog onayında tamamlanır.
+  const [pendingColumnMapping, setPendingColumnMapping] = React.useState<
+    null | { removed: Array<{ id: number; name: string; category?: string }> }
+  >(null)
+  const [mappingBusy, setMappingBusy] = React.useState(false)
+
+  const save = React.useCallback(async (): Promise<boolean> => {
+    if (mode === "status") {
+      try {
+        const fresh = (
+          await apiClient.get<
+            Array<{ id: number; name: string; category?: string }>
+          >(`/projects/${project.id}/columns`)
+        ).data
+        const canvasIds = new Set(
+          statusWorkflow.nodes
+            .map((n) => colIdFromNodeId(n.id))
+            .filter((x): x is number => x !== null),
+        )
+        const removed = fresh.filter((c) => !canvasIds.has(c.id))
+        if (removed.length > 0) {
+          setPendingColumnMapping({ removed })
+          return false
+        }
+      } catch {
+        // Kolon listesi alınamazsa eşleme adımı atlanır; kayıt yine de denenir.
+      }
+    }
+    return performSave()
+  }, [mode, project.id, statusWorkflow.nodes, performSave])
+
+  // Eşleme hedefleri: canvas'ta KALAN gerçek kolonlar.
+  const mappingTargets = React.useMemo(
+    () =>
+      statusWorkflow.nodes.flatMap((n) => {
+        const boardId = colIdFromNodeId(n.id)
+        if (boardId === null) return []
+        return [
+          {
+            value: String(boardId),
+            label: n.name,
+            isInitial: n.isInitial,
+            isFinal: n.isFinal,
+          },
+        ]
+      }),
+    [statusWorkflow.nodes],
+  )
 
   // Rate-limit countdown ticker — decrements `countdown` every second; clears
   // saveError when it reaches 0 so the Save button is re-enabled.
@@ -2254,6 +2306,49 @@ export function EditorPage({ project }: EditorPageProps) {
           onColumnEngineFieldsChange={handleColumnEngineFieldsChange}
         />
       </div>
+
+      {/* Status modunda kayıt sırasında silinecek kolonlar için görev hedefi
+          eşlemesi — AI akışıyla paylaşılan diyalog. Onayda silmeler koşar,
+          ardından kayıt tamamlanır (bekleyen Geri navigasyonu dahil). */}
+      <ColumnMappingDialog
+        open={pendingColumnMapping !== null}
+        removedColumns={pendingColumnMapping?.removed ?? []}
+        targets={mappingTargets}
+        busy={mappingBusy}
+        onCancel={() => setPendingColumnMapping(null)}
+        onConfirm={async (m) => {
+          if (!pendingColumnMapping) return
+          setMappingBusy(true)
+          try {
+            for (const r of pendingColumnMapping.removed) {
+              const target = m[r.id]
+              const qs =
+                target === BACKLOG_TARGET
+                  ? "move_tasks_to_backlog=true"
+                  : `move_tasks_to_column_id=${Number(target)}`
+              await apiClient.delete(
+                `/projects/${project.id}/columns/${r.id}?${qs}`,
+              )
+            }
+            qc.invalidateQueries({ queryKey: ["columns", project.id] })
+            const ok = await performSave()
+            if (ok) {
+              setPendingColumnMapping(null)
+              if (pendingNavigation) {
+                router.push(pendingNavigation)
+                setPendingNavigation(null)
+              }
+            }
+          } catch {
+            showToast({
+              variant: "error",
+              message: T("Kolon silinemedi", "Could not delete column"),
+            })
+          } finally {
+            setMappingBusy(false)
+          }
+        }}
+      />
 
       {/* Plan 12-09 — DirtySaveDialog (router intercept). beforeunload handles
           tab close / refresh in a separate effect with browser-controlled UI. */}

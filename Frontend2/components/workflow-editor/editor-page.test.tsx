@@ -102,6 +102,21 @@ vi.mock("@/services/project-service", () => ({
   },
 }))
 
+// apiClient — status modunun kolon CRUD'u + Kaydet ön-kontrolü (GET columns)
+// buradan geçer. Lifecycle testleri bu mock'a hiç dokunmaz.
+const mockApiGet = vi.fn()
+const mockApiPost = vi.fn()
+const mockApiPatch = vi.fn()
+const mockApiDelete = vi.fn()
+vi.mock("@/lib/api-client", () => ({
+  apiClient: {
+    get: (...a: unknown[]) => mockApiGet(...a),
+    post: (...a: unknown[]) => mockApiPost(...a),
+    patch: (...a: unknown[]) => mockApiPatch(...a),
+    delete: (...a: unknown[]) => mockApiDelete(...a),
+  },
+}))
+
 // React Flow stubs to avoid jsdom layout failures. The stub captures the
 // editable callbacks (onNodesChange / onNodeDragStart / onNodeDragStop) on
 // a module-scoped ref so individual test cases can fire synthetic drag
@@ -1209,5 +1224,204 @@ describe("EditorPage", () => {
     expect("statusWorkflow" in body).toBe(false) // legacy camelCase key dropped
     expect(body.task_workflow).toBeDefined() // V2 canonical present
     expect(body.phase_workflow).toBeDefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Status modu — kolon silme Kaydet'e ertelenir; Kaydet'te eşleme diyaloğu
+// (Jira "Associate statuses") görev hedeflerini sorar, sonra siler + kaydeder.
+// ---------------------------------------------------------------------------
+
+describe("EditorPage status mode — deferred delete + mapping at save", () => {
+  const statusProject: Project = {
+    ...mockProject,
+    boardColumns: [
+      { id: 1, name: "Yapılacak" },
+      { id: 2, name: "Devam" },
+      { id: 3, name: "Bitti" },
+    ] as never,
+    processConfig: {
+      schema_version: 2,
+      task_workflow: { edges: [], groups: [] },
+    } as never,
+  }
+
+  function headerSaveButton(): HTMLButtonElement {
+    const candidates = screen.getAllByText("Kaydet")
+    for (const el of candidates) {
+      let parent: HTMLElement | null = el as HTMLElement
+      for (let i = 0; i < 4 && parent; i += 1) {
+        if (parent.tagName === "BUTTON") return parent as HTMLButtonElement
+        parent = parent.parentElement
+      }
+    }
+    throw new Error("Header Save button not found")
+  }
+
+  beforeEach(() => {
+    mockReplace.mockClear()
+    mockPush.mockClear()
+    mockShowToast.mockClear()
+    mockInvalidateQueries.mockClear()
+    mockUpdateProcessConfig.mockReset()
+    mockUpdateProcessConfig.mockResolvedValue({})
+    mockApiGet.mockReset()
+    mockApiPost.mockReset()
+    mockApiPatch.mockReset()
+    mockApiDelete.mockReset()
+    mockApiPatch.mockResolvedValue({ data: {} })
+    mockApiDelete.mockResolvedValue({ data: {} })
+    mockApiGet.mockResolvedValue({
+      data: [
+        { id: 1, name: "Yapılacak", category: "todo" },
+        { id: 2, name: "Devam", category: "in_progress" },
+        { id: 3, name: "Bitti", category: "done" },
+      ],
+    })
+    mockUseTransitionAuthority.mockReturnValue(true)
+    setSearchParams("projectId=42&mode=status")
+    capturedHandlers.onNodeClick = undefined
+  })
+
+  it("kolon silme API'yi ÇAĞIRMAZ; kayda ertelenir (bilgi toast'ı + dirty)", async () => {
+    render(<EditorPage project={statusProject} />)
+    await waitFor(() => expect(capturedHandlers.onNodeClick).toBeTruthy())
+
+    act(() => {
+      capturedHandlers.onNodeClick?.(null, { id: "col_2" })
+    })
+    fireEvent.keyDown(window, { key: "Delete" })
+
+    expect(mockApiDelete).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: "info" }),
+      ),
+    )
+    expect(screen.getByText("Kaydedilmemiş")).toBeTruthy()
+  })
+
+  it("Kaydet: kaldırılan kolon için eşleme diyaloğu açılır; Backlog seçimi delete+save'i tamamlar", async () => {
+    render(<EditorPage project={statusProject} />)
+    await waitFor(() => expect(capturedHandlers.onNodeClick).toBeTruthy())
+
+    act(() => {
+      capturedHandlers.onNodeClick?.(null, { id: "col_2" })
+    })
+    fireEvent.keyDown(window, { key: "Delete" })
+    await screen.findByText("Kaydedilmemiş")
+
+    await act(async () => {
+      headerSaveButton().click()
+    })
+
+    // Diyalog açıldı; henüz ne delete ne PATCH koştu.
+    expect(
+      await screen.findByText(
+        "Kaldırılan sütunlardaki görevler nereye taşınsın?",
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText("Devam")).toBeTruthy()
+    expect(mockApiDelete).not.toHaveBeenCalled()
+    expect(mockUpdateProcessConfig).not.toHaveBeenCalled()
+
+    const select = screen.getByRole("combobox") as HTMLSelectElement
+    fireEvent.change(select, { target: { value: "__backlog__" } })
+    await act(async () => {
+      fireEvent.click(screen.getByText("Taşı ve Kaydet"))
+    })
+
+    await waitFor(() =>
+      expect(mockApiDelete).toHaveBeenCalledWith(
+        "/projects/42/columns/2?move_tasks_to_backlog=true",
+      ),
+    )
+    await waitFor(() =>
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1),
+    )
+    // Diyalog kapandı.
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          "Kaldırılan sütunlardaki görevler nereye taşınsın?",
+        ),
+      ).toBeNull(),
+    )
+  })
+
+  it("Kaydet: kalan kolona taşıma seçimi doğru query ile delete eder", async () => {
+    render(<EditorPage project={statusProject} />)
+    await waitFor(() => expect(capturedHandlers.onNodeClick).toBeTruthy())
+
+    act(() => {
+      capturedHandlers.onNodeClick?.(null, { id: "col_2" })
+    })
+    fireEvent.keyDown(window, { key: "Delete" })
+    await screen.findByText("Kaydedilmemiş")
+
+    await act(async () => {
+      headerSaveButton().click()
+    })
+    await screen.findByText("Kaldırılan sütunlardaki görevler nereye taşınsın?")
+
+    // Varsayılan hedef: in_progress kategorili "Devam" için initial kolon
+    // (col_1 = Yapılacak). Onayla.
+    const select = screen.getByRole("combobox") as HTMLSelectElement
+    expect(select.value).toBe("1")
+    await act(async () => {
+      fireEvent.click(screen.getByText("Taşı ve Kaydet"))
+    })
+
+    await waitFor(() =>
+      expect(mockApiDelete).toHaveBeenCalledWith(
+        "/projects/42/columns/2?move_tasks_to_column_id=1",
+      ),
+    )
+    await waitFor(() =>
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1),
+    )
+  })
+
+  it("eşleme diyaloğunda Vazgeç: delete de kayıt da koşmaz, dirty kalır", async () => {
+    render(<EditorPage project={statusProject} />)
+    await waitFor(() => expect(capturedHandlers.onNodeClick).toBeTruthy())
+
+    act(() => {
+      capturedHandlers.onNodeClick?.(null, { id: "col_3" })
+    })
+    fireEvent.keyDown(window, { key: "Delete" })
+    await screen.findByText("Kaydedilmemiş")
+
+    await act(async () => {
+      headerSaveButton().click()
+    })
+    await screen.findByText("Kaldırılan sütunlardaki görevler nereye taşınsın?")
+
+    fireEvent.click(screen.getByText("Vazgeç"))
+    expect(
+      screen.queryByText("Kaldırılan sütunlardaki görevler nereye taşınsın?"),
+    ).toBeNull()
+    expect(mockApiDelete).not.toHaveBeenCalled()
+    expect(mockUpdateProcessConfig).not.toHaveBeenCalled()
+    expect(screen.getByText("Kaydedilmemiş")).toBeTruthy()
+  })
+
+  it("kaldırılan kolon yoksa Kaydet diyalogsuz tamamlanır", async () => {
+    render(<EditorPage project={statusProject} />)
+    await waitFor(() => {
+      expect(screen.getAllByText("Kaydet").length).toBeGreaterThan(0)
+    })
+
+    await act(async () => {
+      headerSaveButton().click()
+    })
+
+    await waitFor(() =>
+      expect(mockUpdateProcessConfig).toHaveBeenCalledTimes(1),
+    )
+    expect(
+      screen.queryByText("Kaldırılan sütunlardaki görevler nereye taşınsın?"),
+    ).toBeNull()
+    expect(mockApiDelete).not.toHaveBeenCalled()
   })
 })
