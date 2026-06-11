@@ -12,6 +12,7 @@
  * Plan ref: .planning/ai-workflow-generator-plan.md §5.3 + §17 D-01/D-02
  */
 
+import { apiClient } from "@/lib/api-client"
 import { projectService } from "@/services/project-service"
 import type { WorkflowConfig, WorkflowEdge, WorkflowNode } from "@/services/lifecycle-service"
 import { unmapWorkflowConfig } from "@/services/lifecycle-service"
@@ -81,88 +82,165 @@ export async function applyLifecycleSuggestion(
 }
 
 /**
- * Apply a task-status suggestion. Same shape as lifecycle but encodes columns
- * via the project's board_columns (handled by backend on PATCH).
+ * Apply a task-status suggestion.
  *
- * For Wave 5 MVP we route this through the same process_config write path:
- * columns become workflow nodes with x positioned left-to-right (status mode).
- * Backend's normalizer picks them up as board columns when methodology +
- * mode signal kanban-style storage. If your project's wire format differs,
- * adapt this mapper.
+ * The kanban board AND the status-mode canvas read columns from the
+ * board_columns table (the JSONB task_workflow carries only edges/groups/
+ * capabilities; nodes are derived as col_{id}). So the apply must do REAL
+ * column CRUD — the old implementation wrote nd_* nodes into task_workflow,
+ * which updated the canvas but left the kanban board untouched.
+ *
+ * Replace mode:
+ *   1. Reuse-or-create columns in AI order (matched by name). Creation runs
+ *      BEFORE deletion so the board never empties and the move target exists.
+ *   2. Delete columns not in the suggestion; their tasks move to the first
+ *      suggested column.
+ *   3. Persist task_workflow with col_{id} edges and NO nodes (derived).
  */
 export async function applyTaskStatusSuggestion(
   args: ApplyTaskStatusArgs,
 ): Promise<{ projectId: number; isNewProject: boolean }> {
-  // Normalize column ids to backend's required ^nd_[A-Za-z0-9_-]{10}$ format
-  const colIdMap = new Map<string, string>()
-  for (const c of args.columns) {
-    colIdMap.set(c.id, normalizeNodeId(c.id))
-  }
-  // M-L2 — apply the same collision tie-break the lifecycle path uses: two
-  // column labels that normalize to the same nd_ id would otherwise produce
-  // duplicate node ids and 422 on write.
-  dedupeNormalizedIds(colIdMap)
-
-  // Map columns → status-mode nodes laid out horizontally
-  const nodes: WorkflowNode[] = args.columns.map((c, idx) => ({
-    id: colIdMap.get(c.id) ?? c.id,
-    name: c.label,
-    description: c.description,
-    x: 60 + idx * 220,
-    y: 200,
-    color: c.color,
-    isInitial: c.is_initial,
-    isFinal: c.is_final,
-    wipLimit: c.wip_limit ?? null,
-  }))
-
-  // Status-mode workflows are typically linear flow edges; we synthesize them
-  // from the column order to keep the persisted shape valid.
-  const edges: WorkflowEdge[] = []
-  const mainCols = args.columns.filter((c) => !c.is_special)
-  for (let i = 0; i < mainCols.length - 1; i++) {
-    const src = colIdMap.get(mainCols[i].id) ?? mainCols[i].id
-    const tgt = colIdMap.get(mainCols[i + 1].id) ?? mainCols[i + 1].id
-    edges.push({
-      id: `e_${src}_${tgt}`,
-      source: src,
-      target: tgt,
-      type: "flow",
-    })
+  // Special buckets (backlog/done aggregates) are canvas sugar, not columns.
+  const wanted = args.columns.filter((c) => !c.is_special)
+  if (wanted.length === 0) {
+    throw new Error("AI önerisinde uygulanabilir sütun yok")
   }
 
-  const workflow: WorkflowConfig = {
-    mode: "flexible",
-    nodes,
-    edges,
-  }
-  const workflowDTO = unmapWorkflowConfig(workflow)
-
-  // Task-status canonical field is `task_workflow` (Wave 2 W2-C5 rename;
-  // older payloads still carry `status_workflow` as a read-side fallback).
-  // Writing to `task_workflow` is what makes the editor's status-mode canvas
-  // pick up the new shape — `phase_workflow` only drives lifecycle mode.
   if (args.mode === "replace") {
+    const existing = (
+      await apiClient.get<Array<{ id: number; name: string }>>(
+        `/projects/${args.projectId}/columns`,
+      )
+    ).data
+
+    const norm = (s: string) => s.trim().toLowerCase()
+    const byName = new Map<string, { id: number; name: string }>()
+    for (const c of existing) {
+      if (!byName.has(norm(c.name))) byName.set(norm(c.name), c)
+    }
+
+    const kept = new Set<number>()
+    const boardIdByAi = new Map<string, number>()
+
+    for (let i = 0; i < wanted.length; i++) {
+      const ai = wanted[i]
+      const category = ai.is_final
+        ? "done"
+        : ai.is_initial
+          ? "todo"
+          : "in_progress"
+      const match = byName.get(norm(ai.label))
+      if (match && !kept.has(match.id)) {
+        kept.add(match.id)
+        boardIdByAi.set(ai.id, match.id)
+        await apiClient.patch(
+          `/projects/${args.projectId}/columns/${match.id}`,
+          {
+            order_index: i,
+            wip_limit: ai.wip_limit ?? 0,
+            category,
+            is_initial: ai.is_initial,
+            is_terminal: ai.is_final,
+          },
+        )
+      } else {
+        const created = await apiClient.post<{ id: number }>(
+          `/projects/${args.projectId}/columns`,
+          {
+            name: ai.label,
+            order_index: i,
+            category,
+            is_initial: ai.is_initial,
+            is_terminal: ai.is_final,
+          },
+        )
+        kept.add(created.data.id)
+        boardIdByAi.set(ai.id, created.data.id)
+        if (ai.wip_limit) {
+          // CreateColumnDTO has no wip_limit — set it via PATCH.
+          await apiClient.patch(
+            `/projects/${args.projectId}/columns/${created.data.id}`,
+            { wip_limit: ai.wip_limit },
+          )
+        }
+      }
+    }
+
+    // Tasks in dropped columns restart from the first suggested column.
+    const moveTarget = boardIdByAi.get(wanted[0].id)
+    for (const col of existing) {
+      if (!kept.has(col.id) && moveTarget != null) {
+        await apiClient.delete(
+          `/projects/${args.projectId}/columns/${col.id}?move_tasks_to_column_id=${moveTarget}`,
+        )
+      }
+    }
+
+    // Linear flow edges over the real column ids; nodes stay derived.
+    const edges: Array<Record<string, unknown>> = []
+    for (let i = 0; i < wanted.length - 1; i++) {
+      const src = boardIdByAi.get(wanted[i].id)
+      const tgt = boardIdByAi.get(wanted[i + 1].id)
+      if (src == null || tgt == null) continue
+      edges.push({
+        id: `es_ai_${src}_${tgt}`,
+        source: `col_${src}`,
+        target: `col_${tgt}`,
+        type: "flow",
+        bidirectional: false,
+        is_all_gate: false,
+      })
+    }
+    const prevTaskWf = (
+      args.existingProcessConfig as {
+        task_workflow?: { capabilities?: Record<string, unknown> }
+      }
+    ).task_workflow
+    const capabilities =
+      prevTaskWf && typeof prevTaskWf === "object"
+        ? prevTaskWf.capabilities
+        : undefined
+
     const nextConfig: Record<string, unknown> = {
       ...args.existingProcessConfig,
-      task_workflow: workflowDTO,
+      task_workflow: {
+        mode: "flexible",
+        nodes: [],
+        edges,
+        groups: [],
+        ...(capabilities ? { capabilities } : {}),
+      },
     }
     await projectService.updateProcessConfig(args.projectId, nextConfig)
     return { projectId: args.projectId, isNewProject: false }
   }
 
-  const nextConfig: Record<string, unknown> = {
-    ...args.existingProcessConfig,
-    task_workflow: workflowDTO,
-    methodology: args.methodology,
+  // new_project — columns ride the create DTO (names in order) and the fresh
+  // project's canvas derives its nodes from them. The source project's task
+  // workflow keys are stripped so stale col_* references don't leak in.
+  const {
+    task_workflow: _tw,
+    status_workflow: _sw,
+    statusWorkflow: _swCamel,
+    ...restConfig
+  } = args.existingProcessConfig as {
+    task_workflow?: unknown
+    status_workflow?: unknown
+    statusWorkflow?: unknown
+    [k: string]: unknown
   }
+  void _tw
+  void _sw
+  void _swCamel
+
   const created = await projectService.create({
     name: `${args.projectName} (AI önerisi)`,
     description: `AI tarafından üretilen ${args.methodology} görev durumu workflow'u`,
     key: makeProjectKey(args.projectName),
     start_date: todayIso(),
     methodology: args.methodology,
-    process_config: nextConfig,
+    columns: wanted.map((c) => c.label),
+    process_config: { ...restConfig, methodology: args.methodology },
   })
   return { projectId: created.id, isNewProject: true }
 }
