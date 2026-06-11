@@ -44,6 +44,7 @@ import * as React from "react"
 import { Card, Badge, type BadgeTone } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 import { adminWorkflowsT } from "@/lib/i18n/admin-workflows-keys"
+import { WorkflowMiniPreview } from "@/components/workflow-editor/workflow-mini-preview"
 
 import { TemplateRowActions } from "./template-row-actions"
 
@@ -57,8 +58,14 @@ export interface AdminTemplateCardData {
   description: string | null
   // behavioral_flags is a JSONB Dict — process_mode lives here when set.
   behavioral_flags?: Record<string, unknown> | null
-  // Canonical mode lives on the editable lifecycle graph.
-  default_workflow?: { mode?: string } | null
+  // Canonical mode + graph live on the editable lifecycle workflow; the
+  // mini preview renders nodes/edges/groups straight from this shape.
+  default_workflow?: {
+    mode?: string
+    nodes?: Array<{ id: string; name?: string; x: number; y: number; color?: string }>
+    edges?: Array<{ source: string; target: string; type?: string }>
+    groups?: Array<{ id: string; color?: string; children?: string[] }>
+  } | null
 }
 
 export interface AdminTemplateCardProps {
@@ -185,6 +192,12 @@ export function AdminTemplateCard({
           activeProjectCount={activeProjectCount}
         />
       </div>
+
+      {/* Statik mini önizleme — şablonun gerçek kanvas yerleşiminin
+          minyatürü (SVG; React Flow mount edilmez). */}
+      {template.default_workflow?.nodes?.length ? (
+        <WorkflowMiniPreview workflow={template.default_workflow} />
+      ) : null}
 
       {/* Footer: mode badge + spacer + N proje counter. Vertical rhythm
           per prototype lines 376-381 (marginTop:12 + padding-top:10 +

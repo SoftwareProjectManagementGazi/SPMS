@@ -142,6 +142,35 @@ describe("AdminTemplateCard (Plan 14-06 Task 1)", () => {
     expect(screen.queryByText("Locked")).toBeNull()
   })
 
+  it("Case 2d — default_workflow'u olan kart statik mini önizleme render eder", () => {
+    render(
+      <AdminTemplateCard
+        template={{
+          ...CUSTOM_TEMPLATE,
+          default_workflow: {
+            mode: "flexible",
+            nodes: [
+              { id: "nd_aaaaaaaaaa", name: "A", x: 60, y: 60, color: "status-todo" },
+              { id: "nd_bbbbbbbbbb", name: "B", x: 300, y: 60, color: "status-done" },
+            ],
+            edges: [{ source: "nd_aaaaaaaaaa", target: "nd_bbbbbbbbbb", type: "flow" }],
+            groups: [],
+          },
+        }}
+        activeProjectCount={0}
+      />,
+    )
+    expect(screen.getByTestId("workflow-mini-preview")).toBeInTheDocument()
+    expect(screen.getAllByTestId("mini-node")).toHaveLength(2)
+  })
+
+  it("Case 2e — workflow'suz kart önizleme render etmez", () => {
+    render(
+      <AdminTemplateCard template={CUSTOM_TEMPLATE} activeProjectCount={0} />,
+    )
+    expect(screen.queryByTestId("workflow-mini-preview")).toBeNull()
+  })
+
   it("Case 2c — sequential-flexible workflow mode maps to the neutral Flexible badge", () => {
     render(
       <AdminTemplateCard
