@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from app.domain.entities.process_template import ProcessTemplate
 from app.domain.repositories.process_template_repository import IProcessTemplateRepository
@@ -7,6 +7,14 @@ from app.application.dtos.process_template_dtos import (
     ProcessTemplateUpdateDTO,
     ProcessTemplateResponseDTO,
 )
+from app.application.dtos.workflow_dtos import WorkflowConfig as WorkflowConfigDTO
+
+
+def _validate_default_workflow(wf: Optional[Dict[str, Any]]) -> None:
+    """Validate the graph with the same Pydantic model that guards project
+    phase_workflow saves. Raises ValidationError; the router maps it to 422."""
+    if isinstance(wf, dict):
+        WorkflowConfigDTO(**wf)
 
 
 class ListProcessTemplatesUseCase:
@@ -23,6 +31,7 @@ class CreateProcessTemplateUseCase:
         self._repo = repo
 
     async def execute(self, dto: ProcessTemplateCreateDTO) -> ProcessTemplateResponseDTO:
+        _validate_default_workflow(dto.default_workflow)
         template = ProcessTemplate(
             name=dto.name,
             is_builtin=False,
@@ -30,6 +39,12 @@ class CreateProcessTemplateUseCase:
             recurring_tasks=dto.recurring_tasks,
             behavioral_flags=dto.behavioral_flags,
             description=dto.description,
+            default_workflow=dto.default_workflow,
+            default_columns=dto.default_columns,
+            default_phase_criteria=dto.default_phase_criteria,
+            default_artifacts=dto.default_artifacts,
+            cycle_label_tr=dto.cycle_label_tr,
+            cycle_label_en=dto.cycle_label_en,
         )
         created = await self._repo.create(template)
         return ProcessTemplateResponseDTO.model_validate(created)
@@ -47,6 +62,7 @@ class UpdateProcessTemplateUseCase:
             raise ValueError(f"Process template {template_id} not found")
         if existing.is_builtin:
             raise PermissionError("Built-in templates cannot be modified")
+        _validate_default_workflow(dto.default_workflow)
 
         update_data = dto.model_dump(exclude_unset=True)
         updated_template = existing.model_copy(update=update_data)

@@ -1,3 +1,4 @@
+import copy
 from typing import List, Optional
 from pydantic import ValidationError
 from app.domain.repositories.project_repository import IProjectRepository
@@ -136,6 +137,19 @@ class CreateProjectUseCase:
             "integrations": {},
         }
         process_config = {**default_config, **(dto.process_config or {})}
+
+        # Copy-on-use: snapshot the template's default_workflow into the new
+        # project's phase_workflow. Deep copy — later template edits must not
+        # reach existing projects. A client-sent workflow with real nodes wins;
+        # an empty placeholder or missing key means "no intent".
+        existing_wf = process_config.get("phase_workflow")
+        wf_is_empty = not (isinstance(existing_wf, dict) and existing_wf.get("nodes"))
+        if (
+            wf_is_empty
+            and template is not None
+            and getattr(template, "default_workflow", None)
+        ):
+            process_config["phase_workflow"] = copy.deepcopy(template.default_workflow)
 
         new_project = Project(
             key=dto.key,

@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_process_template_repo
@@ -24,6 +24,25 @@ from app.domain.entities.user import User
 from app.domain.exceptions import DomainError
 
 router = APIRouter()
+
+
+def _workflow_validation_422(e: ValidationError) -> HTTPException:
+    """Same 422 envelope as the projects PATCH route. include_context=False
+    because .errors() otherwise embeds the raw (non-JSON) exception object."""
+    errors = e.errors(include_context=False)
+    value_error_only = bool(errors) and all(
+        err.get("type") == "value_error" for err in errors
+    )
+    if value_error_only:
+        first_msg = str(errors[0].get("msg", ""))
+        cleaned = first_msg.removeprefix("Value error, ")
+        detail = {"error_code": "INVALID_WORKFLOW_CONFIG", "message": cleaned}
+    else:
+        detail = errors
+    return HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=detail,
+    )
 
 
 class ApplyTemplateDTO(BaseModel):
@@ -55,8 +74,11 @@ async def create_template(
     admin: User = Depends(require_permission("admin.access")),
     repo=Depends(get_process_template_repo),
 ):
-    uc = CreateProcessTemplateUseCase(repo)
-    return await uc.execute(dto)
+    try:
+        uc = CreateProcessTemplateUseCase(repo)
+        return await uc.execute(dto)
+    except ValidationError as e:
+        raise _workflow_validation_422(e)
 
 
 @router.patch("/{template_id}", response_model=ProcessTemplateResponseDTO)
@@ -71,6 +93,10 @@ async def update_template(
         return await uc.execute(template_id, dto)
     except PermissionError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    # ValidationError subclasses ValueError — this branch must come first or
+    # a bad workflow would surface as 404.
+    except ValidationError as e:
+        raise _workflow_validation_422(e)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

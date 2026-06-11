@@ -48,6 +48,12 @@ class SqlAlchemyProcessTemplateRepository(IProcessTemplateRepository):
             recurring_tasks=template.recurring_tasks,
             behavioral_flags=template.behavioral_flags,
             description=template.description,
+            default_workflow=template.default_workflow,
+            default_columns=template.default_columns,
+            default_phase_criteria=template.default_phase_criteria,
+            default_artifacts=template.default_artifacts,
+            cycle_label_tr=template.cycle_label_tr,
+            cycle_label_en=template.cycle_label_en,
         )
         self._session.add(model)
         await self._session.flush()
@@ -70,6 +76,8 @@ class SqlAlchemyProcessTemplateRepository(IProcessTemplateRepository):
             model.behavioral_flags = template.behavioral_flags
         if template.description is not None:
             model.description = template.description
+        if template.default_workflow is not None:
+            model.default_workflow = template.default_workflow
         await self._session.flush()
         await self._session.refresh(model)
         return ProcessTemplate.model_validate(model)

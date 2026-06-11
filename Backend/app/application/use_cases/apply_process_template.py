@@ -13,6 +13,7 @@ Advisory lock key: hash("template_apply:{project_id}") & 0x7FFFFFFFFFFFFFFF
 Distinct from Phase Gate key: hash("phase_gate:{project_id}") — parallel ops on same project allowed.
 """
 import asyncio
+import copy
 from typing import List
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,10 +81,12 @@ class ApplyProcessTemplateUseCase:
                 # V2 and will populate `capabilities` if absent.
                 project.process_template_id = template.id
                 pc = project.process_config or {}
+                # Deep copy: the entity normalizer mutates nested dicts in
+                # place; a shared reference would bleed across projects.
                 if getattr(template, "default_workflow", None):
-                    pc["phase_workflow"] = template.default_workflow
+                    pc["phase_workflow"] = copy.deepcopy(template.default_workflow)
                 if getattr(template, "default_phase_criteria", None):
-                    pc["phase_completion_criteria"] = template.default_phase_criteria
+                    pc["phase_completion_criteria"] = copy.deepcopy(template.default_phase_criteria)
                 pc["schema_version"] = 2
                 project.process_config = pc
 
