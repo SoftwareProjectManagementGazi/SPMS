@@ -164,11 +164,13 @@ describe("AdminTemplateCard (Plan 14-06 Task 1)", () => {
     expect(screen.getAllByTestId("mini-node")).toHaveLength(2)
   })
 
-  it("Case 2e — workflow'suz kart önizleme render etmez", () => {
+  it("Case 2e — workflow'suz kart, kart ritmini koruyan boş-durum kutusu gösterir", () => {
     render(
       <AdminTemplateCard template={CUSTOM_TEMPLATE} activeProjectCount={0} />,
     )
     expect(screen.queryByTestId("workflow-mini-preview")).toBeNull()
+    expect(screen.getByTestId("workflow-mini-preview-empty")).toBeInTheDocument()
+    expect(screen.getByText("Önizleme yok")).toBeInTheDocument()
   })
 
   it("Case 2c — sequential-flexible workflow mode maps to the neutral Flexible badge", () => {

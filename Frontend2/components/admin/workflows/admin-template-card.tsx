@@ -154,7 +154,10 @@ export function AdminTemplateCard({
           gap: 8,
         }}
       >
-        <div>
+        {/* Standart kart ritmi: ad tek satır (ellipsis), açıklama sabit
+            2 satırlık blok — böylece önizleme ve footer her kartta aynı
+            hizada başlar. Tam metinler hover tooltip'inde. */}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               display: "flex",
@@ -162,25 +165,41 @@ export function AdminTemplateCard({
               gap: 8,
             }}
           >
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{template.name}</div>
+            <div
+              title={template.name}
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+              }}
+            >
+              {template.name}
+            </div>
             {isCustom && (
               <Badge size="xs" tone="primary">
                 {adminWorkflowsT("admin.workflows.custom_badge", lang)}
               </Badge>
             )}
           </div>
-          {template.description && (
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--fg-muted)",
-                marginTop: 6,
-                lineHeight: 1.5,
-              }}
-            >
-              {template.description}
-            </div>
-          )}
+          <div
+            title={template.description ?? undefined}
+            style={{
+              fontSize: 12,
+              color: "var(--fg-muted)",
+              marginTop: 6,
+              lineHeight: 1.5,
+              height: 36, // 2 satır × 12px × 1.5 — boş açıklama da yer tutar
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {template.description}
+          </div>
         </div>
 
         <TemplateRowActions
@@ -194,10 +213,30 @@ export function AdminTemplateCard({
       </div>
 
       {/* Statik mini önizleme — şablonun gerçek kanvas yerleşiminin
-          minyatürü (SVG; React Flow mount edilmez). */}
+          minyatürü (SVG; React Flow mount edilmez). Workflow'u olmayan
+          şablonlarda aynı boyutta boş-durum kutusu durur ki kart ritmi
+          (önizleme + footer hizası) satır genelinde bozulmasın. */}
       {template.default_workflow?.nodes?.length ? (
         <WorkflowMiniPreview workflow={template.default_workflow} />
-      ) : null}
+      ) : (
+        <div
+          data-testid="workflow-mini-preview-empty"
+          style={{
+            marginTop: 12,
+            height: 104,
+            borderRadius: "var(--radius-sm)",
+            background: "var(--bg-2)",
+            boxShadow: "inset 0 0 0 1px var(--border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11.5,
+            color: "var(--fg-subtle)",
+          }}
+        >
+          {lang === "tr" ? "Önizleme yok" : "No preview"}
+        </div>
+      )}
 
       {/* Footer: mode badge + spacer + N proje counter. Vertical rhythm
           per prototype lines 376-381 (marginTop:12 + padding-top:10 +
