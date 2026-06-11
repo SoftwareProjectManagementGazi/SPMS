@@ -7,7 +7,8 @@
 import * as React from "react"
 
 export interface SectionProps {
-  title: string
+  /** When no title/subtitle/action is given, the header row is skipped. */
+  title?: string
   subtitle?: string
   action?: React.ReactNode
   children?: React.ReactNode
@@ -23,40 +24,43 @@ export function Section({
   className,
   style,
 }: SectionProps) {
+  const hasHeader = Boolean(title || subtitle || action)
   return (
     <div className={className} style={style}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          marginBottom: 12,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--fg)",
-            }}
-          >
-            {title}
-          </div>
-          {subtitle && (
+      {hasHeader && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            marginBottom: 12,
+          }}
+        >
+          <div>
             <div
               style={{
-                fontSize: 12,
-                color: "var(--fg-muted)",
-                marginTop: 2,
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--fg)",
               }}
             >
-              {subtitle}
+              {title}
             </div>
-          )}
+            {subtitle && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--fg-muted)",
+                  marginTop: 2,
+                }}
+              >
+                {subtitle}
+              </div>
+            )}
+          </div>
+          {action}
         </div>
-        {action}
-      </div>
+      )}
       {children}
     </div>
   )

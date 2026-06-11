@@ -25,6 +25,10 @@ export interface InputProps {
   name?: string
   id?: string
   autoComplete?: string
+  // Forwarded verbatim to the native <input>.
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  title?: string
+  autoFocus?: boolean
 }
 
 const HEIGHTS: Record<InputSize, number> = {
@@ -48,6 +52,9 @@ export function Input({
   name,
   id,
   autoComplete,
+  onKeyDown,
+  title,
+  autoFocus,
 }: InputProps) {
   return (
     <div
@@ -85,6 +92,9 @@ export function Input({
         name={name}
         id={id}
         autoComplete={autoComplete}
+        onKeyDown={onKeyDown}
+        title={title}
+        autoFocus={autoFocus}
         style={{
           flex: 1,
           minWidth: 0,

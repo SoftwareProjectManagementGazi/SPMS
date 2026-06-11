@@ -795,7 +795,16 @@ function NotificationsSection() {
 // Main SettingsPage
 // ---------------------------------------------------------------------------
 
+// useSearchParams() requires a Suspense boundary for static prerender.
 export default function SettingsPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <SettingsPageInner />
+    </React.Suspense>
+  )
+}
+
+function SettingsPageInner() {
   const { language } = useApp()
   const router = useRouter()
   const searchParams = useSearchParams()
