@@ -22,6 +22,7 @@ import type {
 } from "@/lib/ai/types"
 import { useAIWorkflowStream } from "@/hooks/use-ai-workflow-stream"
 import { useApp } from "@/context/app-context"
+import { apiClient } from "@/lib/api-client"
 
 import {
   applyLifecycleSuggestion,
@@ -91,6 +92,50 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
   // applyAIWorkflow service and bubbles result up via onApplied callback.
   const [applyOpen, setApplyOpen] = React.useState(false)
   const [applyError, setApplyError] = React.useState<string | null>(null)
+
+  // Mevcut board kolonları — task_status replace eşleme adımı için. Üretim
+  // bittiğinde önceden çekilir ki onay ekranı açıldığında hazır olsun.
+  const [boardColumns, setBoardColumns] = React.useState<
+    Array<{ id: number; name: string; category?: string }>
+  >([])
+  React.useEffect(() => {
+    if (!open || variant !== "task_status" || !projectId) return
+    if (state.status !== "done") return
+    let cancelled = false
+    apiClient
+      .get<Array<{ id: number; name: string; category?: string }>>(
+        `/projects/${projectId}/columns`,
+      )
+      .then((r) => {
+        if (!cancelled) setBoardColumns(r.data)
+      })
+      .catch(() => {
+        // Eşleme adımı best-effort: liste gelmezse apply eski fallback'iyle
+        // (ilk yeni sütun) çalışmaya devam eder.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, variant, projectId, state.status])
+
+  // Adı eşleşmeyen mevcut kolonlar (silinecekler) + hedef seçenekleri.
+  const { removedColumns, newColumnOptions } = React.useMemo(() => {
+    if (variant !== "task_status" || state.status !== "done") {
+      return { removedColumns: [], newColumnOptions: [] }
+    }
+    const wanted = state.columns.filter((c) => !c.is_special)
+    const norm = (s: string) => s.trim().toLowerCase()
+    const wantedNames = new Set(wanted.map((c) => norm(c.label)))
+    return {
+      removedColumns: boardColumns.filter((c) => !wantedNames.has(norm(c.name))),
+      newColumnOptions: wanted.map((c) => ({
+        id: c.id,
+        label: c.label,
+        isInitial: c.is_initial,
+        isFinal: c.is_final,
+      })),
+    }
+  }, [variant, state, boardColumns])
 
   // -------------------------------------------------------------------------
   // Lifecycle: ESC to close (but only when in idle/done/error — not mid-stream)
@@ -287,11 +332,13 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
                   : state.columns.filter((c) => !c.is_special).length
               }
               defaultMode="replace"
+              removedColumns={removedColumns}
+              newColumns={newColumnOptions}
               onCancel={() => {
                 setApplyOpen(false)
                 setApplyError(null)
               }}
-              onConfirm={async (mode) => {
+              onConfirm={async (mode, columnMapping) => {
                 setApplyError(null)
                 try {
                   let result
@@ -313,6 +360,7 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
                       existingProcessConfig,
                       columns: state.columns,
                       methodology: state.methodology,
+                      columnMapping,
                     })
                   }
                   // Bubble up to parent — parent closes modal + invalidates query

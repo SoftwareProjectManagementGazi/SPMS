@@ -158,6 +158,49 @@ describe("applyTaskStatusSuggestion (replace)", () => {
     })
   })
 
+  it("columnMapping routes each removed column's tasks: mapped column or backlog; unmapped falls back to first", async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { id: 1, name: "Eski A" },
+        { id: 2, name: "Eski B" },
+        { id: 3, name: "Eski C" },
+      ],
+    })
+    mockPost
+      .mockResolvedValueOnce({ data: { id: 20 } }) // Hazır
+      .mockResolvedValueOnce({ data: { id: 21 } }) // Bitti
+    mockPatch.mockResolvedValue({ data: {} })
+    mockDelete.mockResolvedValue({ data: {} })
+    mockUpdateProcessConfig.mockResolvedValue({})
+
+    await applyTaskStatusSuggestion({
+      mode: "replace",
+      projectId: 42,
+      projectName: "P",
+      existingProcessConfig: {},
+      columns: [
+        col({ id: "n1", label: "Hazır", is_initial: true }),
+        col({ id: "n2", label: "Bitti", is_final: true }),
+      ],
+      methodology: "KANBAN",
+      columnMapping: {
+        1: { kind: "column", aiColumnId: "n2" }, // Eski A → Bitti (id 21)
+        2: { kind: "backlog" }, // Eski B → backlog
+        // Eski C eşlenmedi → fallback: ilk yeni sütun (Hazır, id 20)
+      },
+    })
+
+    expect(mockDelete).toHaveBeenCalledWith(
+      "/projects/42/columns/1?move_tasks_to_column_id=21",
+    )
+    expect(mockDelete).toHaveBeenCalledWith(
+      "/projects/42/columns/2?move_tasks_to_backlog=true",
+    )
+    expect(mockDelete).toHaveBeenCalledWith(
+      "/projects/42/columns/3?move_tasks_to_column_id=20",
+    )
+  })
+
   it("creation happens before deletion (board never empties; move target exists)", async () => {
     const order: string[] = []
     mockGet.mockResolvedValue({ data: [{ id: 1, name: "Eski" }] })

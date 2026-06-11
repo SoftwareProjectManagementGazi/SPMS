@@ -36,6 +36,9 @@ export interface ApplyLifecycleArgs {
   methodology: string
 }
 
+/** Mapping target for tasks in a column that the suggestion removes. */
+export type ColumnMapTarget = { kind: "column"; aiColumnId: string } | { kind: "backlog" }
+
 export interface ApplyTaskStatusArgs {
   mode: ApplyMode
   projectId: number
@@ -43,6 +46,10 @@ export interface ApplyTaskStatusArgs {
   existingProcessConfig: Record<string, unknown>
   columns: SuggestedColumnPayload[]
   methodology: string
+  /** Jira "Associate statuses" karşılığı: silinecek ESKİ kolon id'si →
+   *  görevlerinin gideceği yeni AI kolonu ya da backlog. Eşleme verilmeyen
+   *  kolonlar ilk önerilen kolona düşer (eski davranış). */
+  columnMapping?: Record<number, ColumnMapTarget>
 }
 
 /**
@@ -166,12 +173,25 @@ export async function applyTaskStatusSuggestion(
       }
     }
 
-    // Tasks in dropped columns restart from the first suggested column.
-    const moveTarget = boardIdByAi.get(wanted[0].id)
+    // Tasks in dropped columns follow the user's mapping (old column → new
+    // column or backlog); unmapped ones default to the first suggested column.
+    const fallbackTarget = boardIdByAi.get(wanted[0].id)
     for (const col of existing) {
-      if (!kept.has(col.id) && moveTarget != null) {
+      if (kept.has(col.id)) continue
+      const mapped = args.columnMapping?.[col.id]
+      if (mapped?.kind === "backlog") {
         await apiClient.delete(
-          `/projects/${args.projectId}/columns/${col.id}?move_tasks_to_column_id=${moveTarget}`,
+          `/projects/${args.projectId}/columns/${col.id}?move_tasks_to_backlog=true`,
+        )
+        continue
+      }
+      const target =
+        (mapped?.kind === "column"
+          ? boardIdByAi.get(mapped.aiColumnId)
+          : undefined) ?? fallbackTarget
+      if (target != null) {
+        await apiClient.delete(
+          `/projects/${args.projectId}/columns/${col.id}?move_tasks_to_column_id=${target}`,
         )
       }
     }

@@ -104,12 +104,18 @@ async def update_column(
 async def delete_column(
     project_id: int,
     col_id: int,
-    move_tasks_to_column_id: int = Query(..., description="Target column ID to move tasks to"),
+    move_tasks_to_column_id: int | None = Query(
+        None, description="Target column ID to move tasks to"
+    ),
+    move_tasks_to_backlog: bool = Query(
+        False,
+        description="Move tasks to the backlog instead (clears column + sprint)",
+    ),
     current_user: User = Depends(get_current_user),
     project_repo: IProjectRepository = Depends(get_project_repo),
     column_repo: IBoardColumnRepository = Depends(get_board_column_repo),
 ):
-    """Move all tasks to target column then delete. Manager or admin only."""
+    """Relocate tasks (target column OR backlog) then delete. Manager/admin only."""
     if not _is_admin(current_user):
         project = await project_repo.get_by_id_and_user(project_id, current_user.id)
         if project is None:
@@ -122,8 +128,17 @@ async def delete_column(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only project managers or admins can delete columns",
             )
+    if move_tasks_to_column_id is None and not move_tasks_to_backlog:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide move_tasks_to_column_id or move_tasks_to_backlog=true",
+        )
     try:
         use_case = DeleteColumnUseCase(column_repo)
-        await use_case.execute(col_id, move_tasks_to_column_id)
+        await use_case.execute(
+            col_id,
+            move_tasks_to_column_id,
+            move_to_backlog=move_tasks_to_backlog,
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

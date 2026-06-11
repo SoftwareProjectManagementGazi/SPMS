@@ -172,8 +172,18 @@ class DeleteColumnUseCase:
     def __init__(self, column_repo: IBoardColumnRepository):
         self.column_repo = column_repo
 
-    async def execute(self, column_id: int, move_to_column_id: int) -> None:
-        """Move all non-deleted tasks to target column, then delete the column."""
+    async def execute(
+        self,
+        column_id: int,
+        move_to_column_id: Optional[int] = None,
+        move_to_backlog: bool = False,
+    ) -> None:
+        """Delete a column after relocating its tasks.
+
+        Tasks go either to a target column, or — Jira'nın "unmapped status"
+        karşılığı — to the backlog: column_id AND sprint_id are cleared so the
+        task leaves the board entirely and surfaces in backlog/list views.
+        """
         from sqlalchemy import update
         from app.infrastructure.database.models.task import TaskModel
         from app.infrastructure.database.repositories.board_column_repo import SqlAlchemyBoardColumnRepository
@@ -183,20 +193,28 @@ class DeleteColumnUseCase:
         if existing is None:
             raise ValueError(f"Column {column_id} not found")
 
-        # Verify the target column exists
-        target = await self.column_repo.get_by_id(move_to_column_id)
-        if target is None:
-            raise ValueError(f"Target column {move_to_column_id} not found")
+        if not move_to_backlog:
+            if move_to_column_id is None:
+                raise ValueError(
+                    "Either move_to_column_id or move_to_backlog must be provided"
+                )
+            target = await self.column_repo.get_by_id(move_to_column_id)
+            if target is None:
+                raise ValueError(f"Target column {move_to_column_id} not found")
 
-        # Move tasks: UPDATE tasks SET column_id = move_to WHERE column_id = column_id AND is_deleted = False
         if isinstance(self.column_repo, SqlAlchemyBoardColumnRepository):
+            values = (
+                {"column_id": None, "sprint_id": None}
+                if move_to_backlog
+                else {"column_id": move_to_column_id}
+            )
             stmt = (
                 update(TaskModel)
                 .where(
                     TaskModel.column_id == column_id,
                     TaskModel.is_deleted == False,
                 )
-                .values(column_id=move_to_column_id)
+                .values(**values)
             )
             await self.column_repo.session.execute(stmt)
             await self.column_repo.session.commit()

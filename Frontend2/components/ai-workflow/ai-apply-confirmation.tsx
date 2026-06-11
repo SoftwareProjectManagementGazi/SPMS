@@ -21,8 +21,24 @@ import * as React from "react"
 import { AlertTriangle, Check } from "lucide-react"
 
 import { useApp } from "@/context/app-context"
+import type { ColumnMapTarget } from "@/lib/ai/apply-ai-workflow"
 
 export type ApplyMode = "replace" | "new_project"
+
+/** Existing board column the suggestion would remove. */
+export interface RemovedColumnInfo {
+  id: number
+  name: string
+  category?: string
+}
+
+/** Non-special AI column offered as a mapping target. */
+export interface NewColumnOption {
+  id: string
+  label: string
+  isInitial?: boolean
+  isFinal?: boolean
+}
 
 export interface AIApplyConfirmationProps {
   /** Display label for the project/team being replaced */
@@ -34,8 +50,33 @@ export interface AIApplyConfirmationProps {
   newCount: number
   /** Default selection — D-01: "replace" */
   defaultMode?: ApplyMode
+  /** Jira "Associate statuses" adımı (task_status + replace): silinecek eski
+   *  kolonlar. Boş/verilmemişse eşleme bölümü hiç görünmez. */
+  removedColumns?: RemovedColumnInfo[]
+  /** Eşleme hedefi olarak sunulacak yeni AI kolonları. */
+  newColumns?: NewColumnOption[]
   onCancel: () => void
-  onConfirm: (mode: ApplyMode) => Promise<void> | void
+  onConfirm: (
+    mode: ApplyMode,
+    columnMapping?: Record<number, ColumnMapTarget>,
+  ) => Promise<void> | void
+}
+
+const BACKLOG_VALUE = "__backlog__"
+
+/** Smart default per removed column: done-category → first final AI column,
+ *  everything else → first initial (falling back to the first column). */
+function defaultTargetFor(
+  removed: RemovedColumnInfo,
+  options: NewColumnOption[],
+): string {
+  if (options.length === 0) return BACKLOG_VALUE
+  if (removed.category === "done") {
+    const fin = options.find((o) => o.isFinal)
+    if (fin) return fin.id
+  }
+  const init = options.find((o) => o.isInitial)
+  return (init ?? options[0]).id
 }
 
 export function AIApplyConfirmation({
@@ -44,6 +85,8 @@ export function AIApplyConfirmation({
   existingCount,
   newCount,
   defaultMode = "replace",
+  removedColumns,
+  newColumns,
   onCancel,
   onConfirm,
 }: AIApplyConfirmationProps) {
@@ -56,11 +99,38 @@ export function AIApplyConfirmation({
   const [mode, setMode] = React.useState<ApplyMode>(defaultMode)
   const [submitting, setSubmitting] = React.useState(false)
 
+  const removed = React.useMemo(
+    () => removedColumns ?? [],
+    [removedColumns],
+  )
+  const targets = React.useMemo(() => newColumns ?? [], [newColumns])
+
+  // Per-removed-column selection: AI column id or the backlog sentinel.
+  const [mapping, setMapping] = React.useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {}
+    for (const r of removed) init[r.id] = defaultTargetFor(r, targets)
+    return init
+  })
+
+  const showMapping =
+    mode === "replace" && variant === "task_status" && removed.length > 0
+
   const handleConfirm = async () => {
     if (submitting) return
     setSubmitting(true)
     try {
-      await onConfirm(mode)
+      let columnMapping: Record<number, ColumnMapTarget> | undefined
+      if (showMapping) {
+        columnMapping = {}
+        for (const r of removed) {
+          const sel = mapping[r.id] ?? defaultTargetFor(r, targets)
+          columnMapping[r.id] =
+            sel === BACKLOG_VALUE
+              ? { kind: "backlog" }
+              : { kind: "column", aiColumnId: sel }
+        }
+      }
+      await onConfirm(mode, columnMapping)
     } finally {
       setSubmitting(false)
     }
@@ -141,7 +211,7 @@ export function AIApplyConfirmation({
         <p style={{ fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.5, margin: 0 }}>
           {language === "tr" ? (
             <>
-              <strong style={{ color: "var(--fg)" }}>"{contextLabel}"</strong>{" "}
+              <strong style={{ color: "var(--fg)" }}>&quot;{contextLabel}&quot;</strong>{" "}
               {variant === "lifecycle"
                 ? "projesinin workflow'unda"
                 : "takımının görev durumlarında"}{" "}
@@ -149,28 +219,28 @@ export function AIApplyConfirmation({
               <strong style={{ color: "var(--fg)" }}>
                 {existingCount} {itemWord}
               </strong>{" "}
-              var. Bu işlem onları AI'ın ürettiği yeni{" "}
+              var. Bu işlem onları AI&apos;ın ürettiği yeni{" "}
               <strong style={{ color: "var(--fg)" }}>
                 {newCount} {itemWord}la
               </strong>{" "}
               değiştirecek.
               {variant === "task_status" &&
-                " Devam eden görevler en yakın eşleşen duruma taşınır."}
+                " Adı eşleşen sütunlardaki görevler yerinde kalır; kaldırılan sütunların görevleri aşağıdaki eşlemeye göre taşınır."}
             </>
           ) : (
             <>
-              <strong style={{ color: "var(--fg)" }}>"{contextLabel}"</strong>{" "}
+              <strong style={{ color: "var(--fg)" }}>&quot;{contextLabel}&quot;</strong>{" "}
               currently has{" "}
               <strong style={{ color: "var(--fg)" }}>
                 {existingCount} {itemWord}s
               </strong>
-              . This action will replace them with the AI's new{" "}
+              . This action will replace them with the AI&apos;s new{" "}
               <strong style={{ color: "var(--fg)" }}>
                 {newCount} {itemWord}s
               </strong>
               .
               {variant === "task_status" &&
-                " In-flight tasks will move to the nearest matching column."}
+                " Tasks in name-matched columns stay put; tasks in removed columns follow the mapping below."}
             </>
           )}
         </p>
@@ -212,6 +282,93 @@ export function AIApplyConfirmation({
             recommended
           />
         </div>
+
+        {/* Jira "Associate statuses" adımı — kaldırılan her eski sütun için
+            görevlerin gideceği hedef (yeni sütun ya da Backlog). */}
+        {showMapping && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              padding: 12,
+              borderRadius: "var(--radius)",
+              border: "1px solid var(--border)",
+              background: "var(--bg-2)",
+              maxHeight: 180,
+              overflowY: "auto",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--fg)",
+              }}
+            >
+              {T(
+                "Kaldırılan sütunlardaki görevler nereye taşınsın?",
+                "Where should tasks from removed columns go?",
+              )}
+            </div>
+            {removed.map((r) => (
+              <div
+                key={r.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12.5,
+                    color: "var(--fg-muted)",
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={r.name}
+                >
+                  {r.name}
+                </span>
+                <span aria-hidden style={{ color: "var(--fg-subtle)", fontSize: 12 }}>
+                  →
+                </span>
+                <select
+                  aria-label={T(
+                    `${r.name} görevlerinin hedefi`,
+                    `Target for tasks in ${r.name}`,
+                  )}
+                  value={mapping[r.id] ?? defaultTargetFor(r, targets)}
+                  onChange={(e) =>
+                    setMapping((prev) => ({ ...prev, [r.id]: e.target.value }))
+                  }
+                  style={{
+                    fontSize: 12.5,
+                    padding: "5px 8px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--fg)",
+                    maxWidth: 200,
+                  }}
+                >
+                  {targets.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                  <option value={BACKLOG_VALUE}>
+                    {T("Backlog'a taşı (pano dışı)", "Move to backlog (off board)")}
+                  </option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Footer */}
         <div
