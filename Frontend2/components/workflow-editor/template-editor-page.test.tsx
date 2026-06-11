@@ -251,21 +251,24 @@ describe("TemplateEditorPage (canvas editor)", () => {
     expect(screen.queryByTestId("reactflow")).toBeNull()
   })
 
-  it("built-in template opens read-only: lock banner, disabled Save, no edit chrome, inert shortcuts", async () => {
+  it("built-in template is fully editable for admins", async () => {
+    mockUpdateTemplate.mockResolvedValue({})
     await renderLoaded(makeTemplate({ is_builtin: true, name: "Scrum" }))
 
-    expect(
-      screen.getByText(/Yerleşik şablonlar düzenlenemez/),
-    ).toBeTruthy()
-    expect(findHeaderSaveButton().disabled).toBe(true)
-    // Edit-only chrome hidden.
-    expect(screen.queryByText("Şablon Yükle")).toBeNull()
-    expect(screen.queryByText("Düğüm")).toBeNull()
-    // Keyboard add-node is gated — no dirty badge appears.
+    // No read-only banner; edit chrome present.
+    expect(screen.queryByText(/yönetici yetkisi gerekir/)).toBeNull()
+    expect(screen.getByText("Şablon Yükle")).toBeTruthy()
+    expect(screen.getByText("Düğüm")).toBeTruthy()
+    // Keyboard add-node works → dirty → save PATCHes the built-in.
     fireEvent.keyDown(window, { key: "n" })
-    expect(screen.queryByText("Kaydedilmemiş")).toBeNull()
-    // Canvas itself is read-only.
-    expect(screen.queryByTestId("controls")).toBeNull()
+    expect(await screen.findByText("Kaydedilmemiş")).toBeTruthy()
+    fireEvent.click(findHeaderSaveButton())
+    await waitFor(() => expect(mockUpdateTemplate).toHaveBeenCalledTimes(1))
+    const [, payload] = mockUpdateTemplate.mock.calls[0] as [
+      number,
+      { default_workflow: { nodes: unknown[] } },
+    ]
+    expect(payload.default_workflow.nodes).toHaveLength(3)
   })
 
   it("non-admin user opens read-only with the admin-access banner", async () => {

@@ -190,15 +190,20 @@ async def test_update_template_rejects_edge_to_unknown_node():
 
 
 @pytest.mark.asyncio
-async def test_update_builtin_template_still_403s_with_workflow_payload():
+async def test_update_builtin_template_is_allowed():
+    """Built-ins are editable from the admin editor (only delete is blocked)."""
     repo = _InMemoryTemplateRepo(_custom_template(is_builtin=True))
     uc = UpdateProcessTemplateUseCase(repo)
 
-    with pytest.raises(PermissionError):
-        await uc.execute(
-            7, ProcessTemplateUpdateDTO(default_workflow=copy.deepcopy(VALID_WORKFLOW))
-        )
-    assert repo.updated is None
+    new_wf = copy.deepcopy(VALID_WORKFLOW)
+    new_wf["nodes"][0]["name"] = "Revize Faz"
+    result = await uc.execute(
+        7, ProcessTemplateUpdateDTO(default_workflow=new_wf)
+    )
+
+    assert repo.updated is not None
+    assert repo.updated.default_workflow == new_wf
+    assert result.is_builtin is True
 
 
 @pytest.mark.asyncio

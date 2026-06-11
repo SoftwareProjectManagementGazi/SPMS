@@ -60,8 +60,8 @@ class UpdateProcessTemplateUseCase:
         existing = await self._repo.get_by_id(template_id)
         if existing is None:
             raise ValueError(f"Process template {template_id} not found")
-        if existing.is_builtin:
-            raise PermissionError("Built-in templates cannot be modified")
+        # Built-ins are editable (admin-only route); only DELETE stays blocked.
+        # The seeder is idempotent per-name, so edits survive restarts.
         _validate_default_workflow(dto.default_workflow)
 
         update_data = dto.model_dump(exclude_unset=True)

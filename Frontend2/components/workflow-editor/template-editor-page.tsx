@@ -178,9 +178,10 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
     }
   }, [templateId, T])
 
-  const isBuiltin = template?.is_builtin === true
+  // Built-ins are editable too — only the admin gate applies (matches the
+  // backend, which blocks built-in DELETE but allows PATCH).
   const isAdmin = hasPermission("admin.access")
-  const canEdit = template !== null && isAdmin && !isBuiltin
+  const canEdit = template !== null && isAdmin
 
   // ----------------------------- Editor state ----------------------------
 
@@ -1312,15 +1313,7 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
           <Tooltip
             text={
               !canEdit
-                ? isBuiltin
-                  ? T(
-                      "Yerleşik şablonlar düzenlenemez.",
-                      "Built-in templates cannot be edited.",
-                    )
-                  : T(
-                      "Düzenleme yetkiniz yok.",
-                      "You don't have edit permission.",
-                    )
+                ? T("Düzenleme yetkiniz yok.", "You don't have edit permission.")
                 : T("Kaydet", "Save")
             }
           >
@@ -1346,15 +1339,10 @@ export function TemplateEditorPage({ templateId }: TemplateEditorPageProps) {
             style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             <Lock size={13} />
-            {isBuiltin
-              ? T(
-                  "Yerleşik şablonlar düzenlenemez. Düzenlenebilir bir kopya için Şablonlar sayfasından Klonla seçeneğini kullanın.",
-                  "Built-in templates cannot be edited. Use Clone on the Templates page to create an editable copy.",
-                )
-              : T(
-                  "Şablon düzenlemek için yönetici yetkisi gerekir.",
-                  "Editing templates requires admin access.",
-                )}
+            {T(
+              "Şablon düzenlemek için yönetici yetkisi gerekir.",
+              "Editing templates requires admin access.",
+            )}
           </span>
         </AlertBanner>
       )}
