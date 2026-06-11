@@ -208,7 +208,8 @@ function WizardContent() {
     const methodologyMap: Array<{ match: (n: string) => boolean; value: string }> = [
       { match: (n) => n.includes('kanban') || n.includes('lean'), value: 'KANBAN' },
       { match: (n) => n.includes('waterfall') || n.includes('v-modeli') || n.includes('v model') || n.includes('prince'), value: 'WATERFALL' },
-      { match: (n) => n.includes('iterat') || n.includes('spiral') || n.includes('rup') || n.includes('rad'), value: 'ITERATIVE' },
+      // Kanonik Türkçe şablon adları: Yinelemeli / Artırımlı / Prototipleme.
+      { match: (n) => n.includes('iterat') || n.includes('yinele') || n.includes('artırım') || n.includes('artirim') || n.includes('prototip') || n.includes('spiral') || n.includes('rup') || n.includes('rad'), value: 'ITERATIVE' },
       { match: (n) => n.includes('scrum') || n.includes('xp') || n.includes('safe') || n.includes('crystal') || n.includes('dsdm') || n.includes('fdd'), value: 'SCRUM' },
     ]
     const methodology = methodologyMap.find((m) => m.match(templateNameLower))?.value ?? 'SCRUM'

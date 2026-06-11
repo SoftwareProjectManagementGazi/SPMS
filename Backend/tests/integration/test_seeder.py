@@ -24,14 +24,12 @@ def _extract_default_workflow_edges_from_seeder():
     the same template list via a thin call-recorder that captures the dispatch
     data structure.
     """
-    # Import the seeder module to ensure it parses cleanly
-    from app.infrastructure.database import seeder  # noqa: F401
-    # The templates list is defined inside seed_process_templates as a local
-    # variable, not exposed at module scope. To test it without a live DB,
-    # we re-derive the template fixtures by parsing the source file.
+    # Şablon fixture'ları artık _template_workflows.py'de yaşıyor (kanonik 9);
+    # seed_process_templates oradan beslenir. Source-parse testleri bu yüzden
+    # kanonik modülün kaynağına bakar.
     import inspect
-    src = inspect.getsource(seeder.seed_process_templates)
-    return src
+    from app.infrastructure.database import _template_workflows
+    return inspect.getsource(_template_workflows)
 
 
 def test_seeder_module_does_not_use_legacy_from_to_edge_keys():
@@ -397,9 +395,9 @@ def test_seeder_template_dicts_carry_default_columns():
     development) would drop back to NULL until the next migration run.
     """
     import inspect
-    from app.infrastructure.database import seeder
+    from app.infrastructure.database import _template_workflows
 
-    src = inspect.getsource(seeder.seed_process_templates)
+    src = inspect.getsource(_template_workflows)
     # The Scrum template carries SCRUM_DEFAULT_COLUMNS, Kanban -> KANBAN,
     # Waterfall -> WATERFALL — exactly 3 references in the dispatch list.
     assert '"default_columns": SCRUM_DEFAULT_COLUMNS' in src, (

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.infrastructure.database.seeder_extended import seed_extended_data
+from app.infrastructure.database._template_workflows import CANONICAL_TEMPLATES
 # Wave 2 W2-C9 — single-source default column lists. Shared with
 # alembic 014's backfill so the seed payload never drifts.
 from app.infrastructure.database._default_columns import (
@@ -107,127 +108,15 @@ PARENT_TASK_TEMPLATES = [
 
 SUBTASK_PREFIXES = ["Analiz", "Tasarım", "Geliştirme", "Unit Test", "Entegrasyon", "Code Review", "Bug Fix"]
 
-# Phase 12 Plan 12-10 (LIFE-01 fix) — default workflow shapes per methodology
-# so a freshly-seeded project never lands with an empty `process_config.phase_workflow`.
-# (C1: V2 schema renamed `workflow` -> `phase_workflow`.)
-# Each shape ports the canonical preset from
-# Frontend2/lib/lifecycle/presets.ts (which itself ports from
-# New_Frontend/src/data.jsx DEFAULT_LIFECYCLES + EXTRA_LIFECYCLES) so the
-# Settings > Yaşam Döngüsü panel and the LifecycleTab summary strip both
-# render a real workflow on day-zero. Each shape satisfies the FE
-# validateWorkflow() contract (>=1 isInitial, >=1 isFinal, valid edges,
-# orphan-free).
-#
-# `name` is the canonical FE field; `label` is preserved for the legacy
-# WorkflowConfigDTO mapper (mapWorkflowNode reads `name` first). Keys use
-# snake_case at the JSONB boundary (is_initial/is_final) per Pitfall 21.
-
-# Phase 12 Plan 12-10 (Bug X UAT fix) — node IDs MUST satisfy the D-22
-# regex `^nd_[A-Za-z0-9_-]{10}$` (defined in Backend/app/domain/entities/task.py).
-# Pre-fix the seeder shipped `n1`/`n2`/etc. which fails the regex; once the
-# WorkflowConfig validator is wired into the project PATCH path, every save
-# fails 422 unless these IDs are regex-compliant.
-#
-# We use deterministic readable suffixes (e.g. `nd_scinit0001`) that mirror
-# the Frontend2 preset IDs in `Frontend2/lib/lifecycle/presets.ts`, so a
-# user moving between seed data and "Şablon Yükle" sees the same node
-# identities for matching methodology pairs (no churn on apply).
-
-_DEFAULT_WORKFLOW_SCRUM = {
-    "mode": "flexible",
-    "nodes": [
-        {"id": "nd_scinit0001", "name": "Başlatma", "description": "Vizyon ve hedefler",
-         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "nd_scplan0002", "name": "Planlama", "description": "Backlog ve sprint planning",
-         "x": 280, "y": 120, "color": "status-todo"},
-        {"id": "nd_scexec0003", "name": "Yürütme", "description": "Sprint'ler",
-         "x": 500, "y": 120, "color": "status-progress"},
-        {"id": "nd_scmoni0004", "name": "İzleme", "description": "Metrikler ve retro",
-         "x": 720, "y": 120, "color": "status-review"},
-        {"id": "nd_sccls00005", "name": "Kapanış", "description": "Teslim ve ders",
-         "x": 940, "y": 120, "color": "status-done", "is_final": True},
-    ],
-    "edges": [
-        {"id": "e1", "source": "nd_scinit0001", "target": "nd_scplan0002", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "nd_scplan0002", "target": "nd_scexec0003", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "nd_scexec0003", "target": "nd_scmoni0004", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "nd_scmoni0004", "target": "nd_scexec0003", "type": "feedback",
-         "label": "Retro", "bidirectional": False, "is_all_gate": False},
-        {"id": "e5", "source": "nd_scmoni0004", "target": "nd_sccls00005", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-    ],
-    "groups": [],
-}
-
-_DEFAULT_WORKFLOW_WATERFALL = {
-    "mode": "sequential-locked",
-    "nodes": [
-        {"id": "nd_wfreq00001", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
-         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "nd_wfdes00002", "name": "Tasarım", "description": "Mimari ve UI",
-         "x": 280, "y": 120, "color": "status-progress"},
-        {"id": "nd_wfimp00003", "name": "Uygulama", "description": "Geliştirme",
-         "x": 500, "y": 120, "color": "status-progress"},
-        {"id": "nd_wftst00004", "name": "Test", "description": "QA ve UAT",
-         "x": 720, "y": 120, "color": "status-review"},
-        {"id": "nd_wfdep00005", "name": "Yayın", "description": "Dağıtım",
-         "x": 940, "y": 120, "color": "status-done"},
-        {"id": "nd_wfmnt00006", "name": "Bakım", "description": "Destek",
-         "x": 1160, "y": 120, "color": "status-done", "is_final": True},
-    ],
-    "edges": [
-        {"id": "e1", "source": "nd_wfreq00001", "target": "nd_wfdes00002", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "nd_wfdes00002", "target": "nd_wfimp00003", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "nd_wfimp00003", "target": "nd_wftst00004", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "nd_wftst00004", "target": "nd_wfdep00005", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e5", "source": "nd_wfdep00005", "target": "nd_wfmnt00006", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-    ],
-    "groups": [],
-}
-
-_DEFAULT_WORKFLOW_KANBAN = {
-    "mode": "continuous",
-    "nodes": [
-        # Continuous mode requires a single node that is both initial and final.
-        {"id": "nd_kbflow0001", "name": "Sürekli Akış", "description": "Tek aktif faz",
-         "x": 400, "y": 120, "color": "status-progress",
-         "is_initial": True, "is_final": True},
-    ],
-    "edges": [],
-    "groups": [],
-}
-
-_DEFAULT_WORKFLOW_ITERATIVE = {
-    "mode": "flexible",
-    "nodes": [
-        {"id": "nd_itplan0001", "name": "Planlama", "description": "Hedef belirleme",
-         "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-        {"id": "nd_itdes00002", "name": "Tasarım", "description": "Yineleme tasarımı",
-         "x": 260, "y": 120, "color": "status-progress"},
-        {"id": "nd_itimp00003", "name": "Uygulama", "description": "Geliştirme ve test",
-         "x": 460, "y": 120, "color": "status-progress"},
-        {"id": "nd_iteva00004", "name": "Değerlendirme", "description": "İnceleme ve karar",
-         "x": 660, "y": 120, "color": "status-done", "is_final": True},
-    ],
-    "edges": [
-        {"id": "e1", "source": "nd_itplan0001", "target": "nd_itdes00002", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e2", "source": "nd_itdes00002", "target": "nd_itimp00003", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e3", "source": "nd_itimp00003", "target": "nd_iteva00004", "type": "flow",
-         "label": None, "bidirectional": False, "is_all_gate": False},
-        {"id": "e4", "source": "nd_iteva00004", "target": "nd_itplan0001", "type": "feedback",
-         "label": "Yeni iterasyon", "bidirectional": False, "is_all_gate": False},
-    ],
-    "groups": [],
+# Seed projelerinin gün-sıfır phase_workflow'u kanonik şablonlardan gelir
+# (_template_workflows.py) — şablon kanvası ile seed projeleri aynı grafı
+# gösterir.
+_CANONICAL_BY_NAME = {t["name"]: t for t in CANONICAL_TEMPLATES}
+_METHODOLOGY_TEMPLATE_NAME = {
+    Methodology.SCRUM: "Scrum",
+    Methodology.KANBAN: "Kanban",
+    Methodology.WATERFALL: "Waterfall",
+    Methodology.ITERATIVE: "Yinelemeli Model",
 }
 
 
@@ -274,16 +163,8 @@ def _default_workflow_for_methodology(methodology: Methodology) -> dict:
     `schema_version=2`.
     """
     import copy
-    if methodology == Methodology.WATERFALL:
-        wf = copy.deepcopy(_DEFAULT_WORKFLOW_WATERFALL)
-    elif methodology == Methodology.KANBAN:
-        wf = copy.deepcopy(_DEFAULT_WORKFLOW_KANBAN)
-    elif methodology == Methodology.ITERATIVE:
-        wf = copy.deepcopy(_DEFAULT_WORKFLOW_ITERATIVE)
-    else:
-        # SCRUM is the default fallback (matches CLAUDE.md polymorphism rule —
-        # any unhandled methodology degrades to the safest, most-common shape).
-        wf = copy.deepcopy(_DEFAULT_WORKFLOW_SCRUM)
+    name = _METHODOLOGY_TEMPLATE_NAME.get(methodology, "Scrum")
+    wf = copy.deepcopy(_CANONICAL_BY_NAME[name]["default_workflow"])
 
     # C1: derive initial_node_id from the seeded nodes (matches the entity
     # normalizer's algorithm) and attach the capabilities sub-object.
@@ -499,146 +380,8 @@ async def seed_process_templates(session: AsyncSession):
     result = await session.execute(select(ProcessTemplateModel))
     existing = {t.name.lower() for t in result.scalars().all()}
 
-    templates = [
-        {
-            "name": "Scrum",
-            "is_builtin": True,
-            "description": "Zaman-kutulu sprintler, ürün backlog'u, günlük stand-up ve retrospektif ile iteratif geliştirme.",
-            "columns": [
-                {"name": "Backlog", "order": 0},
-                {"name": "To Do", "order": 1},
-                {"name": "In Progress", "order": 2},
-                {"name": "Code Review", "order": 3},
-                {"name": "Done", "order": 4},
-            ],
-            # Wave 2 W2-C9 — engine-aware shape consumed by W2-C10's
-            # CreateProjectUseCase. Legacy ``columns`` above remains as a
-            # read fallback until W2-C11 dual-key cleanup.
-            "default_columns": SCRUM_DEFAULT_COLUMNS,
-            "recurring_tasks": [],
-            "behavioral_flags": {"sprint_required": True, "wip_limits": False},
-            "cycle_label_tr": "Sprint",
-            "cycle_label_en": "Sprint",
-            # Fix (debug workflow-editor-seeder-schema-broken): node schema must match
-            # WorkflowNodeDTO (id, name, x, y, color, is_initial, is_final, description).
-            # Old shape used {id, label, order} — mapWorkflowNode reads `name` not `label`,
-            # so label was silently dropped producing undefined names on the canvas.
-            # Missing x/y stacked all nodes at (0,0). Short ids ("plan", "develop", etc.)
-            # fail the D-22 regex ^nd_[A-Za-z0-9_-]{10}$ and cause 422 on save.
-            # This block now mirrors _DEFAULT_WORKFLOW_SCRUM exactly.
-            "default_workflow": {
-                "mode": "flexible",
-                "nodes": [
-                    {"id": "nd_scinit0001", "name": "Başlatma", "description": "Vizyon ve hedefler",
-                     "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-                    {"id": "nd_scplan0002", "name": "Planlama", "description": "Backlog ve sprint planning",
-                     "x": 280, "y": 120, "color": "status-todo"},
-                    {"id": "nd_scexec0003", "name": "Yürütme", "description": "Sprint'ler",
-                     "x": 500, "y": 120, "color": "status-progress"},
-                    {"id": "nd_scmoni0004", "name": "İzleme", "description": "Metrikler ve retro",
-                     "x": 720, "y": 120, "color": "status-review"},
-                    {"id": "nd_sccls00005", "name": "Kapanış", "description": "Teslim ve ders",
-                     "x": 940, "y": 120, "color": "status-done", "is_final": True},
-                ],
-                "edges": [
-                    {"id": "e1", "source": "nd_scinit0001", "target": "nd_scplan0002", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e2", "source": "nd_scplan0002", "target": "nd_scexec0003", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e3", "source": "nd_scexec0003", "target": "nd_scmoni0004", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e4", "source": "nd_scmoni0004", "target": "nd_scexec0003", "type": "feedback",
-                     "label": "Retro", "bidirectional": False, "is_all_gate": False},
-                    {"id": "e5", "source": "nd_scmoni0004", "target": "nd_sccls00005", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                ],
-                "groups": [],
-            },
-        },
-        {
-            "name": "Kanban",
-            "is_builtin": True,
-            "description": "Sürekli akış, WIP limitleri ve çekme tabanlı iş akışı ile akışkan teslimat.",
-            "columns": [
-                {"name": "To Do", "order": 0, "wip_limit": 0},
-                {"name": "Analiz", "order": 1, "wip_limit": 3},
-                {"name": "Geliştirme", "order": 2, "wip_limit": 4},
-                {"name": "Test", "order": 3, "wip_limit": 2},
-                {"name": "Done", "order": 4, "wip_limit": 0},
-            ],
-            # Wave 2 W2-C9 — engine-aware shape (see _default_columns.py).
-            "default_columns": KANBAN_DEFAULT_COLUMNS,
-            "recurring_tasks": [],
-            "behavioral_flags": {"sprint_required": False, "wip_limits": True},
-            "cycle_label_tr": "Döngü",
-            "cycle_label_en": "Cycle",
-            # Fix: continuous mode requires a single node that is both initial and final.
-            # Old shape had three nodes {id, label, order} — wrong schema + wrong structure
-            # for continuous mode. Mirrors _DEFAULT_WORKFLOW_KANBAN exactly.
-            "default_workflow": {
-                "mode": "continuous",
-                "nodes": [
-                    {"id": "nd_kbflow0001", "name": "Sürekli Akış", "description": "Tek aktif faz",
-                     "x": 400, "y": 120, "color": "status-progress",
-                     "is_initial": True, "is_final": True},
-                ],
-                "edges": [],
-                "groups": [],
-            },
-        },
-        {
-            "name": "Waterfall",
-            "is_builtin": True,
-            "description": "Gereksinim, tasarım, uygulama, test, bakım fazlarıyla sıralı ve belgeleme ağırlıklı model.",
-            "columns": [
-                {"name": "Gereksinim", "order": 0},
-                {"name": "Analiz", "order": 1},
-                {"name": "Tasarım", "order": 2},
-                {"name": "Uygulama", "order": 3},
-                {"name": "Test", "order": 4},
-                {"name": "Bakım", "order": 5},
-            ],
-            # Wave 2 W2-C9 — engine-aware shape (see _default_columns.py).
-            "default_columns": WATERFALL_DEFAULT_COLUMNS,
-            "recurring_tasks": [],
-            "behavioral_flags": {"sprint_required": False, "strict_dependencies": True},
-            "cycle_label_tr": "Faz",
-            "cycle_label_en": "Phase",
-            # Fix: mode corrected sequential -> sequential-locked. Node IDs fixed to
-            # nd_* (D-22 compliant). Old edge source/target refs ("req", "design" etc.)
-            # broken because node IDs changed. Mirrors _DEFAULT_WORKFLOW_WATERFALL exactly.
-            "default_workflow": {
-                "mode": "sequential-locked",
-                "nodes": [
-                    {"id": "nd_wfreq00001", "name": "Gereksinimler", "description": "Kapsam ve dokümantasyon",
-                     "x": 60, "y": 120, "color": "status-todo", "is_initial": True},
-                    {"id": "nd_wfdes00002", "name": "Tasarım", "description": "Mimari ve UI",
-                     "x": 280, "y": 120, "color": "status-progress"},
-                    {"id": "nd_wfimp00003", "name": "Uygulama", "description": "Geliştirme",
-                     "x": 500, "y": 120, "color": "status-progress"},
-                    {"id": "nd_wftst00004", "name": "Test", "description": "QA ve UAT",
-                     "x": 720, "y": 120, "color": "status-review"},
-                    {"id": "nd_wfdep00005", "name": "Yayın", "description": "Dağıtım",
-                     "x": 940, "y": 120, "color": "status-done"},
-                    {"id": "nd_wfmnt00006", "name": "Bakım", "description": "Destek",
-                     "x": 1160, "y": 120, "color": "status-done", "is_final": True},
-                ],
-                "edges": [
-                    {"id": "e1", "source": "nd_wfreq00001", "target": "nd_wfdes00002", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e2", "source": "nd_wfdes00002", "target": "nd_wfimp00003", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e3", "source": "nd_wfimp00003", "target": "nd_wftst00004", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e4", "source": "nd_wftst00004", "target": "nd_wfdep00005", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                    {"id": "e5", "source": "nd_wfdep00005", "target": "nd_wfmnt00006", "type": "flow",
-                     "label": None, "bidirectional": False, "is_all_gate": False},
-                ],
-                "groups": [],
-            },
-        },
-    ]
+    # Kanonik 9 SDLC şablonu — tek kaynak: _template_workflows.py
+    templates = CANONICAL_TEMPLATES
 
     for tpl in templates:
         if tpl["name"].lower() in existing:
