@@ -271,6 +271,11 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
             // properties resolve here. nodeColor maps each node's color token;
             // maskColor dims the off-viewport area with a surface-tinted overlay.
             nodeColor={(n) => {
+              // Group containers span their members' full bbox — painted in
+              // the minimap they show up as giant filled rectangles stacked
+              // on the member nodes ("box AND cloud" confusion). Hide them;
+              // the minimap shows phase nodes only.
+              if (n.type === "group") return "transparent"
               const c = (n.data as { color?: string } | undefined)?.color
               if (!c) return "var(--border-strong)"
               // color may be a token suffix or a raw hex (seed group data).

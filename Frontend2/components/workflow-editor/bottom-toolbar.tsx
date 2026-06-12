@@ -3,7 +3,7 @@
 // BottomToolbar (Phase 12 Plan 12-07) — floating pill at canvas bottom-
 // center. Renders the 4 action buttons per UI-SPEC §1393-1397:
 //
-//   [+ Düğüm] [↪ Bağlantı] [▢ Grup] [Sınıflandır ▾]  |  [✦ AI öner]
+//   [+ Düğüm] [↪ Bağlantı] [▢ Grup] [Hizala ▾]  |  [✦ AI öner]
 //
 // Plan 12-07 ships the structural buttons with disabled handlers (Plan
 // 12-08 wires the real DnD/grouping/align actions).
@@ -91,7 +91,7 @@ export function BottomToolbar(props: BottomToolbarProps) {
         icon={<Plus size={14} />}
         onClick={props.onAddNode}
         disabled={!props.onAddNode}
-        title={T("Düğüm — Plan 12-08", "Node — Plan 12-08")}
+        title={T("Kanvasa yeni düğüm ekle (N)", "Add a new node to the canvas (N)")}
       >
         {T("Düğüm", "Node")}
       </Button>
@@ -101,7 +101,10 @@ export function BottomToolbar(props: BottomToolbarProps) {
         icon={<ArrowRight size={14} />}
         onClick={props.onAddEdge}
         disabled={!props.onAddEdge}
-        title={T("Bağlantı — Plan 12-08", "Edge — Plan 12-08")}
+        title={T(
+          "İki düğüm arasında bağlantı oluştur (önce kaynak, sonra hedef seçilir)",
+          "Connect two nodes (pick source, then target)",
+        )}
       >
         {T("Bağlantı", "Edge")}
       </Button>
@@ -111,7 +114,10 @@ export function BottomToolbar(props: BottomToolbarProps) {
         icon={<Square size={14} />}
         onClick={props.onGroup}
         disabled={!props.onGroup}
-        title={T("Grup — Plan 12-08", "Group — Plan 12-08")}
+        title={T(
+          "Seçili düğümleri grupla; seçili grubu çöz",
+          "Group the selected nodes; ungroup a selected group",
+        )}
       >
         {T("Grup", "Group")}
       </Button>
@@ -122,9 +128,12 @@ export function BottomToolbar(props: BottomToolbarProps) {
           icon={<AlignVerticalJustifyCenter size={14} />}
           onClick={() => setAlignOpen((v) => !v)}
           disabled={!props.onAlign}
-          title={T("Sınıflandır — Plan 12-08", "Align — Plan 12-08")}
+          title={T(
+            "Seçili düğümleri hizala veya eşit aralıkla dağıt",
+            "Align or evenly distribute the selected nodes",
+          )}
         >
-          {T("Sınıflandır", "Align")}
+          {T("Hizala", "Align")}
         </Button>
         {alignOpen && props.onAlign && (
           <div
