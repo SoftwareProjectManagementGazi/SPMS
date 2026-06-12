@@ -12,18 +12,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
-# Methodology — single source of truth (mirrors Frontend2/lib/methodology-matrix.ts)
+# Criteria answer spaces — kullanıcı metodoloji seçmez; AI bu cevaplardan
+# süreci kendisi tasarlar. None = "belirtilmedi" (soru atlanabilir).
 # ---------------------------------------------------------------------------
 
-Methodology = Literal[
-    "SCRUM",
-    "KANBAN",
-    "WATERFALL",
-    "ITERATIVE",
-    "INCREMENTAL",
-    "EVOLUTIONARY",
-    "RAD",
-]
+ReqClarity = Literal["clear_stable", "mostly_clear", "vague", "volatile"]
+DeliveryStyle = Literal["big_bang", "increments", "continuous_flow", "prototype_first"]
+CustomerInvolvement = Literal["continuous", "milestones", "start_end"]
+RiskProfile = Literal["low", "medium", "high_innovative"]
+VerificationRigor = Literal["standard", "high", "critical"]
+SchedulePressure = Literal["relaxed", "strict_deadline", "asap_mvp"]
+InterruptLevel = Literal["rare", "moderate", "constant"]
+ComplianceLevel = Literal["none", "some", "heavy"]
+TeamCadence = Literal["sprints", "flow", "phases"]
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +41,16 @@ class LifecycleFormDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    methodology: Methodology
+    # Criteria questionnaire (all optional chips)
+    req_clarity: ReqClarity | None = None
+    delivery_style: DeliveryStyle | None = None
+    customer_involvement: CustomerInvolvement | None = None
+    risk_profile: RiskProfile | None = None
+    verification_rigor: VerificationRigor | None = None
+    schedule_pressure: SchedulePressure | None = None
+    interrupt_level: InterruptLevel | None = None
+    compliance_level: ComplianceLevel | None = None
+    team_cadence: TeamCadence | None = None
 
     # Team
     team_size: int | None = Field(None, ge=1, le=999)
@@ -69,7 +79,7 @@ class LifecycleFormDTO(BaseModel):
     deployment_model: Literal["saas", "versioned", "mobile"] | None = None
 
     # Free-form
-    additional_context: str = Field(default="", max_length=500)
+    additional_context: str = Field(default="", max_length=1000)
 
     @field_validator("sector")
     @classmethod
@@ -87,7 +97,8 @@ class TaskStatusFormDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    methodology: Methodology
+    # Metodoloji yerine tek ritim sorusu — sütun adlandırma/WIP tonunu belirler
+    work_style: TeamCadence | None = None
 
     target_column_count: int | None = Field(
         None,
@@ -114,7 +125,7 @@ class TaskStatusFormDTO(BaseModel):
 
     wip_limits_enabled: bool = True
 
-    additional_context: str = Field(default="", max_length=500)
+    additional_context: str = Field(default="", max_length=1000)
 
 
 # ---------------------------------------------------------------------------

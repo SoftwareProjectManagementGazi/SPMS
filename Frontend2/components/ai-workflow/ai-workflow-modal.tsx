@@ -39,7 +39,7 @@ import { AIApplyConfirmation } from "./ai-apply-confirmation"
 import { AIChatLog, formatUserPrompt } from "./ai-chat-log"
 import { AIContextBadge } from "./ai-context-badge"
 import { AIErrorState } from "./ai-error-state"
-import { AILifecycleForm } from "./ai-lifecycle-form"
+import { AILifecycleForm, summarizeCriteria } from "./ai-lifecycle-form"
 import { AILiveCanvas } from "./ai-live-canvas"
 import { AIRationaleCard } from "./ai-rationale-card"
 import { AITaskStatusForm } from "./ai-task-status-form"
@@ -206,6 +206,7 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
           nodes: state.nodes,
           edges: state.edges,
           methodology: state.methodology,
+          layoutArchetype: state.layoutArchetype,
         })
       } else {
         result = await applyTaskStatusSuggestion({
@@ -576,7 +577,7 @@ export function AIWorkflowModal(props: AIWorkflowModalProps) {
                     ? variant === "lifecycle"
                       ? `${state.nodes.length} ${T("faz", "phases")} · ${state.edges.length} ${T("bağlantı", "edges")}`
                       : `${state.columns.length} ${T("sütun", "columns")}`
-                    : `✓ ${T("Tamamlandı", "Done")} · ${
+                    : `✓ ${state.methodology} · ${
                         state.variant === "lifecycle"
                           ? `${state.nodes.length} ${T("faz", "phases")} · ${state.edges.length} ${T("bağlantı", "edges")}`
                           : `${state.columns.length} ${T("sütun", "columns")}`
@@ -723,13 +724,18 @@ function buildContextSummary(
   taskStatusForm: TaskStatusFormDTO | null,
 ): string {
   if (variant === "lifecycle" && lifecycleForm) {
-    const parts: string[] = [lifecycleForm.methodology]
+    const parts: string[] = []
+    const criteria = summarizeCriteria(lifecycleForm as Record<string, unknown>, 2)
+    if (criteria) parts.push(criteria)
     if (lifecycleForm.team_size) parts.push(`${lifecycleForm.team_size} kişi`)
     if (lifecycleForm.sector) parts.push(formatSector(lifecycleForm.sector))
-    return parts.join(" · ")
+    return parts.join(" · ") || "AI süreci seçecek"
   }
   if (variant === "task_status" && taskStatusForm) {
-    const parts: string[] = [taskStatusForm.methodology]
+    const parts: string[] = []
+    if (taskStatusForm.work_style) {
+      parts.push(WORK_STYLE_LABEL_TR[taskStatusForm.work_style])
+    }
     if (taskStatusForm.target_column_count) {
       parts.push(`${taskStatusForm.target_column_count} sütun`)
     } else {
@@ -745,6 +751,12 @@ function buildContextSummary(
   return ""
 }
 
+const WORK_STYLE_LABEL_TR: Record<string, string> = {
+  sprints: "Sprintlerle",
+  flow: "Sürekli akış",
+  phases: "Faz bazlı",
+}
+
 /** Build the user prompt summary shown under "Sen" label. */
 function buildUserPrompt(
   variant: AIWorkflowVariant,
@@ -754,7 +766,7 @@ function buildUserPrompt(
   if (variant === "lifecycle" && lifecycleForm) {
     return formatUserPrompt({
       variant: "lifecycle",
-      methodology: lifecycleForm.methodology,
+      criteriaSummary: summarizeCriteria(lifecycleForm as Record<string, unknown>, 3),
       teamSize: lifecycleForm.team_size,
       duration:
         lifecycleForm.duration_value && lifecycleForm.duration_unit
@@ -778,7 +790,9 @@ function buildUserPrompt(
   if (variant === "task_status" && taskStatusForm) {
     return formatUserPrompt({
       variant: "task_status",
-      methodology: taskStatusForm.methodology,
+      criteriaSummary: taskStatusForm.work_style
+        ? WORK_STYLE_LABEL_TR[taskStatusForm.work_style]
+        : undefined,
       qualitySummary: [
         taskStatusForm.has_code_review && "Code review",
         taskStatusForm.has_qa_column && "QA",

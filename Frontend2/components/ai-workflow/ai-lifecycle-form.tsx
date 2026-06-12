@@ -1,19 +1,8 @@
 "use client"
 
 /**
- * AI Lifecycle Form — left-pane idle-state form for lifecycle workflow generation.
- *
- * Renders the full preference questionnaire from mockup Idle state §1:
- *   - Methodology chip group (7 chips, mirrors methodology-matrix.ts)
- *   - Team size (free number input + multi-team checkbox) — D-05 friendly
- *   - Duration (number + unit + Süresiz toggle) — free input, no buckets
- *   - Quality controls (5 toggles incl. UAT + Security)
- *   - Sector chips with inline "Diğer" text input (max 80 chars per D-04)
- *   - Deployment model (3 chips)
- *   - Additional context textarea
- *   - Submit button (--ai-accent)
- *
- * Plan ref: .planning/ai-workflow-generator-plan.md §5.2 + §17 locked decisions.
+ * AI Lifecycle Form — left-pane idle-state form for lifecycle generation.
+ * Metodoloji seçimi yok: kriter soruları + bağlam alanları; süreci AI tasarlar.
  */
 
 import * as React from "react"
@@ -22,17 +11,121 @@ import { Sparkles } from "lucide-react"
 import { Toggle } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 
-import type { LifecycleFormDTO, Methodology } from "@/lib/ai/types"
+import type { LifecycleFormDTO } from "@/lib/ai/types"
 
-const METHODOLOGIES: Methodology[] = [
-  "SCRUM",
-  "KANBAN",
-  "WATERFALL",
-  "ITERATIVE",
-  "INCREMENTAL",
-  "EVOLUTIONARY",
-  "RAD",
-]
+// Kriter soru uzayı — DTO Literal'leriyle birebir (Backend ai_workflow_dto.py)
+export const CRITERIA_QUESTIONS = [
+  {
+    key: "req_clarity",
+    tr: "Gereksinimler ne kadar net?",
+    en: "How clear are the requirements?",
+    options: [
+      { value: "clear_stable", tr: "Net ve sabit", en: "Clear & stable" },
+      { value: "mostly_clear", tr: "Çoğu net", en: "Mostly clear" },
+      { value: "vague", tr: "Belirsiz", en: "Vague" },
+      { value: "volatile", tr: "Sürekli değişiyor", en: "Constantly changing" },
+    ],
+  },
+  {
+    key: "delivery_style",
+    tr: "Teslimat nasıl olmalı?",
+    en: "How should delivery happen?",
+    options: [
+      { value: "big_bang", tr: "Tek seferde komple", en: "Single big release" },
+      { value: "increments", tr: "Parça parça çalışan ürün", en: "Working increments" },
+      { value: "continuous_flow", tr: "Sürekli akış", en: "Continuous flow" },
+      { value: "prototype_first", tr: "Önce prototip", en: "Prototype first" },
+    ],
+  },
+  {
+    key: "customer_involvement",
+    tr: "Müşteri/kullanıcı katılımı?",
+    en: "Customer/user involvement?",
+    options: [
+      { value: "continuous", tr: "Proje boyunca yoğun", en: "Continuous" },
+      { value: "milestones", tr: "Kilometre taşlarında", en: "At milestones" },
+      { value: "start_end", tr: "Sadece başta ve sonda", en: "Start & end only" },
+    ],
+  },
+  {
+    key: "risk_profile",
+    tr: "Teknik risk / belirsizlik?",
+    en: "Technical risk / uncertainty?",
+    options: [
+      { value: "low", tr: "Düşük — bilinen alan", en: "Low — known domain" },
+      { value: "medium", tr: "Orta", en: "Medium" },
+      { value: "high_innovative", tr: "Yüksek — yenilikçi alan", en: "High — innovative" },
+    ],
+  },
+  {
+    key: "verification_rigor",
+    tr: "Test / doğrulama kritikliği?",
+    en: "Verification rigor?",
+    options: [
+      { value: "standard", tr: "Standart", en: "Standard" },
+      { value: "high", tr: "Yüksek", en: "High" },
+      { value: "critical", tr: "Hayati (sertifikasyon)", en: "Critical (certification)" },
+    ],
+  },
+  {
+    key: "schedule_pressure",
+    tr: "Zaman baskısı?",
+    en: "Schedule pressure?",
+    options: [
+      { value: "relaxed", tr: "Normal", en: "Normal" },
+      { value: "strict_deadline", tr: "Sıkı sabit deadline", en: "Strict deadline" },
+      { value: "asap_mvp", tr: "Çok acil MVP", en: "ASAP MVP" },
+    ],
+  },
+  {
+    key: "interrupt_level",
+    tr: "Acil iş / kesinti sıklığı?",
+    en: "Interrupt frequency?",
+    options: [
+      { value: "rare", tr: "Nadir", en: "Rare" },
+      { value: "moderate", tr: "Ara sıra", en: "Moderate" },
+      { value: "constant", tr: "Sürekli", en: "Constant" },
+    ],
+  },
+  {
+    key: "compliance_level",
+    tr: "Regülasyon / dokümantasyon?",
+    en: "Regulation / documentation?",
+    options: [
+      { value: "none", tr: "Yok", en: "None" },
+      { value: "some", tr: "Kısmen", en: "Some" },
+      { value: "heavy", tr: "Ağır (denetimli)", en: "Heavy (audited)" },
+    ],
+  },
+  {
+    key: "team_cadence",
+    tr: "Takım çalışma ritmi tercihi?",
+    en: "Team cadence preference?",
+    options: [
+      { value: "sprints", tr: "Sprintler", en: "Sprints" },
+      { value: "flow", tr: "Akış bazlı", en: "Flow-based" },
+      { value: "phases", tr: "Faz bazlı", en: "Phase-based" },
+    ],
+  },
+] as const
+
+export type CriterionKey = (typeof CRITERIA_QUESTIONS)[number]["key"]
+
+/** Seçili kriter cevaplarını kısa Türkçe özet olarak döndürür (chat log için). */
+export function summarizeCriteria(
+  criteria: Record<string, unknown>,
+  maxItems = 3,
+): string {
+  const parts: string[] = []
+  for (const q of CRITERIA_QUESTIONS) {
+    const v = criteria[q.key]
+    if (!v) continue
+    const opt = q.options.find((o) => o.value === v)
+    if (opt) parts.push(opt.tr)
+    if (parts.length >= maxItems) break
+  }
+  return parts.join(" · ")
+}
 
 const SECTOR_CHIPS = [
   "web_saas",
@@ -51,7 +144,7 @@ export interface AILifecycleFormProps {
 }
 
 interface FormState {
-  methodology: Methodology
+  criteria: Partial<Record<CriterionKey, string>>
   teamSize: string // string for input field, parsed on submit
   multiTeam: boolean
   durationValue: string
@@ -69,7 +162,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
-  methodology: "SCRUM",
+  criteria: {},
   teamSize: "",
   multiTeam: false,
   durationValue: "",
@@ -99,12 +192,30 @@ export function AILifecycleForm({ onSubmit }: AILifecycleFormProps) {
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((s) => ({ ...s, [key]: value }))
 
+  const toggleCriterion = (key: CriterionKey, value: string) =>
+    setForm((s) => ({
+      ...s,
+      criteria: { ...s.criteria, [key]: s.criteria[key] === value ? undefined : value },
+    }))
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
+      const c = form.criteria
       const dto: LifecycleFormDTO = {
-        methodology: form.methodology,
+        req_clarity: (c.req_clarity as LifecycleFormDTO["req_clarity"]) ?? null,
+        delivery_style: (c.delivery_style as LifecycleFormDTO["delivery_style"]) ?? null,
+        customer_involvement:
+          (c.customer_involvement as LifecycleFormDTO["customer_involvement"]) ?? null,
+        risk_profile: (c.risk_profile as LifecycleFormDTO["risk_profile"]) ?? null,
+        verification_rigor:
+          (c.verification_rigor as LifecycleFormDTO["verification_rigor"]) ?? null,
+        schedule_pressure:
+          (c.schedule_pressure as LifecycleFormDTO["schedule_pressure"]) ?? null,
+        interrupt_level: (c.interrupt_level as LifecycleFormDTO["interrupt_level"]) ?? null,
+        compliance_level: (c.compliance_level as LifecycleFormDTO["compliance_level"]) ?? null,
+        team_cadence: (c.team_cadence as LifecycleFormDTO["team_cadence"]) ?? null,
         team_size: form.teamSize ? parseInt(form.teamSize, 10) : null,
         multi_team: form.multiTeam,
         duration_value: form.openEnded
@@ -124,7 +235,7 @@ export function AILifecycleForm({ onSubmit }: AILifecycleFormProps) {
             ? form.sectorOtherText.slice(0, 80) || null
             : form.sectorChip,
         deployment_model: form.deploymentModel,
-        additional_context: form.additionalContext.slice(0, 500),
+        additional_context: form.additionalContext.slice(0, 1000),
       }
       await onSubmit(dto)
     } finally {
@@ -138,19 +249,39 @@ export function AILifecycleForm({ onSubmit }: AILifecycleFormProps) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* METHODOLOGY */}
-      <Field label={T("Metodoloji", "Methodology")}>
-        <ChipGroup>
-          {METHODOLOGIES.map((m) => (
-            <Chip
-              key={m}
-              selected={form.methodology === m}
-              onClick={() => update("methodology", m)}
+      {/* CRITERIA — AI bu cevaplardan süreci kendisi seçer */}
+      <Field label={T("Proje Kriterleri", "Project Criteria")}>
+        <div style={{ fontSize: 11, color: "var(--fg-subtle)", lineHeight: 1.45 }}>
+          {T(
+            "Metodoloji seçmene gerek yok — işaretlediğin kriterlere göre en uygun süreci (gerekirse hibrit) AI tasarlar. Soruları boş bırakabilirsin.",
+            "No need to pick a methodology — AI designs the best-fit (possibly hybrid) process from your answers. Questions are optional.",
+          )}
+        </div>
+        {CRITERIA_QUESTIONS.map((q) => (
+          <div key={q.key} style={{ marginTop: 4 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "var(--fg)",
+                marginBottom: 6,
+              }}
             >
-              {METH_LABEL_TR[m]}
-            </Chip>
-          ))}
-        </ChipGroup>
+              {T(q.tr, q.en)}
+            </div>
+            <ChipGroup>
+              {q.options.map((o) => (
+                <Chip
+                  key={o.value}
+                  selected={form.criteria[q.key] === o.value}
+                  onClick={() => toggleCriterion(q.key, o.value)}
+                >
+                  {T(o.tr, o.en)}
+                </Chip>
+              ))}
+            </ChipGroup>
+          </div>
+        ))}
       </Field>
 
       {/* TEAM SIZE */}
@@ -316,17 +447,17 @@ export function AILifecycleForm({ onSubmit }: AILifecycleFormProps) {
       </Field>
 
       {/* ADDITIONAL CONTEXT */}
-      <Field label={T("Ek Bağlam (opsiyonel)", "Additional Context (optional)")}>
+      <Field label={T("Derdini Anlat (opsiyonel)", "Describe Your Situation (optional)")}>
         <textarea
-          rows={3}
-          maxLength={500}
+          rows={4}
+          maxLength={1000}
           placeholder={T(
-            "Projeye özel kısıt, tercih veya alışkanlık varsa kısaca yaz…",
-            "Any project-specific constraint or preference…",
+            "Projeyi kendi cümlelerinle anlat: kısıtlar, ekip alışkanlıkları, geçmiş sorunlar… AI süreci buna göre şekillendirir.",
+            "Describe the project in your own words: constraints, team habits, past pains… AI shapes the process accordingly.",
           )}
           value={form.additionalContext}
           onChange={(e) => update("additionalContext", e.target.value)}
-          style={{ ...inputStyle, width: "100%", resize: "vertical", minHeight: 72 }}
+          style={{ ...inputStyle, width: "100%", resize: "vertical", minHeight: 88 }}
         />
       </Field>
 
@@ -367,16 +498,6 @@ export function AILifecycleForm({ onSubmit }: AILifecycleFormProps) {
 // Internal helpers — kept local to this file (only used by this form variant
 // and ai-task-status-form which has its own copies for divergence flexibility)
 // ---------------------------------------------------------------------------
-
-const METH_LABEL_TR: Record<Methodology, string> = {
-  SCRUM: "Scrum",
-  KANBAN: "Kanban",
-  WATERFALL: "Waterfall",
-  ITERATIVE: "Iterative",
-  INCREMENTAL: "Incremental",
-  EVOLUTIONARY: "Evolutionary",
-  RAD: "RAD",
-}
 
 const SECTOR_LABEL_TR: Record<(typeof SECTOR_CHIPS)[number], string> = {
   web_saas: "Web/SaaS",

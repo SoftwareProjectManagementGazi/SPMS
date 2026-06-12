@@ -13,11 +13,13 @@
  */
 
 import { apiClient } from "@/lib/api-client"
+import { pickEdgeHandles } from "@/lib/ai/edge-handles"
 import { projectService } from "@/services/project-service"
 import type { WorkflowConfig, WorkflowEdge, WorkflowNode } from "@/services/lifecycle-service"
 import { unmapWorkflowConfig } from "@/services/lifecycle-service"
 
 import type {
+  LayoutArchetype,
   SuggestedColumnPayload,
   SuggestedEdgePayload,
   SuggestedNodePayload,
@@ -33,7 +35,9 @@ export interface ApplyLifecycleArgs {
   existingProcessConfig: Record<string, unknown>
   nodes: SuggestedNodePayload[]
   edges: SuggestedEdgePayload[]
+  /** AI'ın serbest süreç adı (örn. "Spiral + Kanban Hibrit") */
   methodology: string
+  layoutArchetype?: LayoutArchetype
 }
 
 /** Mapping target for tasks in a column that the suggestion removes. */
@@ -82,10 +86,27 @@ export async function applyLifecycleSuggestion(
     description: `AI tarafından üretilen ${args.methodology} workflow'u`,
     key: makeProjectKey(args.projectName),
     start_date: todayIso(),
-    methodology: args.methodology,
+    methodology: toLegacyMethodology(args.methodology, args.layoutArchetype),
     process_config: nextConfig,
   })
   return { projectId: created.id, isNewProject: true }
+}
+
+/**
+ * Backend ProjectCreateDTO.methodology 4-değerli legacy enum'dur; AI'ın
+ * serbest etiketi buna eşlenir (gerçek süreç kimliği process_config'teki graf).
+ */
+export function toLegacyMethodology(
+  label: string,
+  archetype?: LayoutArchetype,
+): "SCRUM" | "KANBAN" | "WATERFALL" | "ITERATIVE" {
+  if (archetype === "PIPELINE") return "KANBAN"
+  if (archetype === "WATERFALL" || archetype === "V_MODEL") return "WATERFALL"
+  const n = label.toLowerCase()
+  if (n.includes("kanban") || n.includes("lean")) return "KANBAN"
+  if (n.includes("waterfall") || n.includes("şelale") || n.includes("v-model") || n.includes("v model")) return "WATERFALL"
+  if (n.includes("scrum") || n.includes("sprint")) return "SCRUM"
+  return "ITERATIVE"
 }
 
 /**
@@ -258,7 +279,7 @@ export async function applyTaskStatusSuggestion(
     description: `AI tarafından üretilen ${args.methodology} görev durumu workflow'u`,
     key: makeProjectKey(args.projectName),
     start_date: todayIso(),
-    methodology: args.methodology,
+    methodology: toLegacyMethodology(args.methodology),
     columns: wanted.map((c) => c.label),
     process_config: { ...restConfig, methodology: args.methodology },
   })
@@ -411,9 +432,17 @@ export function aiToWorkflowConfig(
     wfNodes[wfNodes.length - 1].isFinal = true
   }
 
+  // Yön-bilinçli handle'lar: dikey segmentler üst/alt noktadan bağlanır ki
+  // V / spiral / döngü şekilleri editörde de AI canvas'taki gibi görünsün.
+  const posById = new Map<string, { x: number; y: number }>()
+  for (const n of nodes) {
+    posById.set(idMap.get(n.id) ?? n.id, { x: n.x, y: n.y })
+  }
+
   const wfEdges: WorkflowEdge[] = edges.map((e, idx) => {
     const src = idMap.get(e.source_id) ?? e.source_id
     const tgt = idMap.get(e.target_id) ?? e.target_id
+    const handles = pickEdgeHandles(posById.get(src), posById.get(tgt))
     return {
       id: `e_${idx}_${src}_${tgt}`,
       source: src,
@@ -422,6 +451,8 @@ export function aiToWorkflowConfig(
       label: e.label ?? undefined,
       bidirectional: e.bidirectional,
       isAllGate: e.is_all_gate,
+      sourceHandle: handles.sourceHandle,
+      targetHandle: handles.targetHandle,
     }
   })
 

@@ -1,31 +1,50 @@
 /**
  * AI Workflow Generator — TypeScript types (mirrors Backend DTOs).
  *
- * Plan reference: .planning/ai-workflow-generator-plan.md §5.1 (lib/ai/types.ts)
- *
  * Keep in lockstep with Backend/app/application/dtos/ai_workflow_dto.py.
  * If you change one, change the other.
  */
 
 // ---------------------------------------------------------------------------
-// Methodology — single source of truth (matches methodology-matrix.ts)
+// Criteria answer spaces — kullanıcı metodoloji seçmez, AI tasarlar
 // ---------------------------------------------------------------------------
 
-export type Methodology =
-  | "SCRUM"
-  | "KANBAN"
+export type ReqClarity = "clear_stable" | "mostly_clear" | "vague" | "volatile"
+export type DeliveryStyle = "big_bang" | "increments" | "continuous_flow" | "prototype_first"
+export type CustomerInvolvement = "continuous" | "milestones" | "start_end"
+export type RiskProfile = "low" | "medium" | "high_innovative"
+export type VerificationRigor = "standard" | "high" | "critical"
+export type SchedulePressure = "relaxed" | "strict_deadline" | "asap_mvp"
+export type InterruptLevel = "rare" | "moderate" | "constant"
+export type ComplianceLevel = "none" | "some" | "heavy"
+export type TeamCadence = "sprints" | "flow" | "phases"
+
+/** Çizim şekli — backend layout motorunun anahtarı (methodology değil) */
+export type LayoutArchetype =
   | "WATERFALL"
-  | "ITERATIVE"
-  | "INCREMENTAL"
-  | "EVOLUTIONARY"
-  | "RAD"
+  | "V_MODEL"
+  | "SPIRAL"
+  | "CYCLE"
+  | "INCREMENTAL_ROWS"
+  | "PROTOTYPE_LOOP"
+  | "PARALLEL_BRANCH"
+  | "PIPELINE"
+  | "FREEFORM"
 
 // ---------------------------------------------------------------------------
 // Form inputs (user → backend)
 // ---------------------------------------------------------------------------
 
 export interface LifecycleFormDTO {
-  methodology: Methodology
+  req_clarity?: ReqClarity | null
+  delivery_style?: DeliveryStyle | null
+  customer_involvement?: CustomerInvolvement | null
+  risk_profile?: RiskProfile | null
+  verification_rigor?: VerificationRigor | null
+  schedule_pressure?: SchedulePressure | null
+  interrupt_level?: InterruptLevel | null
+  compliance_level?: ComplianceLevel | null
+  team_cadence?: TeamCadence | null
   team_size?: number | null
   multi_team?: boolean
   duration_value?: number | null
@@ -42,7 +61,7 @@ export interface LifecycleFormDTO {
 }
 
 export interface TaskStatusFormDTO {
-  methodology: Methodology
+  work_style?: TeamCadence | null
   target_column_count?: number | null
   has_code_review?: boolean
   has_qa_column?: boolean
@@ -81,8 +100,7 @@ export interface SuggestedNodePayload {
   label: string
   description: string
   color: "status-todo" | "status-progress" | "status-review" | "status-done" | "status-blocked"
-  /** Adapter-decided layout — frontend renders nodes at these exact coords
-   *  so React Flow's auto-fit doesn't shuffle them during streaming. */
+  /** Backend layout motorunun bastığı koordinatlar — frontend asla hesaplamaz */
   x: number
   y: number
 }
@@ -119,7 +137,9 @@ export interface DonePayload {
   node_count?: number
   edge_count?: number
   column_count?: number
-  methodology: Methodology
+  /** AI'ın seçtiği sürecin serbest Türkçe adı (hibrit olabilir) */
+  methodology: string
+  layout_archetype?: LayoutArchetype
 }
 
 export type ErrorKind = "service_down" | "rate_limit" | "invalid"

@@ -20,6 +20,7 @@ import type {
   SuggestedEdgePayload,
   SuggestedNodePayload,
 } from "@/lib/ai/types"
+import { pickEdgeHandles } from "@/lib/ai/edge-handles"
 import { WorkflowCanvas } from "@/components/workflow-editor/workflow-canvas"
 
 export interface AILiveCanvasProps {
@@ -57,36 +58,27 @@ export function AILiveCanvas({ nodes, edges, isGenerating }: AILiveCanvasProps) 
     [nodes],
   )
 
-  // Convert SuggestedEdgePayload → RFEdge.
-  //
-  // Wave 6 handle fix: PhaseNode exposes 8 handles (top/right/bottom/left
-  // × source/target). Without explicit sourceHandle/targetHandle, RF picks
-  // whichever it finds first — for our PhaseNode that's `top-source`, so
-  // edges shoot UP and OVER the nodes instead of flowing left→right.
-  //
-  // We pick handles by edge direction:
-  //   forward (source.x < target.x) → right-source → left-target  (normal flow)
-  //   backward (source.x > target.x) → left-source → right-target (feedback loops)
-  // This keeps the AI canvas reading as a clean horizontal flow with curves
-  // for return paths (e.g. Iterative's Test→Tasarım, Scrum's Retro→Yürütme).
-  const nodeXById = React.useMemo(() => {
-    const m = new Map<string, number>()
-    for (const n of nodes) m.set(n.id, n.x)
+  // Yön-bilinçli handle seçimi (paylaşılan helper): V/spiral/döngü gibi dikey
+  // segmentli şekillerde kenarlar doğru noktadan bağlanır.
+  const nodePosById = React.useMemo(() => {
+    const m = new Map<string, { x: number; y: number }>()
+    for (const n of nodes) m.set(n.id, { x: n.x, y: n.y })
     return m
   }, [nodes])
 
   const rfEdges: RFEdge[] = React.useMemo(
     () =>
       edges.map((e, idx) => {
-        const sx = nodeXById.get(e.source_id) ?? 0
-        const tx = nodeXById.get(e.target_id) ?? 0
-        const isForward = sx <= tx
+        const handles = pickEdgeHandles(
+          nodePosById.get(e.source_id),
+          nodePosById.get(e.target_id),
+        )
         return {
           id: `ai-edge-${idx}`,
           source: e.source_id,
           target: e.target_id,
-          sourceHandle: isForward ? "right-source" : "left-source",
-          targetHandle: isForward ? "left-target" : "right-target",
+          sourceHandle: handles.sourceHandle,
+          targetHandle: handles.targetHandle,
           type: "phase",
           data: {
             edgeType: e.edge_type,
@@ -97,7 +89,7 @@ export function AILiveCanvas({ nodes, edges, isGenerating }: AILiveCanvasProps) 
           label: e.label ?? undefined,
         }
       }),
-    [edges, nodeXById],
+    [edges, nodePosById],
   )
 
   return (

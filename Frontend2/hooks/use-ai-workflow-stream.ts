@@ -16,8 +16,8 @@ import {
   AIServiceUnavailableError,
   type DonePayload,
   type ErrorKind,
+  type LayoutArchetype,
   type LifecycleFormDTO,
-  type Methodology,
   RateLimitError,
   type SuggestedColumnPayload,
   type SuggestedEdgePayload,
@@ -45,7 +45,8 @@ export type AIStreamState =
   | {
       status: "done"
       variant: "lifecycle" | "task_status"
-      methodology: Methodology
+      methodology: string
+      layoutArchetype?: LayoutArchetype
       chatLog: string[]
       nodes: SuggestedNodePayload[]
       edges: SuggestedEdgePayload[]
@@ -199,6 +200,7 @@ export function useAIWorkflowStream(): UseAIWorkflowStreamReturn {
                 status: "done",
                 variant,
                 methodology: donePayload.methodology,
+                layoutArchetype: donePayload.layout_archetype,
                 chatLog,
                 nodes,
                 edges,

@@ -4,7 +4,7 @@
  * AI Task Status Form — left-pane idle-state form for task workflow generation.
  *
  * Mirrors lifecycle form structure but with task-specific fields:
- *   - Methodology chip group (same 7)
+ *   - Çalışma ritmi chip'i (opsiyonel — metodoloji seçimi kalktı)
  *   - Hedef Durum Sayısı (optional number, default "AI karar versin")
  *   - Onay ve İnceleme: 5 toggles (incl. D-03 "Bug için ayrı doğrulama")
  *   - Özel Durumlar multi-select chip (7 chips)
@@ -20,16 +20,13 @@ import { Sparkles } from "lucide-react"
 import { Toggle } from "@/components/primitives"
 import { useApp } from "@/context/app-context"
 
-import type { Methodology, TaskStatusFormDTO } from "@/lib/ai/types"
+import type { TaskStatusFormDTO, TeamCadence } from "@/lib/ai/types"
 
-const METHODOLOGIES: Methodology[] = [
-  "SCRUM",
-  "KANBAN",
-  "WATERFALL",
-  "ITERATIVE",
-  "INCREMENTAL",
-  "EVOLUTIONARY",
-  "RAD",
+// Metodoloji seçimi kalktı — tek ritim sorusu sütun tonunu belirler
+const WORK_STYLES: Array<{ value: TeamCadence; tr: string; en: string }> = [
+  { value: "sprints", tr: "Sprintlerle", en: "In sprints" },
+  { value: "flow", tr: "Sürekli akışla", en: "Continuous flow" },
+  { value: "phases", tr: "Faz bazlı", en: "Phase-based" },
 ]
 
 // All seven special states from §17 D-03 expansion
@@ -48,7 +45,7 @@ export interface AITaskStatusFormProps {
 }
 
 interface FormState {
-  methodology: Methodology
+  workStyle: TeamCadence | null
   aiDecidesCount: boolean
   targetColumnCount: string
   hasCodeReview: boolean
@@ -62,7 +59,7 @@ interface FormState {
 }
 
 const INITIAL: FormState = {
-  methodology: "SCRUM",
+  workStyle: null,
   aiDecidesCount: true,
   targetColumnCount: "",
   hasCodeReview: false,
@@ -108,7 +105,7 @@ export function AITaskStatusForm({ onSubmit }: AITaskStatusFormProps) {
     setSubmitting(true)
     try {
       const dto: TaskStatusFormDTO = {
-        methodology: form.methodology,
+        work_style: form.workStyle,
         target_column_count: form.aiDecidesCount
           ? null
           : form.targetColumnCount
@@ -121,7 +118,7 @@ export function AITaskStatusForm({ onSubmit }: AITaskStatusFormProps) {
         bug_extra_verification: form.bugExtraVerification,
         special_states: Array.from(form.specialStates),
         wip_limits_enabled: form.wipLimitsEnabled,
-        additional_context: form.additionalContext.slice(0, 500),
+        additional_context: form.additionalContext.slice(0, 1000),
       }
       await onSubmit(dto)
     } finally {
@@ -135,19 +132,27 @@ export function AITaskStatusForm({ onSubmit }: AITaskStatusFormProps) {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* METHODOLOGY */}
-      <Field label={T("Metodoloji", "Methodology")}>
+      {/* WORK STYLE */}
+      <Field label={T("Takım Nasıl Çalışıyor? (opsiyonel)", "How Does the Team Work? (optional)")}>
         <ChipGroup>
-          {METHODOLOGIES.map((m) => (
+          {WORK_STYLES.map((w) => (
             <Chip
-              key={m}
-              selected={form.methodology === m}
-              onClick={() => update("methodology", m)}
+              key={w.value}
+              selected={form.workStyle === w.value}
+              onClick={() =>
+                update("workStyle", form.workStyle === w.value ? null : w.value)
+              }
             >
-              {METH_LABEL_TR[m]}
+              {T(w.tr, w.en)}
             </Chip>
           ))}
         </ChipGroup>
+        <div style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+          {T(
+            "Boş bırakırsan akış tarzını AI belirler.",
+            "Leave empty and AI picks the flow style.",
+          )}
+        </div>
       </Field>
 
       {/* TARGET COLUMN COUNT — input tıkla/focus → otomatik manuel moda geçer */}
@@ -297,7 +302,7 @@ export function AITaskStatusForm({ onSubmit }: AITaskStatusFormProps) {
       <Field label={T("Ek Bağlam (opsiyonel)", "Additional Context (optional)")}>
         <textarea
           rows={3}
-          maxLength={500}
+          maxLength={1000}
           placeholder={T(
             "Takıma özel bir kural veya alışkanlık var mı?",
             "Any team-specific rule or habit?",
@@ -345,16 +350,6 @@ export function AITaskStatusForm({ onSubmit }: AITaskStatusFormProps) {
 // Local helpers (duplicated from lifecycle form intentionally — D-05 single
 // responsibility, easier to diverge if variants evolve)
 // ---------------------------------------------------------------------------
-
-const METH_LABEL_TR: Record<Methodology, string> = {
-  SCRUM: "Scrum",
-  KANBAN: "Kanban",
-  WATERFALL: "Waterfall",
-  ITERATIVE: "Iterative",
-  INCREMENTAL: "Incremental",
-  EVOLUTIONARY: "Evolutionary",
-  RAD: "RAD",
-}
 
 const inputStyle: React.CSSProperties = {
   padding: "6px 10px",

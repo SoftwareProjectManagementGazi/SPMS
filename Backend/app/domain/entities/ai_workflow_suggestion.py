@@ -11,6 +11,21 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
 
 
+# AI metodolojiye kilitlenmez: methodology_label serbest metin (hibrit olabilir),
+# layout_archetype ise çizim şeklini seçer — layout motoru bu enum'a bağlı.
+LayoutArchetype = Literal[
+    "WATERFALL",          # sağa-aşağı merdiven
+    "V_MODEL",            # inen kol + dipte kodlama + çıkan kol
+    "SPIRAL",             # içten dışa dikdörtgen sarmal
+    "CYCLE",              # giriş → döngü çemberi → çıkış (Scrum/Iterative)
+    "INCREMENTAL_ROWS",   # kayan artırım satırları
+    "PROTOTYPE_LOOP",     # tasarla-yap-değerlendir dörtgeni + çıkış hattı
+    "PARALLEL_BRANCH",    # fork eden paralel kollar (RAD)
+    "PIPELINE",           # düz yatay akış (Kanban)
+    "FREEFORM",           # hiçbiri uymazsa BFS katmanlı yerleşim
+]
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle variant — phase-based workflow (Gereksinim → Tasarım → Test → ...)
 # ---------------------------------------------------------------------------
@@ -59,10 +74,8 @@ class WorkflowSuggestion(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    methodology: Literal[
-        "SCRUM", "KANBAN", "WATERFALL", "ITERATIVE",
-        "INCREMENTAL", "EVOLUTIONARY", "RAD",
-    ]
+    methodology_label: str = Field(..., description="Kısa Türkçe süreç adı; hibrit olabilir")
+    layout_archetype: LayoutArchetype = "FREEFORM"
     nodes: list[SuggestedNode]
     edges: list[SuggestedEdge]
     rationale: str = Field(
@@ -101,9 +114,6 @@ class TaskStatusSuggestion(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    methodology: Literal[
-        "SCRUM", "KANBAN", "WATERFALL", "ITERATIVE",
-        "INCREMENTAL", "EVOLUTIONARY", "RAD",
-    ]
+    methodology_label: str
     columns: list[SuggestedColumn]
     rationale: str

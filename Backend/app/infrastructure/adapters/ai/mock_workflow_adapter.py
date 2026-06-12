@@ -1,15 +1,7 @@
 """Mock Workflow Adapter — deterministic stream for CI/dev/demo fallback.
 
-Implements IAIWorkflowSuggestionPort without calling any external LLM. Streams
-a hardcoded, methodology-aware workflow with realistic timing so the frontend
-can develop against a real SSE stream without an API key.
-
-Used in:
-- CI (no API keys in repo)
-- Frontend development before Wave 4 lands Gemini adapter
-- Demo emergency fallback (if Gemini quota exhausted)
-
-Plan reference: .planning/ai-workflow-generator-plan.md §4.3.4
+Gemini ile aynı kontrat: kriterlerden süreç seçer (mini kural ağacı),
+koordinatları aynı domain layout servisine bastırır, aynı SSE akışını üretir.
 """
 
 import asyncio
@@ -23,6 +15,12 @@ from app.application.dtos.ai_workflow_dto import (
 from app.application.ports.ai_workflow_suggestion_port import (
     IAIWorkflowSuggestionPort,
 )
+from app.domain.entities.ai_workflow_suggestion import (
+    SuggestedEdge,
+    SuggestedNode,
+    WorkflowSuggestion,
+)
+from app.domain.services.workflow_layout import apply_layout
 
 
 # Pacing — tuned so a full generation feels ~3-5 seconds (mockup §5.1).
@@ -31,13 +29,32 @@ _EDGE_INTERVAL_S = 0.25
 _TEXT_TOKEN_S = 0.15
 
 
-class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
-    """Hardcoded multi-methodology stream generator.
+def pick_process(form: LifecycleFormDTO) -> tuple[str, str]:
+    """Kriterlerden (methodology_label, layout_archetype) seç — prompt'taki
+    karar pusulasının deterministik aynası."""
+    if form.verification_rigor == "critical":
+        return "V-Modeli", "V_MODEL"
+    if form.risk_profile == "high_innovative":
+        return "Spiral", "SPIRAL"
+    if form.interrupt_level == "constant" or form.team_cadence == "flow":
+        return "Kanban", "PIPELINE"
+    if form.req_clarity in ("vague", "volatile") and form.delivery_style == "prototype_first":
+        return "Prototipleme", "PROTOTYPE_LOOP"
+    if form.schedule_pressure == "asap_mvp" and form.customer_involvement == "continuous":
+        return "RAD", "PARALLEL_BRANCH"
+    if form.delivery_style == "increments":
+        return "Artırımlı Model", "INCREMENTAL_ROWS"
+    if form.compliance_level == "heavy" or (
+        form.req_clarity == "clear_stable" and form.delivery_style == "big_bang"
+    ):
+        return "Waterfall", "WATERFALL"
+    if form.team_cadence == "sprints" or form.req_clarity == "volatile":
+        return "Scrum", "CYCLE"
+    return "Yinelemeli Model", "CYCLE"
 
-    Output shape: same `WorkflowEventDTO` envelope the real Gemini adapter
-    emits, so downstream code (SSE writer, frontend hook) sees identical
-    events regardless of provider.
-    """
+
+class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
+    """Hardcoded multi-archetype stream generator (no LLM call)."""
 
     # ---------------------------------------------------------------------
     # Lifecycle
@@ -48,20 +65,18 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
         form: LifecycleFormDTO,
         language: str,
     ) -> AsyncIterator[WorkflowEventDTO]:
-        nodes, edges, rationale = self._lifecycle_template(form)
+        label, archetype = pick_process(form)
+        suggestion = self._build_lifecycle(label, archetype, form)
+        apply_layout(suggestion)
 
-        # 1) Chat narration — short methodology-aware intro
-        intro = self._lifecycle_intro_text(form)
+        intro = f"{label} tabanlı bir yaşam döngüsü kuruyorum — kriterlerine göre seçtim."
         for chunk in _chunk_text(intro, size=10):
             yield WorkflowEventDTO(type="text_token", payload={"text": chunk})
             await asyncio.sleep(_TEXT_TOKEN_S)
 
-        # 2) Stream nodes + edges INTERLEAVED. After each node arrives, emit
-        # any edges that became valid (both endpoints already on the canvas).
-        # Forward-referencing edges (e.g. feedback loops Test→Tasarım) emit
-        # at the tail after all nodes are placed. This matches the natural
-        # "drawing" cadence users expect: build a node, connect it back,
-        # build the next, connect it, etc.
+        nodes = [n.model_dump() for n in suggestion.nodes]
+        edges = [e.model_dump() for e in suggestion.edges]
+
         pending_edges = list(edges)
         emitted_ids: set[str] = set()
 
@@ -70,7 +85,6 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
             emitted_ids.add(node["id"])
             await asyncio.sleep(_NODE_INTERVAL_S)
 
-            # Find edges whose both endpoints are now on the canvas
             ready = [
                 e for e in pending_edges
                 if e["source_id"] in emitted_ids and e["target_id"] in emitted_ids
@@ -81,22 +95,20 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
             for edge in ready:
                 pending_edges.remove(edge)
 
-        # 3) Remaining forward-reference edges (feedback / verification loops)
         for edge in pending_edges:
             yield WorkflowEventDTO(type="edge_added", payload=edge)
             await asyncio.sleep(_EDGE_INTERVAL_S)
 
-        # 4) Rationale
-        yield WorkflowEventDTO(type="rationale", payload={"text": rationale})
+        yield WorkflowEventDTO(type="rationale", payload={"text": suggestion.rationale})
         await asyncio.sleep(0.1)
 
-        # 5) Done
         yield WorkflowEventDTO(
             type="done",
             payload={
                 "node_count": len(nodes),
                 "edge_count": len(edges),
-                "methodology": form.methodology,
+                "methodology": label,
+                "layout_archetype": archetype,
             },
         )
 
@@ -109,9 +121,9 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
         form: TaskStatusFormDTO,
         language: str,
     ) -> AsyncIterator[WorkflowEventDTO]:
-        columns, rationale = self._task_status_template(form)
+        columns, rationale, label = self._task_status_template(form)
 
-        intro = self._task_status_intro_text(form)
+        intro = f"{label} tarzı görev akışını kuruyorum."
         for chunk in _chunk_text(intro, size=10):
             yield WorkflowEventDTO(type="text_token", payload={"text": chunk})
             await asyncio.sleep(_TEXT_TOKEN_S)
@@ -127,230 +139,41 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
             type="done",
             payload={
                 "column_count": len(columns),
-                "methodology": form.methodology,
+                "methodology": label,
             },
         )
 
     # ---------------------------------------------------------------------
-    # Templates (methodology-aware — minimal but useful per variant)
+    # Templates
     # ---------------------------------------------------------------------
 
-    def _lifecycle_intro_text(self, form: LifecycleFormDTO) -> str:
-        team = form.team_size or "?"
-        m = form.methodology
-        if m == "ITERATIVE":
-            return f"Iterative bir akış kuruyorum — {team} kişilik takım için her döngüde geri besleme döngüsü."
-        if m == "WATERFALL":
-            return f"Sıralı kilitli Waterfall fazlarını kuruyorum — {team} kişilik takım için."
-        if m == "SCRUM":
-            return f"Scrum yaşam döngüsünü kuruyorum — Sprint odaklı, retrospektif geri beslemeli."
-        if m == "RAD":
-            return f"RAD modeli — paralel kollarla hızlı prototip ve teslim."
-        if m == "SPIRAL" if False else False:
-            pass  # SPIRAL not in current methodology list; kept for clarity
-        return f"{m} yaşam döngüsünü kuruyorum — {team} kişilik takım için."
+    def _build_lifecycle(
+        self, label: str, archetype: str, form: LifecycleFormDTO
+    ) -> WorkflowSuggestion:
+        nodes, edges = _ARCHETYPE_TEMPLATES[archetype]()
 
-    def _lifecycle_template(self, form: LifecycleFormDTO):
-        """Returns (nodes, edges, rationale) tuple of dicts.
-
-        Layout is methodology-aware:
-          - WATERFALL: 6 nodes single horizontal row
-          - SCRUM: 5 nodes horizontal + retrospective feedback loop
-          - ITERATIVE: 5 nodes horizontal + feedback edge (Test → Tasarım)
-          - INCREMENTAL: 5 nodes horizontal + increment-loop edge
-          - EVOLUTIONARY: 5 nodes horizontal + prototype evolution loop
-          - RAD: 6 nodes with parallel prototype branches (Y-fork)
-          - KANBAN: 4 nodes continuous flow horizontal
-        """
-        m = form.methodology
-        builder = {
-            "WATERFALL": self._tpl_waterfall,
-            "SCRUM": self._tpl_scrum,
-            "KANBAN": self._tpl_kanban,
-            "ITERATIVE": self._tpl_iterative,
-            "INCREMENTAL": self._tpl_incremental,
-            "EVOLUTIONARY": self._tpl_evolutionary,
-            "RAD": self._tpl_rad,
-        }.get(m, self._tpl_iterative)
-
-        nodes, edges, rationale = builder()
-
-        # Cross-methodology: code review toggle adds a verification edge between
-        # implementation and test phases. Each template tags those nodes via
-        # well-known ids (n_impl, n_test) so we can find them generically here.
         if form.quality_code_review:
-            ids = {n["id"] for n in nodes}
-            if "n_impl" in ids and "n_test" in ids:
-                edges.append({
-                    "source_id": "n_impl", "target_id": "n_test",
-                    "edge_type": "verification", "bidirectional": False,
-                    "is_all_gate": False, "label": "Code Review",
-                })
+            ids = {n.id for n in nodes}
+            if "nd_mockimpl00" in ids and "nd_mocktest00" in ids:
+                edges.append(SuggestedEdge(
+                    source_id="nd_mockimpl00", target_id="nd_mocktest00",
+                    edge_type="verification", label="Code Review",
+                ))
 
-        return nodes, edges, rationale
-
-    # ---------------------------------------------------------------------
-    # Per-methodology templates (positions hand-tuned, not auto-laid)
-    # ---------------------------------------------------------------------
-
-    def _tpl_waterfall(self):
-        """6 nodes, single horizontal row. Classic sequential flow."""
-        nodes = [
-            {"id": "n_req",  "label": "Gereksinimler", "description": "Kapsam ve dokümantasyon", "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_des",  "label": "Tasarım",       "description": "Mimari ve UI",            "color": "status-progress", "x": 260, "y": 200},
-            {"id": "n_impl", "label": "Uygulama",      "description": "Geliştirme",              "color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test", "label": "Test",          "description": "QA ve UAT",               "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_dep",  "label": "Yayın",         "description": "Dağıtım",                 "color": "status-done",     "x": 860, "y": 200},
-            {"id": "n_mnt",  "label": "Bakım",         "description": "Destek",                  "color": "status-done",     "x": 1060, "y": 200},
-        ]
-        edges = _chain_flow_edges([n["id"] for n in nodes])
         rationale = (
-            "Waterfall seçtiğin için sıralı kilitli 6 faz oluşturdum. "
-            "Her faz tamamlanmadan sonraki başlamaz. Bu mock çıktısıdır — "
-            "gerçek AI Wave 4'te devreye girince zenginleşecek."
+            f"Kriterlerine göre {label} seçtim. Bu mock çıktısıdır — gerçek "
+            "AI (Gemini) aynı kriterlerle bağlama özel tasarım yapar."
         )
-        return nodes, edges, rationale
-
-    def _tpl_scrum(self):
-        """5 nodes horizontal + retrospective feedback loop (Monitör → Yürütme)."""
-        nodes = [
-            {"id": "n_init", "label": "Başlatma", "description": "Vizyon ve hedefler",       "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_plan", "label": "Planlama", "description": "Backlog ve sprint planı",  "color": "status-todo",     "x": 260, "y": 200},
-            {"id": "n_impl", "label": "Yürütme",  "description": "Sprint geliştirme",        "color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test", "label": "İzleme",   "description": "Metrikler ve retro",       "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_close","label": "Kapanış",  "description": "Teslim ve dersler",        "color": "status-done",     "x": 860, "y": 200},
-        ]
-        edges = _chain_flow_edges(["n_init", "n_plan", "n_impl", "n_test", "n_close"])
-        edges.append({
-            "source_id": "n_test", "target_id": "n_impl",
-            "edge_type": "feedback", "bidirectional": False,
-            "is_all_gate": False, "label": "Retro",
-        })
-        rationale = (
-            "Scrum seçtiğin için Sprint döngüsünü kuran 5 faz + Retro geri besleme "
-            "edge'i ekledim. Her sprint sonunda İzleme'den Yürütme'ye dönüş yapılır."
+        return WorkflowSuggestion(
+            methodology_label=label,
+            layout_archetype=archetype,  # type: ignore[arg-type]
+            nodes=nodes, edges=edges, rationale=rationale,
         )
-        return nodes, edges, rationale
-
-    def _tpl_kanban(self):
-        """4 nodes single row. No iteration — continuous flow."""
-        nodes = [
-            {"id": "n_req",  "label": "Talep",       "description": "Yeni iş öğesi",      "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_impl", "label": "Geliştirme",  "description": "Akan iş",            "color": "status-progress", "x": 260, "y": 200},
-            {"id": "n_test", "label": "Doğrulama",   "description": "QA",                 "color": "status-review",   "x": 460, "y": 200},
-            {"id": "n_done", "label": "Teslim",      "description": "Yayına alma",        "color": "status-done",     "x": 660, "y": 200},
-        ]
-        edges = _chain_flow_edges([n["id"] for n in nodes])
-        rationale = (
-            "Kanban için sürekli akış kuran 4 faz oluşturdum. Sprint yok — "
-            "iş öğeleri WIP limitleri içinde sürekli akar."
-        )
-        return nodes, edges, rationale
-
-    def _tpl_iterative(self):
-        """5 nodes horizontal + Test→Design feedback (per-cycle revision)."""
-        nodes = [
-            {"id": "n_disc", "label": "Keşif",       "description": "Gereksinim toplama",   "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_des",  "label": "Tasarım",     "description": "Mimari ve modüller",   "color": "status-progress", "x": 260, "y": 200},
-            {"id": "n_impl", "label": "Geliştirme",  "description": "Kodlama ve birim test","color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test", "label": "Test",        "description": "QA ve entegrasyon",    "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_dep",  "label": "Yayın",       "description": "Dağıtım",              "color": "status-done",     "x": 860, "y": 200},
-        ]
-        edges = _chain_flow_edges([n["id"] for n in nodes])
-        edges.append({
-            "source_id": "n_test", "target_id": "n_des",
-            "edge_type": "feedback", "bidirectional": False,
-            "is_all_gate": False, "label": "Test → Tasarım",
-        })
-        rationale = (
-            "Iterative seçtiğin için Test'ten Tasarım'a geri besleme edge'i "
-            "ekledim — her döngüde tasarımı revize edebilirsin."
-        )
-        return nodes, edges, rationale
-
-    def _tpl_incremental(self):
-        """5 nodes + increment-loop edge (Release → Plan-next)."""
-        nodes = [
-            {"id": "n_plan", "label": "Planlama",    "description": "Artım kapsamı",       "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_des",  "label": "Tasarım",     "description": "Artım mimarisi",      "color": "status-progress", "x": 260, "y": 200},
-            {"id": "n_impl", "label": "Geliştirme",  "description": "Artım kodlaması",     "color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test", "label": "Test",        "description": "Artım QA",            "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_dep",  "label": "Teslim",      "description": "Artım yayını",        "color": "status-done",     "x": 860, "y": 200},
-        ]
-        edges = _chain_flow_edges([n["id"] for n in nodes])
-        edges.append({
-            "source_id": "n_dep", "target_id": "n_plan",
-            "edge_type": "feedback", "bidirectional": False,
-            "is_all_gate": False, "label": "Sonraki Artım",
-        })
-        rationale = (
-            "Incremental seçtiğin için her artımı çalışan ürün olarak teslim eden "
-            "5 fazlı döngü kurdum. Teslim sonrası bir sonraki artıma dönüş."
-        )
-        return nodes, edges, rationale
-
-    def _tpl_evolutionary(self):
-        """5 nodes + prototype-evolution feedback loop."""
-        nodes = [
-            {"id": "n_proto", "label": "Prototip",    "description": "İlk çalışan prototip",  "color": "status-todo",     "x":  60, "y": 200},
-            {"id": "n_eval",  "label": "Değerlendir", "description": "Geri bildirim",         "color": "status-progress", "x": 260, "y": 200},
-            {"id": "n_impl",  "label": "Geliştirme",  "description": "Evrim ile büyütme",     "color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test",  "label": "Test",        "description": "Kullanıcı testi",       "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_dep",   "label": "Teslim",      "description": "Sürüm yayını",          "color": "status-done",     "x": 860, "y": 200},
-        ]
-        edges = _chain_flow_edges([n["id"] for n in nodes])
-        edges.append({
-            "source_id": "n_test", "target_id": "n_proto",
-            "edge_type": "feedback", "bidirectional": False,
-            "is_all_gate": False, "label": "Yeni Prototip",
-        })
-        rationale = (
-            "Evolutionary seçtiğin için prototipten başlayıp her test sonrasında "
-            "yeni prototipe dönen evrim döngüsü kurdum."
-        )
-        return nodes, edges, rationale
-
-    def _tpl_rad(self):
-        """6 nodes with parallel prototype branches (Y-fork after Plan)."""
-        nodes = [
-            {"id": "n_plan", "label": "Planlama",      "description": "Hızlı kapsam",    "color": "status-todo",     "x":  60, "y": 200},
-            # Parallel branches A (top) + B (bottom)
-            {"id": "n_p_a",  "label": "Prototip A",    "description": "Paralel kol 1",   "color": "status-progress", "x": 260, "y": 100},
-            {"id": "n_p_b",  "label": "Prototip B",    "description": "Paralel kol 2",   "color": "status-progress", "x": 260, "y": 300},
-            {"id": "n_impl", "label": "Entegrasyon",   "description": "Birleştirme",     "color": "status-progress", "x": 460, "y": 200},
-            {"id": "n_test", "label": "Test",          "description": "QA + UAT",        "color": "status-review",   "x": 660, "y": 200},
-            {"id": "n_dep",  "label": "Yayın",         "description": "Hızlı teslim",    "color": "status-done",     "x": 860, "y": 200},
-        ]
-        edges = [
-            {"source_id": "n_plan", "target_id": "n_p_a", "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-            {"source_id": "n_plan", "target_id": "n_p_b", "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-            {"source_id": "n_p_a",  "target_id": "n_impl", "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-            {"source_id": "n_p_b",  "target_id": "n_impl", "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-            {"source_id": "n_impl", "target_id": "n_test", "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-            {"source_id": "n_test", "target_id": "n_dep",  "edge_type": "flow", "bidirectional": False, "is_all_gate": False, "label": None},
-        ]
-        rationale = (
-            "RAD seçtiğin için Plan sonrası 2 paralel prototip kolunu Entegrasyon'da "
-            "birleştiren 6 fazlı yapı oluşturdum — paralel hızlı geliştirme."
-        )
-        return nodes, edges, rationale
-
-    # ---------------------------------------------------------------------
-
-    def _task_status_intro_text(self, form: TaskStatusFormDTO) -> str:
-        m = form.methodology
-        if m == "SCRUM":
-            return "Scrum için Sprint Backlog başlangıç sütununu içeren akışı kuruyorum."
-        if m == "KANBAN":
-            return "Kanban için WIP limitli sürekli akış sütunlarını kuruyorum."
-        return f"{m} için standart görev akışını kuruyorum."
 
     def _task_status_template(self, form: TaskStatusFormDTO):
-        """Returns (columns, rationale) tuple of dicts."""
-        m = form.methodology
-
-        # Scrum gets Sprint Backlog as initial; others get Yapılacak
-        initial_label = "Sprint Backlog" if m == "SCRUM" else "Yapılacak"
+        style = form.work_style or "sprints"
+        label = {"sprints": "Scrum", "flow": "Kanban", "phases": "Faz Bazlı"}[style]
+        initial_label = "Sprint Backlog" if style == "sprints" else "Yapılacak"
 
         columns = [
             {"id": "col_mock_1", "label": initial_label, "description": "Sıraya alındı", "color": "status-todo", "wip_limit": None, "is_initial": True, "is_final": False, "is_special": False},
@@ -359,7 +182,6 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
             {"id": "col_mock_4", "label": "Bitti", "description": "Tamamlandı", "color": "status-done", "wip_limit": None, "is_initial": False, "is_final": True, "is_special": False},
         ]
 
-        # D-03: Bug için ayrı doğrulama
         if form.bug_extra_verification:
             columns.insert(3, {
                 "id": "col_mock_bugverif", "label": "Doğrulama (Bug)",
@@ -368,7 +190,6 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
                 "is_initial": False, "is_final": False, "is_special": False,
             })
 
-        # Special states from user selection
         for i, state in enumerate(form.special_states):
             columns.append({
                 "id": f"col_mock_special_{i}",
@@ -382,24 +203,167 @@ class MockWorkflowAdapter(IAIWorkflowSuggestionPort):
             })
 
         rationale = (
-            f"{m} için {len([c for c in columns if not c['is_special']])} ana sütun + "
-            f"{len([c for c in columns if c['is_special']])} özel durum kurdum. "
-            "Bu mock çıktısı — Wave 4'te gerçek AI daha zengin öneriler verecek."
+            f"{label} tarzında {len([c for c in columns if not c['is_special']])} ana sütun + "
+            f"{len([c for c in columns if c['is_special']])} özel durum kurdum (mock)."
         )
+        return columns, rationale, label
 
-        return columns, rationale
+
+# ---------------------------------------------------------------------------
+# Archetype node/edge sets — koordinatsız; layout servisi yerleştirir
+# ---------------------------------------------------------------------------
 
 
-def _chain_flow_edges(node_ids: list[str]) -> list[dict]:
-    """Build a sequential flow edge chain from an ordered list of node ids."""
+def _n(nid: str, label: str, desc: str, color: str) -> SuggestedNode:
+    return SuggestedNode(id=nid, label=label, description=desc, color=color)
+
+
+def _chain(ids: list[str]) -> list[SuggestedEdge]:
     return [
-        {
-            "source_id": a, "target_id": b,
-            "edge_type": "flow", "bidirectional": False,
-            "is_all_gate": False, "label": None,
-        }
-        for a, b in zip(node_ids, node_ids[1:])
+        SuggestedEdge(source_id=a, target_id=b, edge_type="flow")
+        for a, b in zip(ids, ids[1:])
     ]
+
+
+def _tpl_waterfall():
+    nodes = [
+        _n("nd_mockreq000", "Gereksinimler", "Kapsam ve dokümantasyon", "status-todo"),
+        _n("nd_mockdes000", "Tasarım", "Mimari ve UI", "status-progress"),
+        _n("nd_mockimpl00", "Uygulama", "Geliştirme", "status-progress"),
+        _n("nd_mocktest00", "Test", "QA ve UAT", "status-review"),
+        _n("nd_mockdep000", "Yayın", "Dağıtım", "status-done"),
+        _n("nd_mockmnt000", "Bakım", "Destek", "status-done"),
+    ]
+    return nodes, _chain([n.id for n in nodes])
+
+
+def _tpl_v_model():
+    nodes = [
+        _n("nd_mockreq000", "Gereksinim Analizi", "SRS ve izlenebilirlik", "status-todo"),
+        _n("nd_mocksys000", "Sistem Tasarımı", "Yüksek düzey mimari", "status-todo"),
+        _n("nd_mockmod000", "Modül Tasarımı", "Detay tasarım", "status-progress"),
+        _n("nd_mockimpl00", "Kodlama", "Geliştirme ve inceleme", "status-progress"),
+        _n("nd_mockunit00", "Birim Testi", "Modül doğrulaması", "status-review"),
+        _n("nd_mocktest00", "Sistem Testi", "Bütünleşik test", "status-review"),
+        _n("nd_mockacc000", "Kabul Testi", "Müşteri kabulü", "status-done"),
+    ]
+    edges = _chain([n.id for n in nodes])
+    edges += [
+        SuggestedEdge(source_id="nd_mockmod000", target_id="nd_mockunit00",
+                      edge_type="verification", bidirectional=True, label="Modül ↔ Birim"),
+        SuggestedEdge(source_id="nd_mocksys000", target_id="nd_mocktest00",
+                      edge_type="verification", bidirectional=True, label="Sistem ↔ Test"),
+        SuggestedEdge(source_id="nd_mockreq000", target_id="nd_mockacc000",
+                      edge_type="verification", bidirectional=True, label="Gereksinim ↔ Kabul"),
+    ]
+    return nodes, edges
+
+
+def _tpl_spiral():
+    names = [
+        ("S1: Planlama", "status-todo"), ("S1: Risk Analizi", "status-progress"),
+        ("S1: Prototip", "status-progress"), ("S1: Değerlendirme", "status-review"),
+        ("S2: Planlama", "status-todo"), ("S2: Risk Azaltma", "status-progress"),
+        ("S2: Geliştirme", "status-progress"), ("S2: Değerlendirme", "status-review"),
+    ]
+    nodes = [
+        _n(f"nd_mocksp{i:04d}", label, "Spiral turu adımı", color)
+        for i, (label, color) in enumerate(names)
+    ]
+    nodes.append(_n("nd_mockfnl000", "Teslimat", "Onaylı ürün canlıya alınır", "status-done"))
+    edges = _chain([n.id for n in nodes])
+    edges += [
+        SuggestedEdge(source_id=nodes[1].id, target_id=nodes[0].id,
+                      edge_type="feedback", label="Risk → Plan"),
+        SuggestedEdge(source_id=nodes[5].id, target_id=nodes[4].id,
+                      edge_type="feedback", label="Risk → Plan"),
+    ]
+    return nodes, edges
+
+
+def _tpl_cycle_scrum():
+    nodes = [
+        _n("nd_mockbklg00", "Ürün Backlog'u", "Önceliklendirilmiş iş listesi", "status-todo"),
+        _n("nd_mockplan00", "Sprint Planlama", "Sprint hedefi ve kapsam", "status-todo"),
+        _n("nd_mockimpl00", "Sprint Geliştirme", "Artırım geliştirilir", "status-progress"),
+        _n("nd_mocktest00", "İnceleme & Test", "Review ve doğrulama", "status-review"),
+        _n("nd_mockretr00", "Retrospektif", "Süreç iyileştirme", "status-review"),
+        _n("nd_mockincr00", "Artırım / Yayın", "Yayınlanabilir artırım", "status-done"),
+    ]
+    edges = _chain([n.id for n in nodes])
+    edges.append(SuggestedEdge(source_id="nd_mockretr00", target_id="nd_mockplan00",
+                               edge_type="feedback", label="Yeni sprint"))
+    return nodes, edges
+
+
+def _tpl_pipeline():
+    nodes = [
+        _n("nd_mockreq000", "Talep", "Yeni iş öğesi", "status-todo"),
+        _n("nd_mockimpl00", "Geliştirme", "Akan iş", "status-progress"),
+        _n("nd_mocktest00", "Doğrulama", "QA", "status-review"),
+        _n("nd_mockdone00", "Teslim", "Yayına alma", "status-done"),
+    ]
+    return nodes, _chain([n.id for n in nodes])
+
+
+def _tpl_incremental():
+    nodes = [_n("nd_mockcore00", "Çekirdek Gereksinimler", "Mimari ve artırım sınırları", "status-todo")]
+    for a in (1, 2):
+        nodes += [
+            _n(f"nd_mocka{a}des0", f"A{a}: Tasarım", f"Artırım {a} tasarımı", "status-todo"),
+            _n(f"nd_mocka{a}dev0", f"A{a}: Geliştirme", f"Artırım {a} kodlaması", "status-progress"),
+            _n(f"nd_mocka{a}tst0", f"A{a}: Test", f"Artırım {a} doğrulaması", "status-review"),
+            _n(f"nd_mocka{a}del0", f"A{a}: Teslim", f"Artırım {a} yayını", "status-done"),
+        ]
+    return nodes, _chain([n.id for n in nodes])
+
+
+def _tpl_prototype():
+    nodes = [
+        _n("nd_mockreq000", "Hızlı Gereksinim", "Bilinenler derlenir", "status-todo"),
+        _n("nd_mockdes000", "Hızlı Tasarım", "Görünen yüzeyler", "status-todo"),
+        _n("nd_mockimpl00", "Prototip Geliştirme", "Çalışan prototip", "status-progress"),
+        _n("nd_mockeval00", "Müşteri Değerlendirmesi", "Geri bildirim toplanır", "status-review"),
+        _n("nd_mockprod00", "Ürün Geliştirme", "Gerçek sistem inşası", "status-progress"),
+        _n("nd_mocktest00", "Test & Teslim", "Kabul ve canlıya alma", "status-done"),
+    ]
+    edges = _chain([n.id for n in nodes])
+    edges.append(SuggestedEdge(source_id="nd_mockeval00", target_id="nd_mockdes000",
+                               edge_type="feedback", label="İyileştir"))
+    return nodes, edges
+
+
+def _tpl_parallel_rad():
+    nodes = [
+        _n("nd_mockplan00", "Gereksinim Planlaması", "Hedefler ve kısıtlar", "status-todo"),
+        _n("nd_mockpra000", "Prototip Kolu A", "Paralel JAD kolu", "status-progress"),
+        _n("nd_mockprb000", "Prototip Kolu B", "Paralel inşa kolu", "status-progress"),
+        _n("nd_mockimpl00", "Entegrasyon", "Kollar birleşir", "status-progress"),
+        _n("nd_mocktest00", "Test", "QA + UAT", "status-review"),
+        _n("nd_mockdep000", "Sisteme Geçiş", "Eğitim ve canlıya geçiş", "status-done"),
+    ]
+    edges = [
+        SuggestedEdge(source_id="nd_mockplan00", target_id="nd_mockpra000", edge_type="flow"),
+        SuggestedEdge(source_id="nd_mockplan00", target_id="nd_mockprb000", edge_type="flow"),
+        SuggestedEdge(source_id="nd_mockpra000", target_id="nd_mockimpl00", edge_type="flow"),
+        SuggestedEdge(source_id="nd_mockprb000", target_id="nd_mockimpl00", edge_type="flow"),
+        SuggestedEdge(source_id="nd_mockimpl00", target_id="nd_mocktest00", edge_type="flow"),
+        SuggestedEdge(source_id="nd_mocktest00", target_id="nd_mockdep000", edge_type="flow"),
+    ]
+    return nodes, edges
+
+
+_ARCHETYPE_TEMPLATES = {
+    "WATERFALL": _tpl_waterfall,
+    "V_MODEL": _tpl_v_model,
+    "SPIRAL": _tpl_spiral,
+    "CYCLE": _tpl_cycle_scrum,
+    "PIPELINE": _tpl_pipeline,
+    "INCREMENTAL_ROWS": _tpl_incremental,
+    "PROTOTYPE_LOOP": _tpl_prototype,
+    "PARALLEL_BRANCH": _tpl_parallel_rad,
+    "FREEFORM": _tpl_pipeline,
+}
 
 
 def _chunk_text(text: str, size: int = 10) -> list[str]:

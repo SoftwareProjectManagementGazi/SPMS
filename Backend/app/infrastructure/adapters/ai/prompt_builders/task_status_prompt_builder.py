@@ -10,33 +10,19 @@ Plan ref: .planning/ai-workflow-generator-plan.md §4.3.3 + §17 D-03.
 from app.application.dtos.ai_workflow_dto import TaskStatusFormDTO
 
 
-# Methodology-aware task-status hints (what each methodology implies for
-# column structure). Mirrors lifecycle builder but oriented for kanban/board.
-TASK_METHODOLOGY_HINTS_TR: dict[str, str] = {
-    "SCRUM": (
-        "Sprint Backlog başlangıç sütunu zorunlu (is_initial=True). Sprint "
-        "döngüsünde tipik durumlar: Sprint Backlog → Devam Ediyor → "
-        "İnceleme → Test → Bitti."
+# Çalışma ritmi → sütun yapısı ipucu (metodoloji seçimi kalktı)
+WORK_STYLE_HINTS_TR: dict[str, str] = {
+    "sprints": (
+        "Sprint ritmi: 'Sprint Backlog' başlangıç sütunu (is_initial=True) "
+        "kullan; methodology_label 'Scrum' tarzı olsun."
     ),
-    "KANBAN": (
-        "Sürekli akış. WIP limitleri öne çıkar — her ana sütun için kullanıcı "
-        "wip_limits_enabled=True derse 2-3 arası WIP önermesi yap."
+    "flow": (
+        "Sürekli akış: WIP limitleri öne çıkar; 'To Do' başlangıcı yeterli, "
+        "methodology_label 'Kanban' tarzı olsun."
     ),
-    "WATERFALL": (
-        "Lineer durumlar, geri besleme YOK. Sütunlar arası tek yönlü akış."
-    ),
-    "ITERATIVE": (
-        "Cycle Review / Retro tarzı bir ara sütun eklenebilir."
-    ),
-    "INCREMENTAL": (
-        "Her artım için açık 'Increment Ready' başlangıç sütunu fikri "
-        "kullanışlı olabilir."
-    ),
-    "EVOLUTIONARY": (
-        "Prototip değerlendirmesi için ara sütun eklenebilir."
-    ),
-    "RAD": (
-        "Hızlı geliştirme — sütun sayısı az ve WIP yüksek tutulur."
+    "phases": (
+        "Faz bazlı: lineer ilerleyen durumlar, geri akış minimum; "
+        "methodology_label plan-bazlı bir ad olsun."
     ),
 }
 
@@ -53,6 +39,8 @@ olduğunu değil.
 
 ÇIKTI KURALLARI (response_schema zorunlu, JSON dışı metin yazma):
 
+- methodology_label: akışın kısa Türkçe adı (örn. "Scrum", "Kanban",
+  "Faz Bazlı Akış") — bağlamdan kendin seç.
 - columns: 3-10 arası ana sütun + opsiyonel özel durumlar.
   · is_special=False olanlar ana akış (Yapılacak → Bitti yönünde).
   · is_special=True olanlar Blocked / Cancelled gibi yan durumlar.
@@ -76,10 +64,10 @@ def build_task_status_prompt(form: TaskStatusFormDTO) -> str:
 
     parts: list[str] = [SYSTEM_PROMPT, "", "BAĞLAM:"]
 
-    parts.append(f"- Metodoloji: {form.methodology}")
-    parts.append(
-        f"  Açıklama: {TASK_METHODOLOGY_HINTS_TR.get(form.methodology, '(genel)')}"
-    )
+    if form.work_style:
+        parts.append(f"- Çalışma ritmi: {WORK_STYLE_HINTS_TR[form.work_style]}")
+    else:
+        parts.append("- Çalışma ritmi belirtilmedi — dengeli, genel bir akış kur.")
 
     if form.target_column_count:
         parts.append(
@@ -145,7 +133,7 @@ def build_task_status_prompt(form: TaskStatusFormDTO) -> str:
 
     # Few-shot — Scrum-flavored to demonstrate Sprint Backlog convention
     parts.append("")
-    parts.append("ÖRNEK ÇIKTI (SCRUM, code review aktif — sadece referans, taklit etme):")
+    parts.append("ÖRNEK ÇIKTI (sprint ritmi, code review aktif — sadece format referansı):")
     parts.append(_FEW_SHOT_EXAMPLE_JSON)
 
     parts.append("")
@@ -156,7 +144,7 @@ def build_task_status_prompt(form: TaskStatusFormDTO) -> str:
 
 _FEW_SHOT_EXAMPLE_JSON = """\
 {
-  "methodology": "SCRUM",
+  "methodology_label": "Scrum",
   "columns": [
     {"id": "col_sprback", "label": "Sprint Backlog", "description": "Mevcut sprint için seçilen işler.", "color": "status-todo", "wip_limit": null, "is_initial": true, "is_final": false, "is_special": false},
     {"id": "col_progres", "label": "Devam Ediyor", "description": "Üzerinde aktif çalışılan görevler.", "color": "status-progress", "wip_limit": 3, "is_initial": false, "is_final": false, "is_special": false},

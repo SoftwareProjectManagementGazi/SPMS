@@ -26,7 +26,7 @@ from app.domain.services.ai_workflow_validator import (
 def _make_valid_lifecycle() -> WorkflowSuggestion:
     """Minimal valid lifecycle: 3 nodes, 2 flow edges, no rule violations."""
     return WorkflowSuggestion(
-        methodology="WATERFALL",
+        methodology_label="Waterfall",
         nodes=[
             SuggestedNode(id="n1", label="Plan", description="Plan.", color="status-todo"),
             SuggestedNode(id="n2", label="Build", description="Build.", color="status-progress"),
@@ -47,7 +47,7 @@ def test_lifecycle_valid_workflow_returns_empty_list():
 
 def test_lifecycle_too_few_nodes():
     suggestion = WorkflowSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         nodes=[
             SuggestedNode(id="n1", label="Solo", description="Only one", color="status-todo"),
         ],
@@ -61,22 +61,22 @@ def test_lifecycle_too_few_nodes():
 def test_lifecycle_too_many_nodes():
     nodes = [
         SuggestedNode(id=f"n{i}", label=f"L{i}", description="d", color="status-todo")
-        for i in range(13)
+        for i in range(14)
     ]
     edges = [
         SuggestedEdge(source_id=f"n{i}", target_id=f"n{i+1}", edge_type="flow")
-        for i in range(12)
+        for i in range(13)
     ]
     suggestion = WorkflowSuggestion(
-        methodology="SCRUM", nodes=nodes, edges=edges, rationale="too many"
+        methodology_label="Scrum", nodes=nodes, edges=edges, rationale="too many"
     )
     errors = validate_lifecycle_suggestion(suggestion)
-    assert any("En fazla 12 faz" in e for e in errors)
+    assert any("En fazla 13 faz" in e for e in errors)
 
 
 def test_lifecycle_duplicate_node_ids():
     suggestion = WorkflowSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         nodes=[
             SuggestedNode(id="n1", label="A", description="d", color="status-todo"),
             SuggestedNode(id="n1", label="B", description="d", color="status-progress"),
@@ -110,7 +110,7 @@ def test_lifecycle_self_loop_rejected():
 def test_lifecycle_no_initial_node():
     # Every node has incoming flow edge → no initial
     suggestion = WorkflowSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         nodes=[
             SuggestedNode(id="n1", label="A", description="d", color="status-todo"),
             SuggestedNode(id="n2", label="B", description="d", color="status-progress"),
@@ -129,7 +129,7 @@ def test_lifecycle_no_initial_node():
 
 def test_lifecycle_isolated_node():
     suggestion = WorkflowSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         nodes=[
             SuggestedNode(id="n1", label="A", description="d", color="status-todo"),
             SuggestedNode(id="n2", label="B", description="d", color="status-progress"),
@@ -154,7 +154,7 @@ def test_lifecycle_isolated_node():
 def _make_valid_task_status() -> TaskStatusSuggestion:
     """Minimal valid task status: 3 main columns + 1 special."""
     return TaskStatusSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         columns=[
             SuggestedColumn(
                 id="c1", label="Yapılacak", description="Backlog",
@@ -183,7 +183,7 @@ def test_task_status_valid_returns_empty():
 
 def test_task_status_too_few_main_columns():
     suggestion = TaskStatusSuggestion(
-        methodology="KANBAN",
+        methodology_label="Kanban",
         columns=[
             SuggestedColumn(
                 id="c1", label="Solo", description="d",
@@ -227,7 +227,7 @@ def test_task_status_invalid_wip_limit():
 def test_task_status_special_columns_not_counted_in_main():
     """is_special=True columns should not pollute the main count."""
     suggestion = TaskStatusSuggestion(
-        methodology="SCRUM",
+        methodology_label="Scrum",
         columns=[
             SuggestedColumn(
                 id="c1", label="A", description="d",

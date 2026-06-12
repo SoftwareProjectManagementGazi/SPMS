@@ -17,7 +17,7 @@ from app.domain.entities.ai_workflow_suggestion import (
 
 # Tunables — keep small + auditable
 _LIFECYCLE_MIN_NODES = 3
-_LIFECYCLE_MAX_NODES = 12
+_LIFECYCLE_MAX_NODES = 13  # kanonik spiral 13 node (3 tur + teslimat)
 _TASK_STATUS_MIN_COLUMNS = 3
 _TASK_STATUS_MAX_COLUMNS = 10
 

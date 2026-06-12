@@ -15,10 +15,8 @@
 import * as React from "react"
 import { Sparkles } from "lucide-react"
 
-import type { Methodology } from "@/lib/ai/types"
-
 export interface AIChatLogProps {
-  /** Methodology + key choices summary chip (e.g. "Iterative · 6 kişi · Web/SaaS") */
+  /** Kriter + bağlam özeti chip'i (örn. "Belirsiz gereksinim · 6 kişi · Web/SaaS") */
   contextSummary: string
   /** User's question/prompt summary line shown under "Sen" */
   userPrompt: string
@@ -196,13 +194,15 @@ export function AIChatLog({
  */
 export function formatUserPrompt(args: {
   variant: "lifecycle" | "task_status"
-  methodology: Methodology
+  /** Seçili kriterlerin kısa özeti (metodoloji artık kullanıcı girdisi değil) */
+  criteriaSummary?: string
   teamSize?: number | null
   duration?: { value: number; unit: "week" | "month" | "year" } | null
   openEnded?: boolean
   qualitySummary?: string // e.g. "Code review + CI"
 }): string {
-  const parts: string[] = [args.methodology]
+  const parts: string[] = []
+  if (args.criteriaSummary) parts.push(args.criteriaSummary)
   if (args.teamSize) parts.push(`${args.teamSize} kişilik takım`)
   if (args.openEnded) parts.push("süresiz")
   else if (args.duration) {
@@ -212,5 +212,7 @@ export function formatUserPrompt(args: {
   if (args.qualitySummary) parts.push(args.qualitySummary)
 
   const variantWord = args.variant === "lifecycle" ? "yaşam döngüsü" : "görev durumu"
-  return `${variantWord} oluştur. ${parts.join(" · ")}.`
+  return parts.length
+    ? `${variantWord} oluştur. ${parts.join(" · ")}.`
+    : `${variantWord} oluştur — en uygun süreci sen seç.`
 }
