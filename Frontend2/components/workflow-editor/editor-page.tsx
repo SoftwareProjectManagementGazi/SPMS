@@ -751,7 +751,7 @@ export function EditorPage({ project }: EditorPageProps) {
         const cloud = buildGroupCloudData(childPositions, 16)
         out.push({
           id: g.id,
-          type: "group",
+          type: "groupCloud",
           position: cloud.position,
           data: {
             childPositions: cloud.childPositions,
@@ -886,7 +886,7 @@ export function EditorPage({ project }: EditorPageProps) {
           }
           const groups = workflow.groups ?? []
           next = next.map((n) => {
-            if (n.type !== "group") return n
+            if (n.type !== "groupCloud") return n
             const g = groups.find((gg) => gg.id === n.id)
             if (!g) return n
             if (!g.children.some((cid) => movedIds.has(cid))) return n

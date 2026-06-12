@@ -47,7 +47,10 @@ import { computeHull, type Point } from "@/lib/lifecycle/cloud-hull"
 // is stable across renders.
 const NODE_TYPES: NodeTypes = {
   phase: PhaseNode,
-  group: GroupCloudNode,
+  // NOT "group": React Flow v12'nin built-in 'group' tipi kendi arka plan
+  // + padding stilini basıyor (.react-flow__node-group) — bulutun altında
+  // görünen dikdörtgen kutunun kaynağı buydu. Çakışmayan ad kullanıyoruz.
+  groupCloud: GroupCloudNode,
 }
 
 const EDGE_TYPES: EdgeTypes = {
@@ -275,7 +278,7 @@ function CanvasBody(props: WorkflowCanvasInnerProps) {
               // the minimap they show up as giant filled rectangles stacked
               // on the member nodes ("box AND cloud" confusion). Hide them;
               // the minimap shows phase nodes only.
-              if (n.type === "group") return "transparent"
+              if (n.type === "groupCloud") return "transparent"
               const c = (n.data as { color?: string } | undefined)?.color
               if (!c) return "var(--border-strong)"
               // color may be a token suffix or a raw hex (seed group data).
