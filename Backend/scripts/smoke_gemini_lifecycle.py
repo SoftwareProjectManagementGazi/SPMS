@@ -31,8 +31,13 @@ SCENARIOS = {
         multi_team=True,
         sector="finans",
     ),
+    # Hiç kriter yok — karar tamamen serbest anlatımdan çıkmalı
     "free": LifecycleFormDTO(
-        additional_context="Küçük bir ekiple üniversite bitirme projesi yönetiyoruz.",
+        additional_context=(
+            "Bir banka için sözleşmeli proje yapıyoruz. Gereksinimler imzalı ve "
+            "değişmeyecek, teslim tek seferde olacak, her aşamanın denetim "
+            "raporu ve bağımsız test kaydı zorunlu. 10 kişilik deneyimli ekip."
+        ),
     ),
 }
 

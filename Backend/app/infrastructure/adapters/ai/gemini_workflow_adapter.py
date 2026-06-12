@@ -139,7 +139,7 @@ class GeminiWorkflowAdapter(IAIWorkflowSuggestionPort):
         # Cold-start UX: ilk Gemini çağrısı 5-10s sürebilir, chat boş kalmasın
         yield WorkflowEventDTO(
             type="text_token",
-            payload={"text": "Kriterler analiz ediliyor, en uygun süreç tasarlanıyor... "},
+            payload={"text": "Bağlam analiz ediliyor, en uygun süreç tasarlanıyor... "},
         )
 
         suggestion: WorkflowSuggestion | None = None
