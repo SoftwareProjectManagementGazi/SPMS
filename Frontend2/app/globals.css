@@ -530,3 +530,12 @@ svg { display: block; }
   border-top: 1px solid var(--border);
   margin: 12px 0;
 }
+
+/* Workflow editörü — React Flow'un çoklu-seçim dikdörtgeni (NodesSelection).
+   Kütüphanenin kendi gri/noktalı kutusu temamızın dışında ve grup bulutunun
+   üstünde ikinci bir konteyner gibi duruyor ("hitbox" hissi). Gizliyoruz:
+   çoklu seçim zaten her düğümün kendi seçim halkasıyla görünür ve seçili bir
+   düğümü sürüklemek tüm seçimi taşır — kutu işlevsel olarak gereksiz. */
+.react-flow__nodesselection {
+  display: none;
+}
